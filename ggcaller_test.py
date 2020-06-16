@@ -58,11 +58,7 @@ class Path:
         self.len = len(self.seq)
 
         #generate codon k-mers for path
-        kmer_list = []
-        for i in range(0, (len(self.seq) - 2)):
-            kmer = self.seq[i:i + 3]
-            kmer_list.append(kmer)
-        self.codons = kmer_list
+        self.codons = self.update_kmers(self.seq)
 
         #create booleans to check if all paths are complete for iterative algorithm, update if codons are present
         self.frame1_complete = frame1_complete
@@ -112,12 +108,12 @@ class Path:
         return edge_list
 
     # class method to enable updating of kmers in seq from last node merged
-    def updates_kmers(self):
+    def update_kmers(self, seq):
         kmer_list = []
-        for i in range(0, (len(self.seq) - 3)):
-            kmer = self.seq[i:i + 3]
+        for i in range(0, (len(seq) - 2)):
+            kmer = seq[i:i + 3]
             kmer_list.append(kmer)
-        self.codons = kmer_list
+        return kmer_list
 
     #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
     def check_frame(self, codon1, codon2, frame):
