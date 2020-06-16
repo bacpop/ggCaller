@@ -1,0 +1,35 @@
+Variables:
+
+graph = pygfa.gfa.GFA.from_file("group3_SP_capsular_gene_bifrost.gfa")
+node_list = ['1']
+
+Command:
+recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
+
+        58864443 function calls (58804037 primitive calls) in 21.650 seconds
+   Ordered by: standard name
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002   21.650   21.650 <string>:1(<module>)
+    70056    0.046    0.000    0.377    0.000 Seq.py:1024(reverse_complement)
+   140112    0.014    0.000    0.014    0.000 Seq.py:149(__str__)
+    70056    0.049    0.000    0.075    0.000 Seq.py:311(__getitem__)
+    70056    0.141    0.000    0.256    0.000 Seq.py:972(complement)
+   210168    0.065    0.000    0.079    0.000 Seq.py:98(__init__)
+    70056    0.028    0.000    0.040    0.000 __init__.py:284(_get_base_alphabet)
+  1807707    4.168    0.000    4.701    0.000 ggcaller_test.py:102(update_edges)
+    60409    0.237    0.000    3.923    0.000 ggcaller_test.py:123(check_frame)
+    60409    1.823    0.000    1.823    0.000 ggcaller_test.py:125(<listcomp>)
+    60409    1.799    0.000    1.799    0.000 ggcaller_test.py:126(<listcomp>)
+   159540    0.029    0.000    0.029    0.000 ggcaller_test.py:135(<genexpr>)
+    60407    0.016    0.000    0.016    0.000 ggcaller_test.py:145(check_all_complete)
+  1747300    0.944    0.000    1.361    0.000 ggcaller_test.py:150(merge_path)
+  60407/1    0.606    0.000   21.648   21.648 ggcaller_test.py:164(recur_paths)
+    60407    9.193    0.000   21.015    0.000 ggcaller_test.py:27(__init__)
+    60409    0.026    0.000    0.049    0.000 {built-in method builtins.any}
+        1    0.000    0.000   21.650   21.650 {built-in method builtins.exec}
+   630504    0.045    0.000    0.045    0.000 {built-in method builtins.isinstance}
+   181221    0.016    0.000    0.016    0.000 {built-in method builtins.len}
+ 45989454    1.991    0.000    1.991    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+  7225297    0.382    0.000    0.382    0.000 {method 'items' of 'dict' objects}
+    70056    0.029    0.000    0.029    0.000 {method 'translate' of 'str' objects}
