@@ -1,0 +1,45 @@
+Metadata-Version: 1.1
+Name: Pympler
+Version: 0.8
+Summary: A development tool to measure, monitor and analyze the memory behavior of Python objects.
+Home-page: https://github.com/pympler/pympler
+Author: Jean Brouwers, Ludwig Haehne, Robert Schuppenies
+Author-email: pympler-dev@googlegroups.com
+License: Apache License, Version 2.0
+Description: 
+        Pympler is a development tool to measure, monitor and analyze the
+        memory behavior of Python objects in a running Python application.
+        
+        By pympling a Python application, detailed insight in the size and
+        the lifetime of Python objects can be obtained.  Undesirable or
+        unexpected runtime behavior like memory bloat and other "pymples"
+        can easily be identified.
+        
+        Pympler integrates three previously separate projects into a single,
+        comprehensive profiling tool. Asizeof provides basic size information
+        for one or several Python objects, muppy is used for on-line
+        monitoring of a Python application and the class tracker provides
+        off-line analysis of the lifetime of selected Python objects. A
+        web profiling frontend exposes process statistics, garbage
+        visualisation and class tracker statistics.
+        
+        Pympler is written entirely in Python, with no dependencies to
+        external libraries. It has been tested with Python 2.7, 3.4, 3.5, 3.6,
+        3.7, 3.8 on Linux, Windows and MacOS X.
+        
+Platform: any
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Topic :: Software Development :: Bug Tracking
