@@ -201,11 +201,8 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
 
 if __name__ == '__main__':
     from pygfa import *
-    import networkx as nx
     from Bio.Seq import Seq
-    graph = pygfa.gfa.GFA.from_file("test2.gfa")
+    graph = pygfa.gfa.GFA.from_file("group3_SP_capsular_gene_bifrost.gfa")
 
-    node_list = ['3']
-    recur_paths(graph, node_list, "ATC", "ATC", 31, True, length=float('inf'))
-    #path1 = Path(graph, node_list, 31, codon1="ACT", codon2="ACT")
-    #iter_codons_merge(graph, nodes_stop, "ACT", "ACT", 31)
+    node_list = ['1']
+    recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
