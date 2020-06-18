@@ -46,6 +46,10 @@ class Path:
         else:
             self.seq = GFA._graph.node[self.nodes[0]]['sequence']
 
+        #set variable for sequence length of current unitig and number of codons generated before adding new nodes
+        self.len = len(self.seq)
+        self.prev_codon_len = (self.len - 3 + 1)
+
         if len(nodes) == 1:
             pass
         else:
@@ -54,13 +58,14 @@ class Path:
                 for edge in edge_list:
                     source, source_dir, target, target_dir = edge
                     if source == str(nodes[index]) and target == str(i):
+                        self.prev_codon_len = (self.len - 3 + 1)
                         self.seq = self.merge_path(self.seq, target, target_dir, ksize, GFA)
+                        self.len = len(self.seq)
                         self.nodes.append(target)
                         self.relori = target_dir
                         self.edges = self.update_edges(self.nodes[-1], GFA, colours)
                     else:
                         pass
-        self.len = len(self.seq)
 
         #generate codon k-mers for path
         self.codons = self.update_kmers(self.seq)
@@ -83,6 +88,11 @@ class Path:
         #check if all paths are complete
         self.all_frames_complete = False
         self.check_all_complete()
+
+        #create empty ORF variables
+        self.ORF_frame1 = None
+        self.ORF_frame2 = None
+        self.ORF_frame3 = None
 
 
     #class method to genereate edges from input node
@@ -133,7 +143,9 @@ class Path:
         for index in indices2:
             if index % 3 == modulus or index == modulus:
                 codon2_frame.append(index)
-        if any(a > b for a in codon2_frame for b in codon1_frame) or not codon1_frame:
+        #need to check whether any of codon2 are in next unitig, as nodes of length 1 will have end codon1 which is not
+        #paired with an end stop codon, meaning a ORF will be missing.
+        if any((a - (self.prev_codon_len - 1)) > b for a in codon2_frame for b in codon1_frame) or not codon1_frame:
             if frame == 1:
                 self.frame1_complete = True
             elif frame == 2:
@@ -161,6 +173,30 @@ class Path:
         else:
             pass
         return merged_path
+
+    #TODO: class method to create sequence from first instance codon1 to first instance of codon2 for a frame
+    def create_ORF(self, codon1, codon2, frame):
+        modulus = frame - 1
+        indices1 = [i for i, x in enumerate(self.codons) if x == codon1]
+        indices2 = [i for i, x in enumerate(self.codons) if x == codon2]
+        codon1_frame = []
+        codon2_frame = []
+        for index in indices1:
+            if index % 3 == modulus or index == modulus:
+                codon1_frame.append(index)
+        for index in indices2:
+            if index % 3 == modulus or index == modulus:
+                codon2_frame.append(index)
+        if any(a > b for a in codon2_frame for b in codon1_frame) or not codon1_frame:
+            if frame == 1:
+                self.frame1_complete = True
+            elif frame == 2:
+                self.frame2_complete = True
+            elif frame == 3:
+                self.frame3_complete = True
+            else:
+                pass
+
 
 #recursive algorithm to generate strings and nodes with codons
 def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=False):
@@ -204,13 +240,35 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
 
     return all_ORF_paths
 
+def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, startdir="+", length=float('inf'), colours=False):
+    all_ORF_paths = {}
+
+    #search for reverse complement of stop_codon if startdir is negative, else search for codon1
+    if startdir == "-":
+        rc_codon1 = str(Seq(stop_codon).reverse_complement())
+        codon1_nodes = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    else:
+        codon1_nodes = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
+
+    #run recur_paths for each stop codon detected
+    for node in codon1_nodes:
+        print("Computing node: {}".format(node))
+        node_list = [node]
+        stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=colours)
+
+
+
+        print("Completed node: {}".format(node))
+
+    return all_ORF_paths
 
 ###for debugging###
 
 if __name__ == '__main__':
     from pygfa import *
     from Bio.Seq import Seq
-    graph = pygfa.gfa.GFA.from_file("group3_SP_capsular_gene_bifrost.gfa")
+    graph = pygfa.gfa.GFA.from_file("test3.gfa")
 
-    node_list = ['1']
-    recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
+    node_list = ['424', '425', '426']
+    test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
+    #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
