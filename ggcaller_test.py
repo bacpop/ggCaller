@@ -14,14 +14,18 @@ graph = group3_graph
 #length graph
 len_graph = len(graph._graph.node)
 
-#choose codon to look for
-#stop_codon_neg = "ATC"
-#start_codon_neg = "TAC"
+#takes tsv file from Bifrost query 
+def add_colours(colours_tsv, graph):
+    colours_dict = {}
+    with open(colours_tsv, "r") as f:
+        #header
+        f.readline()
+        for line in f:
+            line_list = (line.strip()).split()
+            node_id = line_list[0]
+            colours_dict[node_id] = line_list[1:]
+    nx.set_node_attributes(graph._graph, 'colours', colours_dict)
 
-
-#search nodes for codon
-#nodes_stop = graph.search(lambda x: stop_codon_neg in x['sequence'], limit_type=gfa.Element.NODE)
-#nodes_start = graph.search(lambda x: stop_codon_neg in x['sequence'], limit_type=gfa.Element.NODE)
 
 class Path:
     def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
