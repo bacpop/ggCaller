@@ -67,28 +67,13 @@ class Path:
 
         #check if k-mers are present depending on absolute orientiation of merged unitig based on first unitig, reversing ordering of codon indexing.
         if frame1_complete == False:
-            if self.absori == "+":
-                self.check_frame(codon1, codon2, 1)
-            elif self.absori == "-":
-                rc_codon1 = str(Seq(codon1).reverse_complement())
-                rc_codon2 = str(Seq(codon2).reverse_complement())
-                self.check_frame(rc_codon1, rc_codon2, 1)
+            self.check_frame(codon1, codon2, 1)
 
         if frame2_complete == False:
-            if self.absori == "+":
-                self.check_frame(codon1, codon2, 2)
-            elif self.absori == "-":
-                rc_codon1 = str(Seq(codon1).reverse_complement())
-                rc_codon2 = str(Seq(codon2).reverse_complement())
-                self.check_frame(rc_codon1, rc_codon2, 2)
+            self.check_frame(codon1, codon2, 2)
 
         if frame3_complete == False:
-            if self.absori == "+":
-                self.check_frame(codon1, codon2, 3)
-            elif self.absori == "-":
-                rc_codon1 = str(Seq(codon1).reverse_complement())
-                rc_codon2 = str(Seq(codon2).reverse_complement())
-                self.check_frame(rc_codon1, rc_codon2, 3)
+            self.check_frame(codon1, codon2, 3)
 
         #check if all paths are complete
         self.all_frames_complete = False
@@ -181,8 +166,14 @@ def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, sta
 def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=float('inf')):
     all_ORF_paths = {}
 
-    codon1_nodes = GFA.search(lambda x: codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    #search for reverse complement of codon1 if startdir is negative, else search for codon1
+    if startdir == "-":
+        rc_codon1 = str(Seq(codon1).reverse_complement())
+        codon1_nodes = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    else:
+        codon1_nodes = GFA.search(lambda x: codon1 in x['sequence'], limit_type=gfa.Element.NODE)
 
+    #run recur_paths for each item in codon1_nodes
     for node in codon1_nodes:
         print("Computing node: {}".format(node))
         node_list = [node]
