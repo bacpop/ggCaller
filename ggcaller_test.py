@@ -174,7 +174,6 @@ class Path:
             pass
         return merged_path
 
-    #TODO: class method to create sequence from first instance codon1 to first instance of codon2 for a frame
     def create_ORF(self, codon1, codon2, frame):
         modulus = frame - 1
         indices1 = [i for i, x in enumerate(self.codons) if x == codon1]
@@ -187,15 +186,25 @@ class Path:
         for index in indices2:
             if index % 3 == modulus or index == modulus:
                 codon2_frame.append(index)
-        if any(a > b for a in codon2_frame for b in codon1_frame) or not codon1_frame:
-            if frame == 1:
-                self.frame1_complete = True
-            elif frame == 2:
-                self.frame2_complete = True
-            elif frame == 3:
-                self.frame3_complete = True
-            else:
-                pass
+        ORF_indices = []
+        last_codon2 = codon2_frame[0]
+        for codon_index_1 in codon1_frame:
+            if codon_index_1 > last_codon2:
+                for codon_index_2 in codon2_frame:
+                    if codon_index_2 > codon_index_1:
+                        ORF_indices.append((codon_index_1, codon_index_2))
+                        last_codon2 = codon_index_2
+                        break
+        ORF_list = []
+        for item in ORF_indices:
+            start, stop = item
+            kmer = self.codons[start]
+            for i in range(start + 1, stop + 1):
+                kmer = kmer + self.codons[i][-1]
+            ORF_list.append(kmer)
+        return ORF_list
+
+
 
 
 #recursive algorithm to generate strings and nodes with codons
@@ -239,7 +248,7 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
         print("Completed node: {}".format(node))
 
     return all_ORF_paths
-
+#TODO: create function which generates ORFs for all 6 reading frames
 def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, startdir="+", length=float('inf'), colours=False):
     all_ORF_paths = {}
 
@@ -268,7 +277,9 @@ if __name__ == '__main__':
     from pygfa import *
     from Bio.Seq import Seq
     graph = pygfa.gfa.GFA.from_file("test3.gfa")
+    add_colours("group3_SP_capsular_gene_bifrost.tsv", graph)
 
     node_list = ['424', '425', '426']
     test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
+    test_path.create_ORF("ATG", "ATC", 1)
     #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
