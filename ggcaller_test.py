@@ -14,7 +14,7 @@ graph = group3_graph
 #length graph
 len_graph = len(graph._graph.node)
 
-#takes tsv file from Bifrost query 
+#takes tsv file from Bifrost query
 def add_colours(colours_tsv, graph):
     colours_dict = {}
     with open(colours_tsv, "r") as f:
@@ -28,7 +28,7 @@ def add_colours(colours_tsv, graph):
 
 
 class Path:
-    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
+    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=False):
         #initialising entries for path, where nodes is a list
         self.nodes = [nodes[0]]
 
@@ -37,13 +37,14 @@ class Path:
         self.relori = startdir
 
         #create edge list for beginning node
-        self.edges = self.update_edges(self.nodes[0], GFA)
+        self.edges = self.update_edges(self.nodes[0], GFA, colours)
 
-        #add sequences for detailed nodes if they are connected to eachother. If repeat = False, ignore target nodes already in path and set all frame complete to true
+        #add sequences for detailed nodes if they are connected to eachother. If colours is true, checks to see if next node contains at least one
+        #of the same colours in the original start node.
         if self.absori == "-":
-            self.seq = str(Seq(GFA._graph.node[str(self.nodes[0])]['sequence']).reverse_complement())
+            self.seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
         else:
-            self.seq = GFA._graph.node[str(self.nodes[0])]['sequence']
+            self.seq = GFA._graph.node[self.nodes[0]]['sequence']
 
         if len(nodes) == 1:
             pass
@@ -56,7 +57,7 @@ class Path:
                         self.seq = self.merge_path(self.seq, target, target_dir, ksize, GFA)
                         self.nodes.append(target)
                         self.relori = target_dir
-                        self.edges = self.update_edges(self.nodes[-1], GFA)
+                        self.edges = self.update_edges(self.nodes[-1], GFA, colours)
                     else:
                         pass
         self.len = len(self.seq)
@@ -83,17 +84,32 @@ class Path:
         self.all_frames_complete = False
         self.check_all_complete()
 
+
     #class method to genereate edges from input node
-    def update_edges(self, node, GFA):
+    def update_edges(self, node, GFA, colours):
         edge_list = []
         for sink_nodeid, sink_node_info in GFA._graph.edge[str(node)].items():
             # iterate through node info, picking out one of either virtual edges where the node and orientation of interest is the 'from_node'
             for virtual_edgeid, virtual_edge_info in sink_node_info.items():
                 if virtual_edge_info['from_node'] == str(node) and virtual_edge_info['from_orn'] == self.relori:
-                    node_tuple = (
-                        virtual_edge_info['from_node'], virtual_edge_info['from_orn'], virtual_edge_info['to_node'],
-                        virtual_edge_info['to_orn'])
-                    edge_list.append(node_tuple)
+                    #if colours is false, add the node regardless of colour
+                    if colours == False:
+                        node_tuple = (
+                            virtual_edge_info['from_node'], virtual_edge_info['from_orn'], virtual_edge_info['to_node'],
+                            virtual_edge_info['to_orn'])
+                        edge_list.append(node_tuple)
+                    #if colours is true, check that at least one colour present in the original start node is present in the new node.
+                    else:
+                        colours_equal = False
+                        for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
+                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][index] == '1':
+                                colours_equal = True
+                        if colours_equal == True:
+                            node_tuple = (
+                                virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
+                                virtual_edge_info['to_node'],
+                                virtual_edge_info['to_orn'])
+                            edge_list.append(node_tuple)
         return edge_list
 
     # class method to enable updating of kmers in seq from last node merged
@@ -127,6 +143,7 @@ class Path:
             else:
                 pass
 
+    #check if all frames are complete
     def check_all_complete(self):
         if self.frame1_complete == True and self.frame2_complete == True and self.frame3_complete == True:
             self.all_frames_complete = True
@@ -146,10 +163,10 @@ class Path:
         return merged_path
 
 #recursive algorithm to generate strings and nodes with codons
-def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
+def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=False):
 
     path_list = [start_node_list]
-    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete)
+    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete, colours=colours)
 
     if start_path.all_frames_complete == False:
         for neighbour in start_path.edges:
@@ -159,7 +176,7 @@ def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, sta
             else:
                 path = start_node_list + [target]
                 if start_path.len <= length:
-                    for iteration in recur_paths(GFA, path, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=start_path.frame1_complete, frame2_complete=start_path.frame2_complete, frame3_complete=start_path.frame3_complete):
+                    for iteration in recur_paths(GFA, path, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=start_path.frame1_complete, frame2_complete=start_path.frame2_complete, frame3_complete=start_path.frame3_complete, colours=colours):
                         path_list.append(iteration)
         del path_list[0]
     else:
@@ -167,7 +184,7 @@ def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, sta
     return path_list
 
 #run recur_paths for nodes within a list
-def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=float('inf')):
+def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=float('inf'), colours=False):
     all_ORF_paths = {}
 
     #search for reverse complement of codon1 if startdir is negative, else search for codon1
@@ -182,7 +199,7 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
         print("Computing node: {}".format(node))
         node_list = [node]
         all_ORF_paths[node] = []
-        all_ORF_paths[node] = recur_paths(GFA, node_list, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False)
+        all_ORF_paths[node] = recur_paths(GFA, node_list, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=colours)
         print("Completed node: {}".format(node))
 
     return all_ORF_paths
