@@ -80,3 +80,54 @@ Note: only single node in ORF_generation (node 2)
   5995243    0.319    0.000    0.319    0.000 {method 'items' of 'dict' objects}
   1311774    0.077    0.000    0.077    0.000 {method 'start' of 're.Match' objects}
     41115    0.017    0.000    0.017    0.000 {method 'translate' of 'str' objects}
+
+**Running with augmented graph**
+
+Variables:
+graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", "group3_SP_capsular_gene_bifrost.tsv")
+
+Command:
+ORF_generation(graph, "ATC", "ATG", 31, False, length=1000, colours=True)
+
+Note: only single node in ORF_generation (node 2)
+
+        106259468 function calls (105901629 primitive calls) in 58.266 seconds
+   Ordered by: standard name
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.027    0.027   58.266   58.266 <string>:1(<module>)
+   511311    0.328    0.000    2.733    0.000 Seq.py:1024(reverse_complement)
+  1022622    0.110    0.000    0.110    0.000 Seq.py:149(__str__)
+   511311    0.353    0.000    0.558    0.000 Seq.py:311(__getitem__)
+   511311    1.002    0.000    1.847    0.000 Seq.py:972(complement)
+  1533933    0.478    0.000    0.583    0.000 Seq.py:98(__init__)
+   511311    0.214    0.000    0.304    0.000 __init__.py:284(_get_base_alphabet)
+   357846    0.919    0.000    6.533    0.000 ggcaller_test.py:135(check_frame)
+   357846    1.592    0.000    1.893    0.000 ggcaller_test.py:137(<listcomp>)
+   357846    1.325    0.000    1.587    0.000 ggcaller_test.py:138(<listcomp>)
+   357846    0.334    0.000    0.334    0.000 ggcaller_test.py:141(<listcomp>)
+   357846    0.349    0.000    0.349    0.000 ggcaller_test.py:142(<listcomp>)
+  1207947    0.230    0.000    0.230    0.000 ggcaller_test.py:146(<genexpr>)
+   439231    0.095    0.000    0.095    0.000 ggcaller_test.py:157(check_all_complete)
+ 15981386    8.218    0.000   11.236    0.000 ggcaller_test.py:162(merge_path)
+   244170    8.599    0.000   11.794    0.000 ggcaller_test.py:175(create_ORF)
+   244170    0.955    0.000    1.122    0.000 ggcaller_test.py:177(<listcomp>)
+   244170    1.046    0.000    1.251    0.000 ggcaller_test.py:178(<listcomp>)
+ 357841/2    1.415    0.000   38.375   19.188 ggcaller_test.py:210(recur_paths)
+        1    0.395    0.395   58.239   58.239 ggcaller_test.py:250(ORF_generation)
+   439231   23.528    0.000   44.430    0.000 ggcaller_test.py:70(__init__)
+  1204032    0.478    0.000    1.712    0.000 re.py:225(finditer)
+  1204032    0.538    0.000    0.762    0.000 re.py:271(_compile)
+   357846    0.166    0.000    0.385    0.000 {built-in method builtins.any}
+        1    0.000    0.000   58.266   58.266 {built-in method builtins.exec}
+  5805831    0.567    0.000    0.567    0.000 {built-in method builtins.isinstance}
+ 16859848    1.017    0.000    1.017    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+ 21870348    1.307    0.000    1.307    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+   244170    0.030    0.000    0.030    0.000 {method 'extend' of 'list' objects}
+  1204032    0.472    0.000    0.472    0.000 {method 'finditer' of 're.Pattern' objects}
+        2    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+ 15981386    1.022    0.000    1.022    0.000 {method 'items' of 'dict' objects}
+   276451    0.029    0.000    0.029    0.000 {method 'keys' of 'dict' objects}
+ 15190998    0.937    0.000    0.937    0.000 {method 'start' of 're.Match' objects}
+   511311    0.191    0.000    0.191    0.000 {method 'translate' of 'str' objects}

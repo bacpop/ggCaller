@@ -76,7 +76,7 @@ class Path:
         self.relori = startdir
 
         #create edge list for beginning node
-        self.edges = self.update_edges(self.nodes[0], GFA, colours)
+        self.edges = GFA._graph.node[self.nodes[0]][self.absori]
 
         #add sequences for detailed nodes if they are connected to eachother. If colours is true, checks to see if next node contains at least one
         #of the same colours in the original start node.
@@ -89,22 +89,24 @@ class Path:
         self.len = len(self.seq)
         self.prev_codon_len = (self.len - 3 + 1)
 
+        #iterate through nodes to be added, adding them in their correct orientations and updating self.edges
         if len(nodes) == 1:
             pass
         else:
             for index, i in enumerate(nodes[1:]):
-                edge_list = self.edges
-                for edge in edge_list:
-                    source, source_dir, target, target_dir = edge
-                    if source == str(nodes[index]) and target == str(i):
+                for target, item in self.edges.items():
+                    if str(target) == str(i):
+                        if colours == False:
+                            target_dir = item
+                        else:
+                            target_dir, colours = item
                         self.prev_codon_len = (self.len - 3 + 1)
                         self.seq = self.merge_path(self.seq, target, target_dir, ksize, GFA)
                         self.len = len(self.seq)
                         self.nodes.append(target)
                         self.relori = target_dir
-                        self.edges = self.update_edges(self.nodes[-1], GFA, colours)
-                    else:
-                        pass
+                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                        break
 
         #generate codon k-mers for path
         #self.codons = self.update_kmers(self.seq)
@@ -129,47 +131,16 @@ class Path:
         self.all_frames_complete = False
         self.check_all_complete()
 
-    # class method to genereate edges from input node
-    def update_edges(self, node, GFA, colours):
-        edge_list = []
-        for sink_nodeid, sink_node_info in GFA._graph.edge[str(node)].items():
-            # iterate through node info, picking out one of either virtual edges where the node and orientation of interest is the 'from_node'
-            for virtual_edgeid, virtual_edge_info in sink_node_info.items():
-                if virtual_edge_info['from_node'] == str(node) and virtual_edge_info['from_orn'] == self.relori:
-                    # if colours is false, add the node regardless of colour
-                    if colours == False:
-                        node_tuple = (
-                            virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
-                            virtual_edge_info['to_node'],
-                            virtual_edge_info['to_orn'])
-                        edge_list.append(node_tuple)
-                    # if colours is true, check that at least one colour present in the original start node is present in the new node.
-                    else:
-                        colours_equal = False
-                        for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
-                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][index] == '1':
-                                colours_equal = True
-                        if colours_equal == True:
-                            node_tuple = (
-                                virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
-                                virtual_edge_info['to_node'],
-                                virtual_edge_info['to_orn'])
-                            edge_list.append(node_tuple)
-        return edge_list
-
     #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
     def check_frame(self, codon1, codon2, frame):
         modulus = frame - 1
         indices1 = [m.start() for m in re.finditer(codon1, self.seq)]
         indices2 = [m.start() for m in re.finditer(codon2, self.seq)]
-        codon1_frame = []
-        codon2_frame = []
-        for index in indices1:
-            if index % 3 == modulus or index == modulus:
-                codon1_frame.append(index)
-        for index in indices2:
-            if index % 3 == modulus or index == modulus:
-                codon2_frame.append(index)
+
+        #add to list if codon is within desired frame
+        codon1_frame = [index for index in indices1 if index % 3 == modulus or index == modulus]
+        codon2_frame = [index for index in indices2 if index % 3 == modulus or index == modulus]
+
         #need to check whether any of codon2 are in next unitig, as nodes of length 1 will have end codon1 which is not
         #paired with an end stop codon, meaning a ORF will be missing.
         if any(codon1_frame[0] < (a - (self.prev_codon_len - 1)) for a in codon2_frame) or not codon1_frame:
@@ -186,6 +157,35 @@ class Path:
     def check_all_complete(self):
         if self.frame1_complete == True and self.frame2_complete == True and self.frame3_complete == True:
             self.all_frames_complete = True
+
+    # class method to genereate edges from input node
+    def update_edges_old(self, node, GFA, colours):
+        edge_list = []
+        for sink_nodeid, sink_node_info in GFA._graph.edge[str(node)].items():
+            # iterate through node info, picking out one of either virtual edges where the node and orientation of interest is the 'from_node'
+            for virtual_edgeid, virtual_edge_info in sink_node_info.items():
+                if virtual_edge_info['from_node'] == str(node) and virtual_edge_info['from_orn'] == self.relori:
+                    # if colours is false, add the node regardless of colour
+                    if colours == False:
+                        node_tuple = (
+                            virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
+                            virtual_edge_info['to_node'],
+                            virtual_edge_info['to_orn'])
+                        edge_list.append(node_tuple)
+                    # if colours is true, check that at least one colour present in the original start node is present in the new node.
+                    else:
+                        colours_equal = False
+                        for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
+                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][
+                                index] == '1':
+                                colours_equal = True
+                        if colours_equal == True:
+                            node_tuple = (
+                                virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
+                                virtual_edge_info['to_node'],
+                                virtual_edge_info['to_orn'])
+                            edge_list.append(node_tuple)
+        return edge_list
 
     #merge paths between nodes, and update the orientiation of the final node
     def merge_path(self, self_seq, new_node, new_seq_dir, ksize, GFA):
@@ -242,8 +242,7 @@ def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, sta
     start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete, colours=colours)
 
     if start_path.all_frames_complete == False:
-        for neighbour in start_path.edges:
-            source, source_dir, target, target_dir = neighbour
+        for target in start_path.edges.keys():
             if repeat == False and target in start_path.nodes:
                 pass
             else:
@@ -313,7 +312,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
                                          frame3_complete=False, colours=colours)
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True, colours=False)
+                        frame2_complete=True, frame3_complete=True, colours=colours)
 
             #search for ORFs using create_ORF class method
             for frame in range(1,4):
@@ -344,7 +343,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         #calculate negative strand ORFs
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="-", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True, colours=False)
+                        frame2_complete=True, frame3_complete=True, colours=colours)
 
             for frame in range(1, 4):
                 all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
@@ -357,15 +356,16 @@ if __name__ == '__main__':
     from pygfa import *
     from Bio.Seq import Seq
     import re
-    graph = pygfa.gfa.GFA.from_file("test3.gfa")
-    add_colours("group3_SP_capsular_gene_bifrost.tsv", graph)
+
+    graph = generate_graph("test3.gfa", "group3_SP_capsular_gene_bifrost.tsv")
 
     #node_list = ['424', '425', '426']
     #test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
     #test_path.create_ORF("ATG", "ATC", 1)
-    node_list = ['240', '611', '447']
-    test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="-", frame1_complete=False,
-                     frame2_complete=False, frame3_complete=False, colours=True)
-
+    #node_list = ['240', '611', '447']
+    #test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="-", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=True)
+    nodes = ['424']
+    #recur_paths(graph, nodes, "ATC", "ATC", 31, False, 125, colours=True)
+    ORF_generation(graph, "ATC", "ATG", 31, False, length=150, colours=True)
 
     #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
