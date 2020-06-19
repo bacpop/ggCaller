@@ -76,37 +76,40 @@ class Path:
         self.frame3_complete = frame3_complete
 
         #check if k-mers are present depending on absolute orientiation of merged unitig based on first unitig, reversing ordering of codon indexing.
-        if frame1_complete == False:
-            self.check_frame(codon1, codon2, 1)
+        if codon1 != None and codon2 != None:
+            if frame1_complete == False:
+                self.check_frame(codon1, codon2, 1)
 
-        if frame2_complete == False:
-            self.check_frame(codon1, codon2, 2)
+            if frame2_complete == False:
+                self.check_frame(codon1, codon2, 2)
 
-        if frame3_complete == False:
-            self.check_frame(codon1, codon2, 3)
+            if frame3_complete == False:
+                self.check_frame(codon1, codon2, 3)
 
         #check if all paths are complete
         self.all_frames_complete = False
         self.check_all_complete()
 
-    #class method to genereate edges from input node
+    # class method to genereate edges from input node
     def update_edges(self, node, GFA, colours):
         edge_list = []
         for sink_nodeid, sink_node_info in GFA._graph.edge[str(node)].items():
             # iterate through node info, picking out one of either virtual edges where the node and orientation of interest is the 'from_node'
             for virtual_edgeid, virtual_edge_info in sink_node_info.items():
                 if virtual_edge_info['from_node'] == str(node) and virtual_edge_info['from_orn'] == self.relori:
-                    #if colours is false, add the node regardless of colour
+                    # if colours is false, add the node regardless of colour
                     if colours == False:
                         node_tuple = (
-                            virtual_edge_info['from_node'], virtual_edge_info['from_orn'], virtual_edge_info['to_node'],
+                            virtual_edge_info['from_node'], virtual_edge_info['from_orn'],
+                            virtual_edge_info['to_node'],
                             virtual_edge_info['to_orn'])
                         edge_list.append(node_tuple)
-                    #if colours is true, check that at least one colour present in the original start node is present in the new node.
+                    # if colours is true, check that at least one colour present in the original start node is present in the new node.
                     else:
                         colours_equal = False
                         for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
-                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][index] == '1':
+                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][
+                                index] == '1':
                                 colours_equal = True
                         if colours_equal == True:
                             node_tuple = (
@@ -115,14 +118,6 @@ class Path:
                                 virtual_edge_info['to_orn'])
                             edge_list.append(node_tuple)
         return edge_list
-
-    # class method to enable updating of kmers in seq from last node merged
-    #def update_kmers(self, seq):
-    #    kmer_list = []
-    #    for i in range(0, (len(seq) - 2)):
-    #        kmer = seq[i:i + 3]
-    #        kmer_list.append(kmer)
-    #    return kmer_list
 
     #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
     def check_frame(self, codon1, codon2, frame):
