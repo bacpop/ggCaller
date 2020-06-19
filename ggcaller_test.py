@@ -108,8 +108,7 @@ class Path:
                     else:
                         colours_equal = False
                         for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
-                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][
-                                index] == '1':
+                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][index] == '1':
                                 colours_equal = True
                         if colours_equal == True:
                             node_tuple = (
@@ -134,7 +133,7 @@ class Path:
                 codon2_frame.append(index)
         #need to check whether any of codon2 are in next unitig, as nodes of length 1 will have end codon1 which is not
         #paired with an end stop codon, meaning a ORF will be missing.
-        if any(a < (b - (self.prev_codon_len - 1)) for a in codon1_frame for b in codon2_frame) or not codon1_frame:
+        if any(codon1_frame[0] < (a - (self.prev_codon_len - 1)) for a in codon2_frame) or not codon1_frame:
             if frame == 1:
                 self.frame1_complete = True
             elif frame == 2:
@@ -247,8 +246,8 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
     #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
-    stop_nodes_pos = ['2']
-    stop_nodes_neg = ['2']
+    stop_nodes_pos = ['424']
+    stop_nodes_neg = ['424']
 
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
