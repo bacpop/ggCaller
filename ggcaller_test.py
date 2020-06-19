@@ -5,14 +5,14 @@ import re
 from Bio.Seq import Seq
 
 #generate graph
-test_graph = pygfa.gfa.GFA.from_file("test.gfa")
-test_graph_3 = pygfa.gfa.GFA.from_file("test3.gfa")
-group3_graph = pygfa.gfa.GFA.from_file("group3_SP_capsular_gene_bifrost.gfa")
+#test_graph = pygfa.gfa.GFA.from_file("test.gfa")
+#test_graph_3 = pygfa.gfa.GFA.from_file("test3.gfa")
+#group3_graph = pygfa.gfa.GFA.from_file("group3_SP_capsular_gene_bifrost.gfa")
 
-graph = group3_graph
+#graph = group3_graph
 
 #length graph
-len_graph = len(graph._graph.node)
+#len_graph = len(graph._graph.node)
 
 #takes tsv file from Bifrost query
 def add_colours(colours_tsv, graph):
@@ -25,6 +25,45 @@ def add_colours(colours_tsv, graph):
             node_id = line_list[0]
             colours_dict[node_id] = line_list[1:]
     nx.set_node_attributes(graph._graph, 'colours', colours_dict)
+
+def add_edges_to_node_attributes(graph, colours=False):
+    node_pos_dict = {}
+    node_neg_dict = {}
+    for item in graph._graph.adjacency_iter():
+        node_id, adjacency_info = item
+        node_pos_dict[node_id] = {}
+        node_neg_dict[node_id] = {}
+        for sink_node_id, sink_node_info in adjacency_info.items():
+            for virtual_edgeid, virtual_edge_info in sink_node_info.items():
+                #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node
+                if colours == True:
+                    if any(graph._graph.node[virtual_edge_info['to_node']]['colours'][i] == graph._graph.node[node_id]['colours'][i] for i in range(0, len(graph._graph.node[node_id]['colours']))):
+                        if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
+                            node_pos_dict[node_id][virtual_edge_info['to_node']] = (virtual_edge_info['to_orn'], graph._graph.node[virtual_edge_info['to_node']]['colours'])
+                        elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
+                            node_neg_dict[node_id][virtual_edge_info['to_node']] = (virtual_edge_info['to_orn'], graph._graph.node[virtual_edge_info['to_node']]['colours'])
+                #if not, just add the node and it's direction
+                else:
+                    if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
+                        node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
+                    elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
+                        node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
+    nx.set_node_attributes(graph._graph, '+', node_pos_dict)
+    nx.set_node_attributes(graph._graph, '-', node_neg_dict)
+
+#generate graph using colours or no colours file
+def generate_graph(GFA, colours_file=None):
+    #generate graph
+    graph = pygfa.gfa.GFA.from_file(GFA)
+
+    #add colours and node edge attributes
+    if colours_file != None:
+        add_colours(colours_file, graph)
+        add_edges_to_node_attributes(graph, colours=True)
+    else:
+        add_edges_to_node_attributes(graph, colours=False)
+
+    return graph
 
 
 class Path:
@@ -246,8 +285,8 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
     #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
-    stop_nodes_pos = ['424']
-    stop_nodes_neg = ['424']
+    stop_nodes_pos = ['2']
+    stop_nodes_neg = ['2']
 
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
