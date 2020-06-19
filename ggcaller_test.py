@@ -1,8 +1,8 @@
 #imports
 from pygfa import *
 import networkx as nx
+import re
 from Bio.Seq import Seq
-import copy
 
 #generate graph
 test_graph = pygfa.gfa.GFA.from_file("test.gfa")
@@ -68,7 +68,7 @@ class Path:
                         pass
 
         #generate codon k-mers for path
-        self.codons = self.update_kmers(self.seq)
+        #self.codons = self.update_kmers(self.seq)
 
         #create booleans to check if all paths are complete for iterative algorithm, update if codons are present
         self.frame1_complete = frame1_complete
@@ -117,18 +117,18 @@ class Path:
         return edge_list
 
     # class method to enable updating of kmers in seq from last node merged
-    def update_kmers(self, seq):
-        kmer_list = []
-        for i in range(0, (len(seq) - 2)):
-            kmer = seq[i:i + 3]
-            kmer_list.append(kmer)
-        return kmer_list
+    #def update_kmers(self, seq):
+    #    kmer_list = []
+    #    for i in range(0, (len(seq) - 2)):
+    #        kmer = seq[i:i + 3]
+    #        kmer_list.append(kmer)
+    #    return kmer_list
 
     #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
     def check_frame(self, codon1, codon2, frame):
         modulus = frame - 1
-        indices1 = [i for i, x in enumerate(self.codons) if x == codon1]
-        indices2 = [i for i, x in enumerate(self.codons) if x == codon2]
+        indices1 = [m.start() for m in re.finditer(codon1, self.seq)]
+        indices2 = [m.start() for m in re.finditer(codon2, self.seq)]
         codon1_frame = []
         codon2_frame = []
         for index in indices1:
@@ -170,8 +170,8 @@ class Path:
 
     def create_ORF(self, codon1, codon2, frame):
         modulus = frame - 1
-        indices1 = [i for i, x in enumerate(self.codons) if x == codon1]
-        indices2 = [i for i, x in enumerate(self.codons) if x == codon2]
+        indices1 = [m.start() for m in re.finditer(codon1, self.seq)]
+        indices2 = [m.start() for m in re.finditer(codon2, self.seq)]
         codon1_frame = []
         codon2_frame = []
         for index in indices1:
@@ -195,10 +195,10 @@ class Path:
         ORF_list = []
         for item in ORF_indices:
             start, stop = item
-            kmer = self.codons[start]
-            for i in range(start + 1, stop + 1):
-                kmer = kmer + self.codons[i][-1]
-            ORF_list.append(kmer)
+            ORF = self.seq[start] + self.seq[start + 1] + self.seq[start + 2]
+            for i in range(start + 3, stop + 3):
+                ORF = ORF + self.seq[i]
+            ORF_list.append(ORF)
         return ORF_list
 
 
@@ -248,9 +248,13 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     all_ORF_paths = {}
 
     #search for all nodes with stop codon with positive and negative strandedness
-    rc_codon1 = str(Seq(stop_codon).reverse_complement())
-    stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
-    stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
+    #rc_codon1 = str(Seq(stop_codon).reverse_complement())
+    #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
+
+    stop_nodes_pos = ['2']
+    stop_nodes_neg = ['2']
+
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
     for node in stop_nodes_pos:
@@ -319,6 +323,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
 if __name__ == '__main__':
     from pygfa import *
     from Bio.Seq import Seq
+    import re
     graph = pygfa.gfa.GFA.from_file("test3.gfa")
     add_colours("group3_SP_capsular_gene_bifrost.tsv", graph)
 
