@@ -89,12 +89,6 @@ class Path:
         self.all_frames_complete = False
         self.check_all_complete()
 
-        #create empty ORF variables
-        self.ORF_frame1 = None
-        self.ORF_frame2 = None
-        self.ORF_frame3 = None
-
-
     #class method to genereate edges from input node
     def update_edges(self, node, GFA, colours):
         edge_list = []
@@ -145,7 +139,7 @@ class Path:
                 codon2_frame.append(index)
         #need to check whether any of codon2 are in next unitig, as nodes of length 1 will have end codon1 which is not
         #paired with an end stop codon, meaning a ORF will be missing.
-        if any((a - (self.prev_codon_len - 1)) > b for a in codon2_frame for b in codon1_frame) or not codon1_frame:
+        if any(a < (b - (self.prev_codon_len - 1)) for a in codon1_frame for b in codon2_frame) or not codon1_frame:
             if frame == 1:
                 self.frame1_complete = True
             elif frame == 2:
@@ -186,15 +180,18 @@ class Path:
         for index in indices2:
             if index % 3 == modulus or index == modulus:
                 codon2_frame.append(index)
+
+        # iterate through start and stop codon lists, starting at first start codon after first stop codon and pairing that with next following stop codon etc.
         ORF_indices = []
-        last_codon2 = codon2_frame[0]
-        for codon_index_1 in codon1_frame:
-            if codon_index_1 > last_codon2:
-                for codon_index_2 in codon2_frame:
-                    if codon_index_2 > codon_index_1:
-                        ORF_indices.append((codon_index_1, codon_index_2))
-                        last_codon2 = codon_index_2
-                        break
+        if codon2_frame:
+            last_codon2 = codon2_frame[0]
+            for codon_index_1 in codon1_frame:
+                if codon_index_1 > last_codon2:
+                    for codon_index_2 in codon2_frame:
+                        if codon_index_2 > codon_index_1:
+                            ORF_indices.append((codon_index_1, codon_index_2))
+                            last_codon2 = codon_index_2
+                            break
         ORF_list = []
         for item in ORF_indices:
             start, stop = item
@@ -203,8 +200,6 @@ class Path:
                 kmer = kmer + self.codons[i][-1]
             ORF_list.append(kmer)
         return ORF_list
-
-
 
 
 #recursive algorithm to generate strings and nodes with codons
@@ -248,26 +243,74 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
         print("Completed node: {}".format(node))
 
     return all_ORF_paths
-#TODO: create function which generates ORFs for all 6 reading frames
-def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, startdir="+", length=float('inf'), colours=False):
+
+def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('inf'), colours=False):
     all_ORF_paths = {}
 
-    #search for reverse complement of stop_codon if startdir is negative, else search for codon1
-    if startdir == "-":
-        rc_codon1 = str(Seq(stop_codon).reverse_complement())
-        codon1_nodes = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
-    else:
-        codon1_nodes = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
+    #search for all nodes with stop codon with positive and negative strandedness
+    rc_codon1 = str(Seq(stop_codon).reverse_complement())
+    stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
-    #run recur_paths for each stop codon detected
-    for node in codon1_nodes:
-        print("Computing node: {}".format(node))
+    #run recur_paths for each stop codon detected, generating ORFs from node list
+    for node in stop_nodes_pos:
+        print("Computing node (pos): {}".format(node))
         node_list = [node]
-        stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=colours)
 
+        #intialise all frame dictionaries
+        all_ORF_paths[node] = {}
+        all_ORF_paths[node]['+'] = {}
+        all_ORF_paths[node]['-'] = {}
 
+        all_ORF_paths[node]['+'][1] = []
+        all_ORF_paths[node]['+'][2] = []
+        all_ORF_paths[node]['+'][3] = []
 
-        print("Completed node: {}".format(node))
+        all_ORF_paths[node]['-'][1] = []
+        all_ORF_paths[node]['-'][2] = []
+        all_ORF_paths[node]['-'][3] = []
+
+        #calculate positive strand paths
+        stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length,
+                                         startdir='+', frame1_complete=False, frame2_complete=False,
+                                         frame3_complete=False, colours=colours)
+        for node_path in stop_to_stop_paths:
+            path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=True,
+                        frame2_complete=True, frame3_complete=True, colours=False)
+
+            #search for ORFs using create_ORF class method
+            for frame in range(1,4):
+                all_ORF_paths[node]['+'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
+
+    for node in stop_nodes_neg:
+        print("Computing node (neg): {}".format(node))
+        node_list = [node]
+
+        # intialise all frame dictionaries if not present in positive strand search
+        if node not in all_ORF_paths:
+            all_ORF_paths[node] = {}
+            all_ORF_paths[node]['+'] = {}
+            all_ORF_paths[node]['-'] = {}
+
+            all_ORF_paths[node]['+'][1] = []
+            all_ORF_paths[node]['+'][2] = []
+            all_ORF_paths[node]['+'][3] = []
+
+            all_ORF_paths[node]['-'][1] = []
+            all_ORF_paths[node]['-'][2] = []
+            all_ORF_paths[node]['-'][3] = []
+
+        # calculate negative strand stop-stop paths
+        stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length,
+                                         startdir='-', frame1_complete=False, frame2_complete=False,
+                                         frame3_complete=False, colours=colours)
+        #calculate negative strand ORFs
+        for node_path in stop_to_stop_paths:
+            path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="-", frame1_complete=True,
+                        frame2_complete=True, frame3_complete=True, colours=False)
+
+            for frame in range(1, 4):
+                all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
 
     return all_ORF_paths
 
@@ -279,7 +322,12 @@ if __name__ == '__main__':
     graph = pygfa.gfa.GFA.from_file("test3.gfa")
     add_colours("group3_SP_capsular_gene_bifrost.tsv", graph)
 
-    node_list = ['424', '425', '426']
-    test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
-    test_path.create_ORF("ATG", "ATC", 1)
+    #node_list = ['424', '425', '426']
+    #test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
+    #test_path.create_ORF("ATG", "ATC", 1)
+    node_list = ['240', '611', '447']
+    test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="-", frame1_complete=False,
+                     frame2_complete=False, frame3_complete=False, colours=True)
+
+
     #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
