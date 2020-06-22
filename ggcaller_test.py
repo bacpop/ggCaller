@@ -67,7 +67,7 @@ def generate_graph(GFA, colours_file=None):
 
 
 class Path:
-    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
+    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, create_ORF=False):
         #initialising entries for path, where nodes is a list
         self.nodes = [nodes[0]]
 
@@ -78,65 +78,128 @@ class Path:
         #create edge list for beginning node
         self.edges = GFA._graph.node[self.nodes[0]][self.absori]
 
-        #add sequences for detailed nodes if they are connected to eachother. If colours is true, checks to see if next node contains at least one
-        #of the same colours in the original start node.
-        if self.absori == "-":
-            self.seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
+        #if create_ORF is false, run standard methods to check if frames are complete
+        if create_ORF == False:
+            #add sequences for detailed nodes if they are connected to eachother. If colours is true, checks to see if next node contains at least one
+            #of the same colours in the original start node.
+            if self.absori == "-":
+                self.iter_seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
+            else:
+                self.iter_seq = GFA._graph.node[self.nodes[0]]['sequence']
+
+            #set variable for sequence length of current unitig and number of codons generated before adding new nodes
+            self.len = len(self.iter_seq)
+            self.prev_codon_len = (self.len - 3 + 1)
+
+            #create indices for codons in each frame of self.prev_seq
+            indices1 = [m.start() for m in re.finditer(codon1, self.iter_seq)]
+            indices2 = [m.start() for m in re.finditer(codon2, self.iter_seq)]
+
+            self.codon1_frame1 = [index for index in indices1 if index % 3 == 0 or index == 0]
+            self.codon2_frame1 = [index for index in indices2 if index % 3 == 0 or index == 0]
+            self.codon1_frame2 = [index for index in indices1 if index % 3 == 1 or index == 1]
+            self.codon2_frame2 = [index for index in indices2 if index % 3 == 1 or index == 1]
+            self.codon1_frame3 = [index for index in indices1 if index % 3 == 2 or index == 2]
+            self.codon2_frame3 = [index for index in indices2 if index % 3 == 2 or index == 2]
+
+            #iterate through nodes to be added, adding them in their correct orientations and updating self.edges
+            if len(nodes) == 1:
+                pass
+            else:
+                for node in nodes[1:]:
+                    try:
+                        target_dir = self.edges[node]
+                        self.prev_codon_len = (self.len - 3 + 1)
+                        #generate indices for codon1 and codon 2
+                        self.iterate_sequence(node, target_dir, ksize, codon1, codon2, GFA)
+                        self.nodes.append(node)
+                        self.relori = target_dir
+                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                    except KeyError:
+                        pass
+
+
+            #create booleans to check if all paths are complete for iterative algorithm, update if codons are present
+            self.frame1_complete = frame1_complete
+            self.frame2_complete = frame2_complete
+            self.frame3_complete = frame3_complete
+
+            #check if k-mers are present depending on absolute orientiation of merged unitig based on first unitig, reversing ordering of codon indexing.
+            if codon1 != None and codon2 != None:
+                if self.frame1_complete == False:
+                    self.check_frame(1)
+
+                if self.frame2_complete == False:
+                    self.check_frame(2)
+
+                if self.frame3_complete == False:
+                    self.check_frame(3)
+
+            #check if all paths are complete
+            self.all_frames_complete = False
+            self.check_all_complete()
+
+        #run original merge path method to generate ORF if create_ORF is true, ignoring if frames are complete
         else:
-            self.seq = GFA._graph.node[self.nodes[0]]['sequence']
+            if self.absori == "-":
+                self.seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
+            else:
+                self.seq = GFA._graph.node[self.nodes[0]]['sequence']
+            if len(nodes) == 1:
+                pass
+            else:
+                for node in nodes[1:]:
+                    try:
+                        target_dir = self.edges[node]
+                        self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
+                        self.nodes.append(node)
+                        self.relori = target_dir
+                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                    except KeyError:
+                        pass
 
-        #set variable for sequence length of current unitig and number of codons generated before adding new nodes
-        self.len = len(self.seq)
-        self.prev_codon_len = (self.len - 3 + 1)
+    def iterate_sequence(self, node, target_dir, ksize, codon1, codon2, GFA):
+        if target_dir == "-":
+            self.iter_seq = str(Seq(GFA._graph.node[node]['sequence']).reverse_complement())
+        else:
+            self.iter_seq = GFA._graph.node[node]['sequence']
 
-        #iterate through nodes to be added, adding them in their correct orientations and updating self.edges
-        if len(nodes) == 1:
+        # generate indices of all codons in iter_seq
+        indices1 = [m.start() for m in re.finditer(codon1, self.iter_seq)]
+        indices2 = [m.start() for m in re.finditer(codon2, self.iter_seq)]
+
+        #create a new list for each index in new sequence, ensuring that its index is added to the self.len and that it is not repeated in the previous list
+        codon1_frame1 = [(index + self.len - (ksize - 1)) for index in indices1 if ((index + self.len - (ksize - 1)) % 3 == 0 or index == 0) and index > (ksize - 4)]
+        codon2_frame1 = [(index + self.len - (ksize - 1)) for index in indices2 if ((index + self.len - (ksize - 1)) % 3 == 0 or index == 0) and index > (ksize - 4)]
+        codon1_frame2 = [(index + self.len - (ksize - 1)) for index in indices1 if ((index + self.len - (ksize - 1)) % 3 == 1 or index == 1) and index > (ksize - 4)]
+        codon2_frame2 = [(index + self.len - (ksize - 1)) for index in indices2 if ((index + self.len - (ksize - 1)) % 3 == 1 or index == 1) and index > (ksize - 4)]
+        codon1_frame3 = [(index + self.len - (ksize - 1)) for index in indices1 if ((index + self.len - (ksize - 1)) % 3 == 2 or index == 2) and index > (ksize - 4)]
+        codon2_frame3 = [(index + self.len - (ksize - 1)) for index in indices2 if ((index + self.len - (ksize - 1)) % 3 == 2 or index == 2) and index > (ksize - 4)]
+
+        #append new indices to each codon1/2 frame variables
+        self.codon1_frame1 += codon1_frame1
+        self.codon2_frame1 += codon2_frame1
+        self.codon1_frame2 += codon1_frame2
+        self.codon2_frame2 += codon2_frame2
+        self.codon1_frame3 += codon1_frame3
+        self.codon2_frame3 += codon2_frame3
+
+        #update self.len variable to include length of new unitig, minus overlap
+        self.len = self.len + (len(self.iter_seq) - (ksize - 1))
+
+        #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
+    def check_frame(self, frame):
+        if frame == 1:
+            codon1_frame = self.codon1_frame1
+            codon2_frame = self.codon2_frame1
+        elif frame == 2:
+            codon1_frame = self.codon1_frame2
+            codon2_frame = self.codon2_frame2
+        elif frame == 3:
+            codon1_frame = self.codon1_frame3
+            codon2_frame = self.codon2_frame3
+        else:
             pass
-        else:
-            for node in nodes[1:]:
-                try:
-                    target_dir = self.edges[node]
-                    self.prev_codon_len = (self.len - 3 + 1)
-                    self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
-                    self.len = len(self.seq)
-                    self.nodes.append(node)
-                    self.relori = target_dir
-                    self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
-                except KeyError:
-                    pass
-
-        #generate codon k-mers for path
-        #self.codons = self.update_kmers(self.seq)
-
-        #create booleans to check if all paths are complete for iterative algorithm, update if codons are present
-        self.frame1_complete = frame1_complete
-        self.frame2_complete = frame2_complete
-        self.frame3_complete = frame3_complete
-
-        #check if k-mers are present depending on absolute orientiation of merged unitig based on first unitig, reversing ordering of codon indexing.
-        if codon1 != None and codon2 != None:
-            if frame1_complete == False:
-                self.check_frame(codon1, codon2, 1)
-
-            if frame2_complete == False:
-                self.check_frame(codon1, codon2, 2)
-
-            if frame3_complete == False:
-                self.check_frame(codon1, codon2, 3)
-
-        #check if all paths are complete
-        self.all_frames_complete = False
-        self.check_all_complete()
-
-    #check designated frame to see if it is complete. Also check if codon1 and codon2 are reverse due to reverse complementation
-    def check_frame(self, codon1, codon2, frame):
-        modulus = frame - 1
-        indices1 = [m.start() for m in re.finditer(codon1, self.seq)]
-        indices2 = [m.start() for m in re.finditer(codon2, self.seq)]
-
-        #add to list if codon is within desired frame
-        codon1_frame = [index for index in indices1 if index % 3 == modulus or index == modulus]
-        codon2_frame = [index for index in indices2 if index % 3 == modulus or index == modulus]
 
         #need to check whether any of codon2 are in next unitig, as nodes of length 1 will have end codon1 which is not
         #paired with an end stop codon, meaning a ORF will be missing.
@@ -228,7 +291,7 @@ class Path:
 def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
 
     path_list = [start_node_list]
-    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete)
+    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete, create_ORF=False)
 
     if start_path.all_frames_complete == False:
         for target in start_path.edges:
@@ -300,7 +363,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
                                          frame3_complete=False)
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True)
+                        frame2_complete=True, frame3_complete=True, create_ORF=True)
 
             #search for ORFs using create_ORF class method
             for frame in range(1,4):
@@ -331,7 +394,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         #calculate negative strand ORFs
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="-", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True)
+                        frame2_complete=True, frame3_complete=True, create_ORF=True)
 
             for frame in range(1, 4):
                 all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
@@ -351,9 +414,10 @@ if __name__ == '__main__':
     #test_path = Path(test_graph_3, node_list, 31, "ATC", "ATC")
     #test_path.create_ORF("ATG", "ATC", 1)
     #node_list = ['240', '611', '447']
-    #test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="-", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=True)
-    nodes = ['424']
-    recur_paths(graph, nodes, "ATC", "ATC", 31, False, 125)
-    ORF_generation(graph, "ATC", "ATG", 31, False, length=150)
+    node_list = ['424', '425', '426']
+    test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="+", frame1_complete=False,
+                     frame2_complete=False, frame3_complete=False)
+    #recur_paths(graph, nodes, "ATC", "ATC", 31, False, 125)
+    #ORF_generation(graph, "ATC", "ATG", 31, False, length=150)
 
     #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")
