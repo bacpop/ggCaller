@@ -39,9 +39,9 @@ def add_edges_to_node_attributes(graph, colours=False):
                 if colours == True:
                     if any(graph._graph.node[virtual_edge_info['to_node']]['colours'][i] == graph._graph.node[node_id]['colours'][i] for i in range(0, len(graph._graph.node[node_id]['colours']))):
                         if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
-                            node_pos_dict[node_id][virtual_edge_info['to_node']] = (virtual_edge_info['to_orn'], graph._graph.node[virtual_edge_info['to_node']]['colours'])
+                            node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                         elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
-                            node_neg_dict[node_id][virtual_edge_info['to_node']] = (virtual_edge_info['to_orn'], graph._graph.node[virtual_edge_info['to_node']]['colours'])
+                            node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                 #if not, just add the node and it's direction
                 else:
                     if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
@@ -67,7 +67,7 @@ def generate_graph(GFA, colours_file=None):
 
 
 class Path:
-    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=False):
+    def __init__(self, GFA, nodes, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
         #initialising entries for path, where nodes is a list
         self.nodes = [nodes[0]]
 
@@ -93,20 +93,17 @@ class Path:
         if len(nodes) == 1:
             pass
         else:
-            for i in nodes[1:]:
-                for target, item in self.edges.items():
-                    if str(target) == str(i):
-                        if colours == False:
-                            target_dir = item
-                        else:
-                            target_dir, colours = item
-                        self.prev_codon_len = (self.len - 3 + 1)
-                        self.seq = self.merge_path(self.seq, target, target_dir, ksize, GFA)
-                        self.len = len(self.seq)
-                        self.nodes.append(target)
-                        self.relori = target_dir
-                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
-                        break
+            for node in nodes[1:]:
+                try:
+                    target_dir = self.edges[node]
+                    self.prev_codon_len = (self.len - 3 + 1)
+                    self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
+                    self.len = len(self.seq)
+                    self.nodes.append(node)
+                    self.relori = target_dir
+                    self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                except KeyError:
+                    pass
 
         #generate codon k-mers for path
         #self.codons = self.update_kmers(self.seq)
@@ -228,19 +225,19 @@ class Path:
 
 
 #recursive algorithm to generate strings and nodes with codons
-def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=False):
+def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, startdir="+", frame1_complete=False, frame2_complete=False, frame3_complete=False):
 
     path_list = [start_node_list]
-    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete, colours=colours)
+    start_path = Path(GFA, start_node_list, ksize, startdir=startdir, codon1=codon1, codon2=codon2, frame1_complete=frame1_complete, frame2_complete=frame2_complete, frame3_complete=frame3_complete)
 
     if start_path.all_frames_complete == False:
-        for target in start_path.edges.keys():
+        for target in start_path.edges:
             if repeat == False and target in start_path.nodes:
                 pass
             else:
                 path = start_node_list + [target]
                 if start_path.len <= length:
-                    for iteration in recur_paths(GFA, path, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=start_path.frame1_complete, frame2_complete=start_path.frame2_complete, frame3_complete=start_path.frame3_complete, colours=colours):
+                    for iteration in recur_paths(GFA, path, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=start_path.frame1_complete, frame2_complete=start_path.frame2_complete, frame3_complete=start_path.frame3_complete):
                         path_list.append(iteration)
         del path_list[0]
     else:
@@ -248,7 +245,7 @@ def recur_paths(GFA, start_node_list, codon1, codon2, ksize, repeat, length, sta
     return path_list
 
 #run recur_paths for nodes within a list
-def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=float('inf'), colours=False):
+def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=float('inf')):
     all_ORF_paths = {}
 
     #search for reverse complement of codon1 if startdir is negative, else search for codon1
@@ -263,12 +260,12 @@ def run_recur_paths(GFA, codon1, codon2, ksize, repeat, startdir="+", length=flo
         print("Computing node: {}".format(node))
         node_list = [node]
         all_ORF_paths[node] = []
-        all_ORF_paths[node] = recur_paths(GFA, node_list, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=colours)
+        all_ORF_paths[node] = recur_paths(GFA, node_list, codon1, codon2, ksize, repeat, length, startdir=startdir, frame1_complete=False, frame2_complete=False, frame3_complete=False)
         print("Completed node: {}".format(node))
 
     return all_ORF_paths
 
-def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('inf'), colours=False):
+def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('inf')):
     all_ORF_paths = {}
 
     #search for all nodes with stop codon with positive and negative strandedness
@@ -276,9 +273,8 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
     #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
-    stop_nodes_pos = ['424']
-    stop_nodes_neg = ['424']
-
+    stop_nodes_pos = ['2']
+    stop_nodes_neg = ['2']
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
     for node in stop_nodes_pos:
@@ -301,10 +297,10 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         #calculate positive strand paths
         stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length,
                                          startdir='+', frame1_complete=False, frame2_complete=False,
-                                         frame3_complete=False, colours=colours)
+                                         frame3_complete=False)
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="+", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True, colours=colours)
+                        frame2_complete=True, frame3_complete=True)
 
             #search for ORFs using create_ORF class method
             for frame in range(1,4):
@@ -331,11 +327,11 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         # calculate negative strand stop-stop paths
         stop_to_stop_paths = recur_paths(GFA, node_list, stop_codon, stop_codon, ksize, repeat, length,
                                          startdir='-', frame1_complete=False, frame2_complete=False,
-                                         frame3_complete=False, colours=colours)
+                                         frame3_complete=False)
         #calculate negative strand ORFs
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, codon1=None, codon2=None, startdir="-", frame1_complete=True,
-                        frame2_complete=True, frame3_complete=True, colours=colours)
+                        frame2_complete=True, frame3_complete=True)
 
             for frame in range(1, 4):
                 all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
@@ -357,7 +353,7 @@ if __name__ == '__main__':
     #node_list = ['240', '611', '447']
     #test_path = Path(graph, node_list, 31, codon1="ATC", codon2="ATC", startdir="-", frame1_complete=False, frame2_complete=False, frame3_complete=False, colours=True)
     nodes = ['424']
-    #recur_paths(graph, nodes, "ATC", "ATC", 31, False, 125, colours=True)
-    ORF_generation(graph, "ATC", "ATG", 31, False, length=150, colours=True)
+    recur_paths(graph, nodes, "ATC", "ATC", 31, False, 125)
+    ORF_generation(graph, "ATC", "ATG", 31, False, length=150)
 
     #recur_paths(graph, node_list, "ATC", "ATC", 31, False, 2000, startdir="+")

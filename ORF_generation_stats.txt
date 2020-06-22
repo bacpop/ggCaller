@@ -131,3 +131,86 @@ Note: only single node in ORF_generation (node 2)
    276451    0.029    0.000    0.029    0.000 {method 'keys' of 'dict' objects}
  15190998    0.937    0.000    0.937    0.000 {method 'start' of 're.Match' objects}
    511311    0.191    0.000    0.191    0.000 {method 'translate' of 'str' objects}
+
+
+**Running with augmented graph and list comprehension in ORF-generation method**
+
+Variables:
+graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", "group3_SP_capsular_gene_bifrost.tsv")
+
+Command:
+ORF_generation(graph, "ATC", "ATG", 31, False, length=1000, colours=True)
+
+Note: only single node in ORF_generation (node 2) **
+
+         88458475 function calls (88100634 primitive calls) in 39.270 seconds
+   Ordered by: standard name
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.026    0.026   39.270   39.270 <string>:1(<module>)
+   511311    0.304    0.000    2.592    0.000 Seq.py:1024(reverse_complement)
+  1022622    0.102    0.000    0.102    0.000 Seq.py:149(__str__)
+   511311    0.327    0.000    0.525    0.000 Seq.py:311(__getitem__)
+   511311    0.979    0.000    1.762    0.000 Seq.py:972(complement)
+  1533933    0.448    0.000    0.551    0.000 Seq.py:98(__init__)
+   511311    0.189    0.000    0.271    0.000 __init__.py:284(_get_base_alphabet)
+        4    0.000    0.000    0.000    0.000 enum.py:284(__call__)
+        4    0.000    0.000    0.000    0.000 enum.py:526(__new__)
+        2    0.000    0.000    0.000    0.000 enum.py:836(__and__)
+   357846    0.849    0.000    5.963    0.000 ggcaller_test.py:132(check_frame)
+   357846    1.413    0.000    1.708    0.000 ggcaller_test.py:134(<listcomp>)
+   357846    1.231    0.000    1.480    0.000 ggcaller_test.py:135(<listcomp>)
+   357846    0.306    0.000    0.306    0.000 ggcaller_test.py:138(<listcomp>)
+   357846    0.271    0.000    0.271    0.000 ggcaller_test.py:139(<listcomp>)
+  1207947    0.212    0.000    0.212    0.000 ggcaller_test.py:143(<genexpr>)
+   439231    0.088    0.000    0.088    0.000 ggcaller_test.py:154(check_all_complete)
+ 15981386    7.875    0.000   10.738    0.000 ggcaller_test.py:187(merge_path)
+   244170    0.730    0.000    3.863    0.000 ggcaller_test.py:200(create_ORF)
+   244170    0.804    0.000    0.955    0.000 ggcaller_test.py:202(<listcomp>)
+   244170    0.940    0.000    1.133    0.000 ggcaller_test.py:203(<listcomp>)
+   244170    0.188    0.000    0.188    0.000 ggcaller_test.py:205(<listcomp>)
+   244170    0.226    0.000    0.226    0.000 ggcaller_test.py:206(<listcomp>)
+ 357841/2    1.258    0.000   29.456   14.728 ggcaller_test.py:228(recur_paths)
+        1    0.352    0.352   39.244   39.244 ggcaller_test.py:268(ORF_generation)
+   439231   14.987    0.000   33.606    0.000 ggcaller_test.py:70(__init__)
+  1204032    0.436    0.000    1.564    0.000 re.py:225(finditer)
+  1204032    0.467    0.000    0.682    0.000 re.py:271(_compile)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:432(_generate_overlap_table)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:453(_get_iscased)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:461(_get_literal_prefix)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:536(_compile_info)
+        4    0.000    0.000    0.000    0.000 sre_compile.py:595(isstring)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:598(_code)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:71(_compile)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:759(compile)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:111(__init__)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:160(__len__)
+        6    0.000    0.000    0.000    0.000 sre_parse.py:164(__getitem__)
+        6    0.000    0.000    0.000    0.000 sre_parse.py:172(append)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:174(getwidth)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:224(__init__)
+        8    0.000    0.000    0.000    0.000 sre_parse.py:233(__next)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:249(match)
+        6    0.000    0.000    0.000    0.000 sre_parse.py:254(get)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:286(tell)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:417(_parse_sub)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:475(_parse)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:76(__init__)
+        4    0.000    0.000    0.000    0.000 sre_parse.py:81(groups)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:903(fix_flags)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:919(parse)
+        2    0.000    0.000    0.000    0.000 {built-in method _sre.compile}
+   357846    0.158    0.000    0.360    0.000 {built-in method builtins.any}
+        1    0.000    0.000   39.270   39.270 {built-in method builtins.exec}
+  5805849    0.550    0.000    0.550    0.000 {built-in method builtins.isinstance}
+16859874/16859872    0.969    0.000    0.969    0.000 {built-in method builtins.len}
+        6    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        6    0.000    0.000    0.000    0.000 {built-in method builtins.ord}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+ 19838708    1.044    0.000    1.044    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+   244174    0.028    0.000    0.028    0.000 {method 'extend' of 'list' objects}
+  1204032    0.446    0.000    0.446    0.000 {method 'finditer' of 're.Pattern' objects}
+        2    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+ 15190998    0.889    0.000    0.889    0.000 {method 'start' of 're.Match' objects}
+   511311    0.179    0.000    0.179    0.000 {method 'translate' of 'str' objects}
