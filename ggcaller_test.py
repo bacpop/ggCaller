@@ -93,7 +93,7 @@ class Path:
         if len(nodes) == 1:
             pass
         else:
-            for index, i in enumerate(nodes[1:]):
+            for i in nodes[1:]:
                 for target, item in self.edges.items():
                     if str(target) == str(i):
                         if colours == False:
@@ -176,8 +176,7 @@ class Path:
                     else:
                         colours_equal = False
                         for index, item in enumerate(GFA._graph.node[self.nodes[0]]['colours']):
-                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][
-                                index] == '1':
+                            if item == '1' and GFA._graph.node[virtual_edge_info['to_node']]['colours'][index] == '1':
                                 colours_equal = True
                         if colours_equal == True:
                             node_tuple = (
@@ -205,14 +204,9 @@ class Path:
         modulus = frame - 1
         indices1 = [m.start() for m in re.finditer(codon1, self.seq)]
         indices2 = [m.start() for m in re.finditer(codon2, self.seq)]
-        codon1_frame = []
-        codon2_frame = []
-        for index in indices1:
-            if index % 3 == modulus or index == modulus:
-                codon1_frame.append(index)
-        for index in indices2:
-            if index % 3 == modulus or index == modulus:
-                codon2_frame.append(index)
+
+        codon1_frame = [index for index in indices1 if index % 3 == modulus or index == modulus]
+        codon2_frame = [index for index in indices2 if index % 3 == modulus or index == modulus]
 
         # iterate through start and stop codon lists, starting at first start codon after first stop codon and pairing that with next following stop codon etc.
         ORF_indices = []
@@ -228,9 +222,7 @@ class Path:
         ORF_list = []
         for item in ORF_indices:
             start, stop = item
-            ORF = self.seq[start] + self.seq[start + 1] + self.seq[start + 2]
-            for i in range(start + 3, stop + 3):
-                ORF = ORF + self.seq[i]
+            ORF = self.seq[start:(stop + 3)]
             ORF_list.append(ORF)
         return ORF_list
 
@@ -284,8 +276,8 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
     #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
-    stop_nodes_pos = ['2']
-    stop_nodes_neg = ['2']
+    stop_nodes_pos = ['424']
+    stop_nodes_neg = ['424']
 
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
