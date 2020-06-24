@@ -280,12 +280,9 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
     all_ORF_paths = {}
 
     # search for all nodes with stop codon with positive and negative strandedness
-    # rc_codon1 = str(Seq(stop_codon).reverse_complement())
-    # stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
-    # stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
-
-    stop_nodes_pos = ['424']
-    stop_nodes_neg = ['424']
+    rc_codon1 = str(Seq(stop_codon).reverse_complement())
+    stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
+    stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
     for node in stop_nodes_pos:

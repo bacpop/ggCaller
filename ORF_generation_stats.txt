@@ -321,6 +321,8 @@ Command:
 
 ORF_generation(graph, "ATC", "ATG", 31, False, length = 1000)
 
+Note: only single node in ORF_generation (node 2) **
+
 3090375 function calls (3060171 primitive calls) in 1.888 seconds
    Ordered by: standard name
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
@@ -385,3 +387,84 @@ ORF_generation(graph, "ATC", "ATG", 31, False, length = 1000)
         1    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
    563718    0.035    0.000    0.035    0.000 {method 'start' of 're.Match' objects}
     11520    0.004    0.000    0.004    0.000 {method 'translate' of 'str' objects}
+
+**Full run with all nodes with stop codons**
+
+Variables:
+graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, "ATC", "group3_SP_capsular_gene_bifrost.tsv")
+
+Command:
+
+ORF_generation(graph, "ATC", "ATG", 31, False, length = 2000)
+
+         885055802 function calls (878970071 primitive calls) in 637.736 seconds
+   Ordered by: standard name
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    1.253    1.253  637.736  637.736 <string>:1(<module>)
+  4544793    3.040    0.000   26.359    0.000 Seq.py:1024(reverse_complement)
+  9089586    0.981    0.000    0.981    0.000 Seq.py:149(__str__)
+  4544793    3.540    0.000    5.592    0.000 Seq.py:311(__getitem__)
+  4544793    9.722    0.000   17.727    0.000 Seq.py:972(complement)
+ 13634379    4.520    0.000    5.384    0.000 Seq.py:98(__init__)
+  4544793    1.972    0.000    2.737    0.000 __init__.py:284(_get_base_alphabet)
+        2    0.000    0.000    0.000    0.000 enum.py:284(__call__)
+        2    0.000    0.000    0.000    0.000 enum.py:526(__new__)
+        1    0.000    0.000    0.000    0.000 enum.py:836(__and__)
+        2    0.000    0.000    0.000    0.000 gfa.py:377(nodes_iter)
+        2    0.000    0.000    0.001    0.001 gfa.py:679(search)
+        2    0.001    0.000    0.001    0.001 gfa.py:700(search_on_nodes)
+  7743275  328.489    0.000  423.635    0.000 ggcaller_test2.py:151(__init__)
+ 65068727   48.951    0.000   76.919    0.000 ggcaller_test2.py:219(merge_path)
+  4970013   29.039    0.000  179.006    0.000 ggcaller_test2.py:232(create_ORF)
+  4970013   58.947    0.000   72.378    0.000 ggcaller_test2.py:234(<listcomp>)
+  4970013   31.891    0.000   37.231    0.000 ggcaller_test2.py:235(<listcomp>)
+  4970013   15.127    0.000   15.127    0.000 ggcaller_test2.py:237(<listcomp>)
+  4970013    6.271    0.000    6.271    0.000 ggcaller_test2.py:238(<listcomp>)
+6086604/874   18.473    0.000  302.099    0.346 ggcaller_test2.py:260(recur_paths)
+        1   11.241   11.241  636.483  636.483 ggcaller_test2.py:279(ORF_generation)
+      611    0.000    0.000    0.000    0.000 ggcaller_test2.py:284(<lambda>)
+      611    0.000    0.000    0.000    0.000 ggcaller_test2.py:285(<lambda>)
+        2    0.000    0.000    0.000    0.000 graph.py:610(nodes_iter)
+  9940026    4.656    0.000   16.651    0.000 re.py:225(finditer)
+  9940026    4.935    0.000    7.087    0.000 re.py:271(_compile)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:432(_generate_overlap_table)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:453(_get_iscased)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:461(_get_literal_prefix)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:536(_compile_info)
+        2    0.000    0.000    0.000    0.000 sre_compile.py:595(isstring)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:598(_code)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:71(_compile)
+        1    0.000    0.000    0.000    0.000 sre_compile.py:759(compile)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:111(__init__)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:160(__len__)
+        3    0.000    0.000    0.000    0.000 sre_parse.py:164(__getitem__)
+        3    0.000    0.000    0.000    0.000 sre_parse.py:172(append)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:174(getwidth)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:224(__init__)
+        4    0.000    0.000    0.000    0.000 sre_parse.py:233(__next)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:249(match)
+        3    0.000    0.000    0.000    0.000 sre_parse.py:254(get)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:286(tell)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:417(_parse_sub)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:475(_parse)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:76(__init__)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:81(groups)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:903(fix_flags)
+        1    0.000    0.000    0.000    0.000 sre_parse.py:919(parse)
+        1    0.000    0.000    0.000    0.000 {built-in method _sre.compile}
+        1    0.000    0.000  637.736  637.736 {built-in method builtins.exec}
+ 50843172    5.246    0.000    5.246    0.000 {built-in method builtins.isinstance}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.iter}
+7743288/7743287    0.541    0.000    0.541    0.000 {built-in method builtins.len}
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.ord}
+      874    0.009    0.000    0.009    0.000 {built-in method builtins.print}
+  6086604    0.896    0.000    0.896    0.000 {built-in method builtins.sum}
+379570108   21.290    0.000   21.290    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+  4970015    1.066    0.000    1.066    0.000 {method 'extend' of 'list' objects}
+  9940026    4.908    0.000    4.908    0.000 {method 'finditer' of 're.Pattern' objects}
+      874    0.001    0.000    0.001    0.000 {method 'format' of 'str' objects}
+        3    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+256822902   18.771    0.000   18.771    0.000 {method 'start' of 're.Match' objects}
+  4544793    1.960    0.000    1.960    0.000 {method 'translate' of 'str' objects}
