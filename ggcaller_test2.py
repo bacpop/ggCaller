@@ -42,13 +42,17 @@ def add_edges_to_node_attributes(GFA, colours=False):
     nx.set_node_attributes(GFA._graph, '-', node_neg_dict)
 
 #create binary arrays for each node for codon enumeration
-def enumerate_codon(GFA, codon, ksize):
+def enumerate_codon(GFA, codon_list, ksize):
     #initialise full and partial binary dictionaries
     full_dict = {}
     part_dict = {}
 
-    #generate reverse complement codon
-    rev_codon = str(Seq(codon).reverse_complement())
+    #generate reverse complement codon list
+    rev_codon_list = [str(Seq(codon).reverse_complement()) for codon in codon_list]
+
+    #compile regular express for codon index searching
+    pos_regex = re.compile((r'(' + '|'.join(codon_list) + r')'))
+    neg_regex = re.compile((r'(' + '|'.join(rev_codon_list) + r')'))
 
     #add to each dict for each node
     for node, item in GFA._graph.node.items():
@@ -56,8 +60,8 @@ def enumerate_codon(GFA, codon, ksize):
         seq = item['sequence']
 
         #enumerate codons in full sequence. For negative, indices must start from end of sequence.
-        pos_indices = [m.start() for m in re.finditer(codon, seq)]
-        neg_indices = [(len(seq) - m.start() - 3) for m in re.finditer(rev_codon, seq)]
+        pos_indices = [m.start() for m in pos_regex.finditer(seq)]
+        neg_indices = [(len(seq) - m.start() - 3) for m in neg_regex.finditer(seq)]
         pos_frame1 = 0
         pos_frame2 = 0
         pos_frame3 = 0
@@ -91,8 +95,8 @@ def enumerate_codon(GFA, codon, ksize):
         part_pos_seq = seq[ksize-1:]
         part_neg_seq = seq[:-(ksize-1)]
 
-        pos_indices = [m.start() for m in re.finditer(codon, part_pos_seq)]
-        neg_indices = [(len(part_neg_seq) - m.start() - 3) for m in re.finditer(rev_codon, part_neg_seq)]
+        pos_indices = [m.start() for m in pos_regex.finditer(part_pos_seq)]
+        neg_indices = [(len(part_neg_seq) - m.start() - 3) for m in neg_regex.finditer(part_neg_seq)]
         pos_frame1 = 0
         pos_frame2 = 0
         pos_frame3 = 0
@@ -130,7 +134,7 @@ def enumerate_codon(GFA, codon, ksize):
 
 
 #generate graph using colours or no colours file
-def generate_graph(GFA, ksize, codon=None, colours_file=None):
+def generate_graph(GFA, ksize, codon_list=None, colours_file=None):
     #generate graph
     graph = pygfa.gfa.GFA.from_file(GFA)
 
@@ -141,8 +145,8 @@ def generate_graph(GFA, ksize, codon=None, colours_file=None):
     else:
         add_edges_to_node_attributes(graph, colours=False)
 
-    if codon is not None:
-        enumerate_codon(graph, codon, ksize)
+    if codon_list is not None:
+        enumerate_codon(graph, codon_list, ksize)
 
     return graph
 
@@ -289,18 +293,21 @@ def recur_paths(GFA, start_node_list, ksize, repeat, length, startdir="+"):
         pass
     return path_list
 
-def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('inf')):
+def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=float('inf')):
     all_ORF_paths = {}
     all_ORF_paths['+'] = {}
     all_ORF_paths['-'] = {}
 
-    # search for all nodes with stop codon with positive and negative strandedness
-    rc_codon1 = str(Seq(stop_codon).reverse_complement())
-    #stop_nodes_neg = GFA.search(lambda x: rc_codon1 in x['sequence'], limit_type=gfa.Element.NODE)
-    #stop_nodes_pos = GFA.search(lambda x: stop_codon in x['sequence'], limit_type=gfa.Element.NODE)
+    #generate list of stop codon list
+    rev_stop_codon_list = [str(Seq(codon).reverse_complement()) for codon in stop_codon_list]
+    # search for all nodes with stop codon with positive and negative strandedness, add to set
+    stop_nodes_pos = set()
+    stop_nodes_neg = set()
 
-    stop_nodes_neg = ['424']
-    stop_nodes_pos = ['424']
+    for codon in stop_codon_list:
+        stop_nodes_pos.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=gfa.Element.NODE)))
+    for codon in rev_stop_codon_list:
+        stop_nodes_neg.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=gfa.Element.NODE)))
 
     #run recur_paths for each stop codon detected, generating ORFs from node list
     for node in stop_nodes_pos:
@@ -316,6 +323,7 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
             if any(i == '1' for i in path.path_colour):
                 #search for ORFs using create_ORF class method
                 for frame in range(1, 4):
+                    #TODO update so will iterate through all stop codons given
                     ORF_list = path.create_ORF(start_codon, stop_codon, frame)
                     for ORF in ORF_list:
                         if ORF not in all_ORF_paths['+']:
@@ -352,10 +360,11 @@ if __name__ == '__main__':
     from Bio.Seq import Seq
     import re
 
-    graph = generate_graph("test3.gfa", 31, "ATC", "group3_SP_capsular_gene_bifrost.tsv")
+    codon_list = ["TAA", "TGA", "TAG"]
+    graph = generate_graph("test3.gfa", 31, codon_list, "group3_SP_capsular_gene_bifrost.tsv")
     #node_list = ['424', '425', '426']
     #test_path = Path(graph, node_list, 31, startdir="+", create_ORF=False)
     #node_list = ['424']
     #recur_paths(graph, node_list, 31, False, 1000)
-    nodes_list = ['1', '2', '3']
-    test_path = Path(graph, nodes_list, 31, startdir="+", create_ORF=False)
+
+    ORF_generation(graph, codon_list, "ATG", 31, False, length=150)
