@@ -309,9 +309,15 @@ def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=floa
     for codon in rev_stop_codon_list:
         stop_nodes_neg.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=gfa.Element.NODE)))
 
-    #run recur_paths for each stop codon detected, generating ORFs from node list
+    #calculate length of lists for standard-out
+    len_pos_list = len(stop_nodes_pos)
+    len_neg_list = len(stop_nodes_neg)
+
+    #run recur_paths for each stop codon detected in positive list, generating ORFs from node list
+    count = 0
     for node in stop_nodes_pos:
-        print("Computing node (pos): {}".format(node))
+        count += 1
+        print("Computing positive node: {} / {}".format(count, len_pos_list))
         node_list = [node]
 
         #calculate positive strand paths
@@ -323,16 +329,19 @@ def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=floa
             if any(i == '1' for i in path.path_colour):
                 #search for ORFs using create_ORF class method
                 for frame in range(1, 4):
-                    #TODO update so will iterate through all stop codons given
-                    ORF_list = path.create_ORF(start_codon, stop_codon, frame)
-                    for ORF in ORF_list:
-                        if ORF not in all_ORF_paths['+']:
-                            all_ORF_paths['+'][ORF] = [path.path_colour]
-                        else:
-                            all_ORF_paths['+'][ORF].append(path.path_colour)
+                    for stop_codon in stop_codon_list:
+                        ORF_list = path.create_ORF(start_codon, stop_codon, frame)
+                        for ORF in ORF_list:
+                            if ORF not in all_ORF_paths['+']:
+                                all_ORF_paths['+'][ORF] = [path.path_colour]
+                            else:
+                                all_ORF_paths['+'][ORF].append(path.path_colour)
 
+    # run recur_paths for each stop codon detected in negative list, generating ORFs from node list
+    count = 0
     for node in stop_nodes_neg:
-        print("Computing node (neg): {}".format(node))
+        count += 1
+        print("Computing negative node: {} / {}".format(count, len_neg_list))
         node_list = [node]
 
         # calculate negative strand paths
@@ -344,12 +353,13 @@ def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=floa
             if any(i == '1' for i in path.path_colour):
                 # search for ORFs using create_ORF class method
                 for frame in range(1, 4):
-                    ORF_list = path.create_ORF(start_codon, stop_codon, frame)
-                    for ORF in ORF_list:
-                        if ORF not in all_ORF_paths['-']:
-                            all_ORF_paths['-'][ORF] = [path.path_colour]
-                        else:
-                            all_ORF_paths['-'][ORF].append(path.path_colour)
+                    for stop_codon in stop_codon_list:
+                        ORF_list = path.create_ORF(start_codon, stop_codon, frame)
+                        for ORF in ORF_list:
+                            if ORF not in all_ORF_paths['-']:
+                                all_ORF_paths['-'][ORF] = [path.path_colour]
+                            else:
+                                all_ORF_paths['-'][ORF].append(path.path_colour)
 
     return all_ORF_paths
 
