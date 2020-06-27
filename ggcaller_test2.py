@@ -159,6 +159,9 @@ class Path:
         #create edge list for beginning node
         self.edges = GFA._graph.node[self.nodes[0]][self.absori]
 
+        #create source node colours object
+        self.source_colour = GFA._graph.node[self.nodes[0]]['colours']
+
         #get node length and unitig frame modulus for appending node frame
         self.len = GFA._graph.node[self.nodes[0]]['slen']
         self.modulus = self.len % 3
@@ -173,6 +176,10 @@ class Path:
             else:
                 for node in nodes[1:]:
                     try:
+                        #check if nodes contains any of the same colours as sink node in path
+                        #if any(self.source_colour[i] == GFA._graph.node[node]['colours'][i] for i in range(0, len(self.source_colour))):
+
+                        #update relative orientiation based on newly added node
                         self.relori = self.edges[node]
                         #get part binary matrix of node to be added on, depending on length of previous nodes
                         part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.relori]
@@ -183,7 +190,7 @@ class Path:
                                 full_binary_matrix[i] = 0
 
                         #update path length, edges list, modulus and nodes list
-                        self.len += GFA._graph.node[node]['slen'] - (ksize - 1)
+                        self.len += (GFA._graph.node[node]['slen'] - (ksize - 1))
                         self.modulus = self.len % 3
                         self.edges = GFA._graph.node[node][self.relori]
                         self.nodes.append(node)
@@ -198,6 +205,7 @@ class Path:
 
         #run original merge path method to generate ORF if create_ORF is true, ignoring if frames are complete
         else:
+            self.path_colour = GFA._graph.node[self.nodes[0]]['colours'][:]
             if self.absori == "-":
                 self.seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
             else:
@@ -212,6 +220,11 @@ class Path:
                         self.nodes.append(node)
                         self.relori = target_dir
                         self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                        edge_colour = GFA._graph.node[node]['colours']
+                        #calculate shared colours through entire path length
+                        for i in range(0, len(self.path_colour)):
+                            if self.path_colour[i] == '1' and edge_colour[i] == '0':
+                                self.path_colour[i] = '0'
                     except KeyError:
                         pass
 
@@ -307,9 +320,11 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="+", create_ORF=True)
 
-            #search for ORFs using create_ORF class method
-            for frame in range(1,4):
-                all_ORF_paths[node]['+'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
+            #check to see if path contains at least one colour all the way through, otherwise ignore
+            if any(i == '1' for i in path.path_colour):
+                #search for ORFs using create_ORF class method
+                for frame in range(1,4):
+                    all_ORF_paths[node]['+'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
 
     for node in stop_nodes_neg:
         print("Computing node (neg): {}".format(node))
@@ -334,9 +349,11 @@ def ORF_generation(GFA, stop_codon, start_codon, ksize, repeat, length=float('in
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="-", create_ORF=True)
 
-            # search for ORFs using create_ORF class method
-            for frame in range(1, 4):
-                all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
+            # check to see if path contains at least one colour all the way through, otherwise ignore
+            if any(i == '1' for i in path.path_colour):
+                # search for ORFs using create_ORF class method
+                for frame in range(1, 4):
+                    all_ORF_paths[node]['-'][frame].extend(path.create_ORF(start_codon, stop_codon, frame))
 
     return all_ORF_paths
 
@@ -350,5 +367,7 @@ if __name__ == '__main__':
     graph = generate_graph("test3.gfa", 31, "ATC", "group3_SP_capsular_gene_bifrost.tsv")
     #node_list = ['424', '425', '426']
     #test_path = Path(graph, node_list, 31, startdir="+", create_ORF=False)
-    node_list = ['424']
-    recur_paths(graph, node_list, 31, False, 1000)
+    #node_list = ['424']
+    #recur_paths(graph, node_list, 31, False, 1000)
+    nodes_list = ['1', '2', '3']
+    test_path = Path(graph, nodes_list, 31, startdir="+", create_ORF=False)
