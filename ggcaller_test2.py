@@ -27,7 +27,7 @@ def add_edges_to_node_attributes(GFA, colours=False):
             for virtual_edgeid, virtual_edge_info in sink_node_info.items():
                 #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node
                 if colours == True:
-                    if any(GFA._graph.node[virtual_edge_info['to_node']]['colours'][i] == GFA._graph.node[node_id]['colours'][i] for i in range(0, len(GFA._graph.node[node_id]['colours']))):
+                    if any(GFA._graph.node[virtual_edge_info['to_node']]['colours'][i] == '1' and GFA._graph.node[node_id]['colours'][i] == '1' for i in range(0, len(GFA._graph.node[node_id]['colours']))):
                         if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
                             node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                         elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
@@ -176,8 +176,8 @@ class Path:
             else:
                 for node in nodes[1:]:
                     try:
-                        #check if nodes contains any of the same colours as sink node in path
-                        #if any(self.source_colour[i] == GFA._graph.node[node]['colours'][i] for i in range(0, len(self.source_colour))):
+                        #check if nodes contains any of the same colours as sink node in path - gives recursion limit error
+                        #if any(i == '1' and j == '1' for i, j in zip(self.source_colour, GFA._graph.node[node]['colours'])):
 
                         #update relative orientiation based on newly added node
                         self.relori = self.edges[node]
