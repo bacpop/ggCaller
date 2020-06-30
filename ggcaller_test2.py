@@ -293,7 +293,7 @@ def recur_paths(GFA, start_node_list, ksize, repeat, length, startdir="+"):
         pass
     return path_list
 
-def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=float('inf')):
+def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, path_freq=0, length=float('inf')):
     all_ORF_paths = {}
     all_ORF_paths['+'] = {}
     all_ORF_paths['-'] = {}
@@ -325,8 +325,9 @@ def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=floa
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="+", create_ORF=True)
 
-            #check to see if path contains at least one colour all the way through, otherwise ignore
-            if any(i == '1' for i in path.path_colour):
+            #check to see if path contains number of colours greater than frequency specified
+            path_colour_freq = (path.path_colour.count('1'))/len(path.path_colour)
+            if path_colour_freq >= path_freq and path_colour_freq > 0:
                 #search for ORFs using create_ORF class method
                 for frame in range(1, 4):
                     for stop_codon in stop_codon_list:
@@ -349,8 +350,9 @@ def ORF_generation(GFA, stop_codon_list, start_codon, ksize, repeat, length=floa
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="-", create_ORF=True)
 
-            # check to see if path contains at least one colour all the way through, otherwise ignore
-            if any(i == '1' for i in path.path_colour):
+            # check to see if path contains number of colours greater than frequency specified
+            path_colour_freq = (path.path_colour.count('1')) / len(path.path_colour)
+            if path_colour_freq >= path_freq and path_colour_freq > 0:
                 # search for ORFs using create_ORF class method
                 for frame in range(1, 4):
                     for stop_codon in stop_codon_list:
