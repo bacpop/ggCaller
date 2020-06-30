@@ -374,16 +374,38 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
 ###for debugging###
 
 if __name__ == '__main__':
+    import sys
     from pygfa import *
     from Bio.Seq import Seq
     import re
+    import networkx
+
+    graph_file = sys.argv[1]
+    tsv_file = sys.argv[2]
+    ksize = int(sys.argv[3])
+    path_length = int(sys.argv[4])
+    ORF_length = int(sys.argv[5])
+    output = sys.argv[6]
 
     stop_codon_list = ["TAA", "TGA", "TAG"]
     start_codon_list = ["ATG", "GTG", "TTG"]
-    graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
+    graph = generate_graph(graph_file, ksize, stop_codon_list, tsv_file)
+
+    ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, ksize, False, length=path_length)
+
+    with open(output, "w") as f:
+        count = 1
+        for key, item in ORF_output['+'].items():
+            if len(key) >= ORF_length:
+                f.write(">Gene_ID: " + str(count) + " Strand: +" + "\n" + str(key) + "\n")
+                count += 1
+        for key, item in ORF_output['-'].items():
+            if len(key) >= ORF_length:
+                f.write(">Gene_ID: " + str(count) + " Strand: -" + "\n" + str(key) + "\n")
+                count += 1
+
+    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
     #node_list = ['424', '425', '426']
     #test_path = Path(graph, node_list, 31, startdir="+", create_ORF=False)
     #node_list = ['424']
     #recur_paths(graph, node_list, 31, False, 1000)
-
-    ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=2000)
