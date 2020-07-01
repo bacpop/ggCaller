@@ -337,12 +337,14 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                 #search for ORFs using create_ORF class method
                 for frame in range(1, 4):
                     #search for each start codon and stop codon combination
-                    ORF_list = path.create_ORF(start_codon_list, stop_codon_list, frame)
-                    for ORF in ORF_list:
-                        if ORF not in all_ORF_paths['+']:
-                            all_ORF_paths['+'][ORF] = [path.path_colour]
-                        else:
-                            all_ORF_paths['+'][ORF].append(path.path_colour)
+                    for start_codon in start_codon_list:
+                        start_codon = [start_codon]
+                        ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
+                        for ORF in ORF_list:
+                            if ORF not in all_ORF_paths['+']:
+                                all_ORF_paths['+'][ORF] = [path.path_colour]
+                            else:
+                                all_ORF_paths['+'][ORF].append(path.path_colour)
 
     # run recur_paths for each stop codon detected in negative list, generating ORFs from node list
     count = 0
@@ -362,12 +364,14 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                 # search for ORFs using create_ORF class method
                 for frame in range(1, 4):
                     # search for each start codon and stop codon combination
-                    ORF_list = path.create_ORF(start_codon_list, stop_codon_list, frame)
-                    for ORF in ORF_list:
-                        if ORF not in all_ORF_paths['-']:
-                            all_ORF_paths['-'][ORF] = [path.path_colour]
-                        else:
-                            all_ORF_paths['-'][ORF].append(path.path_colour)
+                    for start_codon in start_codon_list:
+                        start_codon = [start_codon]
+                        ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
+                        for ORF in ORF_list:
+                            if ORF not in all_ORF_paths['-']:
+                                all_ORF_paths['-'][ORF] = [path.path_colour]
+                            else:
+                                all_ORF_paths['-'][ORF].append(path.path_colour)
 
     return all_ORF_paths
 
@@ -379,6 +383,13 @@ if __name__ == '__main__':
     from Bio.Seq import Seq
     import re
     import networkx
+
+    #for debugging
+    #stop_codon_list = ["TAA", "TGA", "TAG"]
+    #start_codon_list = ["ATG", "GTG", "TTG"]
+    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
+    #ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=2000)
+
 
     graph_file = sys.argv[1]
     tsv_file = sys.argv[2]
@@ -403,9 +414,3 @@ if __name__ == '__main__':
             if len(key) >= ORF_length:
                 f.write(">Gene_ID: " + str(count) + " Strand: -" + "\n" + str(key) + "\n")
                 count += 1
-
-    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
-    #node_list = ['424', '425', '426']
-    #test_path = Path(graph, node_list, 31, startdir="+", create_ORF=False)
-    #node_list = ['424']
-    #recur_paths(graph, node_list, 31, False, 1000)
