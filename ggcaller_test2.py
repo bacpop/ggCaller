@@ -25,18 +25,18 @@ def add_edges_to_node_attributes(GFA, colours=False):
         node_neg_dict[node_id] = {}
         for sink_node_id, sink_node_info in adjacency_info.items():
             for virtual_edgeid, virtual_edge_info in sink_node_info.items():
-                #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node
+                #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node and that from and to orn match
                 if colours == True:
                     if any(GFA._graph.node[virtual_edge_info['to_node']]['colours'][i] == '1' and GFA._graph.node[node_id]['colours'][i] == '1' for i in range(0, len(GFA._graph.node[node_id]['colours']))):
-                        if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
+                        if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+' and str(virtual_edge_info['to_orn']) == '+':
                             node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
-                        elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
+                        elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-' and str(virtual_edge_info['to_orn']) == '-':
                             node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                 #if not, just add the node and it's direction
                 else:
-                    if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
+                    if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+' and str(virtual_edge_info['to_orn']) == '+':
                         node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
-                    elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
+                    elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-' and str(virtual_edge_info['to_orn']) == '-':
                         node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
     nx.set_node_attributes(GFA._graph, '+', node_pos_dict)
     nx.set_node_attributes(GFA._graph, '-', node_neg_dict)
@@ -158,7 +158,7 @@ class Path:
 
         #initialise orientation; absori being orientation of first node in whole path, relori being orientation of last node added
         self.absori = startdir
-        self.relori = startdir
+        #self.relori = startdir
 
         #create edge list for beginning node
         self.edges = GFA._graph.node[self.nodes[0]][self.absori]
@@ -183,10 +183,10 @@ class Path:
                         #check if nodes contains any of the same colours as sink node in path - gives recursion limit error
                         #if any(i == '1' and j == '1' for i, j in zip(self.source_colour, GFA._graph.node[node]['colours'])):
 
-                        #update relative orientiation based on newly added node
-                        self.relori = self.edges[node]
+                        #update relative orientiation based on newly added node - removed as results in non-true sequences
+                        #self.relori = self.edges[node]
                         #get part binary matrix of node to be added on, depending on length of previous nodes
-                        part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.relori]
+                        part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.absori]
 
                         #conduct binary matrix subtraction to determine whether frames are complete
                         for i in range(0, 3):
@@ -196,7 +196,7 @@ class Path:
                         #update path length, edges list, modulus and nodes list
                         self.len += (GFA._graph.node[node]['slen'] - (ksize - 1))
                         self.modulus = self.len % 3
-                        self.edges = GFA._graph.node[node][self.relori]
+                        self.edges = GFA._graph.node[node][self.absori]
                         self.nodes.append(node)
                     except KeyError:
                         pass
@@ -219,11 +219,11 @@ class Path:
             else:
                 for node in nodes[1:]:
                     try:
-                        target_dir = self.edges[node]
-                        self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
+                        #target_dir = self.edges[node]
+                        self.seq = self.merge_path(self.seq, node, self.absori, ksize, GFA)
                         self.nodes.append(node)
-                        self.relori = target_dir
-                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
+                        #self.relori = target_dir
+                        self.edges = GFA._graph.node[self.nodes[-1]][self.absori]
                         edge_colour = GFA._graph.node[node]['colours']
                         #calculate shared colours through entire path length
                         for i in range(0, len(self.path_colour)):
