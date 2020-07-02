@@ -28,15 +28,15 @@ def add_edges_to_node_attributes(GFA, colours=False):
                 #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node and that from and to orn match
                 if colours == True:
                     if any(GFA._graph.node[virtual_edge_info['to_node']]['colours'][i] == '1' and GFA._graph.node[node_id]['colours'][i] == '1' for i in range(0, len(GFA._graph.node[node_id]['colours']))):
-                        if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+' and str(virtual_edge_info['to_orn']) == '+':
+                        if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
                             node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
-                        elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-' and str(virtual_edge_info['to_orn']) == '-':
+                        elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
                             node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                 #if not, just add the node and it's direction
                 else:
-                    if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+' and str(virtual_edge_info['to_orn']) == '+':
+                    if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
                         node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
-                    elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-' and str(virtual_edge_info['to_orn']) == '-':
+                    elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
                         node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
     nx.set_node_attributes(GFA._graph, '+', node_pos_dict)
     nx.set_node_attributes(GFA._graph, '-', node_neg_dict)
@@ -158,7 +158,7 @@ class Path:
 
         #initialise orientation; absori being orientation of first node in whole path, relori being orientation of last node added
         self.absori = startdir
-        #self.relori = startdir
+        self.relori = startdir
 
         #create edge list for beginning node
         self.edges = GFA._graph.node[self.nodes[0]][self.absori]
@@ -183,10 +183,10 @@ class Path:
                         #check if nodes contains any of the same colours as sink node in path - gives recursion limit error
                         #if any(i == '1' and j == '1' for i, j in zip(self.source_colour, GFA._graph.node[node]['colours'])):
 
-                        #update relative orientiation based on newly added node - removed as results in non-true sequences
-                        #self.relori = self.edges[node]
+                        #update relative orientiation based on newly added node - beware, results in non-true sequences
+                        self.relori = self.edges[node]
                         #get part binary matrix of node to be added on, depending on length of previous nodes
-                        part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.absori]
+                        part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.relori]
 
                         #conduct binary matrix subtraction to determine whether frames are complete
                         for i in range(0, 3):
@@ -196,7 +196,7 @@ class Path:
                         #update path length, edges list, modulus and nodes list
                         self.len += (GFA._graph.node[node]['slen'] - (ksize - 1))
                         self.modulus = self.len % 3
-                        self.edges = GFA._graph.node[node][self.absori]
+                        self.edges = GFA._graph.node[node][self.relori]
                         self.nodes.append(node)
                     except KeyError:
                         pass
@@ -219,11 +219,11 @@ class Path:
             else:
                 for node in nodes[1:]:
                     try:
-                        #target_dir = self.edges[node]
-                        self.seq = self.merge_path(self.seq, node, self.absori, ksize, GFA)
+                        target_dir = self.edges[node]
+                        self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
                         self.nodes.append(node)
-                        #self.relori = target_dir
-                        self.edges = GFA._graph.node[self.nodes[-1]][self.absori]
+                        self.relori = target_dir
+                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
                         edge_colour = GFA._graph.node[node]['colours']
                         #calculate shared colours through entire path length
                         for i in range(0, len(self.path_colour)):
@@ -375,7 +375,35 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
 
     return all_ORF_paths
 
-###for debugging###
+#function to query paths containing a sequence
+def query_seq_path(GFA, seq, ksize):
+    kmers = []
+    path_list = []
+
+    #need to look for k-mers of length ksize-1 as this is size of overlap in graph
+    ksize = ksize - 1
+    for i in range(len(seq) - ksize + 1):
+        kmer = seq[i: i+ksize]
+        print(kmer)
+        kmers.append(kmer)
+
+    #search for kmer within graph, append kmer to graph if it is not present
+    for kmer in kmers:
+        #search for kmer
+        node_list = GFA.search(lambda x: kmer in x['sequence'], limit_type=gfa.Element.NODE)
+
+        if not node_list:
+            rev_kmer = str(Seq(kmer).reverse_complement())
+            node_list = GFA.search(lambda x: rev_kmer in x['sequence'], limit_type=gfa.Element.NODE)
+
+        #if node list is empty of node list length is greater than 1, put none in node
+        #iterate through node list if there is only a single node, add it to the path_list if it is not present already
+        path_list.append(node_list)
+
+
+
+    return path_list
+
 
 if __name__ == '__main__':
     import sys
@@ -388,6 +416,11 @@ if __name__ == '__main__':
     #stop_codon_list = ["TAA", "TGA", "TAG"]
     #start_codon_list = ["ATG", "GTG", "TTG"]
     #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
+    #path = ['98', '99', '468', '276', '103', '469', '105', '277', '470', '108', '109', '471', '112']
+    #test_path = Path(graph, path, 31, create_ORF=True)
+    #start_codon = ["ATG"]
+    #test_path.create_ORF(start_codon, stop_codon_list, 2)
+    #recur_paths(graph, start_node, 31, False, 10000)
     #ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=2000)
 
 
