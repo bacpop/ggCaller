@@ -342,9 +342,11 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                         ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
                         for ORF in ORF_list:
                             if ORF not in all_ORF_paths['+']:
-                                all_ORF_paths['+'][ORF] = [path.path_colour]
+                                all_ORF_paths['+'][ORF] = path.path_colour
                             else:
-                                all_ORF_paths['+'][ORF].append(path.path_colour)
+                                for i in range(0, len(all_ORF_paths['+'][ORF])):
+                                    if all_ORF_paths['+'][ORF][i] == '0' and path.path_colour[i] == '1':
+                                        all_ORF_paths['+'][ORF][i] = '1'
 
     # run recur_paths for each stop codon detected in negative list, generating ORFs from node list
     count = 0
@@ -369,9 +371,11 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                         ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
                         for ORF in ORF_list:
                             if ORF not in all_ORF_paths['-']:
-                                all_ORF_paths['-'][ORF] = [path.path_colour]
+                                all_ORF_paths['-'][ORF] = path.path_colour
                             else:
-                                all_ORF_paths['-'][ORF].append(path.path_colour)
+                                for i in range(0, len(all_ORF_paths['-'][ORF])):
+                                    if all_ORF_paths['-'][ORF][i] == '0' and path.path_colour[i] == '1':
+                                        all_ORF_paths['-'][ORF][i] = '1'
 
     return all_ORF_paths
 
@@ -384,7 +388,6 @@ def query_seq_path(GFA, seq, ksize):
     ksize = ksize - 1
     for i in range(len(seq) - ksize + 1):
         kmer = seq[i: i+ksize]
-        print(kmer)
         kmers.append(kmer)
 
     #search for kmer within graph, append kmer to graph if it is not present
@@ -400,8 +403,6 @@ def query_seq_path(GFA, seq, ksize):
         #iterate through node list if there is only a single node, add it to the path_list if it is not present already
         path_list.append(node_list)
 
-
-
     return path_list
 
 
@@ -416,10 +417,11 @@ if __name__ == '__main__':
     #stop_codon_list = ["TAA", "TGA", "TAG"]
     #start_codon_list = ["ATG", "GTG", "TTG"]
     #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
-    #path = ['98', '99', '468', '276', '103', '469', '105', '277', '470', '108', '109', '471', '112']
+    #ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
+    #path = ['151', '152', '153', '154', '155', '156', '157', '158', '159', '160', '161']
     #test_path = Path(graph, path, 31, create_ORF=True)
     #start_codon = ["ATG"]
-    #test_path.create_ORF(start_codon, stop_codon_list, 2)
+    #test_path.create_ORF(start_codon, stop_codon_list, 1)
     #recur_paths(graph, start_node, 31, False, 10000)
     #ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=2000)
 
