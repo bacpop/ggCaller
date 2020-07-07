@@ -342,7 +342,7 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                         ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
                         for ORF in ORF_list:
                             if ORF not in all_ORF_paths['+']:
-                                all_ORF_paths['+'][ORF] = path.path_colour
+                                all_ORF_paths['+'][ORF] = path.path_colour[:]
                             else:
                                 for i in range(0, len(all_ORF_paths['+'][ORF])):
                                     if all_ORF_paths['+'][ORF][i] == '0' and path.path_colour[i] == '1':
@@ -371,7 +371,7 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
                         ORF_list = path.create_ORF(start_codon, stop_codon_list, frame)
                         for ORF in ORF_list:
                             if ORF not in all_ORF_paths['-']:
-                                all_ORF_paths['-'][ORF] = path.path_colour
+                                all_ORF_paths['-'][ORF] = path.path_colour[:]
                             else:
                                 for i in range(0, len(all_ORF_paths['-'][ORF])):
                                     if all_ORF_paths['-'][ORF][i] == '0' and path.path_colour[i] == '1':
@@ -443,9 +443,9 @@ if __name__ == '__main__':
         count = 1
         for key, item in ORF_output['+'].items():
             if len(key) >= ORF_length:
-                f.write(">Gene_ID: " + str(count) + " Strand: +" + "\n" + str(key) + "\n")
+                f.write(">[Gene_ID: " + str(count) + "] [Strand: +] [Colours: " + str(item) + "]\n" + str(key) + "\n")
                 count += 1
         for key, item in ORF_output['-'].items():
             if len(key) >= ORF_length:
-                f.write(">Gene_ID: " + str(count) + " Strand: -" + "\n" + str(key) + "\n")
+                f.write(">[Gene_ID: " + str(count) + "] [Strand: -] [Colours: " + str(item) + "]\n" + str(key) + "\n")
                 count += 1
