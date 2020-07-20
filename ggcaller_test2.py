@@ -280,19 +280,25 @@ class Path:
 
 
 #recursive algorithm to generate strings and nodes with codons
-def recur_paths(GFA, start_node_list, ksize, repeat, length, startdir="+"):
+def recur_paths(GFA, start_node_list, ksize, repeat, length, path_cache, startdir="+"):
 
     path_list = [start_node_list]
     start_path = Path(GFA, start_node_list, ksize, startdir=startdir, create_ORF=False)
 
     if start_path.all_frames_complete == False:
         for target in start_path.edges:
+            #check if repeat traversal of nodes is allowed
             if repeat == False and target in start_path.nodes:
                 pass
+            #check for cached paths already completed for target node.
+            elif target in path_cache[start_path.edges[target]]:
+                iteration = [start_node_list + path for path in path_cache[start_path.edges[target]][target]]
+                path_list += iteration
+            #recursive traversal of graph
             else:
                 path = start_node_list + [target]
                 if start_path.len <= length:
-                    for iteration in recur_paths(GFA, path, ksize, repeat, length, startdir=startdir):
+                    for iteration in recur_paths(GFA, path, ksize, repeat, length, path_cache, startdir=startdir):
                         path_list.append(iteration)
         del path_list[0]
     else:
@@ -303,6 +309,11 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
     all_ORF_paths = {}
     all_ORF_paths['+'] = {}
     all_ORF_paths['-'] = {}
+
+    #path cache to return paths that have already been traversed
+    path_cache = {}
+    path_cache['+'] = {}
+    path_cache['-'] = {}
 
     #generate list of stop codon list
     rev_stop_codon_list = [str(Seq(codon).reverse_complement()) for codon in stop_codon_list]
@@ -327,7 +338,10 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
         node_list = [node]
 
         #calculate positive strand paths
-        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, startdir="+")
+        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="+")
+        path_cache['+'][node] = stop_to_stop_paths
+
+        #iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="+", create_ORF=True)
 
@@ -356,7 +370,10 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
         node_list = [node]
 
         # calculate negative strand paths
-        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, startdir="-")
+        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="-")
+        path_cache['-'][node] = stop_to_stop_paths
+
+        # iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:
             path = Path(GFA, node_path, ksize, startdir="-", create_ORF=True)
 
@@ -414,10 +431,10 @@ if __name__ == '__main__':
     import networkx
 
     #for debugging
-    #stop_codon_list = ["TAA", "TGA", "TAG"]
-    #start_codon_list = ["ATG", "GTG", "TTG"]
-    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
-    #ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
+    stop_codon_list = ["TAA", "TGA", "TAG"]
+    start_codon_list = ["ATG", "GTG", "TTG"]
+    graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
+    ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
     #path = ['151', '152', '153', '154', '155', '156', '157', '158', '159', '160', '161']
     #test_path = Path(graph, path, 31, create_ORF=True)
     #start_codon = ["ATG"]
