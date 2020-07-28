@@ -25,7 +25,7 @@ from pygfa.dovetail_operations.iterator import DovetailIterator
 
 from pygfa.graph_operations.compression import compression_graph_by_nodes, compression_graph_by_edges
 from pygfa.graph_operations.overlap_consistency import check_overlap
-from benchmark.extract_subgraph import extract_subgraph
+#from benchmark.extract_subgraph import extract_subgraph
 
 GRAPH_LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def _index(obj, other):
     """Given an object O and a list
     of objects L check that exist an object O'
     in the list such that O == O'.
-    
+
     :return True: If O' exists.
     :return: The position of O' in the list.
     """
@@ -987,8 +987,8 @@ class GFA(DovetailIterator):
         FOLDER, _ = os.path.split(__file__)
         return check_overlap(self, FOLDER.rstrip('pygfa'), external_file)
 
-    def subgraphs_extractor(self, n_source, distance):
-        extract_subgraph(self, n_source, distance)
+    #def subgraphs_extractor(self, n_source, distance):
+        #extract_subgraph(self, n_source, distance)
 
 if __name__ == '__main__': #pragma: no cover
     pass

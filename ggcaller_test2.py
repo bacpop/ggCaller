@@ -339,7 +339,7 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
 
         #calculate positive strand paths
         stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="+")
-        path_cache['+'][node] = stop_to_stop_paths
+        path_cache['+'][node] = stop_to_stop_paths[:]
 
         #iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:
@@ -371,7 +371,7 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
 
         # calculate negative strand paths
         stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="-")
-        path_cache['-'][node] = stop_to_stop_paths
+        path_cache['-'][node] = stop_to_stop_paths[:]
 
         # iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:
@@ -431,10 +431,10 @@ if __name__ == '__main__':
     import networkx
 
     #for debugging
-    stop_codon_list = ["TAA", "TGA", "TAG"]
-    start_codon_list = ["ATG", "GTG", "TTG"]
-    graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
-    ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
+    #stop_codon_list = ["TAA", "TGA", "TAG"]
+    #start_codon_list = ["ATG", "GTG", "TTG"]
+    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
+    #ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
     #path = ['151', '152', '153', '154', '155', '156', '157', '158', '159', '160', '161']
     #test_path = Path(graph, path, 31, create_ORF=True)
     #start_codon = ["ATG"]
