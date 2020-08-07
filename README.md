@@ -1,17 +1,17 @@
-# ggCaller: a graph gene caller for Bifrost graphs
+# ggCaller: a gene caller for Bifrost graphs
 
 Traverses Bifrost graphs to identify putative protein coding sequences, known as open reading frames (ORFs).
 
 ggCaller uses pyGFA to convert Bifrost graphs to Networkx graph objects to enable graph traversal.
 
 ## Requirements
-- python==3.8
+- python3
 - biopython
 - networkx==1.11
 
 ## Installation
 
-###Cloning the repository
+### Cloning the repository
 
 ```git clone --recursive https://github.com/samhorsfield96/ggCaller```
 
