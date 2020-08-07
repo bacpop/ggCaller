@@ -430,19 +430,6 @@ if __name__ == '__main__':
     import re
     import networkx
 
-    #for debugging
-    #stop_codon_list = ["TAA", "TGA", "TAG"]
-    #start_codon_list = ["ATG", "GTG", "TTG"]
-    #graph = generate_graph("group3_SP_capsular_gene_bifrost.gfa", 31, stop_codon_list, "group3_SP_capsular_gene_bifrost.tsv")
-    #ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=10000)
-    #path = ['151', '152', '153', '154', '155', '156', '157', '158', '159', '160', '161']
-    #test_path = Path(graph, path, 31, create_ORF=True)
-    #start_codon = ["ATG"]
-    #test_path.create_ORF(start_codon, stop_codon_list, 1)
-    #recur_paths(graph, start_node, 31, False, 10000)
-    #ORF_generation(graph, stop_codon_list, start_codon_list, 31, False, length=2000)
-
-
     graph_file = sys.argv[1]
     tsv_file = sys.argv[2]
     ksize = int(sys.argv[3])
