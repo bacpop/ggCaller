@@ -1,6 +1,6 @@
 # ggCaller: a gene caller for Bifrost graphs
 
-Traverses Bifrost graphs to identify putative protein coding sequences, known as open reading frames (ORFs).
+Traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).
 
 ggCaller uses pyGFA to convert Bifrost graphs to Networkx graph objects to enable graph traversal.
 
