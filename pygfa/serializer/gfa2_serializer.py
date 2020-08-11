@@ -418,13 +418,13 @@ def serialize_graph(graph, write_header=True):
     if write_header:
         string_serialize = "H\tVN:Z:2.0\n"
 
-    for node_id, node_ in graph.nodes_iter(data=True):
+    for node_id, node_ in graph.nodes(data=True):
         node_serialize = serialize_node(node_, node_id)
         if len(node_serialize) > 0:
             string_serialize += node_serialize + "\n"
 
-    for from_node, to_node, key in graph.edges_iter(keys=True):
-        edge_serialize = serialize_edge(graph.edge[from_node][to_node][key], key)
+    for from_node, to_node, key in graph.edges(keys=True):
+        edge_serialize = serialize_edge(graph.get_edge_data(from_node, to_node, key), key)
         if len(edge_serialize) > 0:
             string_serialize += edge_serialize + "\n"
 

@@ -30,7 +30,7 @@ def dovetails_remove_small_components(gfa_, min_length):
     for conn_comp in dovetails_nodes_connected_components(gfa_):
         length = 0
         for nid in conn_comp:
-            node_ = gfa_.node(nid)
+            node_ = gfa_.nodes(identifier = nid)
             try:
                 length += node_['slen']
             except (TypeError, KeyError):

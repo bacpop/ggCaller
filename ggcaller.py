@@ -15,12 +15,12 @@ def add_colours(colours_tsv, GFA):
             line_list = (line.strip()).split()
             node_id = line_list[0]
             colours_dict[node_id] = line_list[1:]
-    nx.set_node_attributes(GFA._graph, 'colours', colours_dict)
+    nx.set_node_attributes(GFA._graph, colours_dict, 'colours')
 
 def add_edges_to_node_attributes(GFA, colours=False):
     node_pos_dict = {}
     node_neg_dict = {}
-    for item in GFA._graph.adjacency_iter():
+    for item in GFA._graph.adjacency():
         node_id, adjacency_info = item
         node_pos_dict[node_id] = {}
         node_neg_dict[node_id] = {}
@@ -28,7 +28,7 @@ def add_edges_to_node_attributes(GFA, colours=False):
             for virtual_edgeid, virtual_edge_info in sink_node_info.items():
                 #if colours are true, check that any one of the sink nodes colours matches at least one of those in the source node and that from and to orn match
                 if colours == True:
-                    if any(GFA._graph.node[virtual_edge_info['to_node']]['colours'][i] == '1' and GFA._graph.node[node_id]['colours'][i] == '1' for i in range(0, len(GFA._graph.node[node_id]['colours']))):
+                    if any(GFA._graph.nodes[virtual_edge_info['to_node']]['colours'][i] == '1' and GFA._graph.nodes[node_id]['colours'][i] == '1' for i in range(0, len(GFA._graph.nodes[node_id]['colours']))):
                         if str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '+':
                             node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                         elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
@@ -39,8 +39,8 @@ def add_edges_to_node_attributes(GFA, colours=False):
                         node_pos_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
                     elif str(virtual_edge_info['from_node']) == str(node_id) and str(virtual_edge_info['from_orn']) == '-':
                         node_neg_dict[node_id][virtual_edge_info['to_node']] = virtual_edge_info['to_orn']
-    nx.set_node_attributes(GFA._graph, '+', node_pos_dict)
-    nx.set_node_attributes(GFA._graph, '-', node_neg_dict)
+    nx.set_node_attributes(GFA._graph, node_pos_dict, '+')
+    nx.set_node_attributes(GFA._graph, node_neg_dict, '-')
 
 #create binary arrays for each node for codon enumeration
 def enumerate_codon(GFA, codon_list, ksize):
@@ -56,7 +56,7 @@ def enumerate_codon(GFA, codon_list, ksize):
     neg_regex = re.compile((r'(' + '|'.join(rev_codon_list) + r')'))
 
     #add to each dict for each node
-    for node, item in GFA._graph.node.items():
+    for node, item in GFA._graph.nodes.items():
         #initialise node sequence
         seq = item['sequence']
 
@@ -130,8 +130,8 @@ def enumerate_codon(GFA, codon_list, ksize):
         part_dict[node] = part_array
 
     #add full and part binary dicts to GFA
-    nx.set_node_attributes(GFA._graph, 'full_bin', full_dict)
-    nx.set_node_attributes(GFA._graph, 'part_bin', part_dict)
+    nx.set_node_attributes(GFA._graph, full_dict, 'full_bin')
+    nx.set_node_attributes(GFA._graph, part_dict, 'part_bin')
 
 
 #generate graph using colours or no colours file
@@ -162,17 +162,17 @@ class Path:
         self.relori = startdir
 
         #create edge list for beginning node
-        self.edges = GFA._graph.node[self.nodes[0]][self.absori]
+        self.edges = GFA._graph.nodes[self.nodes[0]][self.absori]
 
         #create source node colours object
-        self.source_colour = GFA._graph.node[self.nodes[0]]['colours']
+        self.source_colour = GFA._graph.nodes[self.nodes[0]]['colours']
 
         #get node length and unitig frame modulus for appending node frame
-        self.len = GFA._graph.node[self.nodes[0]]['slen']
+        self.len = GFA._graph.nodes[self.nodes[0]]['slen']
         self.modulus = self.len % 3
 
         #get full binary matrix for start node
-        full_binary_matrix = GFA._graph.node[self.nodes[0]]['full_bin'][self.absori][:]
+        full_binary_matrix = GFA._graph.nodes[self.nodes[0]]['full_bin'][self.absori][:]
 
         #if create_ORF is false, run standard methods to check if frames are complete
         if create_ORF == False:
@@ -187,7 +187,7 @@ class Path:
                         #update relative orientiation based on newly added node - beware, results in non-true sequences
                         self.relori = self.edges[node]
                         #get part binary matrix of node to be added on, depending on length of previous nodes
-                        part_binary_matrix = GFA._graph.node[node]['part_bin'][self.modulus][self.relori]
+                        part_binary_matrix = GFA._graph.nodes[node]['part_bin'][self.modulus][self.relori]
 
                         #conduct binary matrix subtraction to determine whether frames are complete
                         for i in range(0, 3):
@@ -195,9 +195,9 @@ class Path:
                                 full_binary_matrix[i] = 0
 
                         #update path length, edges list, modulus and nodes list
-                        self.len += (GFA._graph.node[node]['slen'] - (ksize - 1))
+                        self.len += (GFA._graph.nodes[node]['slen'] - (ksize - 1))
                         self.modulus = self.len % 3
-                        self.edges = GFA._graph.node[node][self.relori]
+                        self.edges = GFA._graph.nodes[node][self.relori]
                         self.nodes.append(node)
                     except KeyError:
                         pass
@@ -210,11 +210,11 @@ class Path:
 
         #run original merge path method to generate ORF if create_ORF is true, ignoring if frames are complete
         else:
-            self.path_colour = GFA._graph.node[self.nodes[0]]['colours'][:]
+            self.path_colour = GFA._graph.nodes[self.nodes[0]]['colours'][:]
             if self.absori == "-":
-                self.seq = str(Seq(GFA._graph.node[self.nodes[0]]['sequence']).reverse_complement())
+                self.seq = str(Seq(GFA._graph.nodes[self.nodes[0]]['sequence']).reverse_complement())
             else:
-                self.seq = GFA._graph.node[self.nodes[0]]['sequence']
+                self.seq = GFA._graph.nodes[self.nodes[0]]['sequence']
             if len(nodes) == 1:
                 pass
             else:
@@ -224,8 +224,8 @@ class Path:
                         self.seq = self.merge_path(self.seq, node, target_dir, ksize, GFA)
                         self.nodes.append(node)
                         self.relori = target_dir
-                        self.edges = GFA._graph.node[self.nodes[-1]][self.relori]
-                        edge_colour = GFA._graph.node[node]['colours']
+                        self.edges = GFA._graph.nodes[self.nodes[-1]][self.relori]
+                        edge_colour = GFA._graph.nodes[node]['colours']
                         #calculate shared colours through entire path length
                         for i in range(0, len(self.path_colour)):
                             if self.path_colour[i] == '1' and edge_colour[i] == '0':
@@ -236,7 +236,7 @@ class Path:
     #merge paths between nodes, and update the orientiation of the final node
     def merge_path(self, self_seq, new_node, new_seq_dir, ksize, GFA):
         merged_path = None
-        new_seq = GFA._graph.node[str(new_node)]['sequence']
+        new_seq = GFA._graph.nodes[str(new_node)]['sequence']
         if new_seq_dir == "+":
             merged_path = self_seq + new_seq[(ksize - 1)::]
         elif new_seq_dir == "-":
@@ -281,7 +281,7 @@ class Path:
 
 
 #recursive algorithm to generate strings and nodes with codons
-def recur_paths(GFA, start_node_list, ksize, repeat, length, path_cache, startdir="+"):
+def recur_paths(GFA, start_node_list, ksize, repeat, length, startdir="+"):
 
     path_list = [start_node_list]
     start_path = Path(GFA, start_node_list, ksize, startdir=startdir, create_ORF=False)
@@ -291,15 +291,15 @@ def recur_paths(GFA, start_node_list, ksize, repeat, length, path_cache, startdi
             #check if repeat traversal of nodes is allowed
             if repeat == False and target in start_path.nodes:
                 pass
-            #check for cached paths already completed for target node.
-            elif target in path_cache[start_path.edges[target]]:
-                iteration = [start_node_list + path for path in path_cache[start_path.edges[target]][target]]
-                path_list += iteration
+            #check for cached paths already completed for target node. Removed as leads to poor recall
+            #elif target in path_cache[start_path.edges[target]]:
+                #iteration = [start_node_list + path for path in path_cache[start_path.edges[target]][target]]
+                #path_list += iteration
             #recursive traversal of graph
             else:
                 path = start_node_list + [target]
                 if start_path.len <= length:
-                    for iteration in recur_paths(GFA, path, ksize, repeat, length, path_cache, startdir=startdir):
+                    for iteration in recur_paths(GFA, path, ksize, repeat, length, startdir=startdir):
                         path_list.append(iteration)
         del path_list[0]
     else:
@@ -311,10 +311,10 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
     all_ORF_paths['+'] = {}
     all_ORF_paths['-'] = {}
 
-    #path cache to return paths that have already been traversed
-    path_cache = {}
-    path_cache['+'] = {}
-    path_cache['-'] = {}
+    #path cache to return paths that have already been traversed, removed as leads to poor recall
+    #path_cache = {}
+    #path_cache['+'] = {}
+    #path_cache['-'] = {}
 
     #generate list of stop codon list
     rev_stop_codon_list = [str(Seq(codon).reverse_complement()) for codon in stop_codon_list]
@@ -339,8 +339,8 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
         node_list = [node]
 
         #calculate positive strand paths
-        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="+")
-        path_cache['+'][node] = stop_to_stop_paths[:]
+        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, startdir="+")
+        #path_cache['+'][node] = stop_to_stop_paths[:]
 
         #iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:
@@ -371,8 +371,8 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
         node_list = [node]
 
         # calculate negative strand paths
-        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, path_cache, startdir="-")
-        path_cache['-'][node] = stop_to_stop_paths[:]
+        stop_to_stop_paths = recur_paths(GFA, node_list, ksize, repeat, length, startdir="-")
+        #path_cache['-'][node] = stop_to_stop_paths[:]
 
         # iterate through start to stop codon pairs
         for node_path in stop_to_stop_paths:

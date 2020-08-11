@@ -37,29 +37,29 @@ def update_graph(gfa_, keep_id, remove_id, new_seq, overlap, orn):
     to remove are updated with the node to keep and the node with
     remove_id is removed.
     """
-    gfa_.node()[keep_id]['sequence'] = new_seq
+    gfa_.nodes()[keep_id]['sequence'] = new_seq
     if not new_seq == '*':
-        gfa_.node()[keep_id]['slen'] = len(gfa_.node(keep_id)['sequence'])
+        gfa_.nodes()[keep_id]['slen'] = len(gfa_.nodes(identifier = keep_id)['sequence'])
     else:
-        if gfa_.node()[keep_id]['slen'] and gfa_.node()[remove_id]['slen']:
-            gfa_.node()[keep_id]['slen'] += gfa_.node()[remove_id]['slen'] - overlap
+        if gfa_.nodes()[keep_id]['slen'] and gfa_.nodes()[remove_id]['slen']:
+            gfa_.nodes()[keep_id]['slen'] += gfa_.nodes()[remove_id]['slen'] - overlap
         else:
-            gfa_.node()[keep_id]['slen'] = None
+            gfa_.nodes()[keep_id]['slen'] = None
 
-        if 'fu' in gfa_.node()[remove_id]:
-            remove_fu = gfa_.node()[remove_id].get('fu').lstrip('Z:')
+        if 'fu' in gfa_.nodes()[remove_id]:
+            remove_fu = gfa_.nodes()[remove_id].get('fu').lstrip('Z:')
         else:
             remove_fu = remove_id
 
-        if 'fu' in gfa_.node()[keep_id]:
-            gfa_.node()[keep_id]['fu'] += '_'+remove_fu
+        if 'fu' in gfa_.nodes()[keep_id]:
+            gfa_.nodes()[keep_id]['fu'] += '_'+remove_fu
         else:
-            gfa_.node()[keep_id]['fu'] = 'Z:'+keep_id+'_'+remove_fu
+            gfa_.nodes()[keep_id]['fu'] = 'Z:'+keep_id+'_'+remove_fu
 
     #fix gfa_.node()[keep_id]['option']
 
     remove_edge_dict = dict()
-    data_update_edges = gfa_.edge()[remove_id]
+    data_update_edges = gfa_.edges(adj_dict = True)[remove_id]
     for node in data_update_edges:
         for edge_id in data_update_edges[node]:
             if data_update_edges[node][edge_id]['from_node'] == remove_id:
@@ -70,8 +70,8 @@ def update_graph(gfa_, keep_id, remove_id, new_seq, overlap, orn):
                     parse_to_orn = data_update_edges[node][edge_id]['to_orn']
                     parse_from_positions = data_update_edges[node][edge_id]['from_positions']
                     parse_to_positions = data_update_edges[node][edge_id]['to_positions']
-                    keep_slen = int(gfa_.node()[keep_id]['slen'])
-                    remove_slen = int(gfa_.node()[remove_id]['slen'])
+                    keep_slen = int(gfa_.nodes()[keep_id]['slen'])
+                    remove_slen = int(gfa_.nodes()[remove_id]['slen'])
                     if orn == '-+':
                         parse_to_orn = reverse_strand(parse_to_orn)
                         parse_from_positions = (str(remove_slen-int(parse_from_positions[1])), \
@@ -128,8 +128,8 @@ def compact_sequence(gfa_, from_node, to_node):
         overlap = int(edges[edge]['alignment'].rstrip('M'))
     gfa_.remove_edge(edge)
 
-    from_seq = gfa_.node(from_id)['sequence']
-    to_seq = gfa_.node(to_id)['sequence']
+    from_seq = gfa_.nodes(identifier = from_id)['sequence']
+    to_seq = gfa_.nodes(identifier = to_id)['sequence']
 
     if from_orn == '-' and to_orn == '-':
         if from_seq == '*' or to_seq == '*':
@@ -208,7 +208,7 @@ def compression_graph_by_nodes(gfa_):
     from_dict = dict()
     to_dict = dict()
 
-    data_edges = gfa_.edge()
+    data_edges = gfa_.edges(adj_dict = True)
     for node1 in data_edges:
         for node2 in data_edges[node1]:
             for eid in data_edges[node1][node2]:
@@ -241,7 +241,7 @@ def compression_graph_by_nodes(gfa_):
             if len(orientation.get(from_orn)) == 1:
                 to_node = orientation.get(from_orn)
                 to_id, to_orn = to_node[0].split('|')
-                if gfa_.node(from_id) and gfa_.node(to_id):
+                if gfa_.nodes(identifier = from_id) and gfa_.nodes(identifier = to_id):
                     if len(to_dict[to_id][to_orn]) == 1:
                         if to_dict.get(from_id):
                             if to_dict.get(from_id).get(reverse_strand(from_orn)):
@@ -323,7 +323,7 @@ def compression_graph_by_edges(gfa_):
     from_dict = dict()
     to_dict = dict()
 
-    data_edges = gfa_.edge()
+    data_edges = gfa_.edges(adj_dict = True)
     for node1 in data_edges:
         for node2 in data_edges[node1]:
             for eid in data_edges[node1][node2]:
@@ -355,7 +355,7 @@ def compression_graph_by_edges(gfa_):
     for eid in eid_dict:
         from_node = (eid_dict[eid]['from_id'], eid_dict[eid]['from_orn'])
         to_node = (eid_dict[eid]['to_id'], eid_dict[eid]['to_orn'])
-        if gfa_.node(from_node[0]) and gfa_.node(to_node[0]):
+        if gfa_.nodes(identifier = from_node[0]) and gfa_.nodes(identifier = to_node[0]):
             if from_node[1] and from_dict.get(tuple_to_string(from_node)) == 1 and \
                 to_dict.get(tuple_to_string(to_node)) == 1:
                 inverted_from = (from_node[0], reverse_strand(from_node[1]))

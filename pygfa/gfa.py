@@ -12,12 +12,13 @@ import logging
 import copy
 import re
 import os
+import warnings
 
 import networkx as nx
 from networkx.classes.function import all_neighbors as nx_all_neighbors
 
 from pygfa.graph_element.parser import header, segment, link, containment, path
-from pygfa.graph_element.parser import edge, gap, fragment, group
+from pygfa.graph_element.parser import edge, gap, fragment, group, line
 from pygfa.graph_element import node, edge as ge, subgraph as sg
 from pygfa.serializer import gfa1_serializer as gs1, gfa2_serializer as gs2
 
@@ -48,7 +49,7 @@ def _index(obj, other):
     """Given an object O and a list
     of objects L check that exist an object O'
     in the list such that O == O'.
-
+    
     :return True: If O' exists.
     :return: The position of O' in the list.
     """
@@ -70,7 +71,7 @@ class GFA(DovetailIterator):
     undirectly by accessing the `_graph` attribute.
     """
 
-    def __init__(self, base_graph=None):
+    def __init__(self, base_graph=None, is_rGFA = None):
         """Creates a GFA graph.
 
         If :param base_graph: is not `None` use the graph provided
@@ -92,10 +93,11 @@ class GFA(DovetailIterator):
         self._subgraphs = {}
         self._next_virtual_id = 0 if base_graph is None else \
                                 self._find_max_virtual_id()
+        self._is_rGFA = is_rGFA
 
     def __contains__(self, id_):
         try:
-            if id_ in self._graph.node:
+            if self._graph.has_node(id_) :
                 return True
             edge_keys = (key for from_node in self._graph.adj \
                             for to_node in self._graph.adj[from_node] \
@@ -153,16 +155,37 @@ class GFA(DovetailIterator):
         return max(virtual_keys)
 
 
-    def nodes(self, data=False, with_sequence=False):
+    def nodes(self, data=False, with_sequence=False, identifier=None):
         """Return a list of the nodes in the graph.
 
         :param with_sequence: If set return only nodes with
             a `sequence` property.
         """
-        return list(self.nodes_iter(data=data, with_sequence=with_sequence))
+        #return list(self.nodes_iter(data=data, with_sequence=with_sequence))
+        if not identifier is None :
+            if self._graph.has_node(identifier):
+                return self._graph.nodes(data=data)[identifier]
+            else:
+                return;
 
-    def edges(self, **kwargs):
+        if with_sequence is True:
+            return list(self.nodes_iter(data=data, with_sequence=with_sequence))
+
+        return self._graph.nodes(data=data)
+
+    def edges(self,identifier = None, adj_dict = False, **kwargs):
         """Return all the edges in the graph."""
+        #return list(self._graph.edges(**kwargs))
+        
+        if not identifier is None:
+            if isinstance(identifier, tuple):
+                return self._search_edge_by_nodes(identifier)
+            else:
+                return self._search_edge_by_key(identifier)
+
+        if adj_dict is True:
+            return self._graph.adj
+
         return self._graph.edges(**kwargs)
 
     def subgraphs(self, identifier=None):
@@ -178,37 +201,10 @@ class GFA(DovetailIterator):
             if identifier in self._subgraphs:
                 return self._subgraphs[identifier]
 
-    def node(self, identifier=None):
-        """An interface to access the node method of the netwrokx
-        graph.
-
-        If `identifier` is `None` all the graph nodes are returned.
-        """
-        if identifier is None:
-            return self._graph.node
-        else:
-            if identifier in self._graph.node:
-                return self._graph.node[identifier]
-
-    def edge(self, identifier=None):
-        """GFA edge accessor.
-
-        * If `identifier` is `None` all the graph edges are returned.
-        * If `identifier` is a tuple perform a search by nodes with
-           the tuple values as nodes id.
-        * If `identifier` is a single defined value then perform
-           a search by edge key, where the edge key is the given value.
-        """
-        if identifier is None:
-            return self._graph.edge
-        if isinstance(identifier, tuple):
-            return self._search_edge_by_nodes(identifier)
-        return self._search_edge_by_key(identifier)
-
     def _search_edge_by_key(self, edge_key):
         from_node, to_node = self._get_edge_end_nodes(edge_key)
         if (from_node, to_node) != (None, None):
-            return self._graph.edge[from_node][to_node][edge_key]
+            return self._graph.get_edge_data(from_node, to_node, edge_key)
         return None
 
 
@@ -232,8 +228,8 @@ class GFA(DovetailIterator):
         try:
             if len(nodes) > 2:
                 key = nodes[2]
-                return self._graph.edge[from_node][to_node][key]
-            return self._graph.edge[from_node][to_node]
+                return self._graph.get_edge_data(from_node, to_node, key)
+            return self._graph.get_edge_data(from_node, to_node)
         except:
             return None
 
@@ -250,8 +246,8 @@ class GFA(DovetailIterator):
 
     def get(self, key):
         """Return the element pointed by the specified key."""
-        if key in self._graph.node:
-            return self.node(key)
+        if self._graph.has_node(key):
+            return self.nodes(data = True, identifier = key)
         if key in self._subgraphs:
             return self._subgraphs[key]
         edge_ = self._search_edge_by_key(key)
@@ -349,6 +345,11 @@ class GFA(DovetailIterator):
         if safe and new_node.nid in self:
             raise GFAError("An element with the same id already exists.")
 
+        if self._is_rGFA == True:
+            if not self.check_rGFA_node(new_node):
+                raise node.InvalidNodeError("{0}".format(new_node.nid)+\
+                                                " cannot be a rGFA node")
+
         self._graph.add_node(\
                               new_node.nid, \
                               nid=new_node.nid, \
@@ -383,14 +384,14 @@ class GFA(DovetailIterator):
         if with_sequence is True:
             if data is True:
                 return iter((nid, data_) \
-                         for nid, data_ in self._graph.node.items() \
+                         for nid, data_ in self._graph.nodes(data = True) \
                             if 'sequence' in data_)
             else:
                 return iter(nid \
-                         for nid, data_ in self._graph.node.items() \
+                         for nid, data_ in self._graph.nodes(data = True) \
                             if 'sequence' in data_)
         else:
-            return self._graph.nodes_iter(data)
+            return iter(list(self._graph.nodes(data = data)))
 
 
     def nbunch_iter(self, nbunch=None):
@@ -453,6 +454,18 @@ class GFA(DovetailIterator):
                        node2_exists):
                 raise GFAError("From/To node are not already in the graph.")
 
+        if self._is_rGFA:
+
+            if not self.check_rGFA_edge(new_edge):
+                #tmp_field_type,tmp_SR_max = self.max_SR(new_edge.from_node,\
+                #                                            new_edge.to_node)
+                #tmp_opt_field = line.OptField("SR", tmp_SR_max, tmp_field_type)
+                tmp_fields = re.split(":", self.max_SR(new_edge.from_node,new_edge.to_node))[1:]
+                tmp_opt_field = line.OptField("SR",tmp_fields[1],tmp_fields[0])
+                new_edge.opt_fields.update({"SR" : tmp_opt_field})
+                warnings.warn("{0} + {1}".format(new_edge.from_node,new_edge.to_node) +\
+                    ": SR has been set to the maximum value between the SR of the adjacent nodes")
+
         self._graph.add_edge( \
                                new_edge.from_node, new_edge.to_node, key=key, \
                                eid=new_edge.eid, \
@@ -470,6 +483,111 @@ class GFA(DovetailIterator):
                                to_segment_end=new_edge.to_segment_end, \
                                **new_edge.opt_fields \
                                )
+
+    def max_SR(self, from_node, to_node):
+        #return SR is the greater between the input nodes
+        # SR:field_type:value
+        sr_1 = re.split(":", \
+            str(self.as_graph_element(from_node).opt_fields['SR']))[2]
+        sr_2 = re.split(":", \
+            str(self.as_graph_element(to_node).opt_fields['SR']))[2]
+        tmp_max = max(sr_1,sr_2)
+        tmp_field_type = re.split(":", str(self.as_graph_element(from_node).opt_fields['SR']))[1]
+
+        #return tmp_field_type, str(tmp_max)
+   
+        return str.join(":", ("SR", tmp_field_type, str(tmp_max)))
+    
+    def check_rGFA(self, force = False):
+        #returns true if the graph is rGFA, otherwise False
+        #if self._is_rGFA == None or force == True:
+        if force == True:
+            if self.check_rGFA_nodes(self.nodes())\
+                 and self.check_rGFA_edges(self.edges()):
+
+                return True
+
+            return False
+
+        return self._is_rGFA
+
+
+    #def check_rGFA(self, force = False):
+
+        #if self._is_rGFA == None or force == True:
+    #    if force == True:
+    #        if self.check_rGFA_nodes(self.node())\
+    #             and self.check_rGFA_edges(self.edges()):
+                
+    #            self._is_rGFA = True
+
+    #        else:
+    #            self._is_rGFA = False
+        
+    #    return self._is_rGFA
+
+
+    def check_rGFA_nodes(self, nodes):
+        #check that the nodes are suitable for an rGFA graph
+        #if isinstance(nodes,list)
+        #else isinstance(nodes, dict or view)
+        if isinstance(nodes,list):
+            for node in nodes:
+                if  self.check_rGFA_node(self.nodes(identifier = node)):
+                    continue
+                else:
+
+                    return False
+        else:
+            for node in nodes:
+                if self.check_rGFA_node(nodes[node]):
+                    continue
+                else:
+
+                    return False
+
+        return True
+
+    def check_rGFA_node(self,node):
+        if isinstance(node, dict):
+            if "SN" in node and \
+                "SO" in node and \
+                "SR" in node:
+
+                return True
+        else:
+            if "SN" in node.opt_fields and \
+                "SO" in node.opt_fields and \
+                "SR" in node.opt_fields:
+
+                return True
+        
+        return False
+
+    def check_rGFA_edges(self, edges):
+        #check that the edges are suitable for an rGFA graph
+        for edge in edges:
+            if not self.check_rGFA_edge(edge):
+          
+                return False
+        
+        return True
+
+    def check_rGFA_edge(self, edge):
+
+        if isinstance(edge, tuple):
+            tmp_libr = self._search_edge_by_nodes(edge)
+            if "SR" in tmp_libr[next(iter(tmp_libr))]:
+                
+                return True
+        
+        else:
+            if "SR" in edge.opt_fields:
+
+                return True
+
+        return False 
+
 
 
     def remove_edge(self, identifier):
@@ -514,17 +632,17 @@ class GFA(DovetailIterator):
         the number of edges between the given nodes,
         removing all the edges indeed.
         """
-        num_edges = len(self.edge((from_node, to_node)))
+        num_edges = len(self.edges(identifier = (from_node, to_node)))
         for edge_ in range(0, num_edges):
             self._graph.remove_edge(from_node, to_node)
 
 
     def edges_iter(self, nbunch=None, data=False, keys=False, default=None):
         """Interface to networx edges iterator."""
-        return self._graph.edges_iter(nbunch=nbunch, \
+        return iter(self._graph.edges(nbunch=nbunch,\
             data=data, \
             keys=keys, \
-            default=default)
+            default=default))
 
 
     def add_subgraph(self, subgraph, safe=False):
@@ -627,28 +745,64 @@ class GFA(DovetailIterator):
         given and all the edges between each pair of nodes.
         Only dovetails overlaps are considered.
         """
-        bunch = self.nbunch_iter(nbunch)
+        bunch = list(self.nbunch_iter(nbunch))
         # create new graph and copy subgraph into it
         H = self._graph.__class__()
-        # copy node and attribute dictionaries
-        for n in bunch:
-            H.node[n] = self._graph.node[n]
-        # namespace shortcuts for speed
-        H_adj = H.adj
+        # add node and attribute dictionaries
+        H.add_nodes_from((n, self._graph.nodes[n]) for n in bunch)
+
+        # add edge and attribute dictionaries
+
+        """for n, nbrs in self._graph.adj.items():
+            if n in bunch:
+                for nbr, keydict in nbrs.items():
+                    if nbr in bunch:
+                        for key, d in keydict.items():
+                            if d['is_dovetail'] is True:
+                                H.add_edges_from([(n, nbr, key, d)])
+        """ 
+        H.add_edges_from((n, nbr, key, d) 
+            for n, nbrs in self._graph.adj.items() if n in bunch 
+            for nbr, keydict in nbrs.items() if nbr in bunch 
+            for key, d in keydict.items() if d['is_dovetail'] is True)
+
+        H.graph = self._graph.graph
+        if copy is True:
+            return H.copy()
+        return H
+
+
+
+    """def dovetails_subgraph(self, nbunch=None, copy=True):
+        Given a collection of nodes return a subgraph with the nodes
+        given and all the edges between each pair of nodes.
+        Only dovetails overlaps are considered.
+
+        bunch = list(self.nbunch_iter(nbunch))
+        # create new graph and copy subgraph into it
+        H = self._graph.__class__()
+        # add node and attribute dictionaries
+        H.add_nodes_from((n, self._graph.nodes[n]) for n in bunch)
+
+        #BRUTTO
+        H_adj = dict(H.adj)
+        for tmp in H_adj:
+            H_adj[tmp] = dict(H_adj[tmp])
 
         # filter edges based on is_dovetail property
-        self_adj = self._graph.adjlist_dict_factory()
+        self_adj = self._graph.adjlist_inner_dict_factory()
         for from_node in self._graph.adj:
-            self_adj[from_node] = self._graph.adjlist_dict_factory()
+            self_adj[from_node] = self._graph.adjlist_inner_dict_factory()
             for to_node in self._graph.adj[from_node]:
-                self_adj[from_node][to_node] = self._graph.adjlist_dict_factory()
+                self_adj[from_node][to_node] = self._graph.adjlist_inner_dict_factory()
                 for edge_ in self._graph.adj[from_node][to_node]:
                     if self._graph.adj[from_node][to_node][edge_]['is_dovetail'] is True:
                         self_adj[from_node][to_node][edge_] = \
                           self._graph.adj[from_node][to_node][edge_]
+
         # add nodes and edges (undirected method)
         for n in H:
-            Hnbrs = H.adjlist_dict_factory()
+            Hnbrs = H.adjlist_inner_dict_factory()
             H_adj[n] = Hnbrs
             for nbr, edgedict in self_adj[n].items():
                 if nbr in H_adj:
@@ -657,11 +811,12 @@ class GFA(DovetailIterator):
                     ed = edgedict.copy()
                     Hnbrs[nbr] = ed
                     H_adj[nbr][n] = ed
+
         H.graph = self._graph.graph
         if copy is True:
             return H.copy()
         return H
-
+    """
 
     def neighbors(self, nid):
         """Return all the nodes id of the nodes connected to
@@ -672,7 +827,7 @@ class GFA(DovetailIterator):
 
         :params nid: The id of the selected node
         """
-        if self.node(nid) is None:
+        if self.nodes(identifier = nid) is None:
             raise GFAError("The source node is not in the graph.")
         return list(nx_all_neighbors(self._graph, nid))
 
@@ -786,10 +941,10 @@ class GFA(DovetailIterator):
 
     # This method has been checked manually
     @classmethod
-    def from_file(cls, filepath): # pragma: no cover
+    def from_file(cls, filepath, is_rGFA = None): # pragma: no cover
         """Parse the given file and return a GFA object.
         """
-        pygfa_ = GFA()
+        pygfa_ = GFA(is_rGFA=is_rGFA)
         file_handler = open(filepath)
         file_content = file_handler.read()
         file_handler.close()
@@ -860,8 +1015,8 @@ class GFA(DovetailIterator):
         edge_lut = {}
         pure_virtuals = []
         for from_node, to_node, edge_, data_ in self.edges_iter(keys=True, data=True):
-            from_data = self.node(from_node)
-            to_data = self.node(to_node)
+            from_data = self.nodes(identifier = from_node)
+            to_data = self.nodes(identifier = to_node)
             match = regexp.fullmatch(edge_)
             if match is not None:
                 from_sequence = ""
@@ -908,7 +1063,7 @@ class GFA(DovetailIterator):
 
     def _look_for_edge(self, key, edge_table):
         from_node, to_node = edge_table[key]
-        return self._graph.edge[from_node][to_node][key]
+        return self._graph.get_edge_data(from_node, to_node, key)
 
     def __eq__(self, other):
         """
@@ -920,7 +1075,7 @@ class GFA(DovetailIterator):
             # Nodes must be defined, so there is no reason to
             # create a LUT
             for nid, node_ in self.nodes_iter(data=True):
-                if node_ != other.node(nid):
+                if node_ != other.nodes(identifier = nid):
                     return False
 
             self_edge_table = self._make_edge_table()
@@ -987,8 +1142,8 @@ class GFA(DovetailIterator):
         FOLDER, _ = os.path.split(__file__)
         return check_overlap(self, FOLDER.rstrip('pygfa'), external_file)
 
-    #def subgraphs_extractor(self, n_source, distance):
-        #extract_subgraph(self, n_source, distance)
+#    def subgraphs_extractor(self, n_source, distance):
+#        extract_subgraph(self, n_source, distance)
 
 if __name__ == '__main__': #pragma: no cover
     pass

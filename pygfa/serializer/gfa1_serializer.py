@@ -268,7 +268,7 @@ def _serialize_to_link(link_, identifier=DEFAULT_IDENTIFIER):
 def point_to_node(gfa_, node_id):
     """Check if the given node_id point to a node in the gfa graph.
     """
-    return gfa_.node(node_id) != None
+    return gfa_.nodes(identifier = node_id) != None
 
 
 def _serialize_subgraph_elements(subgraph_elements, gfa_=None):
@@ -365,13 +365,13 @@ def serialize_graph(graph, write_header=True):
     if write_header:
         string_serialize = "H\tVN:Z:1.0\n"
 
-    for node_id, node in graph.nodes_iter(data=True):
+    for node_id, node in graph.nodes(data=True):
         node_serialize = serialize_node(node, node_id)
         if len(node_serialize) > 0:
             string_serialize += node_serialize + "\n"
 
-    for from_node, to_node, key in graph.edges_iter(keys=True):
-        edge_serialize = serialize_edge(graph.edge[from_node][to_node][key], key)
+    for from_node, to_node, key in graph.edges(keys=True):
+        edge_serialize = serialize_edge(graph.get_edge_data(from_node, to_node, key), key)
         if len(edge_serialize) > 0:
             string_serialize += edge_serialize + "\n"
     return string_serialize

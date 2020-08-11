@@ -103,7 +103,7 @@ def check_overlap(gfa_, path, external_file):
     edges_no_calculate = []
     edge_no_text = 0
 
-    data_edges = gfa_.edge()
+    data_edges = gfa_.edges(adj_dict = True)
     for node1 in data_edges:
         for node2 in data_edges[node1]:
             for eid in data_edges[node1][node2]:
@@ -111,13 +111,13 @@ def check_overlap(gfa_, path, external_file):
                     eid_dict[eid] = True
                     from_id = data_edges[node1][node2][eid]['from_node']
                     try:
-                        node_dict[from_id] = gfa_.node()[from_id]['sequence']
+                        node_dict[from_id] = gfa_.nodes()[from_id]['sequence']
                     except KeyError:
                         edge_no_text += 1
                         break
                     to_id = data_edges[node1][node2][eid]['to_node']
                     try:
-                        node_dict[to_id] = gfa_.node()[to_id]['sequence']
+                        node_dict[to_id] = gfa_.nodes()[to_id]['sequence']
                     except KeyError:
                         edge_no_text += 1
                         break
