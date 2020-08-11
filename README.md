@@ -7,7 +7,7 @@ ggCaller uses pyGFA to convert Bifrost graphs to Networkx graph objects to enabl
 ## Requirements
 - python3
 - biopython
-- networkx==1.11
+- networkx
 
 ## Installation
 
