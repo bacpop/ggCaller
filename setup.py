@@ -87,7 +87,7 @@ setup(
     author='Sam Horsfield',
     author_email='s.horsfield19@imperial.ac.uk',
     description='A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).'
-    entry_points={"console_scripts": ['ggcaller = ggcaller.ggcaller:main']},
+    entry_points={"console_scripts": ['ggcaller = ggCaller.ggcaller:main']},
         ext_modules=[CMakeExtension('match_string')],
         cmdclass=dict(build_ext=CMakeBuild),
         zip_safe=False

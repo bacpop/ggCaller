@@ -1,9 +1,10 @@
 #imports
 import sys
-from ..pygfa import *
+from pygfa import *
 from Bio.Seq import Seq
 import re
 import networkx as nx
+#from match_string import *
 
 #takes tsv file from Bifrost query
 def add_colours(colours_tsv, GFA):
@@ -397,6 +398,20 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
 
     return all_ORF_paths
 
+#generate fasta files
+def generate_fasta(ORF_output, outfile):
+    with open(outfile, "w") as f:
+        count = 1
+        for key, item in ORF_output['+'].items():
+            if len(key) >= ORF_length:
+                f.write(">[Gene_ID: " + str(count) + "] [Strand: +] [Colours: " + str(item) + "]\n" + str(key) + "\n")
+                count += 1
+        for key, item in ORF_output['-'].items():
+            if len(key) >= ORF_length:
+                f.write(">[Gene_ID: " + str(count) + "] [Strand: -] [Colours: " + str(item) + "]\n" + str(key) + "\n")
+                count += 1
+
+
 #function to query paths containing a sequence
 def query_seq_path(GFA, seq, ksize):
     kmers = []
@@ -453,6 +468,7 @@ def get_options():
 if __name__ == '__main__':
     options = get_options()
 
+    # parse command line arguments
     graph_file = options.graph
     tsv_file = options.colours
     ksize = int(options.kmer)
@@ -460,19 +476,16 @@ if __name__ == '__main__':
     ORF_length = int(options.orf)
     output = options.out
 
+    # define start/stop codons
     stop_codon_list = ["TAA", "TGA", "TAG"]
     start_codon_list = ["ATG", "GTG", "TTG"]
+
+    # generate networkx object and annotate with colours
     graph = generate_graph(graph_file, ksize, stop_codon_list, tsv_file)
 
+    # generate ORFs
     ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, ksize, False, length=path_length)
 
-    with open(output, "w") as f:
-        count = 1
-        for key, item in ORF_output['+'].items():
-            if len(key) >= ORF_length:
-                f.write(">[Gene_ID: " + str(count) + "] [Strand: +] [Colours: " + str(item) + "]\n" + str(key) + "\n")
-                count += 1
-        for key, item in ORF_output['-'].items():
-            if len(key) >= ORF_length:
-                f.write(">[Gene_ID: " + str(count) + "] [Strand: -] [Colours: " + str(item) + "]\n" + str(key) + "\n")
-                count += 1
+    # generate fasta
+    generate_fasta(ORF_output, output)
+
