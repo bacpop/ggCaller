@@ -1,6 +1,6 @@
 #imports
 import sys
-from pygfa import *
+from ..pygfa import *
 from Bio.Seq import Seq
 import re
 import networkx as nx
