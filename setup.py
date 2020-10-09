@@ -7,7 +7,7 @@ import io
 import platform
 import subprocess
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
@@ -80,14 +80,31 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='ggCaller',
-    version=find_version("ggCaller/__init__.py"),
-    packages=['pygfa', 'ggCaller'],
+    version=find_version('ggCaller/__init__.py'),
+    packages=['ggCaller',
+              'ggCaller.pygfa',
+              'ggCaller.pygfa.algorithms',
+              'ggCaller.pygfa.dovetail_operations',
+              'ggCaller.pygfa.dovetail_operations.components',
+              'ggCaller.pygfa.graph_element',
+              'ggCaller.pygfa.graph_element.parser',
+              'ggCaller.pygfa.serializer',
+              'ggCaller.pygfa.graph_operations'],
+    package_dir={'ggCaller': 'ggCaller',
+                 'ggCaller.pygfa': 'ggCaller/pygfa',
+                 'ggCaller.pygfa.algorithms': 'ggCaller/pygfa/algorithms',
+                 'ggCaller.pygfa.dovetail_operations': 'ggCaller/pygfa/dovetail_operations',
+                 'ggCaller.pygfa.dovetail_operations.components': 'ggCaller/pygfa/dovetail_operations/components',
+                 'ggCaller.pygfa.graph_element': 'ggCaller/pygfa/graph_element',
+                 'ggCaller.pygfa.graph_element.parser': 'ggCaller/pygfa/graph_element/parser',
+                 'ggCaller.pygfa.serializer': 'ggCaller/pygfa/serializer',
+                 'ggCaller.pygfa.graph_operations': 'ggCaller/pygfa/graph_operations'},
     url='https://github.com/samhorsfield96/ggCaller',
     license='MIT License',
     author='Sam Horsfield',
     author_email='s.horsfield19@imperial.ac.uk',
-    description='A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).'
-    entry_points={"console_scripts": ['ggcaller = ggCaller.ggcaller:main']},
+    description='A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).',
+    entry_points={'console_scripts': ['ggcaller = ggCaller.__main__:main']},
         ext_modules=[CMakeExtension('match_string')],
         cmdclass=dict(build_ext=CMakeBuild),
         zip_safe=False

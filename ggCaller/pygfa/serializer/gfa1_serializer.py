@@ -9,8 +9,8 @@ import logging
 
 import networkx as nx
 
-from pygfa.graph_element.parser import field_validator as fv
-from pygfa.serializer import utils
+from ggCaller.pygfa.graph_element.parser import field_validator as fv
+from ggCaller.pygfa.serializer import utils
 
 class GFA1SerializationError(Exception): pass
 

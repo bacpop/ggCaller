@@ -27,7 +27,7 @@ std::unordered_map<std::string, bool> py_call_strings(const std::vector<std::str
     return result;
 }
 
-PYBIND11_MODULE(fmindex, m)
+PYBIND11_MODULE(match_string, m)
 {
     m.doc() = "Finds presence/absence of gene sequences in source genomes";
 

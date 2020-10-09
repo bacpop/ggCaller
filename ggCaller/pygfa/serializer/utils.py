@@ -1,4 +1,4 @@
-from pygfa.graph_element.parser import line, field_validator as fv
+from ggCaller.pygfa.graph_element.parser import line, field_validator as fv
 
 SERIALIZATION_ERROR_MESSAGGE = "Couldn't serialize object identified by: "
 

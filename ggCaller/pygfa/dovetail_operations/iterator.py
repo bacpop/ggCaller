@@ -8,7 +8,7 @@ representing dovetails overlaps.
 # while reading this class.
 
 from networkx.exception import NetworkXError
-from pygfa.algorithms.traversal import dfs_edges
+from ggCaller.pygfa.algorithms.traversal import dfs_edges
 
 class DovetailIterator:
     def dovetails_iter(self, nbunch=None, keys=False, data=False):

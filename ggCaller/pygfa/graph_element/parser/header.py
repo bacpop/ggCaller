@@ -1,6 +1,6 @@
 import re
 
-from pygfa.graph_element.parser import line, field_validator as fv
+from ggCaller.pygfa.graph_element.parser import line, field_validator as fv
 
 class Header(line.Line):
 

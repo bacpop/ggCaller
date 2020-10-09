@@ -17,15 +17,15 @@ import warnings
 import networkx as nx
 from networkx.classes.function import all_neighbors as nx_all_neighbors
 
-from pygfa.graph_element.parser import header, segment, link, containment, path
-from pygfa.graph_element.parser import edge, gap, fragment, group, line
-from pygfa.graph_element import node, edge as ge, subgraph as sg
-from pygfa.serializer import gfa1_serializer as gs1, gfa2_serializer as gs2
+from ggCaller.pygfa.graph_element.parser import header, segment, link, containment, path
+from ggCaller.pygfa.graph_element.parser import edge, gap, fragment, group, line
+from ggCaller.pygfa.graph_element import node, edge as ge, subgraph as sg
+from ggCaller.pygfa.serializer import gfa1_serializer as gs1, gfa2_serializer as gs2
 
-from pygfa.dovetail_operations.iterator import DovetailIterator
+from ggCaller.pygfa.dovetail_operations.iterator import DovetailIterator
 
-from pygfa.graph_operations.compression import compression_graph_by_nodes, compression_graph_by_edges
-from pygfa.graph_operations.overlap_consistency import check_overlap
+from ggCaller.pygfa.graph_operations.compression import compression_graph_by_nodes, compression_graph_by_edges
+from ggCaller.pygfa.graph_operations.overlap_consistency import check_overlap
 #from benchmark.extract_subgraph import extract_subgraph
 
 GRAPH_LOGGER = logging.getLogger(__name__)

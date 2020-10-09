@@ -1,10 +1,10 @@
-from pygfa.dovetail_operations.components.connected import dovetails_nodes_connected_components
-from pygfa.dovetail_operations.components.connected import dovetails_nodes_connected_component
-from pygfa.dovetail_operations.components.connected import dovetails_connected_components_subgraphs
+from ggCaller.pygfa.dovetail_operations.components.connected import dovetails_nodes_connected_components
+from ggCaller.pygfa.dovetail_operations.components.connected import dovetails_nodes_connected_component
+from ggCaller.pygfa.dovetail_operations.components.connected import dovetails_connected_components_subgraphs
 
-from pygfa.dovetail_operations.components.biconnected import dovetails_articulation_points
-from pygfa.dovetail_operations.linear_paths import *
-from pygfa.dovetail_operations.simple_paths import *
+from ggCaller.pygfa.dovetail_operations.components.biconnected import dovetails_articulation_points
+from ggCaller.pygfa.dovetail_operations.linear_paths import *
+from ggCaller.pygfa.dovetail_operations.simple_paths import *
 
 from ..operations import nodes_connected_component
 

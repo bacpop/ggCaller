@@ -1,10 +1,10 @@
 #imports
 import sys
-from pygfa import *
+import ggCaller.pygfa
 from Bio.Seq import Seq
 import re
 import networkx as nx
-#from match_string import *
+import match_string
 
 #takes tsv file from Bifrost query
 def add_colours(colours_tsv, GFA):
@@ -138,7 +138,7 @@ def enumerate_codon(GFA, codon_list, ksize):
 #generate graph using colours or no colours file
 def generate_graph(GFA, ksize, codon_list=None, colours_file=None):
     #generate graph
-    graph = pygfa.gfa.GFA.from_file(GFA)
+    graph = ggCaller.pygfa.gfa.GFA.from_file(GFA)
 
     #add colours and node edge attributes
     if colours_file is not None:
@@ -324,9 +324,9 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
     stop_nodes_neg = set()
 
     for codon in stop_codon_list:
-        stop_nodes_pos.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=gfa.Element.NODE)))
+        stop_nodes_pos.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=ggCaller.pygfa.gfa.Element.NODE)))
     for codon in rev_stop_codon_list:
-        stop_nodes_neg.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=gfa.Element.NODE)))
+        stop_nodes_neg.update(tuple(GFA.search(lambda x: codon in x['sequence'], limit_type=ggCaller.pygfa.gfa.Element.NODE)))
 
     #calculate length of lists for standard-out
     len_pos_list = len(stop_nodes_pos)
@@ -399,7 +399,7 @@ def ORF_generation(GFA, stop_codon_list, start_codon_list, ksize, repeat, path_f
     return all_ORF_paths
 
 #generate fasta files
-def generate_fasta(ORF_output, outfile):
+def generate_fasta(ORF_output, outfile, ORF_length):
     with open(outfile, "w") as f:
         count = 1
         for key, item in ORF_output['+'].items():
@@ -426,11 +426,11 @@ def query_seq_path(GFA, seq, ksize):
     #search for kmer within graph, append kmer to graph if it is not present
     for kmer in kmers:
         #search for kmer
-        node_list = GFA.search(lambda x: kmer in x['sequence'], limit_type=gfa.Element.NODE)
+        node_list = GFA.search(lambda x: kmer in x['sequence'], limit_type=ggCaller.pygfa.gfa.Element.NODE)
 
         if not node_list:
             rev_kmer = str(Seq(kmer).reverse_complement())
-            node_list = GFA.search(lambda x: rev_kmer in x['sequence'], limit_type=gfa.Element.NODE)
+            node_list = GFA.search(lambda x: rev_kmer in x['sequence'], limit_type=ggCaller.pygfa.gfa.Element.NODE)
 
         #if node list is empty of node list length is greater than 1, put none in node
         #iterate through node list if there is only a single node, add it to the path_list if it is not present already
@@ -464,28 +464,4 @@ def get_options():
                     default='calls.fasta',
                     help='Output FASTA file containing ORF sequences. ')
     return parser.parse_args()
-
-if __name__ == '__main__':
-    options = get_options()
-
-    # parse command line arguments
-    graph_file = options.graph
-    tsv_file = options.colours
-    ksize = int(options.kmer)
-    path_length = int(options.path)
-    ORF_length = int(options.orf)
-    output = options.out
-
-    # define start/stop codons
-    stop_codon_list = ["TAA", "TGA", "TAG"]
-    start_codon_list = ["ATG", "GTG", "TTG"]
-
-    # generate networkx object and annotate with colours
-    graph = generate_graph(graph_file, ksize, stop_codon_list, tsv_file)
-
-    # generate ORFs
-    ORF_output = ORF_generation(graph, stop_codon_list, start_codon_list, ksize, False, length=path_length)
-
-    # generate fasta
-    generate_fasta(ORF_output, output)
 

@@ -1,7 +1,7 @@
 import copy
 
-from pygfa.graph_element.parser import segment
-from pygfa.graph_element.parser import line, field_validator as fv
+from ggCaller.pygfa.graph_element.parser import segment
+from ggCaller.pygfa.graph_element.parser import line, field_validator as fv
 
 class InvalidNodeError(Exception):
     pass

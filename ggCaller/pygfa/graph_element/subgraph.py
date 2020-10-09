@@ -1,7 +1,7 @@
 import copy
 import collections
 
-from pygfa.graph_element.parser import line
+from ggCaller.pygfa.graph_element.parser import line
 
 
 class InvalidSubgraphError(Exception): pass

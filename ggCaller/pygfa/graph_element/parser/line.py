@@ -1,6 +1,6 @@
 import re
 
-from pygfa.graph_element.parser import field_validator as fv
+from ggCaller.pygfa.graph_element.parser import field_validator as fv
 
 class InvalidLineError(Exception):
     """Exception raised when making a Line object from a string.

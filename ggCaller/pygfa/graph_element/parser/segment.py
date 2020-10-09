@@ -1,6 +1,6 @@
 import re
 
-from pygfa.graph_element.parser import line, field_validator as fv
+from ggCaller.pygfa.graph_element.parser import line, field_validator as fv
 
 def is_segmentv1(line_repr):
     """Check wether a given gfa line string probably belongs to a
