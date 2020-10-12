@@ -5,10 +5,10 @@
 #include "match_string.h"
 
 //run fmindex workflow
-std::unordered_map<std::string, bool> call_strings(const std::vector<std::string>& assembly_list,
-                                                   const std::unordered_map<std::string, std::string>& query_dict,
-                                                   const bool write_idx,
-                                                   const size_t num_threads)
+std::unordered_map<std::string, std::vector<std::string>> call_strings(const std::vector<std::string>& assembly_list,
+                                                                       std::unordered_map<std::string, std::vector<std::string>>& query_list,
+                                                                       const bool& write_idx,
+                                                                       const size_t& num_threads)
 {
     // Create threaded queue for computation
     assert(num_threads >= 1);
@@ -35,7 +35,7 @@ std::unordered_map<std::string, bool> call_strings(const std::vector<std::string
     start_points.push_back(start);
 
     // Read all sequences into memory as Fasta objects (threaded)
-    std::cerr << "Constructing indexes for all input sequences..." << std::endl;
+    //std::cerr << "Constructing indexes for all input sequences..." << std::endl;
     std::vector<fm_index_coll> seq_idx;
 
     // multithread with openMP
@@ -51,18 +51,16 @@ std::unordered_map<std::string, bool> call_strings(const std::vector<std::string
         seq_idx.insert(seq_idx.end(), seq_idx_private.begin(), seq_idx_private.end());
     }
 
-    std::cerr << "Searching for gene sequences..." << std::endl;
+    //std::cerr << "Searching for gene sequences..." << std::endl;
 
     // Run searches using openMP, looping over genes and multithreading searches across all fmindexes
-    // create unordered map object for output of query
-    std::unordered_map<std::string, bool> results;
 
-    for (auto& entry : query_dict)
+    for (auto itr = query_list.cbegin(); itr != query_list.cend(); )
     {
         // initialise hits variable for specific gene
         int hits = 0;
         // convert string to dn5 vector
-        seqan3::dna5_vector query = entry.second | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+        seqan3::dna5_vector query = (*itr).first | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
 
         #pragma omp parallel for reduction(+:hits) num_threads(num_threads)
         for (unsigned int thread_idx = 0; thread_idx < num_threads; ++thread_idx)
@@ -70,19 +68,12 @@ std::unordered_map<std::string, bool> call_strings(const std::vector<std::string
             hits += seq_search(query, seq_idx, start_points[thread_idx], start_points[thread_idx + 1]);
         }
 
-        //set present to true if matches are detected
-        bool present = false;
-        if (hits)
-        {
-            present = true;
-        }
-
-        // Print results for query to unordered map
-        results[entry.first] = present;
+        //set remove the entry from query_dict if not found
+        itr = (!hits) ? query_list.erase(itr) : std::next(itr);
     }
 
-    std::cerr << "Done." << std::endl;
-    return results;
+    //std::cerr << "Done." << std::endl;
+    return query_list;
 }
 
 // index fasta files
@@ -90,7 +81,7 @@ std::vector<fm_index_coll> index_fasta(const std::vector<std::string>& fasta_fil
                                        const size_t start,
                                        const size_t end,
                                        const bool& write_idx)
-    {
+{
     std::vector<fm_index_coll> seq_idx;
     for (auto file_it = fasta_files.begin() + start; file_it != fasta_files.begin() + end; ++file_it)
     {

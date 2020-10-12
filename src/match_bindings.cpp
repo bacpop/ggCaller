@@ -4,10 +4,10 @@
 
 #include "match_string.h"
 
-std::unordered_map<std::string, bool> py_call_strings(const std::vector<std::string>& assembly_list,
-                                                      const std::unordered_map<std::string, std::string>& query_dict,
-                                                      const bool write_idx,
-                                                      size_t num_threads)
+std::unordered_map<std::string, std::vector<std::string>> py_call_strings(const std::vector<std::string>& assembly_list,
+                                                                          std::unordered_map<std::string, std::vector<std::string>>& query_list,
+                                                                          const bool& write_idx,
+                                                                          size_t& num_threads)
 {
     // Check input
 
@@ -21,17 +21,17 @@ std::unordered_map<std::string, bool> py_call_strings(const std::vector<std::str
     // Here done automatically with pybind11/stl.h
 
     // call pure C++ function
-    std::unordered_map<std::string, bool> result = call_strings(assembly_list, query_dict, write_idx, num_threads);
+    query_list = call_strings(assembly_list, query_list, write_idx, num_threads);
 
     // return C++ map (pybind11 converts to python dictionary)
-    return result;
+    return query_list;
 }
 
 PYBIND11_MODULE(match_string, m)
 {
     m.doc() = "Finds presence/absence of gene sequences in source genomes";
 
-    m.def("query_gene", &py_call_strings, "Generate dictionary for dictionary or queries, whether they represent true sequences.",
+    m.def("query_gene", &py_call_strings, "Removes values from a dictionary based on whether they are artifically generated sequences.",
     py::arg("assembly_files"),
     py::arg("queries"),
     py::arg("write_idx") = 1,

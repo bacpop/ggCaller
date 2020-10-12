@@ -52,10 +52,10 @@ using seqan3::operator""_dna5;
 
 // Function headers
 // match_strings.cpp
-std::unordered_map<std::string, bool> call_strings(const std::vector<std::string>& assembly_list,
-                                                   const std::unordered_map<std::string, std::string>& query_dict,
-                                                   const bool write_idx,
-                                                   const size_t num_threads);
+std::unordered_map<std::string, std::vector<std::string>> call_strings(const std::vector<std::string>& assembly_list,
+                                                                       std::unordered_map<std::string, std::vector<std::string>>& query_list,
+                                                                       const bool& write_idx,
+                                                                       const size_t& num_threads);
 
 std::vector<fm_index_coll> index_fasta(const std::vector<std::string>& fasta_files,
                                        const size_t start,
@@ -68,7 +68,7 @@ int seq_search(const seqan3::dna5_vector& query,
                const size_t end);
 
 // match_bindings.cpp
-std::unordered_map<std::string, bool> py_call_strings(const std::vector<std::string>& assembly_list,
-                                                      const std::unordered_map<std::string, std::string>& query_dict,
-                                                      const bool write_idx,
-                                                      size_t num_threads);
+std::unordered_map<std::string, std::vector<std::string>> py_call_strings(const std::vector<std::string>& assembly_list,
+                                                                          std::unordered_map<std::string, std::vector<std::string>>& query_list,
+                                                                          const bool& write_idx,
+                                                                          size_t& num_threads);
