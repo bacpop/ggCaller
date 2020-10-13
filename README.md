@@ -4,7 +4,7 @@ Traverses Bifrost graphs constructed from bacterial genomes to identify putative
 
 ggCaller uses pyGFA to convert Bifrost graphs to Networkx graph objects to enable graph traversal.
 
-##Installation
+## Installation
 
 ### Installation via conda (recommended)
 
