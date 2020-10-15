@@ -5,7 +5,7 @@ from .ggcaller import *
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='ggCaller')
+                                     prog='ggcaller')
 
     IO = parser.add_argument_group('Input/output')
     IO.add_argument('--graph',
