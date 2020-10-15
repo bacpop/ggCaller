@@ -66,7 +66,7 @@ def main():
     check_ORF_in_source(source_genomes, ORF_output, write_idx, num_threads)
 
     # generate fasta
-    print("Generating FASTA files...")
+    print("Generating gene call FASTA file...")
     generate_fasta(ORF_output, output, ORF_length)
     print("Done.")
 
