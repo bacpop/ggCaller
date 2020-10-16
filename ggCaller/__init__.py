@@ -1,4 +1,4 @@
-# Copyright 2019-2020 Sam Horsfield
+# Copyright 2020 Sam Horsfield
 
 '''ggCaller: a gene caller for Bifrost graphs'''
 
