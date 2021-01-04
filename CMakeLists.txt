@@ -1,12 +1,17 @@
-cmake_minimum_required (VERSION 3.4)
-project(match_string)
+cmake_minimum_required(VERSION 3.4)
+project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 find_package(OpenMP)
+find_library(pthread REQUIRED)
+find_library(z REQUIRED)
+find_library(bifrost REQUIRED)
 
 find_package(pybind11 REQUIRED)
-pybind11_add_module(match_string src/match_string.cpp src/match_bindings.cpp)
+pybind11_add_module(ggCaller_cpp src/call_ORFs.cpp src/ggCaller_bindings.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp)
 
 IF( DEFINED ENV{CONDA_PREFIX} )
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
@@ -18,8 +23,8 @@ ELSE()
   find_package(SeqAn3 REQUIRED)
 ENDIF()
 
-target_link_libraries(match_string PRIVATE seqan3::seqan3 pthread)
+target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 pthread z bifrost)
 
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(match_string PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
 endif()

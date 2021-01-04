@@ -1,155 +1,135 @@
-//
-// Created by Sam Horsfield on 25/08/2020.
-//
-
-#include "match_string.h"
-
-//run fmindex workflow
-std::unordered_map<std::string, std::vector<std::string>> call_strings(const std::vector<std::string>& assembly_list,
-                                                                       std::unordered_map<std::string, std::vector<std::string>>& query_list,
-                                                                       const bool& write_idx,
-                                                                       const size_t& num_threads)
-{
-    // Create threaded queue for computation
-    assert(num_threads >= 1);
-    const unsigned long int database_size = (unsigned long int)assembly_list.size();
-    const unsigned long int calc_per_thread = database_size / num_threads;
-    const unsigned int num_big_threads = database_size % num_threads;
-
-    size_t start = 0;
-    std::vector<size_t> start_points;
-    for (unsigned int thread_idx = 0; thread_idx < num_threads; ++thread_idx) // Loop over threads
-    {
-        start_points.push_back(start);
-
-        // First 'big' threads have an extra job
-        if (thread_idx < num_big_threads)
-        {
-            start += calc_per_thread + 1;
-        }
-        else
-        {
-            start += calc_per_thread;
-        }
-    }
-    start_points.push_back(start);
-
-    // Read all sequences into memory as Fasta objects (threaded)
-    //std::cerr << "Constructing indexes for all input sequences..." << std::endl;
-    std::vector<fm_index_coll> seq_idx;
-
-    // multithread with openMP
-    #pragma omp parallel num_threads(num_threads)
-    {
-        std::vector<fm_index_coll> seq_idx_private;
-        #pragma omp for nowait
-        for (unsigned int thread_idx = 0; thread_idx < num_threads; ++thread_idx)
-        {
-            seq_idx_private = std::move(index_fasta(assembly_list, start_points[thread_idx], start_points[thread_idx + 1], write_idx));
-        }
-        #pragma omp critical
-        seq_idx.insert(seq_idx.end(), seq_idx_private.begin(), seq_idx_private.end());
-    }
-
-    //std::cerr << "Searching for gene sequences..." << std::endl;
-
-    // Run searches using openMP, looping over genes and multithreading searches across all fmindexes
-
-    for (auto itr = query_list.cbegin(); itr != query_list.cend(); )
-    {
-        // initialise hits variable for specific gene
-        int hits = 0;
-        // convert string to dn5 vector
-        seqan3::dna5_vector query = (*itr).first | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-
-        #pragma omp parallel for reduction(+:hits) num_threads(num_threads)
-        for (unsigned int thread_idx = 0; thread_idx < num_threads; ++thread_idx)
-        {
-            hits += seq_search(query, seq_idx, start_points[thread_idx], start_points[thread_idx + 1]);
-        }
-
-        //set remove the entry from query_dict if not found
-        itr = (!hits) ? query_list.erase(itr) : std::next(itr);
-    }
-
-    //std::cerr << "Done." << std::endl;
-    return query_list;
-}
+// ggCaller header
+#include "ggCaller_classes.h"
 
 // index fasta files
-std::vector<fm_index_coll> index_fasta(const std::vector<std::string>& fasta_files,
-                                       const size_t start,
-                                       const size_t end,
-                                       const bool& write_idx)
+fm_index_coll index_fasta(const std::string& fasta_file,
+                          const bool& write_idx)
 {
-    std::vector<fm_index_coll> seq_idx;
-    for (auto file_it = fasta_files.begin() + start; file_it != fasta_files.begin() + end; ++file_it)
+    fm_index_coll ref_index;
+    // create fm index file name
+    std::string idx_file_name = fasta_file + ".fm";
+
+    // Read index if it already exists
+    if (std::filesystem::exists(idx_file_name))
     {
-        fm_index_coll ref_index;
-        // create fm index file name
-        std::string idx_file_name = *file_it + ".fm";
-
-        // Read index if it already exists
-        if (std::filesystem::exists(idx_file_name))
-        {
-            std::ifstream is{idx_file_name, std::ios::binary};
-            cereal::BinaryInputArchive iarchive{is};
-            iarchive(ref_index);
-        }
-        else
-        {
-            // Create index - should be viable for both single and collections fmindexes
-            seqan3::sequence_file_input reference_in{*file_it};
-            std::vector<seqan3::dna5_vector> reference_seq;
-
-            for (auto & [seq, id, qual] : reference_in) {
-                reference_seq.push_back(std::move(seq));
-            }
-
-            // this is where the sequence is indexed
-            ref_index = fm_index_coll{reference_seq};
-
-            // write indexes to file if specified
-            if (write_idx)
-            {
-                std::ofstream os{idx_file_name, std::ios::binary};
-                cereal::BinaryOutputArchive oarchive{os};
-                oarchive(ref_index);
-            }
-        }
-        seq_idx.push_back(ref_index);
+        std::ifstream is{idx_file_name, std::ios::binary};
+        cereal::BinaryInputArchive iarchive{is};
+        iarchive(ref_index);
     }
-    return seq_idx;
+    else
+    {
+        // Create index - should be viable for both single and collections fmindexes
+        seqan3::sequence_file_input reference_in{fasta_file};
+        std::vector<seqan3::dna5_vector> reference_seq;
+
+        for (auto & [seq, id, qual] : reference_in) {
+            reference_seq.push_back(std::move(seq));
+        }
+
+        // this is where the sequence is indexed
+        ref_index = fm_index_coll{reference_seq};
+
+        // write indexes to file if specified
+        if (write_idx)
+        {
+            std::ofstream os{idx_file_name, std::ios::binary};
+            cereal::BinaryOutputArchive oarchive{os};
+            oarchive(ref_index);
+        }
+    }
+    return ref_index;
 }
 
 //search for a specific sequence within an fm index array
 int seq_search(const seqan3::dna5_vector& query,
-               const std::vector<fm_index_coll>& seq_idx,
-               const size_t start,
-               const size_t end)
+               const fm_index_coll& ref_idx,
+               const std::string& strand)
 {
     int present = 0;
     int query_count = 0;
-    for (auto ref_it = seq_idx.begin() + start; ref_it != seq_idx.begin() + end; ref_it++)
+    //count number of occurrences
+    if (strand == "+")
     {
-        //count number of occurrences
-        auto results = search(query, *ref_it);
+        auto results = search(query, ref_idx);
         query_count = (int)std::ranges::distance(results);
+    } else
+    {
+        auto results = search(query | std::views::reverse | seqan3::views::complement, ref_idx);
+        query_count = (int)std::ranges::distance(results);
+    }
 
-        if (query_count == 0)
-        {
-            //find reverse complement, count number of occurrences
-            auto results = search(query | std::views::reverse | seqan3::views::complement, *ref_it);
-            query_count = (int)std::ranges::distance(results);
-        }
-
-        if (query_count != 0) {
-            // debug_stream << "found" << std::endl;
-            int present = 1;
-            //std::cerr << present << std::endl;
-            return present;
-        }
-        //std::cerr << "Not found!" << std::endl;
+    if (query_count != 0)
+    {
+        // debug_stream << "found" << std::endl;
+        present = 1;
     }
     return present;
+}
+
+//run fmindex workflow
+void call_strings(robin_hood::unordered_map<std::string, std::vector<bool>>& query_list,
+                  const std::string& strand,
+                  const std::vector<std::string>& assembly_list,
+                  const bool& write_idx)
+{
+    // compute number of colours
+    const size_t num_colours = assembly_list.size();
+
+    // generate list of genes for iteration
+    std::vector<std::string> gene_list;
+    for (const auto& gene : query_list)
+    {
+        gene_list.push_back(gene.first);
+    }
+
+    // Read all sequences into memory as Fasta objects (threaded)
+    std::vector<fm_index_coll> seq_idx(num_colours);
+
+    // multithread with openMP
+#pragma omp parallel for
+    for (size_t i = 0; i < num_colours; i++)
+    {
+        seq_idx[i] = std::move(index_fasta(assembly_list[i], write_idx));
+    }
+
+    // Run searches using openMP, looping over genes and multithreading searches of genes calls in specific fm-indexes
+    std::vector<std::string> to_remove;
+#pragma omp parallel
+    {
+        std::vector<std::string> to_remove_private;
+#pragma omp for nowait
+        for (auto itr = gene_list.begin(); itr < gene_list.end(); itr++)
+        {
+            // initialise hits variable for specific query
+            int hits = 0;
+
+            // convert string to dn5 vector, get colours from query_list
+            seqan3::dna5_vector query = *itr | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+            const auto colours = query_list.at(*itr);
+
+            // compute number of colours
+            int sum_colours = accumulate(colours.begin(), colours.end(), 0);
+
+            //iterate over colours, if colour present then add to hits
+            for (size_t i = 0; i < num_colours; i++)
+            {
+                if (colours[i])
+                {
+                    hits += seq_search(query, seq_idx[i], strand);
+                }
+            }
+            //set remove the entry from query_list if number of colours is not same as expected
+            if (hits != sum_colours)
+            {
+                to_remove_private.push_back(*itr);
+            }
+        }
+        //#pragma omp critical
+        to_remove.insert(to_remove.end(), make_move_iterator(to_remove_private.begin()), make_move_iterator(to_remove_private.end()));
+    }
+
+    for (const auto& artificial_gene : to_remove)
+    {
+        query_list.erase(artificial_gene);
+    }
 }
