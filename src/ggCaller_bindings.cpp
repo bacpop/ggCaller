@@ -52,18 +52,20 @@ int py_ggCaller_graphexists (const std::string& graphfile,
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto all_ORFs = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
+    auto ORF_tuple = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
 
     // generate fmindices and check for artificial sequences if sequences supplied are reference files
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        filter_artificial_ORFS(all_ORFs, input_colours, write_idx);
+        auto ORF_colours_map = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
     }
 
     // write fasta files to file
     cout << "Writing gene calls to file..." << endl;
-    write_to_file(outfile, all_ORFs);
+    write_to_file(outfile, std::get<0>(ORF_tuple));
+
+
 
     cout << "Done." << endl;
 
@@ -134,18 +136,18 @@ int py_ggCaller_graphbuild (const std::string& infile1,
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto all_ORFs = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
+    auto ORF_tuple = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
 
     // generate fmindices and check for artificial sequences if sequences supplied are reference files
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        filter_artificial_ORFS(all_ORFs, input_colours, write_idx);
+        auto ORF_colours_map = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
     }
 
     // write fasta files to file
     cout << "Writing gene calls to file..." << endl;
-    write_to_file(outfile, all_ORFs);
+    write_to_file(outfile, std::get<0>(ORF_tuple));
 
     cout << "Done." << endl;
 

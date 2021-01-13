@@ -21,7 +21,7 @@
 // openMP headers
 #include <omp.h>
 
-// robinhood hasing header
+// robinhood hashing header
 #include "robin_hood.h"
 
 // seqan3 headers
@@ -39,14 +39,15 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+// Eigen header
+#include "Eigen/Sparse"
+
 // bifrost header
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
 const vector<bool> empty_codon_arr(3, 0);
-//vector<bool> empty_colour_arr;
 namespace py = pybind11;
-
 
 // class declaration
 class unitigDict {
@@ -81,9 +82,6 @@ class unitigDict {
 //    const bool& returnForstop() {return forward_stop;};
 //    const bool& returnRevstop() {return reverse_stop;};
 
-
-
-
     // to add: add unitig sequence, predecessor/successor ID and orientation for fast access with robin-hood maps
 
     size_t unitig_id;
@@ -99,6 +97,32 @@ class unitigDict {
     bool forward_stop_defined = false;
     bool reverse_stop_defined = false;
 };
+
+// ggCaller typedefs
+typedef std::tuple<size_t, size_t, size_t> indexTriplet;
+typedef robin_hood::unordered_map<std::string, unitigDict> unitigMap;
+typedef std::pair<std::vector<std::string>, std::vector<indexTriplet>> ORFNodeVector;
+typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
+typedef robin_hood::unordered_map<std::string, ORFNodeMap> StrandORFNodeMap;
+typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
+typedef robin_hood::unordered_map<std::string, SeqORFMap> StrandSeqORFMap;
+
+
+// Eigen typedef
+typedef Eigen::Triplet<double> ET;
+
+// fmindex typedef
+using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
+        sdsl::rank_support_v<>,
+        sdsl::select_support_scan<>,
+        sdsl::select_support_scan<0>>,
+        16,
+        10000000,
+        sdsl::sa_order_sa_sampling<>,
+        sdsl::isa_sampling<>,
+        sdsl::plain_byte_alphabet>;
+typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
+using seqan3::operator""_dna5;
 
 // function headers
 // indexing
@@ -133,11 +157,11 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const int& kmer,
                                    const size_t& nb_colours);
 
-std::tuple<robin_hood::unordered_map<std::string, unitigDict>, std::vector<std::string>, std::vector<std::string>> index_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                               const std::vector<std::string>& stop_codons_for,
-                                                                                                                               const std::vector<std::string>& stop_codons_rev,
-                                                                                                                               const int& kmer,
-                                                                                                                               const size_t& nb_colours);
+std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>> index_graph(const ColoredCDBG<>& ccdbg,
+                                                                                                                                      const std::vector<std::string>& stop_codons_for,
+                                                                                                                                      const std::vector<std::string>& stop_codons_rev,
+                                                                                                                                      const int& kmer,
+                                                                                                                                      const size_t& nb_colours);
 // traversal.cpp
 std::vector<bool> compare_codon_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
@@ -159,24 +183,12 @@ std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<boo
                                                                                                          const vector<bool>& empty_colour_arr);
 
 std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>> traverse_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                                                                  const std::tuple<robin_hood::unordered_map<std::string, unitigDict>, std::vector<std::string>, std::vector<std::string>>& graph_tuple,
+                                                                                                                                                                                  const std::tuple<robin_hood::unordered_map<std::string, unitigDict>, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>>& graph_tuple,
                                                                                                                                                                                   const bool& repeat,
                                                                                                                                                                                   const vector<bool>& empty_colour_arr,
                                                                                                                                                                                   const size_t& max_path_length);
 
 // match_strings
-// fmindex typedef
-using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
-        sdsl::rank_support_v<>,
-        sdsl::select_support_scan<>,
-        sdsl::select_support_scan<0>>,
-        16,
-        10000000,
-        sdsl::sa_order_sa_sampling<>,
-        sdsl::isa_sampling<>,
-        sdsl::plain_byte_alphabet>;
-typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
-using seqan3::operator""_dna5;
 
 fm_index_coll index_fasta(const std::string& fasta_file,
                           const bool& write_idx);
@@ -185,32 +197,41 @@ int seq_search(const seqan3::dna5_vector& query,
                const fm_index_coll& ref_idx,
                const std::string& strand);
 
-void call_strings(robin_hood::unordered_map<std::string, std::vector<bool>>& query_list,
+void call_strings(SeqORFMap& query_list,
                   const std::string& strand,
+                  ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx);
 
 // call_ORFs
-std::vector<std::string> generate_ORFs(const ColoredCDBG<>& ccdbg,
-                                       const std::vector<std::string>& stop_codons,
-                                       const std::vector<std::string>& start_codons,
-                                       const std::vector<std::pair<std::string, bool>>& unitig_path,
-                                       const int& overlap,
-                                       const size_t& min_len);
+ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
+                         const std::vector<std::string>& stop_codons,
+                         const std::vector<std::string>& start_codons,
+                         const std::vector<std::pair<std::string, bool>>& unitig_path,
+                         const int& overlap,
+                         const size_t& min_len);
 
-robin_hood::unordered_map<std::string, robin_hood::unordered_map<std::string, std::vector<bool>>> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                                                                            const std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>>& path_tuple,
-                                                                                                            const std::vector<std::string>& stop_codons_for,
-                                                                                                            const std::vector<std::string>& start_codons_for,
-                                                                                                            const int& overlap,
-                                                                                                            const size_t& min_ORF_length);
+std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccdbg,
+                                                        const std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>>& path_tuple,
+                                                        const std::vector<std::string>& stop_codons_for,
+                                                        const std::vector<std::string>& start_codons_for,
+                                                        const int& overlap,
+                                                        const size_t& min_ORF_length);
 
-void filter_artificial_ORFS(robin_hood::unordered_map<std::string, robin_hood::unordered_map<std::string, std::vector<bool>>>& all_ORFs,
-                            const std::vector<std::string>& fasta_files,
-                            const bool write_index);
+std::unordered_map<std::string, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
+                                                                                 StrandORFNodeMap& ORF_node_paths,
+                                                                                 const std::vector<std::string>& fasta_files,
+                                                                                 const bool write_index);
 
 void write_to_file (const std::string& outfile_name,
-                    const robin_hood::unordered_map<std::string, robin_hood::unordered_map<std::string, std::vector<bool>>>& all_ORFs);
+                    const StrandSeqORFMap& all_ORFs);
+
+// gene_overlap.cpp
+void calculate_overlaps(const unitigMap& unitig_map,
+                        const StrandORFNodeMap& ORF_node_paths,
+                        const std::unordered_map<std::string, std::vector<std::string>> ORF_colours_map,
+                        const int& node_overlap,
+                        const size_t& max_overlap);
 
 // ggCaller_bindings
 int py_ggCaller_graphexists (const std::string& graphfile,

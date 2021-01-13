@@ -67,8 +67,9 @@ int seq_search(const seqan3::dna5_vector& query,
 }
 
 //run fmindex workflow
-void call_strings(robin_hood::unordered_map<std::string, std::vector<bool>>& query_list,
+void call_strings(SeqORFMap& query_list,
                   const std::string& strand,
+                  ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx)
 {
@@ -131,5 +132,6 @@ void call_strings(robin_hood::unordered_map<std::string, std::vector<bool>>& que
     for (const auto& artificial_gene : to_remove)
     {
         query_list.erase(artificial_gene);
+        ORF_node_paths.erase(artificial_gene);
     }
 }

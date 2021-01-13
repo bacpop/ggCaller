@@ -91,7 +91,7 @@ std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::
 //}
 
 std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> recur_nodes_binary (const ColoredCDBG<>& ccdbg,
-                                                                                                         const robin_hood::unordered_map<std::string, unitigDict>& graph_map,
+                                                                                                         const unitigMap& graph_map,
                                                                                                          const robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>& previous_paths,
                                                                                                          const std::vector<std::pair<std::string, bool>> head_kmer_list,
                                                                                                          const uint8_t& codon_arr,
@@ -222,7 +222,7 @@ std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<boo
 }
 
 std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>> traverse_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                                                                  const std::tuple<robin_hood::unordered_map<std::string, unitigDict>, std::vector<std::string>, std::vector<std::string>>& graph_tuple,
+                                                                                                                                                                                  const std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>>& graph_tuple,
                                                                                                                                                                                   const bool& repeat,
                                                                                                                                                                                   const vector<bool>& empty_colour_arr,
                                                                                                                                                                                   const size_t& max_path_length)

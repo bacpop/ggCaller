@@ -11,7 +11,7 @@ find_library(z REQUIRED)
 find_library(bifrost REQUIRED)
 
 find_package(pybind11 REQUIRED)
-pybind11_add_module(ggCaller_cpp src/call_ORFs.cpp src/ggCaller_bindings.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp)
+pybind11_add_module(ggCaller_cpp src/call_ORFs.cpp src/ggCaller_bindings.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp)
 
 IF( DEFINED ENV{CONDA_PREFIX} )
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
