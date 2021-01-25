@@ -31,9 +31,9 @@ int main(int argc, char *argv[]) {
     // read in compact coloured DBG
 //    cout << "Building coloured compacted DBG..." << endl;
 //
-//    const std::string infile1 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt";
-//    const std::string infile2 = "NA";
-
+//    const std::string infile1 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group2_capsular_fa_list.txt";
+//    const std::string infile2 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt";
+//
 //    const int kmer = 31;
 //
 //
@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
 //    }
 //
 //    ColoredCDBG<> ccdbg;
+//
 //
 //    if (write_graph) {
 //        // build and write graph
@@ -53,6 +54,7 @@ int main(int argc, char *argv[]) {
 //        std::string outgraph = "NA";
 //        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, false, outgraph);
 //    }
+
 
     cout << "Reading coloured compacted DBG..." << endl;
 
@@ -78,13 +80,6 @@ int main(int argc, char *argv[]) {
     cout << "Generating graph stop codon index..." << endl;
     const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
 
-    auto test = std::get<0>(graph_tuple).at("TGTCCAATGAAGAGCAAGACTTGACAGTAGA");
-    auto test2 = std::get<0>(graph_tuple).at("AAAAGTCAAATCTGTCTTGATTGAAAACACT");
-    auto test3 = std::get<0>(graph_tuple).at("TCCATGGGATGCTTTCTGTGTGGAATTACTA");
-    auto test4 = std::get<0>(graph_tuple).at("AATCGATTTCTAACAATGTTTTAGAAGCAGA");
-
-    auto test_map = std::get<3>(graph_tuple).size();
-
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
     const auto path_tuple = traverse_graph(ccdbg, graph_tuple, repeat, empty_colour_arr, max_path_length);
@@ -98,13 +93,13 @@ int main(int argc, char *argv[]) {
 
     // generate fmindices and check for artificial sequences
     cout << "Checking for artificial sequences..." << endl;
-    auto ORF_colours_map = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+    auto ORF_colours_tuple = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
 
     ORF_num = std::get<0>(ORF_tuple).at("+").size();
     path_num = std::get<1>(ORF_tuple).at("+").size();
 
     cout << "Calculating gene overlap" << endl;
-    calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), ORF_colours_map, overlap, 90);
+    auto ORF_overlap_map = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), ORF_colours_tuple, overlap, 90);
 
     // write fasta files to file
     cout << "Writing gene calls to file..." << endl;

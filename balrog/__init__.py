@@ -1,0 +1,1 @@
+#Copyright (c) 2020 Markus J. Sommer & Steven L. Salzberg
