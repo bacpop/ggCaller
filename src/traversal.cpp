@@ -90,21 +90,21 @@ std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::
 //    outfile.close();
 //}
 
-std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> recur_nodes_binary (const ColoredCDBG<>& ccdbg,
-                                                                                                         const unitigMap& graph_map,
-                                                                                                         const robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>& previous_paths,
-                                                                                                         const std::vector<std::pair<std::string, bool>> head_kmer_list,
-                                                                                                         const uint8_t& codon_arr,
-                                                                                                         const std::vector<bool>& colour_arr,
-                                                                                                         const std::set<std::pair<std::string, bool>> kmer_set,
-                                                                                                         const size_t length,
-                                                                                                         const bool& forward,
-                                                                                                         const size_t& length_max,
-                                                                                                         const bool repeat,
-                                                                                                         const vector<bool>& empty_colour_arr)
+PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
+                               const unitigMap& graph_map,
+                               const PathMap& previous_paths,
+                               const std::vector<std::pair<std::string, bool>> head_kmer_list,
+                               const uint8_t& codon_arr,
+                               const std::vector<bool>& colour_arr,
+                               const std::set<std::pair<std::string, bool>> kmer_set,
+                               const size_t length,
+                               const bool& forward,
+                               const size_t& length_max,
+                               const bool repeat,
+                               const vector<bool>& empty_colour_arr)
 {
     // generate path list, add head_kmer_list to it
-    std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> path_list;
+    PathVector path_list;
     path_list.push_back(std::make_pair(head_kmer_list, colour_arr));
 
     // if path not complete, generate unitig object using head kmer
@@ -142,7 +142,6 @@ std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<boo
 
             // calculate modulus for path and updated cached path reading frame
             int modulus = length % 3;
-            //std::vector<bool> cached_codon_array; // = compare_codon_array(codon_arr, graph_map.at(kmer_id).full_codon.at(um.strand).at(modulus));
             bool cache_valid = 0;
             std::string cached_kmer_id = kmer_id + (um.strand ? "+" : "-");
 
@@ -160,7 +159,7 @@ std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<boo
             if (updated_colour_array != empty_colour_arr)
             {
                 // get previous cached paths
-                std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> cached_paths;
+                PathVector cached_paths;
                 // check if cached path is present in previous paths
                 try {
                     cached_paths = previous_paths.at(cached_kmer_id);
@@ -221,17 +220,17 @@ std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<boo
     return path_list;
 }
 
-std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>> traverse_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                                                                  const std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>>& graph_tuple,
-                                                                                                                                                                                  const bool& repeat,
-                                                                                                                                                                                  const vector<bool>& empty_colour_arr,
-                                                                                                                                                                                  const size_t& max_path_length)
+PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
+                         const GraphTuple& graph_tuple,
+                         const bool& repeat,
+                         const vector<bool>& empty_colour_arr,
+                         const size_t& max_path_length)
 {
     // define head_string_arr for parrallelisation
     std::vector<std::string> head_string_arr;
 
     // recur through nodes to file paths
-    robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>> complete_paths;
+    PathMap complete_paths;
 
 
     cout << "Traversing nodes in forward direction..." << endl;
@@ -239,7 +238,7 @@ std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vec
     bool is_forward = true;
     #pragma omp parallel
     {
-        std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> unitig_complete_paths;
+        PathVector unitig_complete_paths;
         #pragma omp for nowait
         for (auto it = std::get<1>(graph_tuple).begin(); it < std::get<1>(graph_tuple).end(); it++)
         {
@@ -263,11 +262,6 @@ std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vec
             std::string head_kmer_id = head_kmer + "+";
             if (!unitig_complete_paths.empty())
             {
-//                #pragma omp critical
-//                {
-//                    complete_paths.emplace(head_kmer_id, std::move(unitig_complete_paths));
-//                    head_string_arr.push_back(head_kmer_id);
-//                }
                 //critical section, ensure data race is avoided when appending to/reading complete_paths
                 mtx.lock();
                 complete_paths.emplace(head_kmer_id, std::move(unitig_complete_paths));
@@ -282,7 +276,7 @@ std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vec
     is_forward = false;
     #pragma omp parallel
     {
-        std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> unitig_complete_paths;
+        PathVector unitig_complete_paths;
         #pragma omp for nowait
         for (auto it = std::get<2>(graph_tuple).begin(); it < std::get<2>(graph_tuple).end(); it++)
         {
@@ -306,11 +300,6 @@ std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vec
             std::string head_kmer_id = head_kmer + "-";
             if (!unitig_complete_paths.empty())
             {
-//                #pragma omp critical
-//                {
-//                    complete_paths.emplace(head_kmer_id, std::move(unitig_complete_paths));
-//                    head_string_arr.push_back(head_kmer_id);
-//                }
                 // critical section, ensure data race is avoided when appending to/reading complete_paths
                 mtx.lock();
                 complete_paths.emplace(head_kmer_id, std::move(unitig_complete_paths));

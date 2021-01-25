@@ -1,18 +1,19 @@
 // ggCaller header
 #include "ggCaller_classes.h"
 
-int py_ggCaller_graphexists (const std::string& graphfile,
-                             const std::string& coloursfile,
-                             const std::string& outfile,
-                             const std::vector<std::string>& start_codons,
-                             const std::vector<std::string>& stop_codons_for,
-                             const std::vector<std::string>& stop_codons_rev,
-                             size_t num_threads,
-                             const bool is_ref,
-                             const bool write_idx,
-                             const bool repeat,
-                             const size_t& max_path_length,
-                             const size_t& min_ORF_length) {
+std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string& graphfile,
+                                                           const std::string& coloursfile,
+                                                           const std::string& outfile,
+                                                           const std::vector<std::string>& start_codons,
+                                                           const std::vector<std::string>& stop_codons_for,
+                                                           const std::vector<std::string>& stop_codons_rev,
+                                                           size_t num_threads,
+                                                           const bool is_ref,
+                                                           const bool write_idx,
+                                                           const bool repeat,
+                                                           const size_t& max_path_length,
+                                                           const size_t& min_ORF_length,
+                                                           const size_t& max_ORF_overlap) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -55,37 +56,45 @@ int py_ggCaller_graphexists (const std::string& graphfile,
     auto ORF_tuple = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
 
     // generate fmindices and check for artificial sequences if sequences supplied are reference files
+    std::pair<ORFColoursMap, std::vector<std::string>> ORF_colours_pair;
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        auto ORF_colours_map = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+        ORF_colours_pair = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+    } else
+    {
+        ORF_colours_pair = sort_ORF_colours(std::get<0>(ORF_tuple));
     }
 
+    cout << "Calculating gene overlap" << endl;
+    auto ORF_overlap_pair = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), ORF_colours_pair, overlap, max_ORF_overlap);
+
     // write fasta files to file
-    cout << "Writing gene calls to file..." << endl;
-    write_to_file(outfile, std::get<0>(ORF_tuple));
+    //cout << "Writing gene calls to file..." << endl;
+    //write_to_file(outfile, std::get<0>(ORF_tuple));
 
 
 
     cout << "Done." << endl;
 
-    return 0;
+    return ORF_overlap_pair;
 }
 
-int py_ggCaller_graphbuild (const std::string& infile1,
-                            const int& kmer,
-                            const std::string& outfile,
-                            const std::vector<std::string>& start_codons,
-                            const std::vector<std::string>& stop_codons_for,
-                            const std::vector<std::string>& stop_codons_rev,
-                            size_t num_threads,
-                            bool is_ref,
-                            const bool write_idx,
-                            const bool repeat,
-                            const bool write_graph,
-                            const size_t& max_path_length,
-                            const size_t& min_ORF_length,
-                            const std::string& infile2) {
+std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphbuild (const std::string& infile1,
+                                                          const int& kmer,
+                                                          const std::string& outfile,
+                                                          const std::vector<std::string>& start_codons,
+                                                          const std::vector<std::string>& stop_codons_for,
+                                                          const std::vector<std::string>& stop_codons_rev,
+                                                          size_t num_threads,
+                                                          bool is_ref,
+                                                          const bool write_idx,
+                                                          const bool repeat,
+                                                          const bool write_graph,
+                                                          const size_t& max_path_length,
+                                                          const size_t& min_ORF_length,
+                                                          const size_t& max_ORF_overlap,
+                                                          const std::string& infile2) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -139,19 +148,26 @@ int py_ggCaller_graphbuild (const std::string& infile1,
     auto ORF_tuple = call_ORFs(ccdbg, path_tuple, stop_codons_for, start_codons, overlap, min_ORF_length);
 
     // generate fmindices and check for artificial sequences if sequences supplied are reference files
+    std::pair<ORFColoursMap, std::vector<std::string>> ORF_colours_pair;
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        auto ORF_colours_map = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+        ORF_colours_pair = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+    } else
+    {
+        ORF_colours_pair = sort_ORF_colours(std::get<0>(ORF_tuple));
     }
 
+    cout << "Calculating gene overlap" << endl;
+    auto ORF_overlap_pair = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), ORF_colours_pair, overlap, max_ORF_overlap);
+
     // write fasta files to file
-    cout << "Writing gene calls to file..." << endl;
-    write_to_file(outfile, std::get<0>(ORF_tuple));
+//    cout << "Writing gene calls to file..." << endl;
+//    write_to_file(outfile, std::get<0>(ORF_tuple));
 
     cout << "Done." << endl;
 
-    return 0;
+    return ORF_overlap_pair;
 }
 
 PYBIND11_MODULE(ggCaller_cpp, m)
@@ -170,7 +186,8 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     py::arg("write_idx") = 1,
     py::arg("repeat") = 0,
     py::arg("max_path_length") = 10000,
-    py::arg("min_ORF_length") = 90);
+    py::arg("min_ORF_length") = 90,
+    py::arg("max_ORF_overlap") = 60);
 
     m.def("call_genes_build", &py_ggCaller_graphbuild, "Builds and then traverses Bifrost graph, calling open reading frames.",
     py::arg("infile1"),
@@ -186,5 +203,6 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     py::arg("write_graph") = 1,
     py::arg("max_path_length") = 10000,
     py::arg("min_ORF_length") = 90,
+    py::arg("max_ORF_overlap") = 60,
     py::arg("infile2") = "NA");
 }

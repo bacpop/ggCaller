@@ -263,11 +263,11 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     return unitig_map;
 }
 
-std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>> index_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                      const std::vector<std::string>& stop_codons_for,
-                                                                                                                                      const std::vector<std::string>& stop_codons_rev,
-                                                                                                                                      const int& kmer,
-                                                                                                                                      const size_t& nb_colours)
+GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
+                       const std::vector<std::string>& stop_codons_for,
+                       const std::vector<std::string>& stop_codons_rev,
+                       const int& kmer,
+                       const size_t& nb_colours)
 {
     // get all head kmers for parrellelisation
     std::vector<Kmer> head_kmer_arr;
@@ -280,7 +280,6 @@ std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_
     robin_hood::unordered_map<std::string, unitigDict> graph_map;
     std::vector<std::string> stop_list_for;
     std::vector<std::string> stop_list_rev;
-    robin_hood::unordered_map<size_t, std::string> head_kmer_map;
 
     // run unitig indexing in parallel
     size_t unitig_id = 0;
@@ -289,7 +288,6 @@ std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_
         robin_hood::unordered_map<std::string, unitigDict> graph_map_private;
         std::vector<std::string> stop_list_for_private;
         std::vector<std::string> stop_list_rev_private;
-        robin_hood::unordered_map<size_t, std::string> head_kmer_map_private;
         #pragma omp for nowait
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
         {
@@ -301,9 +299,6 @@ std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_
             unitigDict unitig_map = std::move(analyse_unitigs_binary(ccdbg, unitig, stop_codons_for, stop_codons_rev, kmer, nb_colours));
             #pragma omp atomic capture
             unitig_map.unitig_id = unitig_id++;
-
-            // add unitig id to head_kmer_map
-            head_kmer_map_private[unitig_map.unitig_id] = unitig_map.head_kmer;
 
             // add results to private maps and vectors
             if (unitig_map.forward_stop)
@@ -319,12 +314,11 @@ std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_
         #pragma omp critical
         {
             graph_map.insert(graph_map_private.begin(), graph_map_private.end());
-            head_kmer_map.insert(head_kmer_map_private.begin(), head_kmer_map_private.end());
             stop_list_for.insert(stop_list_for.end(), std::make_move_iterator(stop_list_for_private.begin()), std::make_move_iterator(stop_list_for_private.end()));
             stop_list_rev.insert(stop_list_rev.end(), std::make_move_iterator(stop_list_rev_private.begin()), std::make_move_iterator(stop_list_rev_private.end()));
         }
     }
 
-    const auto graph_tuple = std::make_tuple(graph_map, stop_list_for, stop_list_rev, head_kmer_map);
+    const auto graph_tuple = std::make_tuple(graph_map, stop_list_for, stop_list_rev);
     return graph_tuple;
 }

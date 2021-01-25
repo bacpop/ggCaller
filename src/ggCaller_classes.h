@@ -47,6 +47,7 @@
 
 // global variable declaration
 const vector<bool> empty_codon_arr(3, 0);
+//vector<bool> empty_colour_arr;
 namespace py = pybind11;
 
 // class declaration
@@ -106,6 +107,13 @@ typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 typedef robin_hood::unordered_map<std::string, ORFNodeMap> StrandORFNodeMap;
 typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
 typedef robin_hood::unordered_map<std::string, SeqORFMap> StrandSeqORFMap;
+typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColoursMap;
+typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>> GraphTuple;
+typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
+typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
+typedef std::tuple<PathMap, std::vector<std::string>> PathTuple;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, std::tuple<char, size_t, std::string, std::string>>>> ORFOverlapMap;
+typedef std::unordered_map<std::string, std::pair<std::string, std::string>> FullORFMap;
 
 
 // Eigen typedef
@@ -157,11 +165,12 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const int& kmer,
                                    const size_t& nb_colours);
 
-std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>> index_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                      const std::vector<std::string>& stop_codons_for,
-                                                                                                                                      const std::vector<std::string>& stop_codons_rev,
-                                                                                                                                      const int& kmer,
-                                                                                                                                      const size_t& nb_colours);
+GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
+                       const std::vector<std::string>& stop_codons_for,
+                       const std::vector<std::string>& stop_codons_rev,
+                       const int& kmer,
+                       const size_t& nb_colours);
+
 // traversal.cpp
 std::vector<bool> compare_codon_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
@@ -169,24 +178,24 @@ std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const st
 
 std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
-std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> recur_nodes_binary (const ColoredCDBG<>& ccdbg,
-                                                                                                         const robin_hood::unordered_map<std::string, unitigDict>& graph_map,
-                                                                                                         const robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>& previous_paths,
-                                                                                                         const std::vector<std::pair<std::string, bool>> head_kmer_list,
-                                                                                                         const uint8_t& codon_arr,
-                                                                                                         const std::vector<bool>& colour_arr,
-                                                                                                         const std::set<std::pair<std::string, bool>> kmer_set,
-                                                                                                         const size_t length,
-                                                                                                         const bool& forward,
-                                                                                                         const size_t& length_max,
-                                                                                                         const bool repeat,
-                                                                                                         const vector<bool>& empty_colour_arr);
+PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
+                               const unitigMap& graph_map,
+                               const PathMap& previous_paths,
+                               const std::vector<std::pair<std::string, bool>> head_kmer_list,
+                               const uint8_t& codon_arr,
+                               const std::vector<bool>& colour_arr,
+                               const std::set<std::pair<std::string, bool>> kmer_set,
+                               const size_t length,
+                               const bool& forward,
+                               const size_t& length_max,
+                               const bool repeat,
+                               const vector<bool>& empty_colour_arr);
 
-std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>> traverse_graph(const ColoredCDBG<>& ccdbg,
-                                                                                                                                                                                  const std::tuple<robin_hood::unordered_map<std::string, unitigDict>, std::vector<std::string>, std::vector<std::string>, robin_hood::unordered_map<size_t, std::string>>& graph_tuple,
-                                                                                                                                                                                  const bool& repeat,
-                                                                                                                                                                                  const vector<bool>& empty_colour_arr,
-                                                                                                                                                                                  const size_t& max_path_length);
+PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
+                         const GraphTuple& graph_tuple,
+                         const bool& repeat,
+                         const vector<bool>& empty_colour_arr,
+                         const size_t& max_path_length);
 
 // match_strings
 
@@ -212,54 +221,58 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const size_t& min_len);
 
 std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                        const std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>>& path_tuple,
+                                                        const PathTuple& path_tuple,
                                                         const std::vector<std::string>& stop_codons_for,
                                                         const std::vector<std::string>& start_codons_for,
                                                         const int& overlap,
                                                         const size_t& min_ORF_length);
 
-std::unordered_map<std::string, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
-                                                                                 StrandORFNodeMap& ORF_node_paths,
-                                                                                 const std::vector<std::string>& fasta_files,
-                                                                                 const bool write_index);
+std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const StrandSeqORFMap& all_ORFs);
+
+std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
+                                                                            StrandORFNodeMap& ORF_node_paths,
+                                                                            const std::vector<std::string>& fasta_files,
+                                                                            const bool write_index);
 
 void write_to_file (const std::string& outfile_name,
                     const StrandSeqORFMap& all_ORFs);
 
 // gene_overlap.cpp
-void calculate_overlaps(const unitigMap& unitig_map,
-                        const StrandORFNodeMap& ORF_node_paths,
-                        const std::unordered_map<std::string, std::vector<std::string>> ORF_colours_map,
-                        const int& node_overlap,
-                        const size_t& max_overlap);
+std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_map,
+                                                                     const StrandORFNodeMap& ORF_node_paths,
+                                                                     const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_tuple,
+                                                                     const int& DBG_overlap,
+                                                                     const size_t& max_overlap);
 
 // ggCaller_bindings
-int py_ggCaller_graphexists (const std::string& graphfile,
-                             const std::string& coloursfile,
-                             const std::string& outfile,
-                             const std::vector<std::string>& start_codons,
-                             const std::vector<std::string>& stop_codons_for,
-                             const std::vector<std::string>& stop_codons_rev,
-                             size_t num_threads,
-                             const bool is_ref,
-                             const bool write_idx,
-                             const bool repeat,
-                             const size_t& max_path_length,
-                             const size_t& min_ORF_length);
+std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string& graphfile,
+                                                                           const std::string& coloursfile,
+                                                                           const std::string& outfile,
+                                                                           const std::vector<std::string>& start_codons,
+                                                                           const std::vector<std::string>& stop_codons_for,
+                                                                           const std::vector<std::string>& stop_codons_rev,
+                                                                           size_t num_threads,
+                                                                           const bool is_ref,
+                                                                           const bool write_idx,
+                                                                           const bool repeat,
+                                                                           const size_t& max_path_length,
+                                                                           const size_t& min_ORF_length,
+                                                                           const size_t& max_ORF_overlap);
 
-int py_ggCaller_graphbuild (const std::string& infile1,
-                            const int& kmer,
-                            const std::string& outfile,
-                            const std::vector<std::string>& start_codons,
-                            const std::vector<std::string>& stop_codons_for,
-                            const std::vector<std::string>& stop_codons_rev,
-                            size_t num_threads,
-                            bool is_ref,
-                            const bool write_idx,
-                            const bool repeat,
-                            const bool write_graph,
-                            const size_t& max_path_length,
-                            const size_t& min_ORF_length,
-                            const std::string& infile2);
+std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphbuild (const std::string& infile1,
+                                                                          const int& kmer,
+                                                                          const std::string& outfile,
+                                                                          const std::vector<std::string>& start_codons,
+                                                                          const std::vector<std::string>& stop_codons_for,
+                                                                          const std::vector<std::string>& stop_codons_rev,
+                                                                          size_t num_threads,
+                                                                          bool is_ref,
+                                                                          const bool write_idx,
+                                                                          const bool repeat,
+                                                                          const bool write_graph,
+                                                                          const size_t& max_path_length,
+                                                                          const size_t& min_ORF_length,
+                                                                          const size_t& max_ORF_overlap,
+                                                                          const std::string& infile2);
 
 #endif //BIFROST_API_GGCALLER_H

@@ -45,15 +45,21 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
         if (path_sequence.empty())
         {
             path_sequence = unitig_seq;
+            // start index of node in path
             node_range[0] = node_start;
+            // start index of next node (one past the end index)
             node_range[1] = node_end;
-            node_range[2] = node_end;
+            // absolute end index of node
+            node_range[2] = node_end - 1;
             node_start = node_end;
         } else {
             path_sequence.append(unitig_seq.begin()+overlap, unitig_seq.end());
+            // start index of node in path
             node_range[0] = node_start - overlap;
-            node_range[2] = node_end;
+            // absolute end index of node
+            node_range[2] = node_end - 1;
             node_end += node_start - overlap;
+            // start index of next node in path (one past the end index)
             node_range[1] = node_end;
             node_start = node_end;
 
@@ -160,7 +166,8 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                         // check that stop index is in correct frame and further in sequence than last start codon index
                         if (stop_index > start_index)
                         {
-                            ORF_index_pairs.push_back(std::make_pair(start_index, stop_index));
+                            // stop index is indexed at first base, therefore end of ORF is two bases after
+                            ORF_index_pairs.push_back(std::make_pair(start_index, stop_index + 2));
                             last_index = start_index;
                             break;
                         }
@@ -175,7 +182,8 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     // generate sequences for ORFs from codon pairs
     for (const auto& codon_pair : ORF_index_pairs)
     {
-        size_t ORF_len = (codon_pair.second - codon_pair.first) + 3;
+        // add one as codon_pair is zero-indexed
+        size_t ORF_len = (codon_pair.second - codon_pair.first) + 1;
         if (ORF_len >= min_len)
         {
             // make a pair containing a vector of each node name, and corresponding vector of positions traversed in the node
@@ -195,28 +203,35 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                         start_assigned = true;
                     } else if (codon_pair.first >= node_ranges[i][0] && codon_pair.first < node_ranges[i][1]){
                         traversed_node_start = codon_pair.first - node_ranges[i][0];
-                        start_assigned = true;
+                        // check that the start difference to end is greater than the overlap. If not, then sequence is covered in next node traversal
+                        if ((node_ranges[i][2] - traversed_node_start) >= overlap)
+                        {
+                            start_assigned = true;
+                        }
                     }
 
-                    if (codon_pair.second > node_ranges[i][1]) {
-                        traversed_node_end = node_ranges[i][2] - 1;
+                    if (codon_pair.second >= node_ranges[i][1]) {
+                        traversed_node_end = node_ranges[i][2];
                         end_assigned = true;
                     } else if (codon_pair.second >= node_ranges[i][0] && codon_pair.second < node_ranges[i][1]){
-                        // add 3 as codon_pair.second indexed at first base of codon, take 1 to take final index past end of gene (i.e. +2)
-                        traversed_node_end = (codon_pair.second + 2) - node_ranges[i][0];
-                        end_assigned = true;
+                        traversed_node_end = codon_pair.second - node_ranges[i][0];
+                        // check that the end is greater than the overlap. If not, then sequence is already covered in prior node traversal
+                        if (traversed_node_end >= overlap)
+                        {
+                            end_assigned = true;
+                        }
                     }
 
                     if (start_assigned && end_assigned){
-                        size_t node_end = node_ranges[i][2] - 1;
+                        size_t node_end = node_ranges[i][2];
                         indexTriplet node_coords = std::make_tuple(traversed_node_start, traversed_node_end, node_end);
                         ORF_node_vector.first.push_back(nodelist[i]);
                         ORF_node_vector.second.push_back(std::move(node_coords));
                     }
 
                 }
-                //std::string ORF = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
-                std::string ORF = path_sequence.substr((codon_pair.first), (ORF_len));
+                std::string ORF = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
+                //std::string ORF = path_sequence.substr((codon_pair.first), (ORF_len));
                 ORF_map.emplace(std::move(ORF), std::move(ORF_node_vector));
             }
         }
@@ -224,10 +239,10 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     return ORF_map;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
-                                                                                 StrandORFNodeMap& ORF_node_paths,
-                                                                                 const std::vector<std::string>& fasta_files,
-                                                                                 const bool write_index)
+std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
+                                                                          StrandORFNodeMap& ORF_node_paths,
+                                                                          const std::vector<std::string>& fasta_files,
+                                                                          const bool write_index)
 {
     // call strings edits all_ORFs in place
     // run call strings for positive strand
@@ -236,7 +251,14 @@ std::unordered_map<std::string, std::vector<std::string>> filter_artificial_ORFS
     call_strings(all_ORFs["-"], "-", ORF_node_paths["-"], fasta_files, write_index);
 
     // generate a colours dictionary for gene overlap analysis
-    std::unordered_map<std::string, std::vector<std::string>> ORF_colours_map;
+    auto return_tuple = sort_ORF_colours(all_ORFs);
+    return return_tuple;
+}
+
+std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const StrandSeqORFMap& all_ORFs)
+{
+    ORFColoursMap ORF_colours_map;
+    std::unordered_set<std::string> ORF_colours_set;
     for (const auto& ORF_strand : all_ORFs)
     {
         for (const auto& ORF_seq : ORF_strand.second)
@@ -247,13 +269,19 @@ std::unordered_map<std::string, std::vector<std::string>> filter_artificial_ORFS
                 colour_key += std::to_string(colour);
             }
             ORF_colours_map[colour_key].push_back(ORF_seq.first);
+            ORF_colours_set.insert(colour_key);
         }
     }
-    return ORF_colours_map;
+    // convert set to vector to enable parallelisation
+    std::vector<std::string> ORF_colours_vector(ORF_colours_set.begin(), ORF_colours_set.end());
+
+    // generate return tuple
+    std::pair<ORFColoursMap, std::vector<std::string>> return_tuple = std::make_pair(ORF_colours_map, ORF_colours_vector);
+    return return_tuple;
 }
 
 std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                  const std::tuple<robin_hood::unordered_map<std::string, std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>>>, std::vector<std::string>>& path_tuple,
+                                                  const PathTuple& path_tuple,
                                                   const std::vector<std::string>& stop_codons_for,
                                                   const std::vector<std::string>& start_codons_for,
                                                   const int& overlap,
