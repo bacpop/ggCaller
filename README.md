@@ -52,8 +52,8 @@ To run ggCaller using an existing Bifrost GFA file and Colours file, specify BOT
 - ```--graph <graph.gfa>``` Input GFA
 - ```--colours <colours.bfg_colors>``` Input colours file
 
-To enable filtering of artificially generated sequences via FMindexing (if sequences used to generate the GFA and Colours files were exclusively assembled genomes), additionally specify:
-- ```--is-ref```
+To disable filtering of artificially generated sequences via FMindexing (if sequences used to generate the GFA and Colours files are not exclusively assembled genomes), additionally specify:
+- ```--not-ref```
 
 Note: Ensure the sequences used to build the graph are in the same directories as when the graph was built.
 
@@ -92,11 +92,11 @@ argument. Bifrost uses kmer coverage filtering for read files to remove read err
 
 - Use existing graph which was built using assembled genomes only.
 
-```ggcaller --graph graph.gfa --colours colours.bfg_colours --is-ref --out calls.fasta```
+```ggcaller --graph graph.gfa --colours colours.bfg_colours --out calls.fasta```
 
 - Use existing graph which was built using reads or assembled genomes and reads.
 
-```ggcaller --graph graph.gfa --colours colours.bfg_colours --out calls.fasta```
+```ggcaller --graph graph.gfa --colours colours.bfg_colours --not-ref --out calls.fasta```
 
 Test data is available in the ```data``` directory.
 
