@@ -4,6 +4,8 @@ Traverses Bifrost graphs constructed from bacterial genomes to identify putative
 
 ## Installation
 
+ggCaller is currently only available for Linux. If you are running Windows 10, it can be installed via the Windows Subsystem for Linux ([WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10))
+
 ### Installation via conda (recommended)
 
 Install through [bioconda](http://bioconda.github.io/):
