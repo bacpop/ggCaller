@@ -112,8 +112,8 @@ typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>
 typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
 typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
 typedef std::tuple<PathMap, std::vector<std::string>> PathTuple;
-typedef std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, std::tuple<char, size_t, std::string, std::string>>>> ORFOverlapMap;
-typedef std::unordered_map<std::string, std::pair<std::string, std::string>> FullORFMap;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, std::pair<char, size_t>>>> ORFOverlapMap;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, std::string>> FullORFMap;
 
 
 // Eigen typedef

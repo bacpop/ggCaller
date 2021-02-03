@@ -91,30 +91,33 @@ def get_start_codon(seq, orfcoords, strand):
         startcoord = orfcoords[1]
         return seq[startcoord:startcoord + 3].reverse_complement()
 
-def get_ORF_info(seq_dict):
+def get_ORF_info(ORF_dict):
+    ORF_colour = []
     ORF_seq = []
     ORF_coord = []
     ORF_nucseq = []
     # iterate over list of ORFs
-    for ORF in seq_dict.keys():
+    for colour, seq_dict in ORF_dict.items():
+        for ORF in seq_dict.keys():
 
-        seq = Seq(ORF)
-        length = len(ORF)
+            seq = Seq(ORF)
+            length = len(ORF)
 
-        ### find the ORF 16bp upstream of start of sequence
-        orf_coords = [16, length - 3]
+            ### find the ORF 16bp upstream of start of sequence
+            orf_coords = [16, length - 3]
 
-        # standardize coords
-        full_ORF_nuccord = (orf_coords[0] + 3, orf_coords[1])
+            # standardize coords
+            full_ORF_nuccord = (orf_coords[0] + 3, orf_coords[1])
 
-        # translate once per frame, then slice
-        aa = str(seq[full_ORF_nuccord[0]:full_ORF_nuccord[1]].translate(table=translation_table, to_stop=False))
+            # translate once per frame, then slice
+            aa = str(seq[full_ORF_nuccord[0]:full_ORF_nuccord[1]].translate(table=translation_table, to_stop=False))
 
-        ORF_seq.append(aa)
-        ORF_coord.append(full_ORF_nuccord)
-        ORF_nucseq.append(ORF)
+            ORF_colour.append(colour)
+            ORF_seq.append(aa)
+            ORF_coord.append(full_ORF_nuccord)
+            ORF_nucseq.append(ORF)
 
-    return ORF_seq, ORF_nucseq, ORF_coord
+    return ORF_colour, ORF_seq, ORF_nucseq, ORF_coord
 
 def predict(model, X):
     model.eval()
@@ -189,7 +192,7 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-def score_genes(seq_dict):
+def score_genes(ORF_dict):
     # set up load gene and TIS models
     """ download balrog model """
 
@@ -218,7 +221,7 @@ def score_genes(seq_dict):
     if verbose:
         print("Finding and translating open reading frames...\n")
 
-    ORF_seq_list, ORF_nucseq_list, ORF_coord_list = get_ORF_info(seq_dict)
+    ORF_colour_list, ORF_seq_list, ORF_nucseq_list, ORF_coord_list = get_ORF_info(ORF_dict)
 
     # encode amino acids as integers
     if verbose:
@@ -388,9 +391,8 @@ def score_genes(seq_dict):
 
             ORF_score_flat.append(score)
 
-    # update initial dictionary with scores
+    # update initial dictionary with strand and score within a tuple
     for i, score in enumerate(ORF_score_flat):
-        colours, strand = seq_dict[ORF_nucseq_list[i]]
-        seq_dict[ORF_nucseq_list[i]] = (colours, strand, score)
+        ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = (ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]], score)
 
-    return seq_dict
+    return ORF_dict

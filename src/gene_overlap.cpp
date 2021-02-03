@@ -40,8 +40,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             if (ORF_node_paths.at("+").find(ORF_seq) != ORF_node_paths.at("+").end())
             {
                 // add ORF sequence to full_ORF_map
-                std::pair info_pair(*colit, "+");
-                full_ORF_map[ORF_seq] = std::move(info_pair);
+                full_ORF_map[*colit][ORF_seq] = "+";
 
                 std::pair seq_pair(ORF_seq, "+");
                 ORF_ID_map[ORF_ID] = std::move(seq_pair);
@@ -58,8 +57,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             else if (ORF_node_paths.at("-").find(ORF_seq) != ORF_node_paths.at("-").end())
             {
                 // add ORF sequence to full_ORF_map
-                std::pair info_pair(*colit, "-");
-                full_ORF_map[ORF_seq] = std::move(info_pair);
+                full_ORF_map[*colit][ORF_seq] = "-";
 
                 std::pair seq_pair(ORF_seq, "-");
                 ORF_ID_map[ORF_ID] = std::move(seq_pair);
@@ -90,9 +88,6 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                     continue;
                 }
 
-                // for debugging
-                auto row = init.row();
-                auto col = init.col();
 
                 // Assign temporary values for ORF1 and ORF2, not sorted by traversed node vector.
                 auto temp_ORF1 = ORF_ID_map.at(init.col());
@@ -103,6 +98,17 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                 auto ORF2_nodes = ((ORF_node_paths.at(temp_ORF1.second).at(temp_ORF1.first).first.size() >= ORF_node_paths.at(temp_ORF2.second).at(temp_ORF2.first).first.size()) ? ORF_node_paths.at(temp_ORF2.second).at(temp_ORF2.first) : ORF_node_paths.at(temp_ORF1.second).at(temp_ORF1.first));
                 auto ORF1 = ((ORF_node_paths.at(temp_ORF1.second).at(temp_ORF1.first).first.size() >= ORF_node_paths.at(temp_ORF2.second).at(temp_ORF2.first).first.size()) ? temp_ORF1 : temp_ORF2);
                 auto ORF2 = ((ORF_node_paths.at(temp_ORF1.second).at(temp_ORF1.first).first.size() >= ORF_node_paths.at(temp_ORF2.second).at(temp_ORF2.first).first.size()) ? temp_ORF2 : temp_ORF1);
+
+                // for debugging
+                auto row = init.row();
+                auto col = init.col();
+
+                if ((ORF1.first == "ATTGGTAATTTTGTATATGCCTACTTTTAGGGATGATGCTTCAACGAAGGCGTATAATCTTGATTACGATAAGGTAATAAATTCATTTCAAGATTTTTATAACAGAAAAGTTAAAGTATTGATTCGTTTTCATCCAAATGTAGATAATACATTTTTTAATAATACTGATAAAAGATTAATTAATGTGACAGATTATCCTAATCCGCAGGATTTAATGTTTGTGGCTGATATTATGATTTCAGACTATTCGTCAGCACCCATAGATTTTTTGTTATTAAATCGAGTAGTCTTTCTGTATCTACCAGATTTTAAAGAATATCAGAGCGATAAAAATCCGTTTTTTGAAGTTTTCAAAGTTTCGAAAACCAAAGGCATTGCGCTTGATCCGTTTGATGAGATTATTGGTCGCTTCCAGTTTGGCGTTAGAATAGTGTAG" || ORF2.first == "ATTGGTAATTTTGTATATGCCTACTTTTAGGGATGATGCTTCAACGAAGGCGTATAATCTTGATTACGATAAGGTAATAAATTCATTTCAAGATTTTTATAACAGAAAAGTTAAAGTATTGATTCGTTTTCATCCAAATGTAGATAATACATTTTTTAATAATACTGATAAAAGATTAATTAATGTGACAGATTATCCTAATCCGCAGGATTTAATGTTTGTGGCTGATATTATGATTTCAGACTATTCGTCAGCACCCATAGATTTTTTGTTATTAAATCGAGTAGTCTTTCTGTATCTACCAGATTTTAAAGAATATCAGAGCGATAAAAATCCGTTTTTTGAAGTTTTCAAAGTTTCGAAAACCAAAGGCATTGCGCTTGATCCGTTTGATGAGATTATTGGTCGCTTCCAGTTTGGCGTTAGAATAGTGTAG")
+                && (ORF1.first == "TTTTGTCCTTTCTTTTTTGATGTTCAAAGCGATAAAAATCCGTTTTTTGAAGTTTTCAAAGTTTCGAAAACCAAAGGCATTGCGCTTGATAAGTTTGATGAGATTATTGGTCGCTTCCAGTTTGGCATTAGAATAG" || ORF2.first == "TTTTGTCCTTTCTTTTTTGATGTTCAAAGCGATAAAAATCCGTTTTTTGAAGTTTTCAAAGTTTCGAAAACCAAAGGCATTGCGCTTGATAAGTTTGATGAGATTATTGGTCGCTTCCAGTTTGGCATTAGAATAG"))
+                {
+                    int test = 1;
+                }
+
 
                 // get ORF1 and ORF2 5' and 3' ends in pair <node_head_kmer, position>
                 std::pair<std::string, size_t> ORF1_5p(ORF1_nodes.first[0], std::get<0>(ORF1_nodes.second[0]));
@@ -173,7 +179,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                 bool overlap_complete = false;
 
                 // initialise overlap type
-                // n = no overlap / gene fully nested within another
+                // n = no overlap
                 // u = unidirectional overlap (3' of first overlaps with 5' of second ->->)
                 // c = convergent overlap (3' of first overlaps with 3' of second -><-)
                 // d = divergent overlap (5' of first overlaps with 5' of second <-->)
@@ -186,7 +192,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                 {
                     overlap_type = 'i';
                     overlap_complete = true;
-                    abs_overlap = ((ORF1.first.size() >= ORF2.first.size()) ? ORF2.first.size() : ORF1.first.size());
+                    abs_overlap = ((ORF1.first.size() >= ORF2.first.size()) ? ORF2.first.size() : ORF1.first.size()) - 16;
                     // set the first ORF to be the longest if not negative. If is negative, both ORFs start at same position on positive strand, so leave as default
                     if (!negative)
                     {
@@ -329,8 +335,8 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                                 overlap_complete = true;
 
                                 // if all nodes of ORF2 match internally within ORF1,
-                                // the overlap between the two is equivalent to the length of ORF2
-                                abs_overlap = ORF2.first.size();
+                                // the overlap between the two is equivalent to the length of ORF2, minus upstream region
+                                abs_overlap = ORF2.first.size() - 16;
 
                                 // gene pair is set overlap_types as 'w'
                                 overlap_type = 'w';
@@ -347,109 +353,28 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                 }
 
                 // check that an overlapping region has been found. If so, calculate absolute overlap in base-pairs
-                if (overlap_complete && abs_overlap == 0)
+                if (overlap_complete)
                 {
-                    // get the index of the corresponding overlapping nodes between ORF1 and ORF2
-                    size_t ORF1_overlap_node = ORF_1_overlap_node_index[0];
-                    size_t ORF2_overlap_node = ORF_2_overlap_node_index[0];
-
-
-                    // calculate overlap of first node and get overlap of it's end
-                    // get the node coordinates traversed by each ORF
-                    size_t ORF1_start = std::get<0>(ORF1_nodes.second[ORF1_overlap_node]);
-                    size_t ORF1_end = std::get<1>(ORF1_nodes.second[ORF1_overlap_node]);
-                    size_t ORF2_start = std::get<0>(ORF2_nodes.second[ORF2_overlap_node]);
-                    size_t ORF2_end = std::get<1>(ORF2_nodes.second[ORF2_overlap_node]);
-
-                    // get the first node involved in the overlap
-                    std::string overlap_node = ORF1_nodes.first[ORF1_overlap_node];
-
-                    // initialise options for computing which type of overlap has occurred
-                    size_t overlap_start;
-                    size_t overlap_end;
-
-                    // check there is an intersection
-                    if ((ORF1_start <= ORF2_end) && (ORF2_start <= ORF1_end))
-                    {
-                        size_t low_index = std::max(ORF1_start, ORF2_start);
-                        size_t high_index = std::min(ORF1_end, ORF2_end);
-
-                        // calculate overlap. Add 1 as positions are zero-indexed
-                        abs_overlap += (high_index - low_index) + 1;
-
-                        // check what are the beginning and end indexes of the overlap, if they match a certain prime end, then can calculate the type of overlap
-                        if (!reversed)
-                        {
-                            if (overlap_node == ORF1_5p.first && low_index == ORF1_5p.second)
-                            {
-                                overlap_start = 15;
-                            } else if (overlap_node == ORF2_5p.first && low_index == ORF2_5p.second)
-                            {
-                                overlap_start = 25;
-                            }
-                        } else
-                        {
-                            if (overlap_node == ORF1_5p.first && low_index == ORF1_5p.second)
-                            {
-                                overlap_start = 15;
-                            } else if (overlap_node == ORF2_5p.first && low_index == ORF2_5p.second)
-                            {
-                                overlap_start = 25;
-                            } else if (overlap_node == ORF1_3p.first && low_index == ORF1_3p.second)
-                            {
-                                overlap_start = 13;
-                            } else if (overlap_node == ORF2_3p.first && low_index == ORF2_3p.second)
-                            {
-                                overlap_start = 23;
-                            }
-                        }
-
-                        // if overlap is only single node, calculate overlap_end also
-                        if (ORF_1_overlap_node_index.size() == 1)
-                        {
-                            if (!reversed)
-                            {
-                                if (overlap_node == ORF1_3p.first && high_index == ORF1_3p.second)
-                                {
-                                    overlap_end = 13;
-                                } else if (overlap_node == ORF2_3p.first && high_index == ORF2_3p.second)
-                                {
-                                    overlap_end = 23;
-                                }
-                            } else
-                            {
-                                if (overlap_node == ORF1_5p.first && high_index == ORF1_5p.second)
-                                {
-                                    overlap_end = 15;
-                                } else if (overlap_node == ORF2_5p.first && high_index == ORF2_5p.second)
-                                {
-                                    overlap_end = 25;
-                                } else if (overlap_node == ORF1_3p.first && high_index == ORF1_3p.second)
-                                {
-                                    overlap_end = 13;
-                                } else if (overlap_node == ORF2_3p.first && high_index == ORF2_3p.second)
-                                {
-                                    overlap_end = 23;
-                                }
-                            }
-                        }
-                    }
-
-                    // iterate over remaining matching indexes across the two ORFs. Negate node_overlap due to DBG structure.
-                    for (size_t i = 1; i < ORF_1_overlap_node_index.size(); i++)
+                    if (abs_overlap == 0)
                     {
                         // get the index of the corresponding overlapping nodes between ORF1 and ORF2
-                        ORF1_overlap_node = ORF_1_overlap_node_index[i];
-                        ORF2_overlap_node = ORF_2_overlap_node_index[i];
+                        size_t ORF1_overlap_node = ORF_1_overlap_node_index[0];
+                        size_t ORF2_overlap_node = ORF_2_overlap_node_index[0];
 
+
+                        // calculate overlap of first node and get overlap of it's end
                         // get the node coordinates traversed by each ORF
-                        ORF1_start = std::get<0>(ORF1_nodes.second[ORF1_overlap_node]);
-                        ORF1_end = std::get<1>(ORF1_nodes.second[ORF1_overlap_node]);
-                        ORF2_start = std::get<0>(ORF2_nodes.second[ORF2_overlap_node]);
-                        ORF2_end = std::get<1>(ORF2_nodes.second[ORF2_overlap_node]);
+                        size_t ORF1_start = std::get<0>(ORF1_nodes.second[ORF1_overlap_node]);
+                        size_t ORF1_end = std::get<1>(ORF1_nodes.second[ORF1_overlap_node]);
+                        size_t ORF2_start = std::get<0>(ORF2_nodes.second[ORF2_overlap_node]);
+                        size_t ORF2_end = std::get<1>(ORF2_nodes.second[ORF2_overlap_node]);
 
                         // get the first node involved in the overlap
-                        overlap_node = ORF1_nodes.first[ORF1_overlap_node];
+                        std::string overlap_node = ORF1_nodes.first[ORF1_overlap_node];
+
+                        // initialise options for computing which type of overlap has occurred
+                        size_t overlap_start;
+                        size_t overlap_end;
 
                         // check there is an intersection
                         if ((ORF1_start <= ORF2_end) && (ORF2_start <= ORF1_end))
@@ -457,14 +382,38 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                             size_t low_index = std::max(ORF1_start, ORF2_start);
                             size_t high_index = std::min(ORF1_end, ORF2_end);
 
-                            // calculate node overlap from DBG structure.
-                            size_t node_overlap = (DBG_overlap - low_index);
+                            // calculate overlap. Add 1 as positions are zero-indexed
+                            abs_overlap += (high_index - low_index) + 1;
 
-                            // calculate overlap, negating node overlap. Add one as zero indexed.
-                            abs_overlap += ((high_index - low_index) - node_overlap) + 1;
+                            // check what are the beginning and end indexes of the overlap, if they match a certain prime end, then can calculate the type of overlap
+                            if (!reversed)
+                            {
+                                if (overlap_node == ORF1_5p.first && low_index == ORF1_5p.second)
+                                {
+                                    overlap_start = 15;
+                                } else if (overlap_node == ORF2_5p.first && low_index == ORF2_5p.second)
+                                {
+                                    overlap_start = 25;
+                                }
+                            } else
+                            {
+                                if (overlap_node == ORF1_5p.first && low_index == ORF1_5p.second)
+                                {
+                                    overlap_start = 15;
+                                } else if (overlap_node == ORF2_5p.first && low_index == ORF2_5p.second)
+                                {
+                                    overlap_start = 25;
+                                } else if (overlap_node == ORF1_3p.first && low_index == ORF1_3p.second)
+                                {
+                                    overlap_start = 13;
+                                } else if (overlap_node == ORF2_3p.first && low_index == ORF2_3p.second)
+                                {
+                                    overlap_start = 23;
+                                }
+                            }
 
-                            // if the node is the last in the overlap, check what end matches the overlap
-                            if (i == ORF_1_overlap_node_index.size() - 1)
+                            // if overlap is only single node, calculate overlap_end also
+                            if (ORF_1_overlap_node_index.size() == 1)
                             {
                                 if (!reversed)
                                 {
@@ -493,167 +442,197 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                                 }
                             }
                         }
-                    }
-                    // check if any overlap detected. If not, pass
-                    if (abs_overlap > 0)
-                    {
-                        // convert overlap_start and overlap_end to string to enable creation of ID for switch
-                        std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
-                        int overlap_ID = std::stoi(overlap_ID_str);
-
-                        // go over combinations of overlap start and overlap end to determine type of overlap
-                        switch (overlap_ID)
+                            // if no intersection detection, determine how ORFs are ordered
+                        else if ((ORF1_start > ORF2_end && !negative) || (ORF2_start > ORF1_end && negative))
                         {
-                            // unidirectional
-                            case 1523:
-                                overlap_type = 'u';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
+                            first_ORF = 2;
+                        }
+
+                        // iterate over remaining matching indexes across the two ORFs. Negate node_overlap due to DBG structure.
+                        for (size_t i = 1; i < ORF_1_overlap_node_index.size(); i++)
+                        {
+                            // get the index of the corresponding overlapping nodes between ORF1 and ORF2
+                            ORF1_overlap_node = ORF_1_overlap_node_index[i];
+                            ORF2_overlap_node = ORF_2_overlap_node_index[i];
+
+                            // get the node coordinates traversed by each ORF
+                            ORF1_start = std::get<0>(ORF1_nodes.second[ORF1_overlap_node]);
+                            ORF1_end = std::get<1>(ORF1_nodes.second[ORF1_overlap_node]);
+                            ORF2_start = std::get<0>(ORF2_nodes.second[ORF2_overlap_node]);
+                            ORF2_end = std::get<1>(ORF2_nodes.second[ORF2_overlap_node]);
+
+                            // get the first node involved in the overlap
+                            overlap_node = ORF1_nodes.first[ORF1_overlap_node];
+
+                            // check there is an intersection
+                            if ((ORF1_start <= ORF2_end) && (ORF2_start <= ORF1_end))
+                            {
+                                size_t low_index = std::max(ORF1_start, ORF2_start);
+                                size_t high_index = std::min(ORF1_end, ORF2_end);
+
+                                // calculate node overlap from DBG structure.
+                                size_t node_overlap = (DBG_overlap - low_index);
+
+                                // calculate overlap, negating node overlap. Add one as zero indexed.
+                                abs_overlap += ((high_index - low_index) - node_overlap) + 1;
+
+                                // if the node is the last in the overlap, check what end matches the overlap
+                                if (i == ORF_1_overlap_node_index.size() - 1)
                                 {
-                                    first_ORF = 2;
+                                    if (!reversed)
+                                    {
+                                        if (overlap_node == ORF1_3p.first && high_index == ORF1_3p.second)
+                                        {
+                                            overlap_end = 13;
+                                        } else if (overlap_node == ORF2_3p.first && high_index == ORF2_3p.second)
+                                        {
+                                            overlap_end = 23;
+                                        }
+                                    } else
+                                    {
+                                        if (overlap_node == ORF1_5p.first && high_index == ORF1_5p.second)
+                                        {
+                                            overlap_end = 15;
+                                        } else if (overlap_node == ORF2_5p.first && high_index == ORF2_5p.second)
+                                        {
+                                            overlap_end = 25;
+                                        } else if (overlap_node == ORF1_3p.first && high_index == ORF1_3p.second)
+                                        {
+                                            overlap_end = 13;
+                                        } else if (overlap_node == ORF2_3p.first && high_index == ORF2_3p.second)
+                                        {
+                                            overlap_end = 23;
+                                        }
+                                    }
                                 }
-                                break;
-                            case 2513:
-                                overlap_type = 'u';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
+                            }
+                        }
+                        // convert overlap_start and overlap_end to string to enable creation of ID for switch
+                        // check if any overlap detected.
+                        if (abs_overlap > 0)
+                        {
+                            std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
+                            int overlap_ID = std::stoi(overlap_ID_str);
+                            // go over combinations of overlap start and overlap end to determine type of overlap
+                            switch (overlap_ID)
+                            {
+                                // unidirectional
+                                case 1523:
+                                    overlap_type = 'u';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (!negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                case 2513:
+                                    overlap_type = 'u';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                    // ORF lies completely within another
+                                case 1513:
+                                    overlap_type = 'w';
+                                    // ORF1 sits fully in ORF2
                                     first_ORF = 2;
-                                }
-                                break;
-                                // ORF lies completely within another
-                            case 1513:
-                                overlap_type = 'w';
-                                // ORF1 sits fully in ORF2
-                                first_ORF = 2;
-                                break;
-                            case 2523:
-                                overlap_type = 'w';
-                                // ORF2 sits fully in ORF1, leave first_ORF = 1
-                                break;
-                            case 1315:
-                                overlap_type = 'w';
-                                // ORF1 sits fully in ORF2
-                                first_ORF = 2;
-                                break;
-                            case 2325:
-                                overlap_type = 'w';
-                                // ORF2 sits fully in ORF1, leave first_ORF = 1
-                                break;
-                                // convergent
-                            case 2313:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
+                                    // think about case where ORF1 and ORF2 are reverse complements of eachother
+                                    if (ORF1_5p == ORF2_3p && ORF1_3p == ORF2_5p && !negative)
+                                    {
+                                        first_ORF = 1;
+                                    }
+                                    break;
+                                case 2523:
+                                    overlap_type = 'w';
+                                    // ORF2 sits fully in ORF1, leave first_ORF = 1
+                                    break;
+                                case 1315:
+                                    overlap_type = 'w';
+                                    // ORF1 sits fully in ORF2
                                     first_ORF = 2;
-                                }
-                                break;
-                            case 1323:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1313:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                                // divergent
-                            case 2515:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1525:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1515:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
+                                    break;
+                                case 2325:
+                                    overlap_type = 'w';
+                                    // ORF2 sits fully in ORF1, leave first_ORF = 1
+                                    break;
+                                    // convergent
+                                case 2313:
+                                    overlap_type = 'c';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                case 1323:
+                                    overlap_type = 'c';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (!negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                case 1313:
+                                    overlap_type = 'c';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                    // divergent
+                                case 2515:
+                                    overlap_type = 'd';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                case 1525:
+                                    overlap_type = 'd';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    // check for case where 5p of ORF1 and 3p of ORF2 match, if they do keep ORF as first ORF
+                                    if (ORF1_5p != ORF2_3p && !negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                                case 1515:
+                                    overlap_type = 'd';
+                                    // adjust for negativity of ORF1 from default (first_ORF = 1)
+                                    if (!negative)
+                                    {
+                                        first_ORF = 2;
+                                    }
+                                    break;
+                            }
                         }
                     }
+                    // if overlap is greater than max_overlap, set as incompatible
+                    if (abs_overlap > max_overlap)
+                    {
+                        overlap_type = 'i';
+                    }
+
+                    // add overlap type to map, where the first ORF on the positive strand is the second key,
+                    // and the second ORF is the first key (edge weights are generated for the sink node based on Balrog DAG)
+
+                    // overlap_tuple contains the overlap_type, abs_overlap, and the strand of the first and second ORF in the order they appear in the map
+                    if (first_ORF == 1)
+                    {
+                        std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
+                        ORF_overlap_map[*colit][ORF2.first][ORF1.first] = overlap_tuple;
+                    } else {
+                        std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
+                        ORF_overlap_map[*colit][ORF1.first][ORF2.first] = overlap_tuple;
+                    }
                 }
-
-                // if overlap is greater than max_overlap, set as incompatible
-                if (abs_overlap > max_overlap)
-                {
-                    overlap_type = 'i';
-                }
-
-                // add overlap type to map, where the first ORF on the positive strand is the second key,
-                // and the second ORF is the first key (edge weights are generated for the sink node based on Balrog DAG)
-
-                // overlap_tuple contains the overlap_type, abs_overlap, and the strand of the first and second ORF in the order they appear in the map
-                if (first_ORF == 1)
-                {
-                    std::tuple<char, size_t, std::string, std::string> overlap_tuple(overlap_type, abs_overlap, ORF2.second, ORF1.second);
-                    ORF_overlap_map[*colit][ORF2.first][ORF1.first] = overlap_tuple;
-                } else {
-                    std::tuple<char, size_t, std::string, std::string> overlap_tuple(overlap_type, abs_overlap, ORF1.second, ORF2.second);
-                    ORF_overlap_map[*colit][ORF1.first][ORF2.first] = overlap_tuple;
-                }
-
-                //add overlaps to overlap groups set
-                // if no entries in overlap_group_vector, add new set and populate with overlapping ORFS
-                // TODO this won't be working, what if you don't have an overlap, and then a new ORF pair comes along that links the two? Check for intersection between sets and merge if found
-//                if (overlap_group_vector.empty())
-//                {
-//                    std::unordered_set<std::string> new_set;
-//                    new_set.insert(ORF1.first);
-//                    new_set.insert(ORF2.first);
-//                    overlap_group_vector.push_back(std::move(new_set));
-//                } else
-//                {
-//                    bool updated_group = false;
-//                    // check for the presence of either ORF1 or ORF2 in each overlap group. If found, insert into the group
-//                    for (auto & group : overlap_group_vector)
-//                    {
-//                        if (group.find(ORF1.first) != group.end() || group.find(ORF2.first) != group.end())
-//                        {
-//                            group.insert(ORF1.first);
-//                            group.insert(ORF2.first);
-//                            updated_group = true;
-//                            break;
-//                        }
-//                    }
-//                    // if ORF1 and ORF2 not found in any group, create a new group and add to the overlap_group_vector
-//                    if (!updated_group)
-//                    {
-//                        std::unordered_set<std::string> new_set;
-//                        new_set.insert(ORF1.first);
-//                        new_set.insert(ORF2.first);
-//                        overlap_group_vector.push_back(std::move(new_set));
-//                    }
-//                }
             }
         }
-//        // add the overlap_group_vector to the overlap_group_map, with the colour as the key
-//        overlap_group_map[*colit] = std::move(overlap_group_vector);
     }
-    // convert ORF_set into ORF_vector to return
-    //std::vector<std::string> ORF_vector(ORF_set.begin(), ORF_set.end());
-
     auto ORF_overlap_pair = std::make_pair(ORF_overlap_map, full_ORF_map);
-
     return ORF_overlap_pair;
 }

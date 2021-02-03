@@ -4,8 +4,10 @@ import sys
 import json
 from Bio.Seq import Seq
 import ggCaller_cpp
-import graph_tool
+import graph_tool.all as gt
 from balrog.__main__ import *
+from numpy.random import poisson
+
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -74,60 +76,76 @@ def get_options():
     return parser.parse_args()
 
 def main():
-    options = get_options()
+    # options = get_options()
+    #
+    # # parse command line arguments
+    # graph_file = options.graph
+    # colours_file = options.colours
+    # is_ref = bool(options.not_ref)
+    # refs_file = options.refs
+    # reads_file = options.reads
+    # codons = options.codons
+    # ksize = int(options.kmer)
+    # max_path_length = int(options.path)
+    # min_ORF_length = int(options.orf)
+    # max_ORF_overlap = int(options.maxoverlap)
+    # write_idx = bool(options.no_write_idx)
+    # write_graph = bool(options.no_write_graph)
+    # repeat = bool(options.repeat)
+    # num_threads = int(options.threads)
+    # output = options.out
 
-    # parse command line arguments
-    graph_file = options.graph
-    colours_file = options.colours
-    is_ref = bool(options.not_ref)
-    refs_file = options.refs
-    reads_file = options.reads
-    codons = options.codons
-    ksize = int(options.kmer)
-    max_path_length = int(options.path)
-    min_ORF_length = int(options.orf)
-    max_ORF_overlap = int(options.maxoverlap)
-    write_idx = bool(options.no_write_idx)
-    write_graph = bool(options.no_write_graph)
-    repeat = bool(options.repeat)
-    num_threads = int(options.threads)
-    output = options.out
+    # # define start/stop codons
+    # if codons != None:
+    #     with open(codons, "r") as json_file:
+    #         try:
+    #             data = json.load(json_file)
+    #             start_codons = data["codons"]["start"]
+    #             stop_codon_for = data["codons"]["stop"]
+    #             stop_codon_rev = [str((Seq(i)).reverse_complement()) for i in stop_codon_for]
+    #         except:
+    #             print("Please specify codons in the format shown in codons.json.")
+    #             sys.exit(1)
+    # else:
+    #     start_codons = ["ATG", "GTG", "TTG"]
+    #     stop_codon_for = ["TAA", "TGA", "TAG"]
+    #     stop_codon_rev = ["TTA", "TCA", "CTA"]
 
-    # define start/stop codons
-    if codons != None:
-        with open(codons, "r") as json_file:
-            try:
-                data = json.load(json_file)
-                start_codons = data["codons"]["start"]
-                stop_codon_for = data["codons"]["stop"]
-                stop_codon_rev = [str((Seq(i)).reverse_complement()) for i in stop_codon_for]
-            except:
-                print("Please specify codons in the format shown in codons.json.")
-                sys.exit(1)
-    else:
-        start_codons = ["ATG", "GTG", "TTG"]
-        stop_codon_for = ["TAA", "TGA", "TAG"]
-        stop_codon_rev = ["TTA", "TCA", "CTA"]
+    start_codons = ["ATG", "GTG", "TTG"]
+    stop_codon_for = ["TAA", "TGA", "TAG"]
+    stop_codon_rev = ["TTA", "TCA", "CTA"]
+
+    output = "calls.fasta"
+
+    called_ORF_pair = ggCaller_cpp.call_genes_existing("/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.gfa",
+                                                       "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.bfg_colors",
+                                                       "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/call.fasta", start_codons,
+                                                       stop_codon_for, stop_codon_rev, 1, True,
+                                                       True, False, 10000, 90,
+                                                       60)
 
     # if build graph specified, build graph and then call ORFs
-    if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
-        called_ORF_pair = ggCaller_cpp.call_genes_existing(graph_file, colours_file, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
-    # if refs file specified for building
-    elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file == None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, True, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
-    # if reads file specified for building
-    elif (graph_file == None) and (colours_file == None) and (refs_file == None) and (reads_file != None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(reads_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
-    # if both reads and refs file specified for building
-    elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file != None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
-    else:
-        print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
-              "- Bifrost GFA and Bifrost colours file\n"
-              "- List of reference files\n"
-              "- List of read files\n"
-              "- A list of reference files and a list of read files.")
-        sys.exit(1)
+    # if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
+    #     called_ORF_pair = ggCaller_cpp.call_genes_existing(graph_file, colours_file, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
+    # # if refs file specified for building
+    # elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file == None):
+    #     called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, True, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+    # # if reads file specified for building
+    # elif (graph_file == None) and (colours_file == None) and (refs_file == None) and (reads_file != None):
+    #     called_ORF_pair = ggCaller_cpp.call_genes_build(reads_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+    # # if both reads and refs file specified for building
+    # elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file != None):
+    #     called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
+    # else:
+    #     print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
+    #           "- Bifrost GFA and Bifrost colours file\n"
+    #           "- List of reference files\n"
+    #           "- List of read files\n"
+    #           "- A list of reference files and a list of read files.")
+    #     sys.exit(1)
+
+    # set mimimum path score
+    minimum_path_score = 100
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     ORF_overlap_dict, full_ORF_dict = called_ORF_pair
@@ -135,8 +153,313 @@ def main():
     # generate gene scores using Balrog
     full_ORF_dict = score_genes(full_ORF_dict)
 
+    # create list for high scoring ORFs to return
+    true_genes = {}
+
+    #test = "GGTATAGGTGTTAATCATGAGTAGACGTTTTAAAAAATCACGTTCACAGAAAGTGAAGCGAAGTGTTAATATCGTTTTGCTGACTATTTATTTATTGTTAGTTTGTTTTTTATTGTTCTTAATCTTTAAGTACAATATCCTTGCTTTTAGATATCTTAACCTAGTGGTAACTGCGTTAGTCCTACTAGTTGCCTTGGTAGGGCTACTCTTGATTATCTATAAAAAAGCTGAAAAGTTTACTATTTTTCTGTTGGTGTTCTCTATCCTTGTCAGCTCTGTGTCGCTCTTTGCAGTACAGCAGTTTGTTGGACTGACCAATCGTTTAAATGCGACTTCTAATTACTCAGAATATTCAATCAGTGTCGCTGTTTTAGCAGATAGTGATATCGAAAATGTTACGCAACTGACGAGTGTGACAGCACCGACTGGGACTGATAATGAAAATATTCAAAAACTACTAGCTGATATTAAGTCAAGTCAGAATACCGATTTGACGGTCGACCAGAGTTCGTCTTACTTGGCAGCTTACAAGAGTTTGATTGCAGGGGAGACTAAGGCCATTGTCTTAAATAGTGTCTTTGAAAATATCATCGAGTCAGAGTATCCAGACTACGCATCGAAGATAAAAAAGATTTATACCAAGGGATTCACTAAAAAAGTAGAAGCTCCTAAGACGTCTAAGAATCAGTCTTTCAATATCTATGTTAGTGGAATTGACACCTATGGTCCTATTAGTTCGGTGTCGCGATCAGATGTCAATATCCTGATGACTGTCAATCGAGATACCAAGAAAATCCTCTTGACCACAACGCCACGTGATGCCTATGTACCAATAGCAGATGGTGGAAATAATCAAAAAGATAAATTAACCCATGCGGGCATTTATGGAGTTGATTCGTCCATTCACACCTTAGAAAATCTCTATGGAGTGGATATCAATTACTATGTGCGATTGAACTTCACTTCTTTCTTGAAAATGATTGACTTATTGGGAGGGGTAGATGTTCATAATGATCAAGAGTTTTCAGCTCTACATGGGAAGTTCCATTTCCCAGTAGGGAATGTCCATCTAGACTCTGAGCAGGCTCTAGGTTTTGTACGTGAACGCTACTCACTAGCCGATGGAGACCGTGACCGTGGTCGCAACCAACAAAAGGTGATTGTGGCTATCCTTCAAAAATTAACGTCAACCGAAGCACTGAAAAATTATAGTACGATCATTGATAGCTTGCAAGATTCTATCCAAACAAATATGCCACTTGAGACTATGATAAATTTGGTCAATGCTCAGTTAGAAAGTGGAGGGAATTATAAAGTAAATTCTCAAGATTTAAAAGGTACAGGTCGGACGGATCTTCCTTCTTATGCAATGCCAGACAGTAACCTCTATGTGATGGAAATAGATGATAGTAGTTTAGCTGTAGTTAAAGCAGCTATACAGGATGTGATGGAGGGTAGATGA" in full_ORF_dict["10000"]
+
     # iterate over colours in ORF_overlap_dict, generating a graph
-    #for colour, ORF1_dict in ORF_overlap_dict:
+    for colour, seq_dict in full_ORF_dict.items():
+        print(colour)
+
+        # initilise high scoring ORF set to return
+        high_scoring_ORFs = set()
+
+        # create empty, directed graph
+        g = gt.Graph()
+
+        # create a dictionaries assign each ORF an index in the graph to vertices
+        ORF_index = {}
+
+        # create new graph item with node labels
+        vertex_seq = g.new_vertex_property("string")
+
+        # add vertexes to graph, store ORF information in ORF_index
+        test = -1
+        for ORF in seq_dict.keys():
+            v = g.add_vertex()
+            vertex_seq[v] = ORF
+            ORF_index[ORF] = g.vertex_index[v]
+            if ORF == "GATATGCATGTGGTGATTGAACGGGCGCTTGAGGTTGTGGAGAAAGAGTTTGGATATGACAAAAAGTAGAATCAATTGGATAGATTTTGGAAAAGGCTTTTCCATATTTTTAGTCTTAGCAGGGCATGTGTTGCTTGGACTGTATCAATCGGAAAAATTTCCCACAGCAAATAACATACTATCGTTGTTGATAGCACAAGTCTACATATTTCATATACCAGTATTTTTTGCCTTATCAGGATACTTTTTCAAACCTGTGTCGGATTTGAAGGAGTTCTGGCAATATGCTAAAAAGAAGACAATTGTTTTTGGTCTGCCATATATTTTCTATTCGATCATTCACTTTGGTCTTCAAAAAGTTGCAGGGGCATCTGTTCGTGTTCCTACAACCATATCTGATTTGCTAAATATCTATAAATTTCCTCTGGGAGTTTCATGGTATCTATATACGTTATGGTCGATATTGATAGTTTATGGTTTACTATCTGTTGTTTTCAAAAATCGTAAGTCCCTTTTGTTAGTTAGTGTTTTTGCCTATATTTTCACACTATTTATTCAAACTGATATTTTTATTGTGCAACGGACGTTGGTTTGGGGGATTTGTTTCTTTCTTGGCAGTGTATTGAGTGAAATTCACTTTGATAAAATTAATTTGAAAAAATTTCTTTTTTTCTTTGTGTTATTTGATTTTATTTATATGTTCGCTTGGTTCTTGTTTTATGAAGTAGGGTCTAAGAAGGATTATGTAAGCTATATTAACCCAGGTTTGTGGGGGATTGCTTTTATTGTCTGTGTATTAGTTGCTTTTGCGATTTTTCCTAAAATGGAGAAAAATTTTCCTAAAACTTTCCTATATTTCACTAAATACGGGAAAGATAGTTTAGGGATCTATATTCTTCATGCACCAATTTGTAGCATGATTCGGATTCTAATGTTGAAAGTGGGAATAAACTCAGTTTTTCTTCACGTTGTTGTTGGGATTGTGCTAGGCTGGTATTTATCCATACTAGCAACTTATATATTGAAAAAAATTCCATTTTTGAATATTGTTTTATTACCACAAAAGTATATTAAATTAAAATAA":
+                test = g.vertex_index[v]
+
+        # add vertex sequences to graph
+        g.vertex_properties["seq"] = vertex_seq
+
+        # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
+        if colour in ORF_overlap_dict:
+            for ORF1, overlap_dict in ORF_overlap_dict[colour].items():
+                for ORF2 in overlap_dict.keys():
+                    # add new edge between the two ORFs, where ORF2 is the source and ORF1 is the sink
+                    e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
+
+
+        # generate a transative closure of the graph to add all directed edges and add vertex properties
+        tc = gt.transitive_closure(g)
+
+        # get label components of tc
+        component_assignments = gt.label_components(tc, directed=False)[0]
+
+        component_ids = set(component_assignments.a)
+
+        tc.vertex_properties["component"] = component_assignments
+
+        # create vertex property map to store node IDs
+        vertex_seq = tc.new_vertex_property("string")
+        for ORF, index in ORF_index.items():
+            vertex_seq[tc.vertex(index)] = ORF
+
+        # add vertex sequences as internal property of graph
+        tc.vertex_properties["seq"] = vertex_seq
+
+        # create edge weights property
+        edge_weights = tc.new_edge_property("double")
+
+        # create incompatible list for edge iteration
+        incomp_edges = []
+
+        # create dictionary for holding connected components within the graph
+        #unconnected_nodes = {}
+
+        # iterate over edges and assign weights, and identify invalid overlaps to remove
+        for e in tc.edges():
+            # parse sink and source nodes, order same as before
+            ORF1 = tc.vertex_properties["seq"][e.target()]
+            ORF2 = tc.vertex_properties["seq"][e.source()]
+
+            if (e.target() == 81 and e.source() == 118):
+                test3 = True
+
+            # parse sink ORF score calculated by Balrog
+            ORF_strand1, ORF_score1 = seq_dict[ORF1]
+
+            # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
+            if ORF1 not in ORF_overlap_dict[colour]:
+                edge_weights[e] = -(ORF_score1)
+                continue
+            elif ORF2 not in ORF_overlap_dict[colour][ORF1]:
+                edge_weights[e] = -(ORF_score1)
+                continue
+            # parse overlap info, calculate edge weight
+            overlap_type, abs_overlap = ORF_overlap_dict[colour][ORF1][ORF2]
+
+            # set penalty to 0 for "n" or "w" or "i" overlaps
+            penalty = 0
+            if overlap_type == "i":
+                # add incompatible ORFs as tuple, added as source (1) and sink(2)
+                incomp_edges.append(e)
+            elif overlap_type == "u":
+                penalty = unidirectional_penalty_per_base * abs_overlap
+            elif overlap_type == "c":
+                penalty = convergent_penalty_per_base * abs_overlap
+            elif overlap_type == "d":
+                penalty = divergent_penalty_per_base * abs_overlap
+            # set ORF score to negative so that shortest algorithm can be applied
+            edge_weights[e] = -(ORF_score1 - penalty)
+
+        # add edge_weights as internal property
+        tc.edge_properties["weights"] = edge_weights
+
+        # iterate over incompatible edges to remove them
+        for e in incomp_edges:
+            ORF1 = e.target()
+            ORF2 = e.source()
+            tc.remove_edge(e)
+
+        # create graph view
+        tc.save(colour + "_tc.graphml")
+        g.save(colour + "_original.graphml")
+
+        # iterate over components, find highest scoring path within component
+        for component in component_ids:
+            # generate subgraph view
+            u = gt.GraphView(tc, vfilt=component_assignments.a == component)
+
+            # initialise list of high scoring ORFs and their associated score for single component
+            high_scoring_ORFs_temp = []
+
+            high_score_temp = 0
+
+            # iterate over edges, determine which are source and sink nodes for connected components
+            vertices = u.get_vertices()
+            if test in vertices:
+                test2 = True
+            in_degs = u.get_in_degrees(u.get_vertices())
+            out_degs = u.get_out_degrees((u.get_vertices()))
+
+            # calculate start nodes and add to list, if in-degree is 0
+            start_vertices = [vertices[i] for i in range(len(in_degs)) if in_degs[i] == 0]
+
+            # calculate end nodes and add to list, if in-degree is 0
+            end_vertices = [vertices[i] for i in range(len(out_degs)) if out_degs[i] == 0]
+
+            # iterate over start and stop vertices
+            for start in start_vertices:
+                # add the score of the first node
+                strand, start_score = seq_dict[u.vertex_properties["seq"][start]]
+
+                # check if start vertex is lone node
+                if start in end_vertices:
+                    vertex_list = [start]
+                    # replace high_score_ORFs with new high scoring ORF path
+                    if start_score > high_score_temp:
+                        high_score_temp = start_score
+                        high_scoring_ORFs_temp = vertex_list
+                else:
+                    for end in end_vertices:
+                        score = start_score
+                        vertex_list, edge_list = gt.shortest_path(u, start, end, weights=edge_weights,
+                                                                  negative_weights=True, dag=True)
+                        # ensure a path has been found. If not, pass.
+                        if edge_list:
+                            for e in edge_list:
+                                # add the inverse of the score to get the true score
+                                score -= edge_weights[e]
+
+                            # replace high_score_ORFs with new high scoring ORF path
+                            if score > high_score_temp:
+                                high_score_temp = score
+                                high_scoring_ORFs_temp = vertex_list
+
+
+            # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
+            if high_score_temp >= minimum_path_score:
+                for node in high_scoring_ORFs_temp:
+                    high_scoring_ORFs.add(u.vertex_properties["seq"][node])
+
+        true_genes[colour] = high_scoring_ORFs
+
+    # print output to file
+    ORF_count = 1
+    with open(output, "w") as f:
+        for colour, gene_set in true_genes.items():
+            for gene in gene_set:
+                strand, score = full_ORF_dict[colour][gene]
+                f.write(">" + str(ORF_count) + "_" + str(strand) + "_" + str(colour) + "\n" + gene[16:] + "\n")
+                ORF_count += 1
+
+
+
+
+
+
+
+
+
+        # # create set of nodes to remove
+        # nodes_to_remove = set()
+        #
+        # # iterate over incompatible edges to remove them
+        # for e in incomp_edges:
+        #     ORF1 = e.target()
+        #     ORF2 = e.source()
+        #     tc.remove_edge(e)
+        #
+        #     # check if removal of edge has made node unconnected
+        #     degree_array = tc.get_total_degrees([ORF1, ORF2])
+        #
+        #     # if both nodes are unconnected, remove the lowest scoring one
+        #     if degree_array[0] == 0 and degree_array[1] == 0:
+        #         ORF_strand1, ORF_score1 = seq_dict[tc.vertex_properties["seq"][ORF1]]
+        #         ORF_strand2, ORF_score2 = seq_dict[tc.vertex_properties["seq"][ORF2]]
+        #         if ORF_score1 >= ORF_score2:
+        #             nodes_to_remove.add(ORF2)
+        #         else:
+        #             nodes_to_remove.add(ORF1)
+        #     # if only one node is unconnected, add to a dictionary which tracks how unconnected nodes were previously connected
+        #     elif degree_array[0] == 0 or degree_array[1] == 0:
+        #         unconnected_nodes[ORF1] = ORF2
+        #         unconnected_nodes[ORF2] = ORF1
+        #
+        #
+        # # for troublshooting
+        # incomp_edges = []
+        # for e in g.edges():
+        #     # parse sink and source nodes, order same as before
+        #     ORF1 = v_index[e.target()]
+        #     ORF2 = v_index[e.source()]
+        #
+        #     # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
+        #     if ORF1 not in ORF_overlap_dict[colour]:
+        #         continue
+        #     elif ORF2 not in ORF_overlap_dict[colour][ORF1]:
+        #         continue
+        #     # parse overlap info, calculate edge weight
+        #     overlap_type, abs_overlap = ORF_overlap_dict[colour][ORF1][ORF2]
+        #
+        #     # set penalty to 0 for "n" or "w" or "i" overlaps
+        #     penalty = 0
+        #     if overlap_type == "i":
+        #         # add incompatible ORFs as tuple, added as source (1) and sink(2)
+        #         incomp_edges.append(e)
+        #
+        # g.save(colour + "_original_noremoved.graphml")
+        #
+        # # iterate over incompatible edges to remove them
+        # #for e in incomp_edges:
+        #     #g.remove_edge(e)
+        #
+        # # remove unconnected nodes marked for removal
+        # tc.remove_vertex(nodes_to_remove)
+        #
+        # # iterate over edges, determine which are source and sink nodes for connected components
+        # in_degs = tc.get_in_degrees(tc.get_vertices())
+        # out_degs = tc.get_out_degrees((tc.get_vertices()))
+        #
+        # # calculate start nodes and add to list, if in-degree is 0
+        # start_vertices = [tc.vertex(index) for index, degree in enumerate(in_degs) if degree == 0]
+        #
+        # # calculate end nodes and add to list, if in-degree is 0
+        # end_vertices = [tc.vertex(index) for index, degree in enumerate(out_degs) if degree == 0]
+        #
+        # # create maximal paths list
+        # high_scoring_ORFs_private = set()
+        #
+        # # create list of unconnected nodes that need removal
+        # unconnected_to_remove = []
+        #
+        # # create graph view
+        # tc.save(colour + "_tc.graphml")
+        #
+        # #all_cycles = gt.all_circuits(g)
+        #
+        #
+        # # calculate maximal path through graph by using shortest path algorithm
+        # # TODO in graphs with large number of ORFs, negative loops present which should not be, draw graph to see why
+        # # create variable to check if unconnected nodes score higher than conflicting path
+        # unconnected_conflict = False
+        # for start in start_vertices:
+        #     for end in end_vertices:
+        #         if start == end:
+        #             # if node is alone, check that score is greater than minimum set
+        #             strand, score = seq_dict[v_index[start]]
+        #             if score >= minimum_path_score:
+        #                 high_scoring_ORFs.add(tc.vertex_properties["seq"][start])
+        #         else:
+        #             vertex_list, edge_list = gt.shortest_path(tc, start, end, weights=edge_weights, negative_weights=True, dag=True)
+        #             score = 0
+        #             for e in edge_list:
+        #                 # add the inverse of the score to get the true score
+        #                 score -= edge_weights[e]
+        #             # check for unconnected conflict. If so, check that the path score is greater than the conflicting node
+        #             check_unconnected = [unconnected_nodes[tc.vertex_index[v]] for v in vertex_list if tc.vertex_index[v] in unconnected_nodes]
+        #             unconnected_seq = [tc.vertex_properties["seq"][v] for v in vertex_list if tc.vertex_index[v] in unconnected_nodes]
+        #             if any(check_unconnected):
+        #                 for lone_node in check_unconnected:
+        #                     lone_strand, lone_score = seq_dict[v_index[lone_node]]
+        #                     if score < lone_score:
+        #                         unconnected_conflict = True
+        #                         break
+        #             # if score is greater than minimimum and no unconnected conflict, add all ORFs to the return list
+        #             if score >= minimum_path_score and not unconnected_conflict:
+        #                 for v in vertex_list:
+        #                     high_scoring_ORFs.add(tc.vertex_properties["seq"][v])
+        #                 # add to list to remove lone nodes if they are present in output
+        #                 unconnected_to_remove.extend(unconnected_seq)
+        #
+        # #remove any unconnected nodes identified to be removed
+        # for node in unconnected_to_remove:
+        #     high_scoring_ORFs.discard(node)
 
 
     sys.exit(0)
