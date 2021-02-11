@@ -47,7 +47,6 @@
 
 // global variable declaration
 const vector<bool> empty_codon_arr(3, 0);
-//vector<bool> empty_colour_arr;
 namespace py = pybind11;
 
 // class declaration
@@ -70,21 +69,8 @@ class unitigDict {
     void add_colour(const std::vector<bool>& array);
     void add_colour(std::vector<bool>& array);
 
-//    // reset unitigDict
-//    void reset();
 
-    // access private members
-//    const int& returnID() {return unitig_id;};
-//    const std::string& returnHead() {return head_kmer;};
-//    const robin_hood::unordered_map<bool, robin_hood::unordered_map<int, std::vector<bool>>>& returnFullcodon() {return full_codon;};
-//    const robin_hood::unordered_map<bool, robin_hood::unordered_map<int, std::vector<bool>>>& returnPartcodon() {return part_codon;};
-//    const std::pair<size_t, std::size_t>& returnSize() {return unitig_size;};
-//    const std::vector<bool>& returnColours() {return unitig_colour;};
-//    const bool& returnForstop() {return forward_stop;};
-//    const bool& returnRevstop() {return reverse_stop;};
-
-    // to add: add unitig sequence, predecessor/successor ID and orientation for fast access with robin-hood maps
-
+    // Public class items
     size_t unitig_id;
     std::string head_kmer;
     robin_hood::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> full_codon;
@@ -102,18 +88,17 @@ class unitigDict {
 // ggCaller typedefs
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 typedef robin_hood::unordered_map<std::string, unitigDict> unitigMap;
-typedef std::pair<std::vector<std::string>, std::vector<indexTriplet>> ORFNodeVector;
+typedef std::tuple<std::vector<std::string>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
-typedef robin_hood::unordered_map<std::string, ORFNodeMap> StrandORFNodeMap;
 typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
-typedef robin_hood::unordered_map<std::string, SeqORFMap> StrandSeqORFMap;
 typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColoursMap;
 typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>> GraphTuple;
 typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
 typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
 typedef std::tuple<PathMap, std::vector<std::string>> PathTuple;
 typedef std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, std::pair<char, size_t>>>> ORFOverlapMap;
-typedef std::unordered_map<std::string, std::unordered_map<std::string, std::string>> FullORFMap;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, char>> FullORFMap;
+typedef robin_hood::unordered_map<std::string, bool> NodeStrandMap;
 
 
 // Eigen typedef
@@ -203,11 +188,9 @@ fm_index_coll index_fasta(const std::string& fasta_file,
                           const bool& write_idx);
 
 int seq_search(const seqan3::dna5_vector& query,
-               const fm_index_coll& ref_idx,
-               const std::string& strand);
+               const fm_index_coll& ref_idx);
 
 void call_strings(SeqORFMap& query_list,
-                  const std::string& strand,
                   ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx);
@@ -220,29 +203,30 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const int& overlap,
                          const size_t& min_len);
 
-std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                        const PathTuple& path_tuple,
-                                                        const std::vector<std::string>& stop_codons_for,
-                                                        const std::vector<std::string>& start_codons_for,
-                                                        const int& overlap,
-                                                        const size_t& min_ORF_length);
+std::tuple<SeqORFMap, ORFNodeMap, NodeStrandMap> call_ORFs(const ColoredCDBG<>& ccdbg,
+                                                              const PathTuple& path_tuple,
+                                                              const std::vector<std::string>& stop_codons_for,
+                                                              const std::vector<std::string>& start_codons_for,
+                                                              const int& overlap,
+                                                              const size_t& min_ORF_length);
 
-std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const StrandSeqORFMap& all_ORFs);
+std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORFMap& all_ORFs);
 
-std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
-                                                                            StrandORFNodeMap& ORF_node_paths,
+std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(SeqORFMap& all_ORFs,
+                                                                            ORFNodeMap& ORF_node_paths,
                                                                             const std::vector<std::string>& fasta_files,
                                                                             const bool write_index);
 
 void write_to_file (const std::string& outfile_name,
-                    const StrandSeqORFMap& all_ORFs);
+                    const SeqORFMap& all_ORFs);
 
 // gene_overlap.cpp
 std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_map,
-                                                                     const StrandORFNodeMap& ORF_node_paths,
-                                                                     const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_tuple,
-                                                                     const int& DBG_overlap,
-                                                                     const size_t& max_overlap);
+                                                        const ORFNodeMap& ORF_node_paths,
+                                                        const NodeStrandMap& pos_strand_map,
+                                                        const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
+                                                        const int& DBG_overlap,
+                                                        const size_t& max_overlap);
 
 // ggCaller_bindings
 std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string& graphfile,

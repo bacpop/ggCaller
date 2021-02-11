@@ -1,17 +1,12 @@
 import os
-#import sys
-#import gzip
-#import copy
+import tarfile
 import time
-#import pandas
 import pickle
 import numpy as np
 from tqdm.auto import tqdm
-from Bio import SeqIO
 from Bio.Seq import Seq
 from scipy.special import expit
 from scipy.special import logit
-#from multiprocessing import Pool
 
 import torch
 #import torch.nn as nn
@@ -19,7 +14,8 @@ import torch.nn.functional as F
 #from torch.nn.utils import weight_norm
 
 """ Get directories for model and seengenes """
-model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "balrog_models")
+module_dir = os.path.dirname(os.path.realpath(__file__))
+model_dir = os.path.join(module_dir, "balrog_models")
 
 """ Print what the program is doing."""
 verbose = True
@@ -192,23 +188,28 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-def score_genes(ORF_dict):
+def score_genes(ORF_dict, minimum_ORF_score):
     # set up load gene and TIS models
-    """ download balrog model """
+    """ extract and load balrog model """
+
+    # check if directory exists. If not, unzip file
+    if not os.path.exists(model_dir):
+        tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
+        tar.extractall(module_dir)
+        tar.close()
 
     torch.hub.set_dir(model_dir)
+    print("Loading convolutional model...")
     if torch.cuda.device_count() > 0:
         print("GPU detected...")
         model = torch.hub.load(model_dir, "geneTCN", source='local').cuda()
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local').cuda()
         time.sleep(0.5)
-        print("\nDone")
     else:
         print("No GPU detected, using CPU...")
         model = torch.hub.load(model_dir, "geneTCN", source='local')
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)
-        print("\nDone")
 
     """Load k-mer filters"""
     genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
@@ -219,19 +220,19 @@ def score_genes(ORF_dict):
 
     # get sequences and coordinates of ORFs
     if verbose:
-        print("Finding and translating open reading frames...\n")
+        print("Finding and translating open reading frames...")
 
     ORF_colour_list, ORF_seq_list, ORF_nucseq_list, ORF_coord_list = get_ORF_info(ORF_dict)
 
     # encode amino acids as integers
     if verbose:
-        print("Encoding amino acids...\n")
+        print("Encoding amino acids...")
     ORF_seq_enc = [tokenize_aa_seq(x) for x in ORF_seq_list]
 
     # seengene check
     if protein_kmer_filter:
         if verbose:
-            print("Applying protein kmer filter...\n")
+            print("Applying protein kmer filter...")
         seengene = []
         for s in ORF_seq_enc:
             kmerset = kmerize(s, k_seengene)
@@ -242,7 +243,7 @@ def score_genes(ORF_dict):
 
     # score
     if verbose:
-        print("Scoring ORFs with temporal convolutional network...\n")
+        print("Scoring ORFs with temporal convolutional network...")
 
     # sort by length to minimize impact of batch padding
     ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
@@ -282,7 +283,7 @@ def score_genes(ORF_dict):
         idx += 1
 
     if verbose:
-        print("Scoring translation initiation sites...\n")
+        print("Scoring translation initiation sites...")
 
     # extract nucleotide sequence surrounding potential start codons
     ORF_TIS_seq = ORF_coord_list[:]
@@ -393,6 +394,11 @@ def score_genes(ORF_dict):
 
     # update initial dictionary with strand and score within a tuple
     for i, score in enumerate(ORF_score_flat):
-        ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = (ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]], score)
+        # if score greater than minimum, add to the ORF_dict
+        if score >= minimum_ORF_score:
+            ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = (ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]], score)
+        # else, remove the ORF from the full ORF list
+        else:
+            del ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]]
 
     return ORF_dict

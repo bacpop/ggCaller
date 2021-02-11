@@ -42,17 +42,16 @@ fm_index_coll index_fasta(const std::string& fasta_file,
 
 //search for a specific sequence within an fm index array
 int seq_search(const seqan3::dna5_vector& query,
-               const fm_index_coll& ref_idx,
-               const std::string& strand)
+               const fm_index_coll& ref_idx)
 {
     int present = 0;
     int query_count = 0;
-    //count number of occurrences
-    if (strand == "+")
-    {
-        auto results = search(query, ref_idx);
-        query_count = (int)std::ranges::distance(results);
-    } else
+    //count number of occurrences in positive strand
+    auto results = search(query, ref_idx);
+    query_count = (int)std::ranges::distance(results);
+
+    // if not found, check reverse strand
+    if (query_count == 0)
     {
         auto results = search(query | std::views::reverse | seqan3::views::complement, ref_idx);
         query_count = (int)std::ranges::distance(results);
@@ -68,7 +67,6 @@ int seq_search(const seqan3::dna5_vector& query,
 
 //run fmindex workflow
 void call_strings(SeqORFMap& query_list,
-                  const std::string& strand,
                   ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx)
@@ -116,7 +114,7 @@ void call_strings(SeqORFMap& query_list,
             {
                 if (colours[i])
                 {
-                    hits += seq_search(query, seq_idx[i], strand);
+                    hits += seq_search(query, seq_idx[i]);
                 }
             }
             //set remove the entry from query_list if number of colours is not same as expected

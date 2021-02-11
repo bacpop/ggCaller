@@ -1,6 +1,9 @@
 // ggCaller header
 #include "ggCaller_classes.h"
 
+// for testing
+std::string query_ORF = "ATGGAAGATTTGATAAGCATTGTTGTTCCAGTCTATAACGTGGAAAAATATTTAAAAAAATCAATAGAAAGTATTTTGAATCAGACTTATCAAAATATCGAGATTTTATTGGTTGATGACGGAAGCACAGATAGTAGTGGGAAAATTTGTGAATCATTTAGTAAAGTTGATCCTAGGATAAGAGTATTTCATAAAGAAAATGGTGGTTTATCAGATGCTCGGAATTTTGGAATTGAGCAAATGAAAGGTCAATATGTAGCGTTTATTGATAGCGATGACTACATATCTAAGGATTATGTCTGGAAGTTGTATTCTTCTATAAAAAATAATGATTCCGAGGTGTCGATTTGTTCTTTTTTATTAGTCGATGAAAAAGGGGAAAAAATAAAAGATGAGCTATTAGATTCGGGAAAAATATGCTTGACTGGTCAACAAATATTAGAAAAAGTATTAACAGCCGACGGCTATCGCTATGTTGTTGCTTGGAATAAGCTTTATCGGTCAACTTTATTTGAAAAATTAAAATTTAAAAAAGGAATGTTGTATGAGGATGAATTTCTTAACTATCCTCTATTTTGGGACTGTAAAAGGGTATCAATTGTAGAGGAGCCGTTATATTTATACGTTCAACGAAAAGGAAGCATTGTACAAAGTAATATGACTTTAGAAAAAATAAAGATGAAGGATGAGATGCATACTTCACGCATTGAGTTTTATTCAGAAAAGGGGCATTCTTTTTTGCACGAAAAAGCGTGTCAACAGTACTGCAATTGGATTGTTACAGCGACTACCAATCATAGTAAGATTTTAAATCCTAATTTTTCGAAGTATTTACAACGACAGTTTAGAAAGTTCGCTAAATATACACGAAACAATGATATTAGACTAATTGTGCAGAACATTCTAGGATTTATAGATATTCGTTTAGCAGCTTATGTAAAATCAAAAGTAATGTAG";
+
 // generate ORFs from paths
 ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons,
@@ -12,6 +15,9 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     // initialise path sequence and ORF list
     std::string path_sequence;
     std::vector<std::string> ORF_list;
+
+    // initialise if nodes belong to positive or negative strand in current orientation
+    bool positive = true;
 
     // here generate vector/map which contains the start/end of each node in basepairs. This will then be used to determine which nodes an ORF traverses
     std::vector<std::string> nodelist;
@@ -27,8 +33,11 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
 
         // add node to node list for path coordinates
         nodelist.push_back(node.first);
-        // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd entry is node length.
-        std::vector<size_t> node_range(3);
+        // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd entry is node length. 3rd is strandedness (1 for forward, 0 for reverse)
+        std::vector<size_t> node_range(4);
+
+        // add unitig strand to node_range
+        node_range[3] = unitig.strand;
 
         // if strand is negative, calculate reverse complement
         std::string unitig_seq;
@@ -186,8 +195,13 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
         size_t ORF_len = (codon_pair.second - codon_pair.first) + 1;
         if (ORF_len >= min_len)
         {
-            // make a pair containing a vector of each node name, and corresponding vector of positions traversed in the node
-            ORFNodeVector ORF_node_vector;
+            // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
+            std::vector<std::string> ORF_node_id;
+            std::vector<indexTriplet> ORF_node_coords;
+            std::vector<bool> ORF_node_strand;
+
+            std::string ORF_test = path_sequence.substr((codon_pair.first), (ORF_len));
+
 
             // pull 16bp upstream of start codon for TIS model if possible
             if (codon_pair.first >= 16) {
@@ -225,13 +239,17 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                     if (start_assigned && end_assigned){
                         size_t node_end = node_ranges[i][2];
                         indexTriplet node_coords = std::make_tuple(traversed_node_start, traversed_node_end, node_end);
-                        ORF_node_vector.first.push_back(nodelist[i]);
-                        ORF_node_vector.second.push_back(std::move(node_coords));
+                        ORF_node_id.push_back(nodelist[i]);
+                        ORF_node_coords.push_back(std::move(node_coords));
+                        ORF_node_strand.push_back(node_ranges[i][3]);
                     }
 
                 }
+                // create ORF_node_vector
+                ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_node_strand);
+
+                // generate ORF string
                 std::string ORF = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
-                //std::string ORF = path_sequence.substr((codon_pair.first), (ORF_len));
                 ORF_map.emplace(std::move(ORF), std::move(ORF_node_vector));
             }
         }
@@ -239,73 +257,167 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     return ORF_map;
 }
 
-std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(StrandSeqORFMap& all_ORFs,
-                                                                          StrandORFNodeMap& ORF_node_paths,
+std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(SeqORFMap& all_ORFs,
+                                                                          ORFNodeMap& ORF_node_paths,
                                                                           const std::vector<std::string>& fasta_files,
                                                                           const bool write_index)
 {
     // call strings edits all_ORFs in place
-    // run call strings for positive strand
-    call_strings(all_ORFs["+"], "+", ORF_node_paths["+"], fasta_files, write_index);
-    // run call strings for negative strand
-    call_strings(all_ORFs["-"], "-", ORF_node_paths["-"], fasta_files, write_index);
+    // run call strings for all ORFs
+    call_strings(all_ORFs, ORF_node_paths, fasta_files, write_index);
 
     // generate a colours dictionary for gene overlap analysis
     auto return_tuple = sort_ORF_colours(all_ORFs);
     return return_tuple;
 }
 
-std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const StrandSeqORFMap& all_ORFs)
+std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORFMap& all_ORFs)
 {
     ORFColoursMap ORF_colours_map;
     std::unordered_set<std::string> ORF_colours_set;
-    for (const auto& ORF_strand : all_ORFs)
+
+    for (const auto& ORF_seq : all_ORFs)
     {
-        for (const auto& ORF_seq : ORF_strand.second)
+        std::string colour_key;
+        for (const auto colour : ORF_seq.second)
         {
-            std::string colour_key;
-            for (const auto colour : ORF_seq.second)
-            {
-                colour_key += std::to_string(colour);
-            }
-            ORF_colours_map[colour_key].push_back(ORF_seq.first);
-            ORF_colours_set.insert(colour_key);
+            colour_key += std::to_string(colour);
         }
+        ORF_colours_map[colour_key].push_back(ORF_seq.first);
+        ORF_colours_set.insert(colour_key);
     }
+
     // convert set to vector to enable parallelisation
     std::vector<std::string> ORF_colours_vector(ORF_colours_set.begin(), ORF_colours_set.end());
 
     // generate return tuple
-    std::pair<ORFColoursMap, std::vector<std::string>> return_tuple = std::make_pair(ORF_colours_map, ORF_colours_vector);
-    return return_tuple;
+    std::pair<ORFColoursMap, std::vector<std::string>> return_pair = std::make_pair(ORF_colours_map, ORF_colours_vector);
+    return return_pair;
 }
 
-std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                  const PathTuple& path_tuple,
-                                                  const std::vector<std::string>& stop_codons_for,
-                                                  const std::vector<std::string>& start_codons_for,
-                                                  const int& overlap,
-                                                  const size_t& min_ORF_length)
+std::tuple<SeqORFMap, ORFNodeMap, NodeStrandMap> call_ORFs(const ColoredCDBG<>& ccdbg,
+                                                              const PathTuple& path_tuple,
+                                                              const std::vector<std::string>& stop_codons_for,
+                                                              const std::vector<std::string>& start_codons_for,
+                                                              const int& overlap,
+                                                              const size_t& min_ORF_length)
 {
-//initialise all_ORFs
-    StrandSeqORFMap all_ORFs;
-    StrandORFNodeMap ORF_node_paths;
+    //initialise all_ORFs to return
+    SeqORFMap all_ORFs;
+    ORFNodeMap ORF_node_paths;
+
+    // initialise map to store orientation of nodes
+    std::vector<NodeStrandMap> pos_strand_vector;
 
     #pragma omp parallel
     {
-        StrandSeqORFMap all_ORFs_private;
-        StrandORFNodeMap ORF_node_paths_private;
+        SeqORFMap all_ORFs_private;
+        ORFNodeMap ORF_node_paths_private;
+        std::vector<NodeStrandMap> pos_strand_vector_private;
 
-        #pragma omp for nowait
         // iterate over head_kmer_strings
+        #pragma omp for nowait
         for (auto it = std::get<1>(path_tuple).begin(); it < std::get<1>(path_tuple).end(); it++)
         {
             const auto unitig_paths = std::get<0>(path_tuple).at(*it);
             // iterate over paths following head_kmer
             for (const auto& path : unitig_paths)
             {
-                int i = 0;
-                const std::string strand = (path.first[0].second ? "+" : "-");
+                // DEFINE NODES IN POSITIVE STRAND
+                // create vector to keep track of which maps need to be added to, and whether this is in positive (true) or negative (false) orientation
+                std::vector<std::pair<size_t, bool>> maps_to_add;
+
+                NodeStrandMap new_map;
+                for (const auto& node : path.first)
+                {
+                    new_map[node.first] = node.second;
+                }
+
+                // if pos_strand_vector is empty, add first entry of nodes in orientation as is
+                if (pos_strand_vector_private.empty())
+                {
+                    pos_strand_vector_private.push_back(new_map);
+                }
+                // if not, search for nodes in existing maps
+                else
+                {
+                    for (size_t i = 0; i < pos_strand_vector_private.size(); i++)
+                    {
+                        for (const auto& node : path.first)
+                        {
+                            // if found, note which maps to add the nodes to
+                            if (pos_strand_vector_private[i].find(node.first) != pos_strand_vector_private[i].end())
+                            {
+                                // if the strand is the same across the map and the node, add as is
+                                if (pos_strand_vector_private[i][node.first] == node.second)
+                                {
+                                    std::pair in_map(i, true);
+                                    maps_to_add.push_back(std::move(in_map));
+                                } else{
+                                    std::pair in_map(i, false);
+                                    maps_to_add.push_back(std::move(in_map));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    // if nodes are not found, then add new map
+                    if (maps_to_add.empty())
+                    {
+                        pos_strand_vector_private.push_back(new_map);
+                    }
+                        // else, go through and add the new map entries to the existing maps in pos_strand_vector_private
+                    else {
+                        for (const auto& map_index : maps_to_add)
+                        {
+                            if (map_index.second == true)
+                            {
+                                // if not present, and node is in strand, add as is
+                                pos_strand_vector_private[map_index.first].insert(new_map.begin(), new_map.end());
+                            } else
+                            {
+                                for (const auto& node : path.first)
+                                {
+                                    // if not present, and node is in opposite strand, add reversed strand
+                                    if (pos_strand_vector_private[map_index.first].find(node.first) == pos_strand_vector_private[map_index.first].end())
+                                    {
+                                        pos_strand_vector_private[map_index.first][node.first] = !node.second;
+                                    }
+                                }
+                            }
+                        }
+                        // if maps to add is greater than one, then means that the detected maps can be merged
+                        if (maps_to_add.size() > 1)
+                        {
+                            std::vector<size_t> to_remove;
+                            for (size_t i = 1; i < maps_to_add.size(); i++)
+                            {
+                                // if maps to add orientation is the same between the two maps, then can be merged as is. Merge all into first map in maps_to_add
+                                if (maps_to_add[0].second == maps_to_add[i].second)
+                                {
+                                    pos_strand_vector_private[maps_to_add[0].first].insert(pos_strand_vector_private[maps_to_add[i].first].begin(), pos_strand_vector_private[maps_to_add[i].first].end());
+
+                                } else
+                                {
+                                    // if not in same orientation, need to reverse the strands of all nodes in the merging vector
+                                    for (const auto& node : pos_strand_vector_private[maps_to_add[i].first])
+                                    {
+                                        pos_strand_vector_private[maps_to_add[0].first][node.first] = !node.second;
+                                    }
+                                }
+                                // set up to remove the merged maps from the pos_strand_vector_private vector
+                                to_remove.push_back(maps_to_add[i].first);
+                            }
+                            // remove the merged maps
+                            for (const auto& index : to_remove)
+                            {
+                                pos_strand_vector_private.erase(pos_strand_vector_private.begin() + index);
+                            }
+                        }
+                    }
+                }
+
+                // CALL ORFS
                 const std::vector<bool> path_colour = path.second;
                 // iterate over each start codon, generate all ORFs within the path
                 for (const auto& start_codon : start_codons_for)
@@ -313,17 +425,25 @@ std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccd
                     std::vector<std::string> start_codon_vector{start_codon};
                     auto ORF_map = generate_ORFs(ccdbg, stop_codons_for, start_codon_vector, path.first, overlap, min_ORF_length);
 
+                    // for debugging
+                    int stop = 1;
+                    auto it = ORF_map.find(query_ORF);
+                    if (it != ORF_map.end())
+                    {
+                        stop = 1;
+                    }
+
                     // check if item in all_ORFs already. If not, add colours array. If yes, update the colours array.
                     for (const auto& ORF : ORF_map)
                     {
-                        ORF_node_paths_private[strand][ORF.first] = ORF.second;
+                        ORF_node_paths_private[ORF.first] = ORF.second;
 
-                        if (all_ORFs_private[strand].find(ORF.first) == all_ORFs_private[strand].end())
+                        if (all_ORFs_private.find(ORF.first) == all_ORFs_private.end())
                         {
-                            all_ORFs_private[strand][ORF.first] = path_colour;
+                            all_ORFs_private[ORF.first] = path_colour;
                         } else {
-                            std::vector<bool> updated_colours = add_colours_array(all_ORFs_private[strand][ORF.first], path_colour);
-                            all_ORFs_private[strand][ORF.first] = updated_colours;
+                            std::vector<bool> updated_colours = add_colours_array(all_ORFs_private[ORF.first], path_colour);
+                            all_ORFs_private[ORF.first] = updated_colours;
                         }
                     }
                 }
@@ -331,52 +451,88 @@ std::tuple<StrandSeqORFMap, StrandORFNodeMap> call_ORFs(const ColoredCDBG<>& ccd
         }
         #pragma omp critical
         {
-            // go through all private ORFs, update colours as before in all_ORFs
-            ORF_node_paths["+"].insert(ORF_node_paths_private["+"].begin(), ORF_node_paths_private["+"].end());
-            ORF_node_paths["-"].insert(ORF_node_paths_private["-"].begin(), ORF_node_paths_private["-"].end());
+            // Update ORF_node_paths and pos_strand_vector
+            ORF_node_paths.insert(ORF_node_paths_private.begin(), ORF_node_paths_private.end());
+            pos_strand_vector.insert(pos_strand_vector.end(), pos_strand_vector_private.begin(), pos_strand_vector_private.end());
 
-            for (const auto& ORF_strand : all_ORFs_private)
+            // go through all private ORFs, update colours as before in all_ORFs
+            for (const auto& ORF_seq : all_ORFs_private)
             {
-                for (const auto& ORF_seq : ORF_strand.second)
+                if (all_ORFs.find(ORF_seq.first) == all_ORFs.end())
                 {
-                    if (all_ORFs[ORF_strand.first].find(ORF_seq.first) == all_ORFs[ORF_strand.first].end())
-                    {
-                        all_ORFs[ORF_strand.first][ORF_seq.first] = ORF_seq.second;
-                    } else {
-                        std::vector<bool> updated_colours = add_colours_array(all_ORFs[ORF_strand.first][ORF_seq.first], ORF_seq.second);
-                        all_ORFs[ORF_strand.first][ORF_seq.first] = updated_colours;
-                    }
+                    all_ORFs[ORF_seq.first] = ORF_seq.second;
+                } else {
+                    std::vector<bool> updated_colours = add_colours_array(all_ORFs[ORF_seq.first], ORF_seq.second);
+                    all_ORFs[ORF_seq.first] = updated_colours;
                 }
             }
         }
     }
-    const auto ORF_tuple = std::make_tuple(all_ORFs, ORF_node_paths);
+
+    // iterate over pos_strand_vector, merging any maps that have matching ORFs. If no matching ORFs, merge as is. Continue until only single item present in pos_strand_vector
+    while (pos_strand_vector.size() > 1)
+    {
+        bool same_strand;
+        bool node_present = false;
+        for (const auto& node : pos_strand_vector[0])
+        {
+            if (pos_strand_vector[1].find(node.first) != pos_strand_vector[1].end())
+            {
+                if (pos_strand_vector[1][node.first] == node.second)
+                {
+                    same_strand == true;
+                } else
+                {
+                    same_strand == false;
+                }
+                node_present = true;
+                break;
+            }
+        }
+        if (!node_present || same_strand)
+        {
+            // if no nodes shared or they are the same strand (node must therefore be present), merge as is
+            pos_strand_vector[0].insert(pos_strand_vector[1].begin(), pos_strand_vector[1].end());
+        } else
+        {
+            // if node present but in the reverse strand, then iterate over second map and add in opposite strand
+            for (const auto& node : pos_strand_vector[1])
+            {
+                if (pos_strand_vector[0].find(node.first) == pos_strand_vector[0].end())
+                {
+                    pos_strand_vector[0][node.first] = !node.second;
+                }
+            }
+        }
+        // erase the second map
+        pos_strand_vector.erase(pos_strand_vector.begin() + 1);
+    }
+
+    const auto ORF_tuple = std::make_tuple(all_ORFs, ORF_node_paths, pos_strand_vector[0]);
     return ORF_tuple;
 }
 
 void write_to_file (const std::string& outfile_name,
-                    const StrandSeqORFMap& all_ORFs)
+                    const SeqORFMap& all_ORFs)
 {
     int gene_id = 1;
     ofstream outfile;
     outfile.open(outfile_name);
 
-    //iterate over strands in all_ORFs
-    for (const auto& strand_dict : all_ORFs)
+
+    // iterate over ORFs in all_ORFs
+    for (const auto& ORF_dict : all_ORFs)
     {
-        // iterate over ORFs in all_ORFs
-        for (const auto& ORF_dict : strand_dict.second)
+        // generate string for colours
+        std::string colours;
+        for (const auto& i : ORF_dict.second)
         {
-            // generate string for colours
-            std::string colours;
-            for (const auto& i : ORF_dict.second)
-            {
-                colours += std::to_string(i);
-            }
-            // append to file
-            outfile << ">" << std::to_string(gene_id) << "_" << strand_dict.first << "_" << colours << "\n" << ORF_dict.first << "\n";
-            gene_id++;
+            colours += std::to_string(i);
         }
+        // append to file
+        outfile << ">" << std::to_string(gene_id) << "_" << colours << "\n" << ORF_dict.first << "\n";
+        gene_id++;
     }
+
     outfile.close();
 }
