@@ -1,6 +1,8 @@
 # ggCaller: a gene caller for Bifrost graphs
 
-Traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).
+ggCaller traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs). ggCaller incorporates [Balrog](https://github.com/salzberg-lab/Balrog) to filter ORFs to improve specificity of calls. 
+
+Balrog determines a score for each ORF based on length, presence/absence of a translation initiation sites and amino acid composition using a convolutional neural network. ORF scores are then used to determine compatible high scoring ORFs based on their overlap.
 
 ## Installation
 
@@ -31,6 +33,10 @@ Requirements:
 -   ```cmake```
 -   ```openMP```
 -   ```pthreads```
+-   ```zlib```
+-   ```graph-tool```
+-   ```pytorch```
+-   ```tqdm```
 -   a C++17 compiler (e.g. gcc >=7.3)
 
 ```
@@ -76,6 +82,10 @@ argument. Bifrost uses kmer coverage filtering for read files to remove read err
 - ```--no-write-idx``` Don't write FMIndexes to file, otherwise in same directory as fasta files.
 - ```--no-write-graph``` Don't write Bifrost GFA or Colours to file, otherwise in working directory.
 - ```--repeat``` Enables traversal of nodes more than once, to detect genes with repeats.
+- ```--maxoverlap``` Maximim overlap allowed between to ORFs (default: 60 bp)
+- ```--min-orf-score``` Minimum individual ORF score allowed during filtering (default: 100)
+- ```--min-path-score``` Minimum path score allowed for consecutive ORFs during overlap analysis in filtering (default: 100)
+- ```--no-filter``` Do not conduct ORF filtering. ggCaller will return all ORFs present.
 - ```--threads``` Number of threads (default: 1)
 - ```--out``` output file in FASTA format (default: 'calls.fasta')
 
@@ -125,7 +135,8 @@ Holley G., Melsted, P. Bifrost – Highly parallel construction and indexing of 
 SeQan3: 
 Reinert, K. et al. The SeqAn C++ template library for efficient sequence analysis: A resource for programmers. (2017) Journal of biotechnology, 261, 157-168 doi: https://doi.org/10.1016/j.jbiotec.2017.07.017
 
-
+Balrog:
+Sommer, M.J. & Salzberg, S.L. Balrog: A universal protein model for prokaryotic gene prediction (2020) BioRxiv 2020.09.06.285304 doi: https://doi.org/10.1101/2020.09.06.285304
 
 
 
