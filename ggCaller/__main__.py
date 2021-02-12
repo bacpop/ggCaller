@@ -127,25 +127,6 @@ def main():
         stop_codon_for = ["TAA", "TGA", "TAG"]
         stop_codon_rev = ["TTA", "TCA", "CTA"]
 
-    # start_codons = ["ATG", "GTG", "TTG"]
-    # stop_codon_for = ["TAA", "TGA", "TAG"]
-    # stop_codon_rev = ["TTA", "TCA", "CTA"]
-    #
-    # output = "calls.fasta"
-    #
-    # called_ORF_pair = ggCaller_cpp.call_genes_existing("/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.gfa",
-    #                                                    "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.bfg_colors",
-    #                                                    "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/call.fasta", start_codons,
-    #                                                    stop_codon_for, stop_codon_rev, 1, True,
-    #                                                    True, False, 10000, 90,
-    #                                                    60)
-    #
-    # # set mimimum path score
-    # minimum_path_score = 100
-    # minimum_ORF_score = 500
-    # no_filter = False
-    # num_threads = 4
-
     # if build graph specified, build graph and then call ORFs
     if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
         called_ORF_pair = ggCaller_cpp.call_genes_existing(graph_file, colours_file, output, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
