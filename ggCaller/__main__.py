@@ -81,7 +81,7 @@ def get_options():
                          '[Default = False] ')
     IO.add_argument('--threads',
                     default=1,
-                    help='Number of threads for FMIndexing '
+                    help='Number of threads. '
                          '[Default = 1] ')
     IO.add_argument('--out',
                     default='calls.fasta',

@@ -472,40 +472,68 @@ std::tuple<SeqORFMap, ORFNodeMap, NodeStrandMap> call_ORFs(const ColoredCDBG<>& 
     // iterate over pos_strand_vector, merging any maps that have matching ORFs. If no matching ORFs, merge as is. Continue until only single item present in pos_strand_vector
     while (pos_strand_vector.size() > 1)
     {
-        bool same_strand;
-        bool node_present = false;
-        for (const auto& node : pos_strand_vector[0])
+        // determine which maps have overlapping nodes with first instance
+        std::vector<std::pair<size_t, bool>> maps_to_add;
+        std::vector<size_t> to_remove;
+
+        // iterate over maps, detect any overlaps in first map and any others
+        for (size_t index = 1; index < pos_strand_vector.size(); index++)
         {
-            if (pos_strand_vector[1].find(node.first) != pos_strand_vector[1].end())
+            bool same_strand;
+            for (const auto& node : pos_strand_vector[0])
             {
-                if (pos_strand_vector[1][node.first] == node.second)
+                if (pos_strand_vector[index].find(node.first) != pos_strand_vector[index].end())
                 {
-                    same_strand == true;
-                } else
-                {
-                    same_strand == false;
+                    if (pos_strand_vector[index][node.first] == node.second)
+                    {
+                        same_strand = true;
+                    } else
+                    {
+                        same_strand = false;
+                    }
+                    std::pair<size_t, bool> map_pair(index, same_strand);
+                    maps_to_add.push_back(map_pair);
+                    break;
                 }
-                node_present = true;
-                break;
             }
         }
-        if (!node_present || same_strand)
+
+        // if no match found across pos_strand_vector, add second map to first as is and remove first
+        if (maps_to_add.size() == 0)
         {
-            // if no nodes shared or they are the same strand (node must therefore be present), merge as is
             pos_strand_vector[0].insert(pos_strand_vector[1].begin(), pos_strand_vector[1].end());
-        } else
+            to_remove.push_back(1);
+        }
+        // else go over maps_to_add, add accordinly and then remove
+        else
         {
-            // if node present but in the reverse strand, then iterate over second map and add in opposite strand
-            for (const auto& node : pos_strand_vector[1])
+            for (const auto& map : maps_to_add)
             {
-                if (pos_strand_vector[0].find(node.first) == pos_strand_vector[0].end())
+                // if same strand, add as is
+                if (map.second == true)
                 {
-                    pos_strand_vector[0][node.first] = !node.second;
+                    pos_strand_vector[0].insert(pos_strand_vector[map.first].begin(), pos_strand_vector[map.first].end());
                 }
+                // else reverse each entry
+                else{
+                    for (const auto& node : pos_strand_vector[map.first])
+                    {
+                        if (pos_strand_vector[0].find(node.first) == pos_strand_vector[0].end())
+                        {
+                            pos_strand_vector[0][node.first] = !node.second;
+                        }
+                    }
+                }
+                to_remove.push_back(map.first);
             }
         }
-        // erase the second map
-        pos_strand_vector.erase(pos_strand_vector.begin() + 1);
+
+        // reverse to_remove so that last occuring maps are removed first, otherwise this will shift the map indexes
+        for (auto index = to_remove.rbegin(); index != to_remove.rend(); index++)
+        {
+            auto test = *index;
+            pos_strand_vector.erase(pos_strand_vector.begin() + *index);
+        }
     }
 
     const auto ORF_tuple = std::make_tuple(all_ORFs, ORF_node_paths, pos_strand_vector[0]);
