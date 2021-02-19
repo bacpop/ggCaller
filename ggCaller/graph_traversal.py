@@ -1,12 +1,77 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
+from multiprocessing import Pool
+from functools import partial
 
-def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score):
+def traverse_components(component, tc, component_assignments, seq_dict, edge_weights, minimum_path_score):
+    # initilise high scoring ORF set to return
+    high_scoring_ORFs = set()
+
+    # generate subgraph view
+    u = gt.GraphView(tc, vfilt=component_assignments.a == component)
+
+    # initialise list of high scoring ORFs and their associated score for single component
+    high_scoring_ORFs_temp = []
+
+    high_score_temp = 0
+
+    # iterate over edges, determine which are source and sink nodes for connected components
+    vertices = u.get_vertices()
+    in_degs = u.get_in_degrees(u.get_vertices())
+    out_degs = u.get_out_degrees((u.get_vertices()))
+
+    # calculate start nodes and add to list, if in-degree is 0
+    start_vertices = [vertices[i] for i in range(len(in_degs)) if in_degs[i] == 0]
+
+    # calculate end nodes and add to list, if in-degree is 0
+    end_vertices = [vertices[i] for i in range(len(out_degs)) if out_degs[i] == 0]
+
+    # iterate over start and stop vertices
+    for start in start_vertices:
+        # add the score of the first node
+        start_score = seq_dict[u.vertex_properties["seq"][start]]
+
+        # check if start vertex is lone node
+        if start in end_vertices:
+            vertex_list = [start]
+            # replace high_score_ORFs with new high scoring ORF path
+            if start_score > high_score_temp:
+                high_score_temp = start_score
+                high_scoring_ORFs_temp = vertex_list
+        else:
+            for end in end_vertices:
+                score = start_score
+                vertex_list, edge_list = gt.shortest_path(u, start, end, weights=edge_weights,
+                                                          negative_weights=True, dag=True)
+                # ensure a path has been found. If not, pass.
+                if edge_list:
+                    for e in edge_list:
+                        # add the inverse of the score to get the true score
+                        score -= edge_weights[e]
+
+                    # replace high_score_ORFs with new high scoring ORF path
+                    if score > high_score_temp:
+                        high_score_temp = score
+                        high_scoring_ORFs_temp = vertex_list
+
+    # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
+    if high_score_temp >= minimum_path_score:
+        for node in high_scoring_ORFs_temp:
+            high_scoring_ORFs.add(u.vertex_properties["seq"][node])
+
+    return high_scoring_ORFs
+
+
+def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, num_threads):
+    # Turn gt threading on
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(num_threads)
+
     colour, seq_dict = colour_seqdict_tuple
     # print(colour)
 
     # initilise high scoring ORF set to return
-    high_scoring_ORFs = set()
+    high_scoring_ORFs_all = set()
 
     # create empty, directed graph
     g = gt.Graph()
@@ -61,9 +126,6 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score):
     # create incompatible list for edge iteration
     incomp_edges = []
 
-    # create dictionary for holding connected components within the graph
-    # unconnected_nodes = {}
-
     # iterate over edges and assign weights, and identify invalid overlaps to remove
     for e in tc.edges():
         # parse sink and source nodes, order same as before
@@ -71,7 +133,7 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score):
         ORF2 = tc.vertex_properties["seq"][e.source()]
 
         # parse sink ORF score calculated by Balrog
-        ORF_strand1, ORF_score1 = seq_dict[ORF1]
+        ORF_score1 = seq_dict[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
         if ORF1 not in ORF_overlap_dict[colour]:
@@ -102,70 +164,39 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score):
 
     # iterate over incompatible edges to remove them
     for e in incomp_edges:
-        ORF1 = e.target()
-        ORF2 = e.source()
         tc.remove_edge(e)
 
     # create graph view
-    # tc.save(colour + "_tc.graphml")
-    # g.save(colour + "_original.graphml")
+    #tc.save(colour + "_1threads_tc.graphml")
+    #g.save(colour + "_1threads_original.graphml")
 
     # for debugging if negative cycles encountered.
     # for c in gt.all_circuits(g):
     #    print(c)
 
-    # iterate over components, find highest scoring path within component
-    for component in component_ids:
-        # generate subgraph view
-        u = gt.GraphView(tc, vfilt=component_assignments.a == component)
+    # Turn gt threading off for multithreading
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(1)
 
-        # initialise list of high scoring ORFs and their associated score for single component
-        high_scoring_ORFs_temp = []
+    # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
+    with Pool(processes=num_threads) as pool:
+        for high_scoring_ORFs in pool.map(partial(traverse_components, tc=tc, component_assignments=component_assignments,
+                                                  seq_dict = seq_dict, edge_weights = edge_weights, minimum_path_score = minimum_path_score),
+                                                  component_ids):
+            high_scoring_ORFs_all.update(high_scoring_ORFs)
 
-        high_score_temp = 0
+    # Turn gt threading back on
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(num_threads)
 
-        # iterate over edges, determine which are source and sink nodes for connected components
-        vertices = u.get_vertices()
-        in_degs = u.get_in_degrees(u.get_vertices())
-        out_degs = u.get_out_degrees((u.get_vertices()))
+    return(colour, high_scoring_ORFs_all)
 
-        # calculate start nodes and add to list, if in-degree is 0
-        start_vertices = [vertices[i] for i in range(len(in_degs)) if in_degs[i] == 0]
 
-        # calculate end nodes and add to list, if in-degree is 0
-        end_vertices = [vertices[i] for i in range(len(out_degs)) if out_degs[i] == 0]
-
-        # iterate over start and stop vertices
-        for start in start_vertices:
-            # add the score of the first node
-            strand, start_score = seq_dict[u.vertex_properties["seq"][start]]
-
-            # check if start vertex is lone node
-            if start in end_vertices:
-                vertex_list = [start]
-                # replace high_score_ORFs with new high scoring ORF path
-                if start_score > high_score_temp:
-                    high_score_temp = start_score
-                    high_scoring_ORFs_temp = vertex_list
-            else:
-                for end in end_vertices:
-                    score = start_score
-                    vertex_list, edge_list = gt.shortest_path(u, start, end, weights=edge_weights,
-                                                              negative_weights=True, dag=True)
-                    # ensure a path has been found. If not, pass.
-                    if edge_list:
-                        for e in edge_list:
-                            # add the inverse of the score to get the true score
-                            score -= edge_weights[e]
-
-                        # replace high_score_ORFs with new high scoring ORF path
-                        if score > high_score_temp:
-                            high_score_temp = score
-                            high_scoring_ORFs_temp = vertex_list
-
-        # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
-        if high_score_temp >= minimum_path_score:
-            for node in high_scoring_ORFs_temp:
-                high_scoring_ORFs.add(u.vertex_properties["seq"][node])
-
-    return(colour, high_scoring_ORFs)
+def update_colour(colour1, colour2):
+    updated_colour = ""
+    for i in range(0, len(colour1)):
+        if colour1[i] == "1" or colour2[0] == "1":
+            updated_colour += "1"
+        else:
+            updated_colour += "0"
+    return updated_colour

@@ -5,8 +5,7 @@ import json
 from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
-from multiprocessing import Pool
-from functools import partial
+
 
 
 def get_options():
@@ -81,7 +80,7 @@ def get_options():
                          '[Default = False] ')
     IO.add_argument('--threads',
                     default=1,
-                    help='Number of threads. '
+                    help='Number of threads for FMIndexing '
                          '[Default = 1] ')
     IO.add_argument('--out',
                     default='calls.fasta',
@@ -155,8 +154,8 @@ def main():
         with open(output, "w") as f:
             ORF_count = 0
             for colour, gene_set in full_ORF_dict.items():
-                for gene, strand in gene_set.items():
-                    f.write(">" + str(ORF_count) + "_" + str(strand) + "_" + str(colour) + "\n" + gene[16:] + "\n")
+                for gene in gene_set.keys():
+                    f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene[16:] + "\n")
                     ORF_count += 1
     else:
         # generate gene scores using Balrog
@@ -167,24 +166,24 @@ def main():
 
         print("Generating highest scoring gene paths...")
 
-        # Turn gt threading off
-        if gt.openmp_enabled():
-            gt.openmp_set_num_threads(1)
-
-        # run multiprocessing to determine geniest path through components
-        with Pool(processes=num_threads) as pool:
-            for colour, high_scoring_ORFs in pool.map(partial(call_true_genes, ORF_overlap_dict=ORF_overlap_dict, minimum_path_score=minimum_path_score), full_ORF_dict.items()):
-                true_genes[colour] = high_scoring_ORFs
+        for colour_seqdict_tuple in full_ORF_dict.items():
+            colour, high_scoring_ORFs = call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, num_threads)
+            # remove TIS, and merge any matching genes which had differing TIS but were called together
+            for ORF in high_scoring_ORFs:
+                gene = ORF[16:]
+                if gene not in true_genes:
+                    true_genes[gene] = colour
+                else:
+                    updated_colour = update_colour(true_genes[gene], colour)
+                    true_genes[gene] = updated_colour
 
         print("Generating fasta file of gene calls...")
         # print output to file
         ORF_count = 1
         with open(output, "w") as f:
-            for colour, gene_set in true_genes.items():
-                for gene in gene_set:
-                    strand, score = full_ORF_dict[colour][gene]
-                    f.write(">" + str(ORF_count) + "_" + str(strand) + "_" + str(colour) + "\n" + gene[16:] + "\n")
-                    ORF_count += 1
+            for gene, colour in true_genes.items():
+                f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene + "\n")
+                ORF_count += 1
 
         print("Finished.")
 

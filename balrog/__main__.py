@@ -396,7 +396,7 @@ def score_genes(ORF_dict, minimum_ORF_score):
     for i, score in enumerate(ORF_score_flat):
         # if score greater than minimum, add to the ORF_dict
         if score >= minimum_ORF_score:
-            ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = (ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]], score)
+            ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = score
         # else, remove the ORF from the full ORF list
         else:
             del ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]]

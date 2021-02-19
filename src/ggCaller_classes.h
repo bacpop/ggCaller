@@ -49,6 +49,7 @@
 const vector<bool> empty_codon_arr(3, 0);
 namespace py = pybind11;
 
+
 // class declaration
 class unitigDict {
     public:
@@ -94,12 +95,11 @@ typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
 typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColoursMap;
 typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>> GraphTuple;
 typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
-typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
+typedef std::map<std::string, PathVector> PathMap;
 typedef std::tuple<PathMap, std::vector<std::string>> PathTuple;
 typedef std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, std::pair<char, size_t>>>> ORFOverlapMap;
 typedef std::unordered_map<std::string, std::unordered_map<std::string, char>> FullORFMap;
 typedef robin_hood::unordered_map<std::string, bool> NodeStrandMap;
-
 
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
@@ -203,12 +203,12 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const int& overlap,
                          const size_t& min_len);
 
-std::tuple<SeqORFMap, ORFNodeMap, NodeStrandMap> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                              const PathTuple& path_tuple,
-                                                              const std::vector<std::string>& stop_codons_for,
-                                                              const std::vector<std::string>& start_codons_for,
-                                                              const int& overlap,
-                                                              const size_t& min_ORF_length);
+std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
+                                                                                            const PathTuple& path_tuple,
+                                                                                            const std::vector<std::string>& stop_codons_for,
+                                                                                            const std::vector<std::string>& start_codons_for,
+                                                                                            const int& overlap,
+                                                                                            const size_t& min_ORF_length);
 
 std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORFMap& all_ORFs);
 
@@ -223,7 +223,7 @@ void write_to_file (const std::string& outfile_name,
 // gene_overlap.cpp
 std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_map,
                                                         const ORFNodeMap& ORF_node_paths,
-                                                        const NodeStrandMap& pos_strand_map,
+                                                        const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
                                                         const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
                                                         const int& DBG_overlap,
                                                         const size_t& max_overlap);

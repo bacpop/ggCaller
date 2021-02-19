@@ -1,6 +1,5 @@
 // ggCaller header
 #include "ggCaller_classes.h"
-
 // define mutex for safe addition to robinhood_maps
 std::mutex mtx;
 
@@ -43,52 +42,6 @@ std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::
     }
     return output_array;
 }
-
-//void write_path_to_file (const std::string& outfile_name,
-//                         const std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>& path,
-//                         const int& type)
-//{
-//    ofstream outfile;
-//    outfile.open(outfile_name, fstream::app);
-//
-//    if (type == 0)
-//    {
-//        outfile << "Original:\n";
-//    } else if (type == 1) {
-//        outfile << "Pre-cache:\n";
-//    } else if (type == 2) {
-//        outfile << "Post-cache:\n";
-//    }
-//
-//    //iterate over paths
-//    for (const auto& node : path.first)
-//    {
-//        outfile << node.first << " <- ";
-//    }
-//
-//    outfile << "\n";
-//    outfile.close();
-//}
-//
-//void write_codon_to_file (const std::string& outfile_name,
-//                         const std::vector<bool>& codon_arr)
-//{
-//    ofstream outfile;
-//    outfile.open(outfile_name, fstream::app);
-//
-//    outfile << "[";
-//
-//    //iterate over paths
-//    for (const auto& codon : codon_arr)
-//    {
-//        outfile << codon;
-//    }
-//
-//    outfile << "]";
-//
-//    outfile << "\n";
-//    outfile.close();
-//}
 
 PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const unitigMap& graph_map,
@@ -146,7 +99,7 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
             std::string cached_kmer_id = kmer_id + (um.strand ? "+" : "-");
 
             // calculate updated codon and colours array
-            if (codon_arr == graph_map.at(kmer_id).full_codon.at(um.strand).at(modulus))
+            if (codon_arr == graph_map.at(kmer_id).part_codon.at(um.strand).at(modulus))
             {
                 cache_valid = 1;
             }
@@ -161,10 +114,14 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                 // get previous cached paths
                 PathVector cached_paths;
                 // check if cached path is present in previous paths
-                try {
-                    cached_paths = previous_paths.at(cached_kmer_id);
-                } catch (const std::out_of_range& e) {
-                    ;
+                if (cache_valid)
+                {
+                    mtx.lock();
+                    if (previous_paths.find(cached_kmer_id) != previous_paths.end())
+                    {
+                        cached_paths = previous_paths.at(cached_kmer_id);
+                    }
+                    mtx.unlock();
                 }
 
                 // if repeat is false and unitig has already been traversed ignore unitig
@@ -309,6 +266,7 @@ PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
         }
     }
 
+    //std::sort(head_string_arr.begin(), head_string_arr.end());
     auto path_tuple = std::make_tuple(complete_paths, head_string_arr);
     return path_tuple;
 }

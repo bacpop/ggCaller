@@ -1,9 +1,8 @@
 #include "ggCaller_classes.h"
-// return robin_hood::unordered_map<std::string, std::string> in future, which pairs each ORF to its overlapping ORFs
 
 std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_map,
                                                         const ORFNodeMap& ORF_node_paths,
-                                                        const NodeStrandMap& pos_strand_map,
+                                                        const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
                                                         const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
                                                         const int& DBG_overlap,
                                                         const size_t& max_overlap)
@@ -13,6 +12,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
 
     // initialise overlap map for each ORF per colour (each first ORF is the first ORF on positive strand etc.)
     ORFOverlapMap ORF_overlap_map;
+
 
     // iterate over each colour combination in ORF_colours_map
     #pragma omp parallel
@@ -37,7 +37,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             // iterate over each ORF sequence with specific colours combination
             for (const auto& ORF_seq : ORF_colours_pair.first.at(*colit))
             {
-                // add ORF sequence to full_ORF_map with placeholder for strand
+                // assign placeholder for ORFs
                 full_ORF_map_private[*colit][ORF_seq] = 'n';
 
                 // assign ORF seq with unique id
@@ -125,7 +125,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
 
                     // work out if node 1 is negative by checking first node in pos_strand_map. If it doesn't match, it is negatively stranded.
                     bool negative = false;
-                    if (ORF1_5p_strand != pos_strand_map.at(ORF1_start_node))
+                    if (ORF1_5p_strand != pos_strand_map.at(*colit).at(ORF1_start_node))
                     {
                         negative = true;
                     }
@@ -142,7 +142,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                     }
 
                     // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
-                    if ((ORF2_5p_strand != pos_strand_map.at(ORF2_start_node) && !negative) || (ORF2_5p_strand == pos_strand_map.at(ORF2_start_node) && negative))
+                    if ((ORF2_5p_strand != pos_strand_map.at(*colit).at(ORF2_start_node) && !negative) || (ORF2_5p_strand == pos_strand_map.at(*colit).at(ORF2_start_node) && negative))
                     {
                         reversed = true;
                     }
@@ -152,9 +152,9 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                     {
                         if (negative && !reversed || !negative && reversed)
                         {
-                            full_ORF_map_private[*colit][ORF1] = '-';
+                            full_ORF_map_private[*colit][ORF2] = '-';
                         } else {
-                            full_ORF_map_private[*colit][ORF1] = '+';
+                            full_ORF_map_private[*colit][ORF2] = '+';
                         }
                     }
 
@@ -183,6 +183,8 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                         // correct ORF2 5p and 3p positions, reversing the coordinates
                         ORF2_5p.second = std::get<1>(std::get<1>(ORF2_nodes).back());
                         ORF2_3p.second = std::get<0>(std::get<1>(ORF2_nodes)[0]);
+                        ORF2_start_node = std::get<0>(ORF2_nodes)[0];
+                        ORF2_end_node = std::get<0>(ORF2_nodes).back();
                     }
 
                     // check if 3p matches between the two ORFs and node is in the same strand. If so, set as incompatible, and the overlap as the shorter of the two ORFS
@@ -580,6 +582,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             ORF_overlap_map.insert(ORF_overlap_map_private.begin(), ORF_overlap_map_private.end());
         }
     }
+
     auto ORF_overlap_pair = std::make_pair(ORF_overlap_map, full_ORF_map);
     return ORF_overlap_pair;
 }
