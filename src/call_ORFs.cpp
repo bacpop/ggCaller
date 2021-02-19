@@ -489,6 +489,8 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
                             to_remove.push_back(maps_to_add[i].first);
                         }
                         // remove the merged maps
+                        // reverse to_remove so that indexes aren't affected
+                        std::reverse(to_remove.begin(), to_remove.end());
                         for (const auto& index : to_remove)
                         {
                             pos_strand_vector.erase(pos_strand_vector.begin() + index);
