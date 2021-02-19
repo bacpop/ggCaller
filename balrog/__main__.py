@@ -188,7 +188,7 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-def score_genes(ORF_dict, minimum_ORF_score):
+def score_genes(ORF_dict, minimum_ORF_score, num_threads):
     # set up load gene and TIS models
     """ extract and load balrog model """
 
@@ -207,6 +207,7 @@ def score_genes(ORF_dict, minimum_ORF_score):
         time.sleep(0.5)
     else:
         print("No GPU detected, using CPU...")
+        torch.set_num_threads(num_threads)
         model = torch.hub.load(model_dir, "geneTCN", source='local')
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)

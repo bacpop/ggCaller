@@ -159,7 +159,7 @@ def main():
                     ORF_count += 1
     else:
         # generate gene scores using Balrog
-        full_ORF_dict = score_genes(full_ORF_dict, minimum_ORF_score)
+        full_ORF_dict = score_genes(full_ORF_dict, minimum_ORF_score, num_threads)
 
         # create list for high scoring ORFs to return
         true_genes = {}
