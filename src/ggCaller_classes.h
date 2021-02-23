@@ -231,7 +231,6 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
 // ggCaller_bindings
 std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string& graphfile,
                                                                            const std::string& coloursfile,
-                                                                           const std::string& outfile,
                                                                            const std::vector<std::string>& start_codons,
                                                                            const std::vector<std::string>& stop_codons_for,
                                                                            const std::vector<std::string>& stop_codons_rev,
@@ -245,7 +244,6 @@ std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string&
 
 std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphbuild (const std::string& infile1,
                                                                           const int& kmer,
-                                                                          const std::string& outfile,
                                                                           const std::vector<std::string>& start_codons,
                                                                           const std::vector<std::string>& stop_codons_for,
                                                                           const std::vector<std::string>& stop_codons_rev,
