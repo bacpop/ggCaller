@@ -3,7 +3,6 @@ import tarfile
 import time
 import pickle
 import numpy as np
-from tqdm.auto import tqdm
 from Bio.Seq import Seq
 from scipy.special import expit
 from scipy.special import logit
@@ -255,7 +254,7 @@ def score_genes(ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads):
 
     # pad to allow creation of batch matrix
     prob_list = []
-    for i in tqdm(range(0, len(ORF_seq_sorted), gene_batch_size), unit=" batch"):
+    for i in range(0, len(ORF_seq_sorted), gene_batch_size):
         batch = ORF_seq_sorted[i:i + gene_batch_size]
         seq_lengths = torch.LongTensor(list(map(len, batch)))
         seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
@@ -330,7 +329,7 @@ def score_genes(ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads):
 
     # batch score TIS
     TIS_prob_list = []
-    for i in tqdm(range(0, len(ORF_TIS_seq_flat), TIS_batch_size), unit=" batch"):
+    for i in range(0, len(ORF_TIS_seq_flat), TIS_batch_size):
         batch = ORF_TIS_seq_flat[i:i + TIS_batch_size]
         TIS_stacked = torch.stack(batch)
         pred = predict_tis(model_tis, TIS_stacked)
