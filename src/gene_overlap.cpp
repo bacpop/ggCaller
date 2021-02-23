@@ -37,7 +37,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             // iterate over each ORF sequence with specific colours combination
             for (const auto& ORF_seq : ORF_colours_pair.first.at(*colit))
             {
-                // assign placeholder for ORFs
+                // assign placeholder for ORF scores
                 full_ORF_map_private[*colit][ORF_seq] = 'n';
 
                 // assign ORF seq with unique id
@@ -130,32 +130,10 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                         negative = true;
                     }
 
-                    // assign strand to ORF1 in full_ORF_map
-                    if (full_ORF_map_private[*colit][ORF1] == 'n')
-                    {
-                        if (negative)
-                        {
-                            full_ORF_map_private[*colit][ORF1] = '-';
-                        } else {
-                            full_ORF_map_private[*colit][ORF1] = '+';
-                        }
-                    }
-
                     // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
                     if ((ORF2_5p_strand != pos_strand_map.at(*colit).at(ORF2_start_node) && !negative) || (ORF2_5p_strand == pos_strand_map.at(*colit).at(ORF2_start_node) && negative))
                     {
                         reversed = true;
-                    }
-
-                    // assign strand to ORF2 in full_ORF_map based on orientation of ORF1 if not already assigned
-                    if (full_ORF_map_private[*colit][ORF2] == 'n')
-                    {
-                        if (negative && !reversed || !negative && reversed)
-                        {
-                            full_ORF_map_private[*colit][ORF2] = '-';
-                        } else {
-                            full_ORF_map_private[*colit][ORF2] = '+';
-                        }
                     }
 
                     // if reversed is true, iterate through ORF2 coordinates and reverse
