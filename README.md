@@ -114,14 +114,14 @@ Test data is available in the ```data``` directory.
 
 ## Interpreting output FASTA
 
-The output ```calls.fasta``` contains ORF sequences. Headers start with a unique ORF identifier (e.g. 1, 2, 3), followed by the strand of the ORF (+/-), and a colours array (e.g. 11100). The colours array describes the presence/absence of the ORF in the source genomes in the same order as they are passed in the ```refs.txt```/```reads.txt``` files. If both refs and reads are passed, then the ordering is reads followed by refs.
+The output ```calls.fasta``` contains ORF sequences. Headers start with a unique ORF identifier (e.g. 1, 2, 3) followed by a colours array (e.g. 11100). The colours array describes the presence/absence of the ORF in the source genomes in the same order as they are passed in the ```refs.txt```/```reads.txt``` files. If both refs and reads are passed, then the ordering is reads followed by refs.
 
 ```
->1_+_11100
+>1_11100
 TTGTCATTTTATTGGTTTATTTTCTTAGCTTTGTTAGAGAGACAGAACTTGAACGTTCTTCTAG
->2_+_00111
+>2_00111
 ATGGGATTAATGCTGTCTTTATGGGTGTTGGTGGCAGTTTTGATGTATTATCAGGACACATTAAACGAGCTCCATTATGGATGCAAAAATTGA
->3_-_11100
+>3_11100
 TTGTTCAAAGGTGGTGTTACGATTTCAAGAACTCCTCTCAGTTCTGAGGACACGGTAATGATTGATGCGATAG
 ```
 
