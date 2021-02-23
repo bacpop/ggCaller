@@ -1,9 +1,7 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
-from multiprocessing import Pool
-from functools import partial
 
-def traverse_components(component, tc, component_list, ORF_seq_dict, edge_weights, minimum_path_score):
+def traverse_components(component, tc, component_list, ORF_ID_dict, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
 
@@ -29,7 +27,7 @@ def traverse_components(component, tc, component_list, ORF_seq_dict, edge_weight
     # iterate over start and stop vertices
     for start in start_vertices:
         # add the score of the first node
-        start_score = ORF_seq_dict[u.vertex_properties["seq"][start]]
+        start_score = ORF_ID_dict[u.vertex_properties["ID"][start]]
 
         # check if start vertex is lone node
         if start in end_vertices:
@@ -57,7 +55,7 @@ def traverse_components(component, tc, component_list, ORF_seq_dict, edge_weight
     # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
     if high_score_temp >= minimum_path_score:
         for node in high_scoring_ORFs_temp:
-            high_scoring_ORFs.add(u.vertex_properties["seq"][node])
+            high_scoring_ORFs.add(u.vertex_properties["ID"][node])
 
     return high_scoring_ORFs
 
@@ -66,7 +64,7 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     colour, ORF_dict = colour_ORF_tuple
 
     # unpack ORF_dict
-    ORF_seq_dict = ORF_dict["seq"]
+    ORF_ID_dict = ORF_dict["ID"]
     ORF_overlap_dict = ORF_dict["overlap"]
 
 
@@ -80,16 +78,16 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     ORF_index = {}
 
     # create new graph item with node labels
-    vertex_seq = g.new_vertex_property("string")
+    #vertex_ID = g.new_vertex_property("int")
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in ORF_seq_dict.keys():
+    for ORF in ORF_ID_dict.keys():
         v = g.add_vertex()
-        vertex_seq[v] = ORF
+        #vertex_ID[v] = ORF
         ORF_index[ORF] = g.vertex_index[v]
 
     # add vertex sequences to graph
-    g.vertex_properties["seq"] = vertex_seq
+    #g.vertex_properties["ID"] = vertex_ID
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     if ORF_overlap_dict:
@@ -113,12 +111,12 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     #tc.vertex_properties["component"] = component_assignments
 
     # create vertex property map to store node IDs
-    vertex_seq = tc.new_vertex_property("string")
-    for ORF, index in ORF_index.items():
-        vertex_seq[tc.vertex(index)] = ORF
+    vertex_ID = tc.new_vertex_property("int")
+    for ORF_ID, index in ORF_index.items():
+        vertex_ID[tc.vertex(index)] = ORF_ID
 
     # add vertex sequences as internal property of graph
-    tc.vertex_properties["seq"] = vertex_seq
+    tc.vertex_properties["ID"] = vertex_ID
 
     # create edge weights property
     edge_weights = tc.new_edge_property("double")
@@ -129,11 +127,11 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     # iterate over edges and assign weights, and identify invalid overlaps to remove
     for e in tc.edges():
         # parse sink and source nodes, order same as before
-        ORF1 = tc.vertex_properties["seq"][e.target()]
-        ORF2 = tc.vertex_properties["seq"][e.source()]
+        ORF1 = tc.vertex_properties["ID"][e.target()]
+        ORF2 = tc.vertex_properties["ID"][e.source()]
 
         # parse sink ORF score calculated by Balrog
-        ORF_score = ORF_seq_dict[ORF1]
+        ORF_score = ORF_ID_dict[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
         if ORF1 not in ORF_overlap_dict:
@@ -174,13 +172,9 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     # for c in gt.all_circuits(g):
     #    print(c)
 
-    # Turn gt threading off for multithreading
-    if gt.openmp_enabled():
-        gt.openmp_set_num_threads(1)
-
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
     for component in set(components):
-        high_scoring_ORFs = traverse_components(component, tc, components, ORF_seq_dict, edge_weights, minimum_path_score)
+        high_scoring_ORFs = traverse_components(component, tc, components, ORF_ID_dict, edge_weights, minimum_path_score)
         high_scoring_ORFs_all.update(high_scoring_ORFs)
 
     return (colour, high_scoring_ORFs_all)

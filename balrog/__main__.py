@@ -87,14 +87,15 @@ def get_start_codon(seq, orfcoords, strand):
         startcoord = orfcoords[1]
         return seq[startcoord:startcoord + 3].reverse_complement()
 
-def get_ORF_info(ORF_dict):
+def get_ORF_info(ORF_colour_ID_map):
     ORF_colour = []
+    ORF_IDs = []
     ORF_seq = []
     ORF_coord = []
     ORF_nucseq = []
     # iterate over list of ORFs
-    for colour, seq_dict in ORF_dict.items():
-        for ORF in seq_dict.keys():
+    for colour, seq_dict in ORF_colour_ID_map.items():
+        for ORF_ID, ORF in seq_dict.items():
 
             seq = Seq(ORF)
             length = len(ORF)
@@ -108,12 +109,13 @@ def get_ORF_info(ORF_dict):
             # translate once per frame, then slice
             aa = str(seq[full_ORF_nuccord[0]:full_ORF_nuccord[1]].translate(table=translation_table, to_stop=False))
 
+            ORF_IDs.append(ORF_ID)
             ORF_colour.append(colour)
             ORF_seq.append(aa)
             ORF_coord.append(full_ORF_nuccord)
             ORF_nucseq.append(ORF)
 
-    return ORF_colour, ORF_seq, ORF_nucseq, ORF_coord
+    return ORF_IDs, ORF_colour, ORF_seq, ORF_nucseq, ORF_coord
 
 def predict(model, X):
     model.eval()
@@ -188,7 +190,7 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-def score_genes(ORF_dict, minimum_ORF_score, num_threads):
+def score_genes(ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads):
     # set up load gene and TIS models
     """ extract and load balrog model """
 
@@ -223,7 +225,7 @@ def score_genes(ORF_dict, minimum_ORF_score, num_threads):
     if verbose:
         print("Finding and translating open reading frames...")
 
-    ORF_colour_list, ORF_seq_list, ORF_nucseq_list, ORF_coord_list = get_ORF_info(ORF_dict)
+    ORF_ID_list, ORF_colour_list, ORF_seq_list, ORF_nucseq_list, ORF_coord_list = get_ORF_info(ORF_colour_ID_map)
 
     # encode amino acids as integers
     if verbose:
@@ -397,9 +399,9 @@ def score_genes(ORF_dict, minimum_ORF_score, num_threads):
     for i, score in enumerate(ORF_score_flat):
         # if score greater than minimum, add to the ORF_dict
         if score >= minimum_ORF_score:
-            ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]] = score
+            ORF_dict[ORF_colour_list[i]][ORF_ID_list[i]] = score
         # else, remove the ORF from the full ORF list
         else:
-            del ORF_dict[ORF_colour_list[i]][ORF_nucseq_list[i]]
+            del ORF_dict[ORF_colour_list[i]][ORF_ID_list[i]]
 
     return ORF_dict

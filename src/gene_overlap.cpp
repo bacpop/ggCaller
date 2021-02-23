@@ -1,18 +1,20 @@
 #include "ggCaller_classes.h"
 
-std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_map,
+std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> calculate_overlaps(const unitigMap& unitig_map,
                                                         const ORFNodeMap& ORF_node_paths,
                                                         const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
                                                         const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
                                                         const int& DBG_overlap,
                                                         const size_t& max_overlap)
 {
+    // initialse ORF_colour_id_map to return ORF and corresponding ID
+    ORFColourIDMap ORF_colour_id_map;
+
     // initialise full ORF map for easy iteration of gene scoring and gene removal
     FullORFMap full_ORF_map;
 
     // initialise overlap map for each ORF per colour (each first ORF is the first ORF on positive strand etc.)
     ORFOverlapMap ORF_overlap_map;
-
 
     // iterate over each colour combination in ORF_colours_map
     #pragma omp parallel
@@ -20,6 +22,7 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
         // initialise private thread items
         FullORFMap full_ORF_map_private;
         ORFOverlapMap ORF_overlap_map_private;
+        ORFColourIDMap ORF_colour_id_map_private;
 
         // iterate over each colour
         #pragma omp for nowait
@@ -32,13 +35,13 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             size_t ORF_ID = 0;
 
             // map to determine ID of a gene
-            robin_hood::unordered_map<size_t, std::string> ORF_ID_map;
+            std::unordered_map<size_t, std::string> ORF_ID_map;
 
             // iterate over each ORF sequence with specific colours combination
             for (const auto& ORF_seq : ORF_colours_pair.first.at(*colit))
             {
-                // assign placeholder for ORF scores
-                full_ORF_map_private[*colit][ORF_seq] = 'n';
+                // assign placeholder for ORFs
+                full_ORF_map_private[*colit][ORF_ID] = 'n';
 
                 // assign ORF seq with unique id
                 ORF_ID_map[ORF_ID] = ORF_seq;
@@ -51,6 +54,10 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                 }
                 ORF_ID++;
             }
+
+            // add ids to ORF_colour_id_map
+            ORF_colour_id_map_private[*colit] = std::move(ORF_ID_map);
+
             // initialise sparse matrix
             Eigen::SparseMatrix<double> mat(ORF_ID, unitig_map.size());
             mat.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -71,18 +78,17 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
 
 
                     // Assign temporary values for ORF1 and ORF2, not sorted by traversed node vector.
-                    auto temp_ORF1 = ORF_ID_map.at(init.col());
-                    auto temp_ORF2 = ORF_ID_map.at(init.row());
+                    auto temp_ORF1 = ORF_colour_id_map_private.at(*colit).at(init.col());
+                    auto temp_ORF2 = ORF_colour_id_map_private.at(*colit).at(init.row());
 
                     // Get nodes traversed by genes. Order by length of the node vector; ORF1 is the longer of the two vectors
                     auto ORF1_nodes = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? ORF_node_paths.at(temp_ORF1) : ORF_node_paths.at(temp_ORF2));
                     auto ORF2_nodes = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? ORF_node_paths.at(temp_ORF2) : ORF_node_paths.at(temp_ORF1));
                     auto ORF1 = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? temp_ORF1 : temp_ORF2);
                     auto ORF2 = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? temp_ORF2 : temp_ORF1);
+                    size_t ORF1_ID = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? init.col() : init.row());
+                    size_t ORF2_ID = ((std::get<0>(ORF_node_paths.at(temp_ORF1)).size() >= std::get<0>(ORF_node_paths.at(temp_ORF2)).size()) ? init.row() : init.col());
 
-                    // for debugging
-                    //auto row = init.row();
-                    //auto col = init.col();
 
                     // initialise overlap type
                     // n = no overlap
@@ -130,11 +136,13 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                         negative = true;
                     }
 
+
                     // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
                     if ((ORF2_5p_strand != pos_strand_map.at(*colit).at(ORF2_start_node) && !negative) || (ORF2_5p_strand == pos_strand_map.at(*colit).at(ORF2_start_node) && negative))
                     {
                         reversed = true;
                     }
+
 
                     // if reversed is true, iterate through ORF2 coordinates and reverse
                     // check if both strands are the same. If not, reverse the nodes of ORF2 and their within-node coordinates
@@ -544,10 +552,10 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
                         if (first_ORF == 1)
                         {
                             std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
-                            ORF_overlap_map_private[*colit][ORF2][ORF1] = overlap_tuple;
+                            ORF_overlap_map_private[*colit][ORF2_ID][ORF1_ID] = overlap_tuple;
                         } else {
                             std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
-                            ORF_overlap_map_private[*colit][ORF1][ORF2] = overlap_tuple;
+                            ORF_overlap_map_private[*colit][ORF1_ID][ORF2_ID] = overlap_tuple;
                         }
                     }
                 }
@@ -558,9 +566,10 @@ std::pair<ORFOverlapMap, FullORFMap> calculate_overlaps(const unitigMap& unitig_
             // merge all thread maps
             full_ORF_map.insert(full_ORF_map_private.begin(), full_ORF_map_private.end());
             ORF_overlap_map.insert(ORF_overlap_map_private.begin(), ORF_overlap_map_private.end());
+            ORF_colour_id_map.insert(ORF_colour_id_map_private.begin(), ORF_colour_id_map_private.end());
         }
     }
 
-    auto ORF_overlap_pair = std::make_pair(ORF_overlap_map, full_ORF_map);
-    return ORF_overlap_pair;
+    auto ORF_overlap_tuple = std::make_tuple(ORF_overlap_map, full_ORF_map, ORF_colour_id_map);
+    return ORF_overlap_tuple;
 }

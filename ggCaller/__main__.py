@@ -6,7 +6,8 @@ from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
 from multiprocessing import Pool
-
+from functools import partial
+import graph_tool.all as gt
 
 
 def get_options():
@@ -148,30 +149,30 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    ORF_overlap_dict, full_ORF_dict = called_ORF_pair
+    ORF_overlap_dict, full_ORF_dict, ORF_colour_ID_map = called_ORF_tuple
 
     if no_filter == True:
         print("Generating fasta file of gene calls...")
         with open(output, "w") as f:
             ORF_count = 0
-            for colour, gene_set in full_ORF_dict.items():
-                for gene in gene_set.keys():
+            for colour, gene_set in ORF_colour_ID_map.items():
+                for gene_ID, gene in gene_set.items():
                     f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene[16:] + "\n")
                     ORF_count += 1
     else:
         # generate gene scores using Balrog
-        full_ORF_dict = score_genes(full_ORF_dict, minimum_ORF_score, num_threads)
+        full_ORF_dict = score_genes(full_ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads)
 
         # create list for high scoring ORFs to return
         true_genes = {}
 
         print("Generating highest scoring gene paths...")
 
-        #merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
+        # merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
         ORF_dict = {}
         for colour in full_ORF_dict.keys():
             ORF_dict[colour] = {}
-            ORF_dict[colour]["seq"] = full_ORF_dict[colour]
+            ORF_dict[colour]["ID"] = full_ORF_dict[colour]
             ORF_dict[colour]["overlap"] = ORF_overlap_dict[colour]
 
         # multithread per colour in ORF_dict
@@ -180,11 +181,13 @@ def main():
             gt.openmp_set_num_threads(1)
 
         with Pool(processes=num_threads) as pool:
-            for colour, high_scoring_ORFs in pool.map(partial(call_true_genes, minimum_path_score = minimum_path_score),
-                                                      ORF_dict.items()):
+            for colour, high_scoring_ORFs in pool.map(
+                    partial(call_true_genes, minimum_path_score=minimum_path_score),
+                    ORF_dict.items()):
                 # remove TIS, and merge any matching genes which had differing TIS but were called together
-                for ORF in high_scoring_ORFs:
-                    gene = ORF[16:]
+                for ORF_ID in high_scoring_ORFs:
+                    ORF_seq = ORF_colour_ID_map[colour][ORF_ID]
+                    gene = ORF_seq[16:]
                     if gene not in true_genes:
                         true_genes[gene] = colour
                     else:
