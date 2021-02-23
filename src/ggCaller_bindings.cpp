@@ -3,7 +3,6 @@
 
 std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string& graphfile,
                                                            const std::string& coloursfile,
-                                                           const std::string& outfile,
                                                            const std::vector<std::string>& start_codons,
                                                            const std::vector<std::string>& stop_codons_for,
                                                            const std::vector<std::string>& stop_codons_rev,
@@ -69,16 +68,11 @@ std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphexists (const std::string&
     cout << "Calculating gene overlap" << endl;
     auto ORF_overlap_pair = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), std::get<2>(ORF_tuple), ORF_colours_pair, overlap, max_ORF_overlap);
 
-    // write fasta files to file
-    //cout << "Writing gene calls to file..." << endl;
-    //write_to_file(outfile, std::get<0>(ORF_tuple));
-
     return ORF_overlap_pair;
 }
 
 std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphbuild (const std::string& infile1,
                                                           const int& kmer,
-                                                          const std::string& outfile,
                                                           const std::vector<std::string>& start_codons,
                                                           const std::vector<std::string>& stop_codons_for,
                                                           const std::vector<std::string>& stop_codons_rev,
@@ -156,10 +150,6 @@ std::pair<ORFOverlapMap, FullORFMap> py_ggCaller_graphbuild (const std::string& 
 
     cout << "Calculating gene overlap" << endl;
     auto ORF_overlap_pair = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), std::get<2>(ORF_tuple), ORF_colours_pair, overlap, max_ORF_overlap);
-
-    // write fasta files to file
-//    cout << "Writing gene calls to file..." << endl;
-//    write_to_file(outfile, std::get<0>(ORF_tuple));
 
     return ORF_overlap_pair;
 }
