@@ -179,7 +179,7 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
         gt.openmp_set_num_threads(1)
 
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
-    for component in components:
+    for component in set(components):
         high_scoring_ORFs = traverse_components(component, tc, components, ORF_seq_dict, edge_weights, minimum_path_score)
         high_scoring_ORFs_all.update(high_scoring_ORFs)
 
