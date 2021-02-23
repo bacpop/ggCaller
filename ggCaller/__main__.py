@@ -5,6 +5,7 @@ import json
 from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
+from multiprocessing import Pool
 
 
 
@@ -166,16 +167,29 @@ def main():
 
         print("Generating highest scoring gene paths...")
 
-        for colour_seqdict_tuple in full_ORF_dict.items():
-            colour, high_scoring_ORFs = call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, num_threads)
-            # remove TIS, and merge any matching genes which had differing TIS but were called together
-            for ORF in high_scoring_ORFs:
-                gene = ORF[16:]
-                if gene not in true_genes:
-                    true_genes[gene] = colour
-                else:
-                    updated_colour = update_colour(true_genes[gene], colour)
-                    true_genes[gene] = updated_colour
+        #merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
+        ORF_dict = {}
+        for colour in full_ORF_dict.keys():
+            ORF_dict[colour] = {}
+            ORF_dict[colour]["seq"] = full_ORF_dict[colour]
+            ORF_dict[colour]["overlap"] = ORF_overlap_dict[colour]
+
+        # multithread per colour in ORF_dict
+        # Turn gt threading on
+        if gt.openmp_enabled():
+            gt.openmp_set_num_threads(1)
+
+        with Pool(processes=num_threads) as pool:
+            for colour, high_scoring_ORFs in pool.map(partial(call_true_genes, minimum_path_score = minimum_path_score),
+                                                      ORF_dict.items()):
+                # remove TIS, and merge any matching genes which had differing TIS but were called together
+                for ORF in high_scoring_ORFs:
+                    gene = ORF[16:]
+                    if gene not in true_genes:
+                        true_genes[gene] = colour
+                    else:
+                        updated_colour = update_colour(true_genes[gene], colour)
+                        true_genes[gene] = updated_colour
 
         print("Generating fasta file of gene calls...")
         # print output to file

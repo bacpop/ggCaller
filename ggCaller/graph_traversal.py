@@ -3,12 +3,12 @@ from balrog.__main__ import *
 from multiprocessing import Pool
 from functools import partial
 
-def traverse_components(component, tc, component_assignments, seq_dict, edge_weights, minimum_path_score):
+def traverse_components(component, tc, component_list, ORF_seq_dict, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
 
     # generate subgraph view
-    u = gt.GraphView(tc, vfilt=component_assignments.a == component)
+    u = gt.GraphView(tc, vfilt=component_list == component)
 
     # initialise list of high scoring ORFs and their associated score for single component
     high_scoring_ORFs_temp = []
@@ -29,7 +29,7 @@ def traverse_components(component, tc, component_assignments, seq_dict, edge_wei
     # iterate over start and stop vertices
     for start in start_vertices:
         # add the score of the first node
-        start_score = seq_dict[u.vertex_properties["seq"][start]]
+        start_score = ORF_seq_dict[u.vertex_properties["seq"][start]]
 
         # check if start vertex is lone node
         if start in end_vertices:
@@ -62,13 +62,13 @@ def traverse_components(component, tc, component_assignments, seq_dict, edge_wei
     return high_scoring_ORFs
 
 
-def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, num_threads):
-    # Turn gt threading on
-    if gt.openmp_enabled():
-        gt.openmp_set_num_threads(num_threads)
+def call_true_genes(colour_ORF_tuple, minimum_path_score):
+    colour, ORF_dict = colour_ORF_tuple
 
-    colour, seq_dict = colour_seqdict_tuple
-    # print(colour)
+    # unpack ORF_dict
+    ORF_seq_dict = ORF_dict["seq"]
+    ORF_overlap_dict = ORF_dict["overlap"]
+
 
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
@@ -83,7 +83,7 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
     vertex_seq = g.new_vertex_property("string")
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in seq_dict.keys():
+    for ORF in ORF_seq_dict.keys():
         v = g.add_vertex()
         vertex_seq[v] = ORF
         ORF_index[ORF] = g.vertex_index[v]
@@ -92,8 +92,8 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
     g.vertex_properties["seq"] = vertex_seq
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
-    if colour in ORF_overlap_dict:
-        for ORF1, overlap_dict in ORF_overlap_dict[colour].items():
+    if ORF_overlap_dict:
+        for ORF1, overlap_dict in ORF_overlap_dict.items():
             # check that ORF1 nodes exist in graph, may have been removed due to low score
             if ORF1 in ORF_index:
                 for ORF2 in overlap_dict.keys():
@@ -106,11 +106,11 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
     tc = gt.transitive_closure(g)
 
     # get label components of tc
-    component_assignments = gt.label_components(tc, directed=False)[0]
+    components = gt.label_components(tc, directed=False)[0].a
 
-    component_ids = set(component_assignments.a)
+    #component_ids = set(component_assignments.a)
 
-    tc.vertex_properties["component"] = component_assignments
+    #tc.vertex_properties["component"] = component_assignments
 
     # create vertex property map to store node IDs
     vertex_seq = tc.new_vertex_property("string")
@@ -133,17 +133,17 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
         ORF2 = tc.vertex_properties["seq"][e.source()]
 
         # parse sink ORF score calculated by Balrog
-        ORF_score1 = seq_dict[ORF1]
+        ORF_score = ORF_seq_dict[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
-        if ORF1 not in ORF_overlap_dict[colour]:
-            edge_weights[e] = -(ORF_score1)
+        if ORF1 not in ORF_overlap_dict:
+            edge_weights[e] = -(ORF_score)
             continue
-        elif ORF2 not in ORF_overlap_dict[colour][ORF1]:
-            edge_weights[e] = -(ORF_score1)
+        elif ORF2 not in ORF_overlap_dict[ORF1]:
+            edge_weights[e] = -(ORF_score)
             continue
         # parse overlap info, calculate edge weight
-        overlap_type, abs_overlap = ORF_overlap_dict[colour][ORF1][ORF2]
+        overlap_type, abs_overlap = ORF_overlap_dict[ORF1][ORF2]
 
         # set penalty to 0 for "n" or "w" or "i" overlaps
         penalty = 0
@@ -157,7 +157,7 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
         elif overlap_type == "d":
             penalty = divergent_penalty_per_base * abs_overlap
         # set ORF score to negative so that shortest algorithm can be applied
-        edge_weights[e] = -(ORF_score1 - penalty)
+        edge_weights[e] = -(ORF_score - penalty)
 
     # add edge_weights as internal property
     tc.edge_properties["weights"] = edge_weights
@@ -179,17 +179,11 @@ def call_true_genes(colour_seqdict_tuple, ORF_overlap_dict, minimum_path_score, 
         gt.openmp_set_num_threads(1)
 
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
-    with Pool(processes=num_threads) as pool:
-        for high_scoring_ORFs in pool.map(partial(traverse_components, tc=tc, component_assignments=component_assignments,
-                                                  seq_dict = seq_dict, edge_weights = edge_weights, minimum_path_score = minimum_path_score),
-                                                  component_ids):
-            high_scoring_ORFs_all.update(high_scoring_ORFs)
+    for component in components:
+        high_scoring_ORFs = traverse_components(component, tc, components, ORF_seq_dict, edge_weights, minimum_path_score)
+        high_scoring_ORFs_all.update(high_scoring_ORFs)
 
-    # Turn gt threading back on
-    if gt.openmp_enabled():
-        gt.openmp_set_num_threads(num_threads)
-
-    return(colour, high_scoring_ORFs_all)
+    return (colour, high_scoring_ORFs_all)
 
 
 def update_colour(colour1, colour2):
