@@ -36,7 +36,6 @@ Requirements:
 -   ```zlib```
 -   ```graph-tool```
 -   ```pytorch```
--   ```tqdm```
 -   a C++17 compiler (e.g. gcc >=7.3)
 
 ```
