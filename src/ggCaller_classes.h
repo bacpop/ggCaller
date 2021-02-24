@@ -96,7 +96,7 @@ typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColo
 typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>> GraphTuple;
 typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
 typedef std::map<std::string, PathVector> PathMap;
-typedef std::tuple<PathMap, std::vector<std::string>> PathTuple;
+typedef std::pair<PathMap, std::vector<std::string>> PathPair;
 typedef std::unordered_map<std::string, std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>>> ORFOverlapMap;
 typedef std::unordered_map<std::string, std::unordered_map<size_t , char>> FullORFMap;
 typedef robin_hood::unordered_map<std::string, bool> NodeStrandMap;
@@ -177,7 +177,7 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const bool repeat,
                                const vector<bool>& empty_colour_arr);
 
-PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
+PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
                          const GraphTuple& graph_tuple,
                          const bool& repeat,
                          const vector<bool>& empty_colour_arr,
@@ -205,7 +205,7 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const size_t& min_len);
 
 std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                                                            const PathTuple& path_tuple,
+                                                                                            const PathPair& path_pair,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
                                                                                             const int& overlap,

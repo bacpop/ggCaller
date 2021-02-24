@@ -177,7 +177,7 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
     return path_list;
 }
 
-PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
+PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
                          const GraphTuple& graph_tuple,
                          const bool& repeat,
                          const vector<bool>& empty_colour_arr,
@@ -267,6 +267,6 @@ PathTuple traverse_graph(const ColoredCDBG<>& ccdbg,
     }
 
     //std::sort(head_string_arr.begin(), head_string_arr.end());
-    auto path_tuple = std::make_tuple(complete_paths, head_string_arr);
-    return path_tuple;
+    auto path_pair = std::make_pair(complete_paths, head_string_arr);
+    return path_pair;
 }

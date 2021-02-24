@@ -301,7 +301,7 @@ std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORF
 }
 
 std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                                                            const PathTuple& path_tuple,
+                                                                                            const PathPair& path_pair,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
                                                                                             const int& overlap,
@@ -319,9 +319,9 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
 
         // iterate over head_kmer_strings
         #pragma omp for nowait
-        for (auto it = std::get<1>(path_tuple).begin(); it < std::get<1>(path_tuple).end(); it++)
+        for (auto it = path_pair.second.begin(); it < path_pair.second.end(); it++)
         {
-            const auto unitig_paths = (std::get<0>(path_tuple)).at(*it);
+            const auto unitig_paths = (path_pair.first).at(*it);
             // iterate over paths following head_kmer
             for (const auto& path : unitig_paths)
             {
