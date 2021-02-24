@@ -183,7 +183,7 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
 def update_colour(colour1, colour2):
     updated_colour = ""
     for i in range(0, len(colour1)):
-        if colour1[i] == "1" or colour2[0] == "1":
+        if colour1[i] == "1" or colour2[i] == "1":
             updated_colour += "1"
         else:
             updated_colour += "0"
