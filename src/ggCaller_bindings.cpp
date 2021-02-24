@@ -138,14 +138,14 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (co
     cout << "Generating complete stop-stop paths..." << endl;
     auto path_pair = traverse_graph(ccdbg, graph_tuple, repeat, empty_colour_arr, max_path_length);
 
+    // generate ORF sequences
+    cout << "Generating ORF sequences from complete paths..." << endl;
+    auto ORF_tuple = call_ORFs(ccdbg, path_pair, stop_codons_for, start_codons, overlap, min_ORF_length);
+
     // clear ccdbg and path_pair to free memory
     ccdbg.clear();
     path_pair.first.clear();
     path_pair.second.clear();
-
-    // generate ORF sequences
-    cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_tuple = call_ORFs(ccdbg, path_pair, stop_codons_for, start_codons, overlap, min_ORF_length);
 
     // generate fmindices and check for artificial sequences if sequences supplied are reference files
     std::pair<ORFColoursMap, std::vector<std::string>> ORF_colours_pair;
