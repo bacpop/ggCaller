@@ -7,7 +7,6 @@ import ggCaller_cpp
 from ggCaller.graph_traversal import *
 from multiprocessing import Pool
 from functools import partial
-import graph_tool.all as gt
 
 
 def get_options():
@@ -130,16 +129,16 @@ def main():
 
     # if build graph specified, build graph and then call ORFs
     if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
-        called_ORF_pair = ggCaller_cpp.call_genes_existing(graph_file, colours_file, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_existing(graph_file, colours_file, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
     # if refs file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file == None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, True, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, True, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
     # if reads file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file == None) and (reads_file != None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(reads_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(reads_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
     # if both reads and refs file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file != None):
-        called_ORF_pair = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
