@@ -150,20 +150,22 @@ def main():
     # unpack ORF pair into overlap dictionary and list for gene scoring
     ORF_overlap_dict, full_ORF_dict, ORF_colour_ID_map = called_ORF_tuple
 
+    # create list for high scoring ORFs to return
+    true_genes = {}
+
+    # if no filter specified, generate ORF sequences and combine colours of identical ORFS
     if no_filter == True:
-        print("Generating fasta file of gene calls...")
-        with open(output, "w") as f:
-            ORF_count = 0
-            for colour, gene_set in ORF_colour_ID_map.items():
-                for gene_ID, gene in gene_set.items():
-                    f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene[16:] + "\n")
-                    ORF_count += 1
+        for colour, gene_set in ORF_colour_ID_map.items():
+            for ORF_ID, ORF_seq in gene_set.items():
+                gene = ORF_seq[16:]
+                if gene not in true_genes:
+                    true_genes[gene] = colour
+                else:
+                    updated_colour = update_colour(true_genes[gene], colour)
+                    true_genes[gene] = updated_colour
     else:
         # generate gene scores using Balrog
         full_ORF_dict = score_genes(full_ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads)
-
-        # create list for high scoring ORFs to return
-        true_genes = {}
 
         print("Generating highest scoring gene paths...")
 
@@ -193,15 +195,15 @@ def main():
                         updated_colour = update_colour(true_genes[gene], colour)
                         true_genes[gene] = updated_colour
 
-        print("Generating fasta file of gene calls...")
-        # print output to file
-        ORF_count = 1
-        with open(output, "w") as f:
-            for gene, colour in true_genes.items():
-                f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene + "\n")
-                ORF_count += 1
+    print("Generating fasta file of gene calls...")
+    # print output to file
+    ORF_count = 1
+    with open(output, "w") as f:
+        for gene, colour in true_genes.items():
+            f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene + "\n")
+            ORF_count += 1
 
-        print("Finished.")
+    print("Finished.")
 
     sys.exit(0)
 
