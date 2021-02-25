@@ -46,12 +46,12 @@ std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::
 PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const unitigMap& graph_map,
                                const PathMap& previous_paths,
-                               const std::vector<std::pair<std::string, bool>> head_kmer_list,
+                               const std::vector<std::pair<std::string, bool>>& head_kmer_list,
                                const uint8_t& codon_arr,
                                const std::vector<bool>& colour_arr,
-                               const std::set<std::pair<std::string, bool>> kmer_set,
+                               const std::set<std::pair<std::string, bool>>& kmer_set,
                                const size_t length,
-                               const bool& forward,
+                               const bool forward,
                                const size_t& length_max,
                                const bool repeat,
                                const vector<bool>& empty_colour_arr)
@@ -179,9 +179,9 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
 
 PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
                          const GraphTuple& graph_tuple,
-                         const bool& repeat,
+                         const bool repeat,
                          const vector<bool>& empty_colour_arr,
-                         const size_t& max_path_length)
+                         const size_t max_path_length)
 {
     // define head_string_arr for parrallelisation
     std::vector<std::string> head_string_arr;
