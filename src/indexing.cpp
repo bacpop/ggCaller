@@ -3,11 +3,11 @@
 
 ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& infile_2,
-                          const bool& is_ref,
+                          const bool is_ref,
                           const int kmer,
                           const int threads,
                           const bool verb,
-                          const bool& write_graph,
+                          const bool write_graph,
                           const std::string& output_prefix)
 {
     std::ifstream infile1(infile_1);
@@ -266,8 +266,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
-                       const int& kmer,
-                       const size_t& nb_colours)
+                       const int kmer,
+                       const size_t nb_colours)
 {
     // get all head kmers for parrellelisation
     std::vector<Kmer> head_kmer_arr;

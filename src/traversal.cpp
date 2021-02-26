@@ -50,10 +50,10 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const uint8_t& codon_arr,
                                const std::vector<bool>& colour_arr,
                                const std::set<std::pair<std::string, bool>>& kmer_set,
-                               const size_t length,
-                               const bool forward,
+                               const size_t& length,
+                               const bool& forward,
                                const size_t& length_max,
-                               const bool repeat,
+                               const bool& repeat,
                                const vector<bool>& empty_colour_arr)
 {
     // generate path list, add head_kmer_list to it

@@ -132,11 +132,11 @@ uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame);
 
 ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& infile_2,
-                          const bool& is_ref,
+                          const bool is_ref,
                           const int kmer,
                           const int threads,
                           const bool verb,
-                          const bool& write_graph,
+                          const bool write_graph,
                           const std::string& output_prefix);
 
 template <class T, class U, bool is_const>
@@ -154,8 +154,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
-                       const int& kmer,
-                       const size_t& nb_colours);
+                       const int kmer,
+                       const size_t nb_colours);
 
 // traversal.cpp
 std::vector<bool> compare_codon_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
@@ -171,10 +171,10 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const uint8_t& codon_arr,
                                const std::vector<bool>& colour_arr,
                                const std::set<std::pair<std::string, bool>>& kmer_set,
-                               const size_t length,
-                               const bool forward,
+                               const size_t& length,
+                               const bool& forward,
                                const size_t& length_max,
-                               const bool repeat,
+                               const bool& repeat,
                                const vector<bool>& empty_colour_arr);
 
 PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
@@ -201,15 +201,15 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
                          const std::vector<std::pair<std::string, bool>>& unitig_path,
-                         const int& overlap,
-                         const size_t& min_len);
+                         const int overlap,
+                         const size_t min_len;
 
 std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
                                                                                             const PathPair& path_pair,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
-                                                                                            const int& overlap,
-                                                                                            const size_t& min_ORF_length);
+                                                                                            const int overlap,
+                                                                                            const size_t min_ORF_length);
 
 std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORFMap& all_ORFs);
 
@@ -218,16 +218,13 @@ std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(SeqORF
                                                                             const std::vector<std::string>& fasta_files,
                                                                             const bool write_index);
 
-void write_to_file (const std::string& outfile_name,
-                    const SeqORFMap& all_ORFs);
-
 // gene_overlap.cpp
 std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> calculate_overlaps(const unitigMap& unitig_map,
-                                                                         const ORFNodeMap& ORF_node_paths,
-                                                                         const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
-                                                                         const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
-                                                                         const int& DBG_overlap,
-                                                                         const size_t& max_overlap);
+                                                                        const ORFNodeMap& ORF_node_paths,
+                                                                        const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
+                                                                        const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
+                                                                        const int DBG_overlap,
+                                                                        const size_t max_overlap);
 
 // ggCaller_bindings
 std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (const std::string& graphfile,
@@ -239,9 +236,9 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (c
                                                                                const bool is_ref,
                                                                                const bool write_idx,
                                                                                const bool repeat,
-                                                                               const size_t& max_path_length,
-                                                                               const size_t& min_ORF_length,
-                                                                               const size_t& max_ORF_overlap);
+                                                                               const size_t max_path_length,
+                                                                               const size_t min_ORF_length,
+                                                                               const size_t max_ORF_overlap);
 
 std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (const std::string& infile1,
                                                                               const int& kmer,
@@ -253,9 +250,9 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (co
                                                                               const bool write_idx,
                                                                               const bool repeat,
                                                                               const bool write_graph,
-                                                                              const size_t& max_path_length,
-                                                                              const size_t& min_ORF_length,
-                                                                              const size_t& max_ORF_overlap,
+                                                                              const size_t max_path_length,
+                                                                              const size_t min_ORF_length,
+                                                                              const size_t max_ORF_overlap,
                                                                               const std::string& infile2);
 
 #endif //BIFROST_API_GGCALLER_H

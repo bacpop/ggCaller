@@ -10,9 +10,9 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (c
                                                                                const bool is_ref,
                                                                                const bool write_idx,
                                                                                const bool repeat,
-                                                                               const size_t& max_path_length,
-                                                                               const size_t& min_ORF_length,
-                                                                               const size_t& max_ORF_overlap) {
+                                                                               const size_t max_path_length,
+                                                                               const size_t min_ORF_length,
+                                                                               const size_t max_ORF_overlap) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -86,9 +86,9 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (co
                                                                               const bool write_idx,
                                                                               const bool repeat,
                                                                               const bool write_graph,
-                                                                              const size_t& max_path_length,
-                                                                              const size_t& min_ORF_length,
-                                                                              const size_t& max_ORF_overlap,
+                                                                              const size_t max_path_length,
+                                                                              const size_t min_ORF_length,
+                                                                              const size_t max_ORF_overlap,
                                                                               const std::string& infile2) {
     // Set number of threads
     if (num_threads < 1)

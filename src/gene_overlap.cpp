@@ -4,8 +4,8 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> calculate_overlaps(const u
                                                         const ORFNodeMap& ORF_node_paths,
                                                         const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
                                                         const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
-                                                        const int& DBG_overlap,
-                                                        const size_t& max_overlap)
+                                                        const int DBG_overlap,
+                                                        const size_t max_overlap)
 {
     // initialse ORF_colour_id_map to return ORF and corresponding ID
     ORFColourIDMap ORF_colour_id_map;

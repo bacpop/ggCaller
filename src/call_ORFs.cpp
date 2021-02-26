@@ -6,8 +6,8 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
                          const std::vector<std::pair<std::string, bool>>& unitig_path,
-                         const int& overlap,
-                         const size_t& min_len)
+                         const int overlap,
+                         const size_t min_len)
 {
     // initialise path sequence and ORF list
     std::string path_sequence;
@@ -304,8 +304,8 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
                                                                                             const PathPair& path_pair,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
-                                                                                            const int& overlap,
-                                                                                            const size_t& min_ORF_length)
+                                                                                            const int overlap,
+                                                                                            const size_t min_ORF_length)
 {
     //initialise all_ORFs to return
     SeqORFMap all_ORFs;
