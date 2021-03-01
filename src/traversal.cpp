@@ -64,8 +64,9 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
     if (codon_arr != 0)
     {
         // get last head-kmer pair in list, generate unitig map
-        const std::pair<std::string, bool>& iter_km_str = head_kmer_list.back();
-        const Kmer iter_km = Kmer(iter_km_str.first.c_str());
+        const std::pair<size_t, bool>& iter_kmer_pair = head_kmer_list.back();
+        const iter_kmer_str = graph_map.at(iter_kmer_pair.first).head_kmer;
+        const Kmer iter_km = Kmer(iter_km_str.c_str());
         auto unitig = ccdbg.find(iter_km, true);
 
         unitig.strand = iter_km_str.second;
@@ -199,16 +200,16 @@ PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
         #pragma omp for nowait
         for (auto it = std::get<1>(graph_tuple).begin(); it < std::get<1>(graph_tuple).end(); it++)
         {
-            const auto head_kmer = *it;
+            const auto unitig_id = *it;
             // gather unitig information from graph_map
-            const std::pair<std::string, bool> kmer_pair(head_kmer, is_forward);
-            const uint8_t codon_arr = std::get<0>(graph_tuple).at(head_kmer).full_codon.at(is_forward).at(0);
-            const vector<bool> colour_arr = std::get<0>(graph_tuple).at(head_kmer).unitig_colour;
-            const size_t unitig_len = std::get<0>(graph_tuple).at(head_kmer).unitig_size.first;
+            const std::pair<size_t, bool> kmer_pair(unitig_id, is_forward);
+            const uint8_t codon_arr = std::get<0>(graph_tuple).at(unitig_id).full_codon.at(is_forward).at(0);
+            const vector<bool> colour_arr = std::get<0>(graph_tuple).at(unitig_id).unitig_colour;
+            const size_t unitig_len = std::get<0>(graph_tuple).at(unitig_id).unitig_size.first;
 
             // generate vector and set for traversal
-            std::vector<std::pair<std::string, bool>> head_kmer_list;
-            std::set<std::pair<std::string, bool>> kmer_set;
+            std::vector<std::pair<size_t, bool>> head_kmer_list;
+            std::set<std::pair<size_t, bool>> kmer_set;
             head_kmer_list.push_back(kmer_pair);
             kmer_set.insert(kmer_pair);
 
@@ -216,7 +217,7 @@ PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
             unitig_complete_paths = recur_nodes_binary(ccdbg, std::get<0>(graph_tuple), complete_paths, head_kmer_list, codon_arr, colour_arr, kmer_set, unitig_len, is_forward, max_path_length, repeat, empty_colour_arr);
 
             // append to complete paths vector
-            std::string head_kmer_id = head_kmer + "+";
+            std::string head_kmer_id = std::to_string(unitig_id) + "+";
             if (!unitig_complete_paths.empty())
             {
                 //critical section, ensure data race is avoided when appending to/reading complete_paths
@@ -237,16 +238,16 @@ PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
         #pragma omp for nowait
         for (auto it = std::get<2>(graph_tuple).begin(); it < std::get<2>(graph_tuple).end(); it++)
         {
-            const auto head_kmer = *it;
+            const auto unitig_id = *it;
             // gather unitig information from graph_map
-            const std::pair<std::string, bool> kmer_pair(head_kmer, is_forward);
-            const uint8_t codon_arr = std::get<0>(graph_tuple).at(head_kmer).full_codon.at(is_forward).at(0);
-            const vector<bool> colour_arr = std::get<0>(graph_tuple).at(head_kmer).unitig_colour;
-            const size_t unitig_len = std::get<0>(graph_tuple).at(head_kmer).unitig_size.first;
+            const std::pair<size_t, bool> kmer_pair(unitig_id, is_forward);
+            const uint8_t codon_arr = std::get<0>(graph_tuple).at(unitig_id).full_codon.at(is_forward).at(0);
+            const vector<bool> colour_arr = std::get<0>(graph_tuple).at(unitig_id).unitig_colour;
+            const size_t unitig_len = std::get<0>(graph_tuple).at(unitig_id).unitig_size.first;
 
             // generate vector and set for traversal
-            std::vector<std::pair<std::string, bool>> head_kmer_list;
-            std::set<std::pair<std::string, bool>> kmer_set;
+            std::vector<std::pair<size_t, bool>> head_kmer_list;
+            std::set<std::pair<size_t, bool>> kmer_set;
             head_kmer_list.push_back(kmer_pair);
             kmer_set.insert(kmer_pair);
 

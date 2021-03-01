@@ -88,7 +88,7 @@ class unitigDict {
 
 // ggCaller typedefs
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
-typedef robin_hood::unordered_map<std::string, unitigDict> unitigMap;
+typedef robin_hood::unordered_map<size_t, unitigDict> unitigMap;
 typedef std::tuple<std::vector<std::string>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
@@ -152,8 +152,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const size_t& nb_colours);
 
 GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
-                       const std::vector<std::string>& stop_codons_for,
-                       const std::vector<std::string>& stop_codons_rev,
+                       const std::vector<size_t>& stop_codons_for,
+                       const std::vector<size_t>& stop_codons_rev,
                        const int kmer,
                        const size_t nb_colours);
 

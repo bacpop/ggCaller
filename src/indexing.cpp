@@ -264,8 +264,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 }
 
 GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
-                       const std::vector<std::string>& stop_codons_for,
-                       const std::vector<std::string>& stop_codons_rev,
+                       const std::vector<size_t>& stop_codons_for,
+                       const std::vector<size_t>& stop_codons_rev,
                        const int kmer,
                        const size_t nb_colours)
 {
@@ -277,7 +277,7 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    robin_hood::unordered_map<std::string, unitigDict> graph_map;
+    robin_hood::unordered_map<size_t, unitigDict> graph_map;
     std::vector<std::string> stop_list_for;
     std::vector<std::string> stop_list_rev;
 
@@ -293,7 +293,6 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
         {
             // convert Kmer defined in *it to unitig
             auto unitig = ccdbg.find(*it, true);
-            auto unitig_str = unitig.referenceUnitigToString();
 
             // generate results per unitig
             unitigDict unitig_map = std::move(analyse_unitigs_binary(ccdbg, unitig, stop_codons_for, stop_codons_rev, kmer, nb_colours));
@@ -303,13 +302,13 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
             // add results to private maps and vectors
             if (unitig_map.forward_stop)
             {
-                stop_list_for_private.push_back(unitig_map.head_kmer);
+                stop_list_for_private.push_back(unitig_map.unitig_id);
             }
             if (unitig_map.reverse_stop)
             {
-                stop_list_rev_private.push_back(unitig_map.head_kmer);
+                stop_list_rev_private.push_back(unitig_map.unitig_id);
             }
-            graph_map_private[unitig_map.head_kmer] = std::move(unitig_map);
+            graph_map_private[unitig_map.unitig_id] = std::move(unitig_map);
         }
         #pragma omp critical
         {
