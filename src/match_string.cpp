@@ -92,44 +92,55 @@ void call_strings(SeqORFMap& query_list,
     }
 
     // Run searches using openMP, looping over genes and multithreading searches of genes calls in specific fm-indexes
-    std::vector<std::string> to_remove;
+    robin_hood::unordered_map<std::string, std::vector<bool>> to_update;
 #pragma omp parallel
     {
-        std::vector<std::string> to_remove_private;
+        robin_hood::unordered_map<std::string, std::vector<bool>> to_update_private;
 #pragma omp for nowait
         for (auto itr = gene_list.begin(); itr < gene_list.end(); itr++)
         {
-            // initialise hits variable for specific query
-            int hits = 0;
-
             // convert string to dn5 vector, get colours from query_list
             seqan3::dna5_vector query = *itr | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-            const auto colours = query_list.at(*itr);
+            auto colours = query_list.at(*itr);
 
-            // compute number of colours
-            int sum_colours = accumulate(colours.begin(), colours.end(), 0);
+            // keep track if colours updated
+            bool updated = false;
 
             //iterate over colours, if colour present then add to hits
             for (size_t i = 0; i < num_colours; i++)
             {
                 if (colours[i])
                 {
-                    hits += seq_search(query, seq_idx[i]);
+                    int hits = seq_search(query, seq_idx[i]);
+                    if (!hits)
+                    {
+                        colours[i] = 0;
+                        updated = true;
+                    }
                 }
             }
-            //set remove the entry from query_list if number of colours is not same as expected
-            if (hits != sum_colours)
+            //set to update the colours of sequences found to be
+            if (updated)
             {
-                to_remove_private.push_back(*itr);
+                to_update_private[*itr] = colours;
             }
         }
-        //#pragma omp critical
-        to_remove.insert(to_remove.end(), make_move_iterator(to_remove_private.begin()), make_move_iterator(to_remove_private.end()));
+        #pragma omp critical
+        {
+            to_update.insert(to_update_private.begin(), to_update_private.end());
+        }
     }
 
-    for (const auto& artificial_gene : to_remove)
+    for (const auto& artificial_gene : to_update)
     {
-        query_list.erase(artificial_gene);
-        ORF_node_paths.erase(artificial_gene);
+        // compute number of colours
+        int sum_colours = accumulate(artificial_gene.second.begin(), artificial_gene.second.end(), 0);
+        if (sum_colours == 0)
+        {
+            query_list.erase(artificial_gene.first);
+            ORF_node_paths.erase(artificial_gene.first);
+        } else {
+            query_list[artificial_gene.first] = artificial_gene.second;
+        }
     }
 }

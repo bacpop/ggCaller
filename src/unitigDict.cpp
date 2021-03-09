@@ -65,13 +65,3 @@ void unitigDict::add_size(const size_t& full_len, const size_t& part_len) {
 void unitigDict::add_size(size_t& full_len, size_t& part_len) {
     unitig_size = make_pair(full_len, part_len);
 }
-
-// add colours, copy semantics
-void unitigDict::add_colour(const std::vector<bool>& array) {
-    unitig_colour = array;
-}
-
-// add colours, move semantics
-void unitigDict::add_colour(std::vector<bool>& array) {
-    unitig_colour = std::move(array);
-}

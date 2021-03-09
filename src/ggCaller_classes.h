@@ -46,7 +46,6 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-const vector<bool> empty_codon_arr(3, 0);
 namespace py = pybind11;
 
 
@@ -67,17 +66,40 @@ class unitigDict {
     void add_size(size_t& full_len, size_t& part_len);
 
     // add colour information
-    void add_colour(const std::vector<bool>& array);
-    void add_colour(std::vector<bool>& array);
+//    void add_head_colour(const std::vector<bool>& array);
+//    void add_head_colour(std::vector<bool>& array);
+//    void add_tail_colour(const std::vector<bool>& array);
+//    void add_tail_colour(std::vector<bool>& array);
 
 
     // Public class items
     size_t unitig_id;
     std::string head_kmer;
-    robin_hood::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> full_codon;
-    robin_hood::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> part_codon;
+
+    // codon arrays
+    std::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> full_codon;
+    std::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> part_codon;
+
+    // unitig properties
+    size_t unitig_len;
     std::pair<size_t, std::size_t> unitig_size;
-    std::vector<bool> unitig_colour;
+    std::vector<bool> unitig_head_colour;
+    std::vector<bool> unitig_tail_colour;
+    bool head_tail_colours_equal = false;
+
+    // unitig sequence
+    std::string unitig_seq;
+
+    // bool to determine if unitig is end of a contig/assembly
+    bool end_contig = false;
+
+    // node neighbours. Successors are downsteam, predecessors are upstream
+    std::vector<std::pair<std::string, bool>> succ_heads;
+    std::vector<std::pair<std::string, bool>> pred_heads;
+    std::unordered_map<size_t, std::pair<bool, uint8_t>> succ;
+    std::unordered_map<size_t, std::pair<bool, uint8_t>> pred;
+
+    // forward_stop presence/absence
     bool forward_stop = false;
     bool reverse_stop = false;
 
@@ -89,17 +111,17 @@ class unitigDict {
 // ggCaller typedefs
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 typedef robin_hood::unordered_map<size_t, unitigDict> unitigMap;
-typedef std::tuple<std::vector<std::string>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
+typedef std::tuple<std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
 typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColoursMap;
-typedef std::tuple<unitigMap, std::vector<std::string>, std::vector<std::string>> GraphTuple;
-typedef std::vector<std::pair<std::vector<std::pair<std::string, bool>>, std::vector<bool>>> PathVector;
-typedef std::map<std::string, PathVector> PathMap;
+typedef std::tuple<unitigMap, std::vector<size_t>, std::vector<size_t>, robin_hood::unordered_map<std::string, size_t>> GraphTuple;
+typedef std::vector<std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>>> PathVector;
+typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
 typedef std::pair<PathMap, std::vector<std::string>> PathPair;
 typedef std::unordered_map<std::string, std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>>> ORFOverlapMap;
 typedef std::unordered_map<std::string, std::unordered_map<size_t , char>> FullORFMap;
-typedef robin_hood::unordered_map<std::string, bool> NodeStrandMap;
+typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 typedef std::unordered_map<std::string, std::unordered_map<size_t, std::string>> ORFColourIDMap;
 
 // Eigen typedef
@@ -141,7 +163,8 @@ ColoredCDBG<> buildGraph (const std::string& infile_1,
 
 template <class T, class U, bool is_const>
 std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
-                                   const size_t& nb_colours);
+                                   const size_t& nb_colours,
+                                   const size_t position);
 
 template <class T, class U, bool is_const>
 unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
@@ -152,8 +175,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const size_t& nb_colours);
 
 GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
-                       const std::vector<size_t>& stop_codons_for,
-                       const std::vector<size_t>& stop_codons_rev,
+                       const std::vector<std::string>& stop_codons_for,
+                       const std::vector<std::string>& stop_codons_rev,
                        const int kmer,
                        const size_t nb_colours);
 
@@ -169,10 +192,9 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const PathMap& previous_paths,
                                const std::vector<std::pair<std::string, bool>>& head_kmer_list,
                                const uint8_t& codon_arr,
-                               const std::vector<bool>& colour_arr,
-                               const std::set<std::pair<std::string, bool>>& kmer_set,
+                               std::vector<bool> colour_arr,
+                               const std::set<std::pair<size_t, bool>>& kmer_set,
                                const size_t& length,
-                               const bool& forward,
                                const size_t& length_max,
                                const bool& repeat,
                                const vector<bool>& empty_colour_arr);
@@ -206,6 +228,7 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
 
 std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
                                                                                             const PathPair& path_pair,
+                                                                                            const unitigMap& unitig_map,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
                                                                                             const int overlap,

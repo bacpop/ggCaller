@@ -3,9 +3,10 @@
 
 // generate ORFs from paths
 ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
+                         const unitigMap& unitig_map,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
-                         const std::vector<std::pair<std::string, bool>>& unitig_path,
+                         const std::vector<std::pair<size_t, bool>>& unitig_path,
                          const int overlap,
                          const size_t min_len)
 {
@@ -17,14 +18,16 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     bool positive = true;
 
     // here generate vector/map which contains the start/end of each node in basepairs. This will then be used to determine which nodes an ORF traverses
-    std::vector<std::string> nodelist;
+    std::vector<size_t> nodelist;
     std::vector<std::vector<size_t>> node_ranges;
     size_t node_start = 0;
 
     // generate path sequence by merging nodes in sequence
     for (const auto& node : unitig_path)
     {
-        const Kmer kmer = Kmer(node.first.c_str());
+        const std::string node_seq = unitig_map.at(node.first).head_kmer;
+
+        const Kmer kmer = Kmer(node_seq.c_str());
         auto unitig = ccdbg.find(kmer, true);
         unitig.strand = node.second;
 
@@ -155,33 +158,48 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     // iterate through frames, pair sequential start+stop codons after first stop codon
     for (int modulus = 0; modulus < 3; modulus++)
     {
-        if (!stop_codon_dict[modulus].empty())
-        {
-            // initialise first stop codon
-            size_t last_index = stop_codon_dict[modulus][0];
+        // initialise stop and start index iterators
+        auto start_index = start_codon_dict[modulus].begin();
+        auto stop_index = stop_codon_dict[modulus].begin();
 
-            // cycle through start codons
-            for (const auto& start_index : start_codon_dict[modulus])
+        // iterate over start and stop indices until you reach the end
+        while (stop_index != stop_codon_dict[modulus].end() && start_index != start_codon_dict[modulus].end())
+        {
+            if (*start_index < *stop_index)
             {
-                // check that start index is in correct frame and further in sequence than last stop codon index
-                if (start_index > last_index)
-                {
-                    // cycle through stop codons
-                    for (const auto& stop_index : stop_codon_dict[modulus])
-                    {
-                        // check that stop index is in correct frame and further in sequence than last start codon index
-                        if (stop_index > start_index)
-                        {
-                            // stop index is indexed at first base, therefore end of ORF is two bases after
-                            ORF_index_pairs.push_back(std::make_pair(start_index, stop_index + 2));
-                            last_index = start_index;
-                            break;
-                        }
-                    }
-                }
+                // stop index is indexed at first base, therefore end of ORF is two bases after
+                std::pair<size_t, size_t> codon_pair(*start_index, *stop_index + 2);
+                ORF_index_pairs.push_back(std::move(codon_pair));
+
+                // iterate start index
+                start_index++;
+            } else {
+                // start is greater than stop, so iterate stop_iterator
+                stop_index++;
             }
         }
     }
+
+//            // cycle through start codons
+//            for (const auto& start_index : start_codon_dict[modulus])
+//            {
+//                // check that start index is in correct frame and further in sequence than last stop codon index
+//                if (start_index > last_index)
+//                {
+//                    // cycle through stop codons
+//                    for (const auto& stop_index : stop_codon_dict[modulus])
+//                    {
+//                        // check that stop index is in correct frame and further in sequence than last start codon index
+//                        if (stop_index > start_index)
+//                        {
+//                            // stop index is indexed at first base, therefore end of ORF is two bases after
+//                            ORF_index_pairs.push_back(std::make_pair(start_index, stop_index + 2));
+//                            last_index = start_index;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
     // ORF dictionary for locating ORF position in graph. Nodes traversed by ORF is ordered map to ensure ordering is kept for overlap comparisons.
     ORFNodeMap ORF_map;
 
@@ -190,10 +208,11 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     {
         // add one as codon_pair is zero-indexed
         size_t ORF_len = (codon_pair.second - codon_pair.first) + 1;
+
         if (ORF_len >= min_len)
         {
             // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
-            std::vector<std::string> ORF_node_id;
+            std::vector<size_t> ORF_node_id;
             std::vector<indexTriplet> ORF_node_coords;
             std::vector<bool> ORF_node_strand;
 
@@ -302,6 +321,7 @@ std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORF
 
 std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
                                                                                             const PathPair& path_pair,
+                                                                                            const unitigMap& unitig_map,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
                                                                                             const int overlap,
@@ -331,7 +351,7 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
                 for (const auto& start_codon : start_codons_for)
                 {
                     std::vector<std::string> start_codon_vector{start_codon};
-                    auto ORF_map = generate_ORFs(ccdbg, stop_codons_for, start_codon_vector, path.first, overlap, min_ORF_length);
+                    auto ORF_map = generate_ORFs(ccdbg, unitig_map, stop_codons_for, start_codon_vector, path.first, overlap, min_ORF_length);
 
                     // check if item in all_ORFs already. If not, add colours array. If yes, update the colours array.
                     for (const auto& ORF : ORF_map)
