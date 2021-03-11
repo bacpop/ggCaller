@@ -2,8 +2,7 @@
 #include "ggCaller_classes.h"
 
 // generate ORFs from paths
-ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
-                         const unitigMap& unitig_map,
+ORFNodeMap generate_ORFs(const unitigMap& graph_map,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
                          const std::vector<std::pair<size_t, bool>>& unitig_path,
@@ -25,27 +24,21 @@ ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
     // generate path sequence by merging nodes in sequence
     for (const auto& node : unitig_path)
     {
-        const std::string node_seq = unitig_map.at(node.first).head_kmer;
-
-        const Kmer kmer = Kmer(node_seq.c_str());
-        auto unitig = ccdbg.find(kmer, true);
-        unitig.strand = node.second;
-
         // add node to node list for path coordinates
         nodelist.push_back(node.first);
         // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd entry is node length. 3rd is strandedness (1 for forward, 0 for reverse)
         std::vector<size_t> node_range(4);
 
         // add unitig strand to node_range
-        node_range[3] = unitig.strand;
+        node_range[3] = node.second;
 
         // if strand is negative, calculate reverse complement
         std::string unitig_seq;
-        if (unitig.strand)
+        if (node.second)
         {
-            unitig_seq = unitig.referenceUnitigToString();
+            unitig_seq = graph_map.at(node.first).unitig_seq;
         } else {
-            unitig_seq = reverse_complement(unitig.referenceUnitigToString());
+            unitig_seq = reverse_complement(graph_map.at(node.first).unitig_seq);
         }
 
         // calculate length of unitig and get end coordinates
@@ -319,9 +312,8 @@ std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORF
     return return_pair;
 }
 
-std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                                                            const PathPair& path_pair,
-                                                                                            const unitigMap& unitig_map,
+std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const PathPair& path_pair,
+                                                                                            const unitigMap& graph_map,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,
                                                                                             const int overlap,
@@ -341,7 +333,7 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
         #pragma omp for nowait
         for (auto it = path_pair.second.begin(); it < path_pair.second.end(); it++)
         {
-            const auto unitig_paths = (path_pair.first).at(*it);
+            const auto& unitig_paths = (path_pair.first).at(*it);
             // iterate over paths following head_kmer
             for (const auto& path : unitig_paths)
             {
@@ -351,7 +343,7 @@ std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>
                 for (const auto& start_codon : start_codons_for)
                 {
                     std::vector<std::string> start_codon_vector{start_codon};
-                    auto ORF_map = generate_ORFs(ccdbg, unitig_map, stop_codons_for, start_codon_vector, path.first, overlap, min_ORF_length);
+                    auto ORF_map = generate_ORFs(graph_map, stop_codons_for, start_codon_vector, path.first, overlap, min_ORF_length);
 
                     // check if item in all_ORFs already. If not, add colours array. If yes, update the colours array.
                     for (const auto& ORF : ORF_map)

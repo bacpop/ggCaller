@@ -46,8 +46,27 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
+const vector<bool> empty_codon_arr(3, 0);
 namespace py = pybind11;
 
+// UnitigDict typedefs
+typedef std::vector<std::tuple<size_t, bool, std::unordered_map<int, uint8_t>>> NeighbourVector;
+
+// Eigen typedef
+typedef Eigen::Triplet<double> ET;
+
+// fmindex typedef
+using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
+        sdsl::rank_support_v<>,
+        sdsl::select_support_scan<>,
+        sdsl::select_support_scan<0>>,
+        16,
+        10000000,
+        sdsl::sa_order_sa_sampling<>,
+        sdsl::isa_sampling<>,
+        sdsl::plain_byte_alphabet>;
+typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
+using seqan3::operator""_dna5;
 
 // class declaration
 class unitigDict {
@@ -65,27 +84,19 @@ class unitigDict {
     void add_size(const size_t& full_len, const size_t& part_len);
     void add_size(size_t& full_len, size_t& part_len);
 
-    // add colour information
-//    void add_head_colour(const std::vector<bool>& array);
-//    void add_head_colour(std::vector<bool>& array);
-//    void add_tail_colour(const std::vector<bool>& array);
-//    void add_tail_colour(std::vector<bool>& array);
-
-
     // Public class items
     size_t unitig_id;
     std::string head_kmer;
 
     // codon arrays
-    std::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> full_codon;
-    std::unordered_map<bool, robin_hood::unordered_map<int, uint8_t>> part_codon;
+    std::unordered_map<bool, std::unordered_map<int, uint8_t>> full_codon;
+    std::unordered_map<bool, std::unordered_map<int, uint8_t>> part_codon;
 
     // unitig properties
-    size_t unitig_len;
     std::pair<size_t, std::size_t> unitig_size;
     std::vector<bool> unitig_head_colour;
     std::vector<bool> unitig_tail_colour;
-    bool head_tail_colours_equal = false;
+    bool head_tail_colours_equal = true;
 
     // unitig sequence
     std::string unitig_seq;
@@ -93,11 +104,10 @@ class unitigDict {
     // bool to determine if unitig is end of a contig/assembly
     bool end_contig = false;
 
-    // node neighbours. Successors are downsteam, predecessors are upstream
+    // node neighbours. Neighbours map contains successors (true) and predecessors (false)
     std::vector<std::pair<std::string, bool>> succ_heads;
     std::vector<std::pair<std::string, bool>> pred_heads;
-    std::unordered_map<size_t, std::pair<bool, uint8_t>> succ;
-    std::unordered_map<size_t, std::pair<bool, uint8_t>> pred;
+    std::unordered_map<bool, NeighbourVector> neighbours;
 
     // forward_stop presence/absence
     bool forward_stop = false;
@@ -123,22 +133,6 @@ typedef std::unordered_map<std::string, std::unordered_map<size_t, std::unordere
 typedef std::unordered_map<std::string, std::unordered_map<size_t , char>> FullORFMap;
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 typedef std::unordered_map<std::string, std::unordered_map<size_t, std::string>> ORFColourIDMap;
-
-// Eigen typedef
-typedef Eigen::Triplet<double> ET;
-
-// fmindex typedef
-using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
-        sdsl::rank_support_v<>,
-        sdsl::select_support_scan<>,
-        sdsl::select_support_scan<0>>,
-        16,
-        10000000,
-        sdsl::sa_order_sa_sampling<>,
-        sdsl::isa_sampling<>,
-        sdsl::plain_byte_alphabet>;
-typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
-using seqan3::operator""_dna5;
 
 // function headers
 // indexing
@@ -166,9 +160,12 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
                                    const size_t& nb_colours,
                                    const size_t position);
 
+template<class T>
+std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);
+
 template <class T, class U, bool is_const>
 unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
-                                   const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
+                                   UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
                                    const std::vector<std::string>& codon_for,
                                    const std::vector<std::string>& codon_rev,
                                    const int& kmer,
@@ -187,9 +184,8 @@ std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const st
 
 std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
-PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
-                               const unitigMap& graph_map,
-                               const PathMap& previous_paths,
+PathVector recur_nodes_binary (const unitigMap& graph_map,
+                               //const PathMap& previous_paths,
                                const std::vector<std::pair<std::string, bool>>& head_kmer_list,
                                const uint8_t& codon_arr,
                                std::vector<bool> colour_arr,
@@ -199,8 +195,7 @@ PathVector recur_nodes_binary (const ColoredCDBG<>& ccdbg,
                                const bool& repeat,
                                const vector<bool>& empty_colour_arr);
 
-PathPair traverse_graph(const ColoredCDBG<>& ccdbg,
-                         const GraphTuple& graph_tuple,
+PathPair traverse_graph(const GraphTuple& graph_tuple,
                          const bool repeat,
                          const vector<bool>& empty_colour_arr,
                          const size_t max_path_length);
@@ -219,15 +214,14 @@ void call_strings(SeqORFMap& query_list,
                   const bool& write_idx);
 
 // call_ORFs
-ORFNodeMap generate_ORFs(const ColoredCDBG<>& ccdbg,
+ORFNodeMap generate_ORFs(const unitigMap& graph_map,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
-                         const std::vector<std::pair<std::string, bool>>& unitig_path,
+                         const std::vector<std::pair<size_t, bool>>& unitig_path,
                          const int overlap,
                          const size_t min_len);
 
-std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const ColoredCDBG<>& ccdbg,
-                                                                                            const PathPair& path_pair,
+std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const PathPair& path_pair,
                                                                                             const unitigMap& unitig_map,
                                                                                             const std::vector<std::string>& stop_codons_for,
                                                                                             const std::vector<std::string>& start_codons_for,

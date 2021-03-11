@@ -46,16 +46,18 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (c
     cout << "Generating graph stop codon index..." << endl;
     const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
 
+    // clear ccdbg to free memory
+    ccdbg.clear();
+
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    auto path_pair = traverse_graph(ccdbg, graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_tuple = call_ORFs(ccdbg, path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons, overlap, min_ORF_length);
+    auto ORF_tuple = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons, overlap, min_ORF_length);
 
-    // clear ccdbg and path_pair to free memory
-    ccdbg.clear();
+    // clear path_pair to free memory
     path_pair.first.clear();
     path_pair.second.clear();
 
@@ -134,16 +136,18 @@ std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (co
     cout << "Generating graph stop codon index..." << endl;
     const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
 
+    // clear ccdbg to free memory
+    ccdbg.clear();
+
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    auto path_pair = traverse_graph(ccdbg, graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_tuple = call_ORFs(ccdbg, path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons, overlap, min_ORF_length);
+    auto ORF_tuple = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons, overlap, min_ORF_length);
 
-    // clear ccdbg and path_pair to free memory
-    ccdbg.clear();
+    // clear path_pair to free memory
     path_pair.first.clear();
     path_pair.second.clear();
 
