@@ -67,8 +67,8 @@ Note: Ensure the sequences used to build the graph are in the same directories a
 #### If Bifrost GFA and Colours file do not exist:
 
 To build a new Bifrost graph using assembled genomes and/or reads, specify ONE OR BOTH:
-- ```--refs <refs.txt>``` Input GFA
-- ```--reads <reads.txt>``` Input colours file
+- ```--refs <refs.txt>``` List of absolute paths to reference sequence fastas (one file per line)
+- ```--reads <reads.txt>``` List of absolute paths to read fastas (one file per line)
 
 Note: Ensure assembled genome files are exclusively passed to the ```--refs``` argument, and read files exclusively to the ```--reads```
 argument. Bifrost uses kmer coverage filtering for read files to remove read errors, but does not do this for assembled genomes.
