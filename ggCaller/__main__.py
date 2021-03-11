@@ -157,7 +157,7 @@ def main():
     if no_filter == True:
         for colour, gene_set in ORF_colour_ID_map.items():
             for ORF_ID, ORF_seq in gene_set.items():
-                gene = ORF_seq[16:]
+                gene = str(ORF_seq)[16:]
                 if gene not in true_genes:
                     true_genes[gene] = colour
                 else:
@@ -188,7 +188,7 @@ def main():
                 # remove TIS, and merge any matching genes which had differing TIS but were called together
                 for ORF_ID in high_scoring_ORFs:
                     ORF_seq = ORF_colour_ID_map[colour][ORF_ID]
-                    gene = ORF_seq[16:]
+                    gene = str(ORF_seq)[16:]
                     if gene not in true_genes:
                         true_genes[gene] = colour
                     else:
