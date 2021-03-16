@@ -36,8 +36,8 @@
 #include <seqan3/std/ranges>
 
 // pybind11 headers
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -47,7 +47,7 @@
 
 // global variable declaration
 const vector<bool> empty_codon_arr(3, 0);
-namespace py = pybind11;
+//namespace py = pybind11;
 
 // UnitigDict typedefs
 typedef std::vector<std::tuple<size_t, bool, std::unordered_map<int, uint8_t>>> NeighbourVector;

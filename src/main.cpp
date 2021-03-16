@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/plasmid_clique_556_list_pre_caching_3.fasta";
-    omp_set_num_threads(num_threads);
+    const std::string outfile = "/home/shorsfield/jobs/ggCaller/all_test_capsular_loci_calls.fasta";
+    //omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
     const bool repeat = false;
@@ -56,43 +56,43 @@ int main(int argc, char *argv[]) {
     }
 
     // read in compact coloured DBG
-//    cout << "Building coloured compacted DBG..." << endl;
-//
-//    const std::string infile1 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.txt";
-//    const std::string infile2 = "NA";
-//
-//    const int kmer = 31;
-//
-//    if (infile2 != "NA") {
-//        is_ref = 0;
-//    }
-//
-//    ColoredCDBG<> ccdbg;
-//
-//
-//    if (write_graph) {
-//        // build and write graph
-//        size_t lastindex = infile1.find_last_of(".");
-//        std::string outgraph = infile1.substr(0, lastindex);
-//        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, true, outgraph);
-//    } else {
-//        // build graph only
-//        std::string outgraph = "NA";
-//        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, false, outgraph);
-//    }
+    cout << "Building coloured compacted DBG..." << endl;
+
+    const std::string infile1 = "/home/shorsfield/software/ggCaller/data/all_test_capsular_loci_list.txt";
+    const std::string infile2 = "NA";
+
+    const int kmer = 31;
+
+    if (infile2 != "NA") {
+        is_ref = 0;
+    }
+
+    ColoredCDBG<> ccdbg;
 
 
-    cout << "Reading coloured compacted DBG..." << endl;
+    if (write_graph) {
+        // build and write graph
+        size_t lastindex = infile1.find_last_of(".");
+        std::string outgraph = infile1.substr(0, lastindex);
+        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, true, outgraph);
+    } else {
+        // build graph only
+        std::string outgraph = "NA";
+        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, false, outgraph);
+    }
 
-    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.gfa";
-    const std::string coloursfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.bfg_colors";
+
+//    cout << "Reading coloured compacted DBG..." << endl;
+
+//    const std::string graphfile = "/home/shorsfield/jobs/ggCaller/clique_556_list.gfa";
+//    const std::string coloursfile = "/home/shorsfield/jobs/ggCaller/clique_556_list.bfg_colors";
 
     // read in graph
-    ColoredCDBG<> ccdbg;
-    ccdbg.read(graphfile, coloursfile, num_threads);
+//    ColoredCDBG<> ccdbg;
+//    ccdbg.read(graphfile, coloursfile, num_threads);
 
     //set local variables
-    const int kmer = ccdbg.getK();
+//    const int kmer = ccdbg.getK();
     const int overlap = kmer - 1;
 
     // get the number of colours, generate empty colour vector
@@ -106,19 +106,20 @@ int main(int argc, char *argv[]) {
     cout << "Generating graph stop codon index..." << endl;
     const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
 
-    // testing
-    //const auto testx = std::get<0>(graph_tuple).at(std::get<3>(graph_tuple).at("CTGGTCAGGGCTTCGCCCCGACACCCCGTAA"));
+    // clear ccdbg to free memory
+    ccdbg.clear();
 
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    const auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
 
     // generate ORF sequences - get this bit to work!
     cout << "Generating ORF sequences from complete paths..." << endl;
     auto ORF_tuple = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
 
-    int ORF_num = std::get<0>(ORF_tuple).size();
-    int path_num = std::get<1>(ORF_tuple).size();
+    // clear path_pair to free memory
+    path_pair.first.clear();
+    path_pair.second.clear();
 
     // generate fmindices and check for artificial sequences
     std::pair<ORFColoursMap, std::vector<std::string>> ORF_colours_tuple;
@@ -130,11 +131,7 @@ int main(int argc, char *argv[]) {
         ORF_colours_tuple = sort_ORF_colours(std::get<0>(ORF_tuple));
     }
 
-    ORF_num = std::get<0>(ORF_tuple).size();
-    path_num = std::get<1>(ORF_tuple).size();
-
     cout << "Calculating gene overlap" << endl;
-    //auto ORF_overlap_map = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_pair), ORF_colours_tuple, overlap, 90);
     auto overlap_tuple = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), std::get<2>(ORF_tuple), ORF_colours_tuple, overlap, 90);
 
     // write fasta files to file
