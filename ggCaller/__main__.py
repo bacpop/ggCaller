@@ -129,16 +129,25 @@ def main():
 
     # if build graph specified, build graph and then call ORFs
     if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
-        called_ORF_tuple = ggCaller_cpp.call_genes_existing(graph_file, colours_file, start_codons, stop_codon_for, stop_codon_rev, num_threads, is_ref, write_idx, repeat, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_existing(graph_file, colours_file, start_codons, stop_codon_for,
+                                                            stop_codon_rev, num_threads, is_ref, write_idx, repeat,
+                                                            no_filter, max_path_length, min_ORF_length, max_ORF_overlap)
     # if refs file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file == None):
-        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, True, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev,
+                                                         num_threads, True, write_idx, repeat, write_graph, no_filter,
+                                                         max_path_length, min_ORF_length, max_ORF_overlap)
     # if reads file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file == None) and (reads_file != None):
-        called_ORF_tuple = ggCaller_cpp.call_genes_build(reads_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(reads_file, ksize, start_codons, stop_codon_for,
+                                                         stop_codon_rev, num_threads, False, write_idx, repeat,
+                                                         write_graph, no_filter, max_path_length, min_ORF_length,
+                                                         max_ORF_overlap)
     # if both reads and refs file specified for building
     elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file != None):
-        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev, num_threads, False, write_idx, repeat, write_graph, max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
+        called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev,
+                                                         num_threads, False, write_idx, repeat, write_graph, no_filter,
+                                                         max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
@@ -148,7 +157,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    ORF_overlap_dict, full_ORF_dict, ORF_colour_ID_map = called_ORF_tuple
+    ORF_overlap_dict, ORF_colour_ID_map, full_ORF_dict, nb_colours = called_ORF_tuple
 
     # create list for high scoring ORFs to return
     true_genes = {}
@@ -156,25 +165,28 @@ def main():
     # if no filter specified, generate ORF sequences and combine colours of identical ORFS
     if no_filter == True:
         for colour, gene_set in ORF_colour_ID_map.items():
-            for ORF_ID, ORF_seq in gene_set.items():
-                gene = str(ORF_seq)[16:]
+            for ORF_ID in gene_set.items():
+                # parse out gene string from full_ORF_dict
+                gene = str(full_ORF_dict[ORF_ID][0])[16:]
                 if gene not in true_genes:
-                    true_genes[gene] = colour
+                    # create string of zeros, make nth colour 1
+                    true_genes[gene] = ["0"] * nb_colours
+                    true_genes[gene][colour] = "1"
                 else:
-                    updated_colour = update_colour(true_genes[gene], colour)
-                    true_genes[gene] = updated_colour
+                    # make nth colour 1
+                    true_genes[gene][colour] = "1"
     else:
         # generate gene scores using Balrog
-        full_ORF_dict = score_genes(full_ORF_dict, ORF_colour_ID_map, minimum_ORF_score, num_threads)
+        full_ORF_dict, ORF_score_dict = score_genes(full_ORF_dict, minimum_ORF_score, num_threads)
 
         print("Generating highest scoring gene paths...")
 
-        # merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
-        ORF_dict = {}
-        for colour in full_ORF_dict.keys():
-            ORF_dict[colour] = {}
-            ORF_dict[colour]["ID"] = full_ORF_dict[colour]
-            ORF_dict[colour]["overlap"] = ORF_overlap_dict[colour]
+        # # merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
+        # ORF_dict = {}
+        # for colour in full_ORF_dict.keys():
+        #     ORF_dict[colour] = {}
+        #     ORF_dict[colour]["ID"] = full_ORF_dict[colour]
+        #     ORF_dict[colour]["overlap"] = ORF_overlap_dict[colour]
 
         # multithread per colour in ORF_dict
         # Turn gt threading on
@@ -183,24 +195,28 @@ def main():
 
         with Pool(processes=num_threads) as pool:
             for colour, high_scoring_ORFs in pool.map(
-                    partial(call_true_genes, minimum_path_score=minimum_path_score),
-                    ORF_dict.items()):
+                    partial(call_true_genes, minimum_path_score=minimum_path_score,
+                            ORF_score_dict=ORF_score_dict, ORF_overlap_dict=ORF_overlap_dict),
+                    ORF_colour_ID_map.items()):
                 # remove TIS, and merge any matching genes which had differing TIS but were called together
                 for ORF_ID in high_scoring_ORFs:
-                    ORF_seq = ORF_colour_ID_map[colour][ORF_ID]
-                    gene = str(ORF_seq)[16:]
+                    # parse out gene string from full_ORF_dict
+                    gene = str(full_ORF_dict[ORF_ID][0])[16:]
                     if gene not in true_genes:
-                        true_genes[gene] = colour
+                        # create string of zeros, make nth colour 1
+                        true_genes[gene] = ["0"] * nb_colours
+                        true_genes[gene][colour] = "1"
                     else:
-                        updated_colour = update_colour(true_genes[gene], colour)
-                        true_genes[gene] = updated_colour
+                        # make nth colour 1
+                        true_genes[gene][colour] = "1"
 
     print("Generating fasta file of gene calls...")
     # print output to file
     ORF_count = 1
     with open(output, "w") as f:
         for gene, colour in true_genes.items():
-            f.write(">" + str(ORF_count) + "_" + str(colour) + "\n" + gene + "\n")
+            colour_str = "".join(colour)
+            f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
             ORF_count += 1
 
     print("Finished.")

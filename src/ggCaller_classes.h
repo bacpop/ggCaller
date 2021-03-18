@@ -36,8 +36,8 @@
 #include <seqan3/std/ranges>
 
 // pybind11 headers
-//#include <pybind11/pybind11.h>
-//#include <pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -46,8 +46,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-const vector<bool> empty_codon_arr(3, 0);
-//namespace py = pybind11;
+namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -129,9 +128,9 @@ typedef std::tuple<std::vector<size_t>, std::vector<indexTriplet>, std::vector<b
 // maps an ORF sequence to its colours and path through graph
 typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFNodeVector>> ORFNodeMap;
 // maps individual colour ids to ORF ids in ORFIDMap
-typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
+typedef std::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
 // maps a unique ID to an ORF sequence and path through graph
-typedef robin_hood::unordered_map<size_t, std::pair<std::string, ORFNodeVector>> ORFIDMap;
+typedef std::unordered_map<size_t, std::pair<std::string, ORFNodeVector>> ORFIDMap;
 // a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::tuple<unitigMap, std::vector<size_t>, std::vector<size_t>, robin_hood::unordered_map<std::string, size_t>> GraphTuple;
 // A vector of paths following a head node, which containg complete stop-stop paths (pair of a vector of nodesID+orientation, and colours vector)
@@ -257,34 +256,34 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                                  const size_t max_overlap);
 
 // ggCaller_bindings
-//std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphexists (const std::string& graphfile,
-//                                                                               const std::string& coloursfile,
-//                                                                               const std::vector<std::string>& start_codons,
-//                                                                               const std::vector<std::string>& stop_codons_for,
-//                                                                               const std::vector<std::string>& stop_codons_rev,
-//                                                                               size_t num_threads,
-//                                                                               const bool is_ref,
-//                                                                               const bool write_idx,
-//                                                                               const bool repeat,
-//                                                                               const bool no_filter,
-//                                                                               const size_t max_path_length,
-//                                                                               const size_t min_ORF_length,
-//                                                                               const size_t max_ORF_overlap);
-//
-//std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphbuild (const std::string& infile1,
-//                                                                          const int kmer,
-//                                                                          const std::vector<std::string>& start_codons,
-//                                                                          const std::vector<std::string>& stop_codons_for,
-//                                                                          const std::vector<std::string>& stop_codons_rev,
-//                                                                          size_t num_threads,
-//                                                                          bool is_ref,
-//                                                                          const bool write_idx,
-//                                                                          const bool repeat,
-//                                                                          const bool write_graph,
-//                                                                          const bool no_filter,
-//                                                                          const size_t max_path_length,
-//                                                                          const size_t min_ORF_length,
-//                                                                          const size_t max_ORF_overlap,
-//                                                                          const std::string& infile2);
+std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap, size_t> py_ggCaller_graphexists (const std::string& graphfile,
+                                                                                    const std::string& coloursfile,
+                                                                                       const std::vector<std::string>& start_codons,
+                                                                                       const std::vector<std::string>& stop_codons_for,
+                                                                                       const std::vector<std::string>& stop_codons_rev,
+                                                                                       size_t num_threads,
+                                                                                       const bool is_ref,
+                                                                                       const bool write_idx,
+                                                                                       const bool repeat,
+                                                                                       const bool no_filter,
+                                                                                       const size_t max_path_length,
+                                                                                       const size_t min_ORF_length,
+                                                                                       const size_t max_ORF_overlap);
+
+std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap, size_t> py_ggCaller_graphbuild (const std::string& infile1,
+                                                                                  const int kmer,
+                                                                                  const std::vector<std::string>& start_codons,
+                                                                                  const std::vector<std::string>& stop_codons_for,
+                                                                                  const std::vector<std::string>& stop_codons_rev,
+                                                                                  size_t num_threads,
+                                                                                  bool is_ref,
+                                                                                  const bool write_idx,
+                                                                                  const bool repeat,
+                                                                                  const bool write_graph,
+                                                                                  const bool no_filter,
+                                                                                  const size_t max_path_length,
+                                                                                  const size_t min_ORF_length,
+                                                                                  const size_t max_ORF_overlap,
+                                                                                  const std::string& infile2);
 
 #endif //BIFROST_API_GGCALLER_H
