@@ -1,7 +1,7 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
 
-def traverse_components(component, tc, component_list, ORF_ID_dict, edge_weights, minimum_path_score):
+def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
 
@@ -27,7 +27,7 @@ def traverse_components(component, tc, component_list, ORF_ID_dict, edge_weights
     # iterate over start and stop vertices
     for start in start_vertices:
         # add the score of the first node
-        start_score = ORF_ID_dict[u.vertex_properties["ID"][start]]
+        start_score = u.vertex_properties["score"][start]
 
         # check if start vertex is lone node
         if start in end_vertices:
@@ -60,13 +60,8 @@ def traverse_components(component, tc, component_list, ORF_ID_dict, edge_weights
     return high_scoring_ORFs
 
 
-def call_true_genes(colour_ORF_tuple, minimum_path_score):
-    colour, ORF_dict = colour_ORF_tuple
-
-    # unpack ORF_dict
-    ORF_ID_dict = ORF_dict["ID"]
-    ORF_overlap_dict = ORF_dict["overlap"]
-
+def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_overlap_dict):
+    colour, ORF_ID_list = colour_ORF_tuple
 
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
@@ -78,20 +73,22 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     ORF_index = {}
 
     # create new graph item with node labels
-    #vertex_ID = g.new_vertex_property("int")
+    # vertex_ID = g.new_vertex_property("int")
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in ORF_ID_dict.keys():
-        v = g.add_vertex()
-        #vertex_ID[v] = ORF
-        ORF_index[ORF] = g.vertex_index[v]
+    for ORF in ORF_ID_list:
+        # check if ORF is present in ORF_score_dict, if not, score too low so do not add
+        if ORF in ORF_score_dict:
+            v = g.add_vertex()
+            # vertex_ID[v] = ORF
+            ORF_index[ORF] = g.vertex_index[v]
 
     # add vertex sequences to graph
-    #g.vertex_properties["ID"] = vertex_ID
+    # g.vertex_properties["ID"] = vertex_ID
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
-    if ORF_overlap_dict:
-        for ORF1, overlap_dict in ORF_overlap_dict.items():
+    if ORF_overlap_dict[colour]:
+        for ORF1, overlap_dict in ORF_overlap_dict[colour].items():
             # check that ORF1 nodes exist in graph, may have been removed due to low score
             if ORF1 in ORF_index:
                 for ORF2 in overlap_dict.keys():
@@ -103,20 +100,26 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
     # generate a transative closure of the graph to add all directed edges and add vertex properties
     tc = gt.transitive_closure(g)
 
+    # clear original graph
+    g.clear()
+
     # get label components of tc
     components = gt.label_components(tc, directed=False)[0].a
 
-    #component_ids = set(component_assignments.a)
+    # component_ids = set(component_assignments.a)
 
-    #tc.vertex_properties["component"] = component_assignments
+    # tc.vertex_properties["component"] = component_assignments
 
-    # create vertex property map to store node IDs
+    # create vertex property map to store node IDs and scores
     vertex_ID = tc.new_vertex_property("int")
+    vertex_score = tc.new_vertex_property("double")
     for ORF_ID, index in ORF_index.items():
         vertex_ID[tc.vertex(index)] = ORF_ID
+        vertex_score[tc.vertex(index)] = ORF_score_dict[ORF_ID]
 
-    # add vertex sequences as internal property of graph
+    # add vertex IDs and scores as internal property of graph
     tc.vertex_properties["ID"] = vertex_ID
+    tc.vertex_properties["score"] = vertex_score
 
     # create edge weights property
     edge_weights = tc.new_edge_property("double")
@@ -131,17 +134,17 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
         ORF2 = tc.vertex_properties["ID"][e.source()]
 
         # parse sink ORF score calculated by Balrog
-        ORF_score = ORF_ID_dict[ORF1]
+        ORF_score = ORF_score_dict[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
-        if ORF1 not in ORF_overlap_dict:
+        if ORF1 not in ORF_overlap_dict[colour]:
             edge_weights[e] = -(ORF_score)
             continue
-        elif ORF2 not in ORF_overlap_dict[ORF1]:
+        elif ORF2 not in ORF_overlap_dict[colour][ORF1]:
             edge_weights[e] = -(ORF_score)
             continue
         # parse overlap info, calculate edge weight
-        overlap_type, abs_overlap = ORF_overlap_dict[ORF1][ORF2]
+        overlap_type, abs_overlap = ORF_overlap_dict[colour][ORF1][ORF2]
 
         # set penalty to 0 for "n" or "w" or "i" overlaps
         penalty = 0
@@ -174,10 +177,10 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score):
 
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
     for component in set(components):
-        high_scoring_ORFs = traverse_components(component, tc, components, ORF_ID_dict, edge_weights, minimum_path_score)
+        high_scoring_ORFs = traverse_components(component, tc, components, edge_weights, minimum_path_score)
         high_scoring_ORFs_all.update(high_scoring_ORFs)
 
-    return (colour, high_scoring_ORFs_all)
+    return colour, high_scoring_ORFs_all
 
 
 def update_colour(colour1, colour2):

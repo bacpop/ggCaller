@@ -1,21 +1,17 @@
 cmake_minimum_required(VERSION 3.4)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fconcepts -march=native")
-
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # find pthreads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+# find pybind and create python module
+find_package(pybind11 REQUIRED)
+pybind11_add_module(ggCaller_cpp src/call_ORFs.cpp src/ggCaller_bindings.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp)
 
 # check for conda environment
 IF( DEFINED ENV{CONDA_PREFIX} )
@@ -48,18 +44,11 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 # find Seqan3 package
 find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)
 
-# add executable
-add_executable(ggCaller_cpp src/main.cpp src/call_ORFs.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp)
-
 # link libraries
 target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads)
 
-#find_package(OpenMP)
-
-#if(OpenMP_CXX_FOUND)
-  #target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
-#endif()
+find_package(OpenMP)
 
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
+  target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
 endif()
