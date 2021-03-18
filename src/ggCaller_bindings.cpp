@@ -44,18 +44,18 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphexists (cons
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+    const auto graph_tuple = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
 
     // clear ccdbg to free memory
     ccdbg.clear();
 
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = std::move(traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length));
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_pair = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
+    auto ORF_pair = std::move(call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length));
 
     // clear path_pair to free memory
     path_pair.first.clear();
@@ -66,9 +66,9 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphexists (cons
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        ORF_colours_tuple = filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx);
+        ORF_colours_tuple = std::move(filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx));
     } else{
-        ORF_colours_tuple = sort_ORF_colours(ORF_pair.first);
+        ORF_colours_tuple = std::move(sort_ORF_colours(ORF_pair.first));
     }
 
     if (no_filter)
@@ -77,7 +77,7 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphexists (cons
         ORFOverlapMap ORF_overlap_map;
     } else {
         cout << "Calculating gene overlap" << endl;
-        ORF_overlap_map = calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90);
+        ORF_overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90));
     }
 
     std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> return_tuple = std::make_tuple(ORF_overlap_map, std::get<0>(ORF_colours_tuple), std::get<1>(ORF_colours_tuple));
@@ -131,18 +131,18 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphbuild (const
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+    const auto graph_tuple = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
 
     // clear ccdbg to free memory
     ccdbg.clear();
 
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = std::move(traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length));
 
     // generate ORF sequences
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_pair = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
+    auto ORF_pair = std::move(call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length));
 
     // clear path_pair to free memory
     path_pair.first.clear();
@@ -153,9 +153,9 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphbuild (const
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        ORF_colours_tuple = filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx);
+        ORF_colours_tuple = std::move(filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx));
     } else{
-        ORF_colours_tuple = sort_ORF_colours(ORF_pair.first);
+        ORF_colours_tuple = std::move(sort_ORF_colours(ORF_pair.first));
     }
 
     if (no_filter)
@@ -164,7 +164,7 @@ std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> py_ggCaller_graphbuild (const
         ORFOverlapMap ORF_overlap_map;
     } else {
         cout << "Calculating gene overlap" << endl;
-        ORF_overlap_map = calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90);
+        ORF_overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90));
     }
 
     std::tuple<ORFOverlapMap, ORFColoursMap, ORFIDMap> return_tuple = std::make_tuple(ORF_overlap_map, std::get<0>(ORF_colours_tuple), std::get<1>(ORF_colours_tuple));

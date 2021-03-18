@@ -120,18 +120,18 @@ int main(int argc, char *argv[]) {
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    const auto graph_tuple = index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+    const auto graph_tuple = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
 
     // clear ccdbg to free memory
     ccdbg.clear();
 
     // generate complete paths
     cout << "Generating complete stop-stop paths..." << endl;
-    auto path_pair = traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length);
+    auto path_pair = std::move(traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length));
 
     // generate ORF sequences - get this bit to work!
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_pair = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
+    auto ORF_pair = std::move(call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length));
 
     // clear path_pair to free memory
     path_pair.first.clear();
@@ -142,13 +142,13 @@ int main(int argc, char *argv[]) {
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        ORF_colours_tuple = filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx);
+        ORF_colours_tuple = std::move(filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx));
     } else{
-        ORF_colours_tuple = sort_ORF_colours(ORF_pair.first);
+        ORF_colours_tuple = std::move(sort_ORF_colours(ORF_pair.first));
     }
 
     cout << "Calculating gene overlap" << endl;
-    auto overlap_map = calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90);
+    auto overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90));
 
     // write fasta files to file
     write_to_file (outfile, std::get<0>(ORF_colours_tuple), std::get<1>(ORF_colours_tuple), nb_colours);
