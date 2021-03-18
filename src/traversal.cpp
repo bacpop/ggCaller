@@ -3,20 +3,6 @@
 // define mutex for safe addition to robinhood_maps
 //std::mutex mtx2;
 
-// compares two codon arrays, set's value to 0 if both are 1. Creates new array, does not edit either array
-std::vector<bool> compare_codon_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < 3; i++)
-    {
-        if (array1[i] == 1 && array2[i] == 1)
-        {
-            output_array[i] = 0;
-        }
-    }
-    return output_array;
-}
-
 std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
 {
     std::vector<bool> output_array = array1;
@@ -85,9 +71,9 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
 
             // calculate modulus for path and updated cached path reading frame
             int modulus = length % 3;
-            bool cache_valid = 0;
             std::string cached_kmer_id = std::to_string(kmer_pair.first) + (kmer_pair.second ? "+" : "-");
 
+            //bool cache_valid = 0;
             // don't need this, need to check if arrays AREN'T completed, this means caching can be used to help branching
             // calculate updated codon and colours array
 //            if (codon_arr != graph_map.at(kmer_pair.first).part_codon.at(kmer_pair.second).at(modulus))

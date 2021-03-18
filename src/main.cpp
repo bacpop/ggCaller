@@ -5,31 +5,47 @@
 # include "ggCaller_classes.h"
 
 void write_to_file (const std::string& outfile_name,
-                    const SeqORFMap& all_ORFs)
+                    const ORFColoursMap& ORF_colours_map,
+                    const ORFIDMap& ORF_ID_map,
+                    const size_t nb_colours)
 {
     int gene_id = 1;
     ofstream outfile;
     outfile.open(outfile_name);
 
+    robin_hood::unordered_map<size_t, std::vector<bool>> ORF_print_map;
+    std::vector<bool> empty_vector(nb_colours, 0);
+    for (size_t i = 0; i < ORF_ID_map.size(); i++)
+    {
+        ORF_print_map[i] = empty_vector;
+    }
+
+    // iterate over all colours in colours_map
+    for (const auto& colour : ORF_colours_map)
+    {
+        // iterate over all ORF_IDs that have that colour and add in correct positive into vector
+        for (const auto& ORF : colour.second)
+        {
+            ORF_print_map[ORF][colour.first] = 1;
+        }
+    }
 
     // iterate over ORFs in all_ORFs
-    for (const auto& ORF_dict : all_ORFs)
+    for (const auto& ORF : ORF_print_map)
     {
         // generate string for colours
         std::string colours;
-        for (const auto& i : ORF_dict.second)
+        for (const auto& i : ORF.second)
         {
             colours += std::to_string(i);
         }
         // append to file
-        outfile << ">" << std::to_string(gene_id) << "_" << colours << "\n" << ORF_dict.first << "\n";
+        outfile << ">" << std::to_string(gene_id) << "_" << colours << "\n" << ORF_ID_map.at(ORF.first).first << "\n";
         gene_id++;
     }
 
     outfile.close();
 }
-
-//TODO remove all_ORFs
 
 int main(int argc, char *argv[]) {
 
@@ -115,28 +131,27 @@ int main(int argc, char *argv[]) {
 
     // generate ORF sequences - get this bit to work!
     cout << "Generating ORF sequences from complete paths..." << endl;
-    auto ORF_tuple = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
+    auto ORF_pair = call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length);
 
     // clear path_pair to free memory
     path_pair.first.clear();
     path_pair.second.clear();
 
     // generate fmindices and check for artificial sequences
-    std::pair<ORFColoursMap, std::vector<std::string>> ORF_colours_tuple;
+    std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> ORF_colours_tuple;
     if (is_ref)
     {
         cout << "Checking for artificial sequences..." << endl;
-        ORF_colours_tuple = filter_artificial_ORFS(std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), input_colours, write_idx);
+        ORF_colours_tuple = filter_artificial_ORFS(ORF_pair.first, input_colours, write_idx);
     } else{
-        ORF_colours_tuple = sort_ORF_colours(std::get<0>(ORF_tuple));
+        ORF_colours_tuple = sort_ORF_colours(ORF_pair.first);
     }
 
     cout << "Calculating gene overlap" << endl;
-    auto overlap_tuple = calculate_overlaps(std::get<0>(graph_tuple), std::get<1>(ORF_tuple), std::get<2>(ORF_tuple), ORF_colours_tuple, overlap, 90);
+    auto overlap_map = calculate_overlaps(std::get<0>(graph_tuple), ORF_pair.second, ORF_colours_tuple, overlap, 90);
 
     // write fasta files to file
-    cout << "Writing gene calls to file..." << endl;
-    write_to_file(outfile, std::get<0>(ORF_tuple));
+    write_to_file (outfile, std::get<0>(ORF_colours_tuple), std::get<1>(ORF_colours_tuple), nb_colours);
 
     cout << "Done." << endl;
 

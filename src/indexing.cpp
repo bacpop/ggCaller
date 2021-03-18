@@ -294,7 +294,7 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
 {
     // get all head kmers for parrellelisation
     std::vector<Kmer> head_kmer_arr;
-    for (const auto um : ccdbg)
+    for (const auto& um : ccdbg)
     {
         head_kmer_arr.push_back(um.getUnitigHead());
     }
@@ -368,10 +368,10 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                 std::vector<bool> colours;
                 if (succ.second)
                 {
-                    colours = negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_head_colour);
+                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_head_colour));
                 } else
                 {
-                    colours = negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_tail_colour);
+                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_tail_colour));
                 }
 
                 // calculate sum_colours
@@ -405,10 +405,10 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                 std::vector<bool> colours;
                 if (pred.second)
                 {
-                    colours = negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_head_colour);
+                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_head_colour));
                 } else
                 {
-                    colours = negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_tail_colour);
+                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_tail_colour));
                 }
 
                 // calculate sum_colours

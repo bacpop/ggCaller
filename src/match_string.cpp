@@ -66,8 +66,7 @@ int seq_search(const seqan3::dna5_vector& query,
 }
 
 //run fmindex workflow
-void call_strings(SeqORFMap& query_list,
-                  ORFNodeMap& ORF_node_paths,
+void call_strings(ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx)
 {
@@ -75,36 +74,34 @@ void call_strings(SeqORFMap& query_list,
     const size_t num_colours = assembly_list.size();
 
     // generate list of genes for iteration
-    std::vector<std::string> gene_list;
-    for (const auto& gene : query_list)
+    std::vector<std::string> ORF_list;
+    for (const auto& ORF : ORF_node_paths)
     {
-        gene_list.push_back(gene.first);
+        ORF_list.push_back(ORF.first);
     }
 
     // Read all sequences into memory as Fasta objects (threaded)
     std::vector<fm_index_coll> seq_idx(num_colours);
 
     // multithread with openMP
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < num_colours; i++)
     {
         seq_idx[i] = std::move(index_fasta(assembly_list[i], write_idx));
     }
 
     // Run searches using openMP, looping over genes and multithreading searches of genes calls in specific fm-indexes
-    robin_hood::unordered_map<std::string, std::vector<bool>> to_update;
-#pragma omp parallel
+    robin_hood::unordered_map<std::string, std::vector<bool>> to_remove;
+    #pragma omp parallel
     {
-        robin_hood::unordered_map<std::string, std::vector<bool>> to_update_private;
-#pragma omp for nowait
-        for (auto itr = gene_list.begin(); itr < gene_list.end(); itr++)
+        robin_hood::unordered_map<std::string, std::vector<bool>> to_remove_private;
+        #pragma omp for nowait
+        for (auto itr = ORF_list.begin(); itr < ORF_list.end(); itr++)
         {
-            // convert string to dn5 vector, get colours from query_list
+            // convert string to dn5 vector, get colours
             seqan3::dna5_vector query = *itr | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-            auto colours = query_list.at(*itr);
+            auto& colours = ORF_node_paths.at(*itr).first;
 
-            // keep track if colours updated
-            bool updated = false;
 
             //iterate over colours, if colour present then add to hits
             for (size_t i = 0; i < num_colours; i++)
@@ -115,32 +112,30 @@ void call_strings(SeqORFMap& query_list,
                     if (!hits)
                     {
                         colours[i] = 0;
-                        updated = true;
                     }
                 }
             }
-            //set to update the colours of sequences found to be
-            if (updated)
+            // compute number of colours
+            int sum_colours = accumulate(colours.begin(), colours.end(), 0);
+
+            //if number of colours is 0, remove item from dictionary
+            if (sum_colours == 0)
             {
-                to_update_private[*itr] = colours;
+                ORF_node_paths.erase(*itr);
             }
-        }
-        #pragma omp critical
-        {
-            to_update.insert(to_update_private.begin(), to_update_private.end());
         }
     }
 
-    for (const auto& artificial_gene : to_update)
-    {
-        // compute number of colours
-        int sum_colours = accumulate(artificial_gene.second.begin(), artificial_gene.second.end(), 0);
-        if (sum_colours == 0)
-        {
-            query_list.erase(artificial_gene.first);
-            ORF_node_paths.erase(artificial_gene.first);
-        } else {
-            query_list[artificial_gene.first] = artificial_gene.second;
-        }
-    }
+//    for (const auto& artificial_gene : to_update)
+//    {
+//        // compute number of colours
+//        int sum_colours = accumulate(artificial_gene.second.begin(), artificial_gene.second.end(), 0);
+//        if (sum_colours == 0)
+//        {
+//            query_list.erase(artificial_gene.first);
+//            ORF_node_paths.erase(artificial_gene.first);
+//        } else {
+//            query_list[artificial_gene.first] = artificial_gene.second;
+//        }
+//    }
 }

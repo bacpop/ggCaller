@@ -50,6 +50,7 @@ const vector<bool> empty_codon_arr(3, 0);
 //namespace py = pybind11;
 
 // UnitigDict typedefs
+// Vector of neighbouring nodes by ID, orientation and map of stop codon frames
 typedef std::vector<std::tuple<size_t, bool, std::unordered_map<int, uint8_t>>> NeighbourVector;
 
 // Eigen typedef
@@ -119,20 +120,32 @@ class unitigDict {
 };
 
 // ggCaller typedefs
-typedef std::tuple<size_t, size_t, size_t> indexTriplet;
+// mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef robin_hood::unordered_map<size_t, unitigDict> unitigMap;
+//a vector of start,stop and length coordinates and strand information for an ORF
+typedef std::tuple<size_t, size_t, size_t> indexTriplet;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates and strand information for an ORF
 typedef std::tuple<std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
-typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
-typedef robin_hood::unordered_map<std::string, std::vector<bool>> SeqORFMap;
-typedef robin_hood::unordered_map<std::string, std::vector<std::string>> ORFColoursMap;
+// maps an ORF sequence to its colours and path through graph
+typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFNodeVector>> ORFNodeMap;
+// maps individual colour ids to ORF ids in ORFIDMap
+typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
+// maps a unique ID to an ORF sequence and path through graph
+typedef robin_hood::unordered_map<size_t, std::pair<std::string, ORFNodeVector>> ORFIDMap;
+// a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::tuple<unitigMap, std::vector<size_t>, std::vector<size_t>, robin_hood::unordered_map<std::string, size_t>> GraphTuple;
+// A vector of paths following a head node, which containg complete stop-stop paths (pair of a vector of nodesID+orientation, and colours vector)
 typedef std::vector<std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>>> PathVector;
+// Mapping of header kmer ID to PathVector
 typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
+// pairing of PathMap and a vector of head-kmer IDs (hashing for PathMap) for parrelisation
 typedef std::pair<PathMap, std::vector<std::string>> PathPair;
-typedef std::unordered_map<std::string, std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>>> ORFOverlapMap;
-typedef std::unordered_map<std::string, std::unordered_map<size_t , char>> FullORFMap;
+// mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
-typedef std::unordered_map<std::string, std::unordered_map<size_t, std::string>> ORFColourIDMap;
+// mapping of colour ID to a NodeStrandMap
+typedef robin_hood::unordered_map<size_t, NodeStrandMap> ColourNodeStrandMap;
+// mapping colour to each colour to map of overlapping ORFs, detailed by ORFIDMap
+typedef std::unordered_map<size_t, std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>>> ORFOverlapMap;
 
 // function headers
 // indexing
@@ -208,8 +221,7 @@ fm_index_coll index_fasta(const std::string& fasta_file,
 int seq_search(const seqan3::dna5_vector& query,
                const fm_index_coll& ref_idx);
 
-void call_strings(SeqORFMap& query_list,
-                  ORFNodeMap& ORF_node_paths,
+void call_strings(ORFNodeMap& ORF_node_paths,
                   const std::vector<std::string>& assembly_list,
                   const bool& write_idx);
 
@@ -219,57 +231,58 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
                          const std::vector<std::string>& start_codons,
                          const std::vector<std::pair<size_t, bool>>& unitig_path,
                          const int overlap,
-                         const size_t min_len);
+                         const size_t min_len,
+                         const std::vector<bool>& path_colours);
 
-std::tuple<SeqORFMap, ORFNodeMap, std::unordered_map<std::string, NodeStrandMap>> call_ORFs(const PathPair& path_pair,
-                                                                                            const unitigMap& unitig_map,
-                                                                                            const std::vector<std::string>& stop_codons_for,
-                                                                                            const std::vector<std::string>& start_codons_for,
-                                                                                            const int overlap,
-                                                                                            const size_t min_ORF_length);
+std::pair<ORFNodeMap, ColourNodeStrandMap> call_ORFs(const PathPair& path_pair,
+                                                     const unitigMap& graph_map,
+                                                     const std::vector<std::string>& stop_codons_for,
+                                                     const std::vector<std::string>& start_codons_for,
+                                                     const int overlap,
+                                                     const size_t min_ORF_length);
 
-std::pair<ORFColoursMap, std::vector<std::string>> sort_ORF_colours(const SeqORFMap& all_ORFs);
+std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> sort_ORF_colours(ORFNodeMap& ORF_node_paths);
 
-std::pair<ORFColoursMap, std::vector<std::string>> filter_artificial_ORFS(SeqORFMap& all_ORFs,
-                                                                            ORFNodeMap& ORF_node_paths,
-                                                                            const std::vector<std::string>& fasta_files,
-                                                                            const bool write_index);
+std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> filter_artificial_ORFS(ORFNodeMap& ORF_node_paths,
+                                                                                     const std::vector<std::string>& fasta_files,
+                                                                                     const bool write_index);
+
+ColourNodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_paths);
 
 // gene_overlap.cpp
-std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> calculate_overlaps(const unitigMap& unitig_map,
-                                                                        const ORFNodeMap& ORF_node_paths,
-                                                                        const std::unordered_map<std::string, NodeStrandMap>& pos_strand_map,
-                                                                        const std::pair<ORFColoursMap, std::vector<std::string>>& ORF_colours_pair,
-                                                                        const int DBG_overlap,
-                                                                        const size_t max_overlap);
+ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
+                                 const ColourNodeStrandMap& pos_strand_map,
+                                 const std::tuple<ORFColoursMap, ORFIDMap, std::vector<size_t>>& ORF_colours_tuple,
+                                 const int DBG_overlap,
+                                 const size_t max_overlap);
 
 // ggCaller_bindings
-std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (const std::string& graphfile,
-                                                                               const std::string& coloursfile,
-                                                                               const std::vector<std::string>& start_codons,
-                                                                               const std::vector<std::string>& stop_codons_for,
-                                                                               const std::vector<std::string>& stop_codons_rev,
-                                                                               size_t num_threads,
-                                                                               const bool is_ref,
-                                                                               const bool write_idx,
-                                                                               const bool repeat,
-                                                                               const size_t max_path_length,
-                                                                               const size_t min_ORF_length,
-                                                                               const size_t max_ORF_overlap);
-
-std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (const std::string& infile1,
-                                                                              const int& kmer,
-                                                                              const std::vector<std::string>& start_codons,
-                                                                              const std::vector<std::string>& stop_codons_for,
-                                                                              const std::vector<std::string>& stop_codons_rev,
-                                                                              size_t num_threads,
-                                                                              bool is_ref,
-                                                                              const bool write_idx,
-                                                                              const bool repeat,
-                                                                              const bool write_graph,
-                                                                              const size_t max_path_length,
-                                                                              const size_t min_ORF_length,
-                                                                              const size_t max_ORF_overlap,
-                                                                              const std::string& infile2);
+//std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphexists (const std::string& graphfile,
+//                                                                               const std::string& coloursfile,
+//                                                                               const std::vector<std::string>& start_codons,
+//                                                                               const std::vector<std::string>& stop_codons_for,
+//                                                                               const std::vector<std::string>& stop_codons_rev,
+//                                                                               size_t num_threads,
+//                                                                               const bool is_ref,
+//                                                                               const bool write_idx,
+//                                                                               const bool repeat,
+//                                                                               const size_t max_path_length,
+//                                                                               const size_t min_ORF_length,
+//                                                                               const size_t max_ORF_overlap);
+//
+//std::tuple<ORFOverlapMap, FullORFMap, ORFColourIDMap> py_ggCaller_graphbuild (const std::string& infile1,
+//                                                                              const int& kmer,
+//                                                                              const std::vector<std::string>& start_codons,
+//                                                                              const std::vector<std::string>& stop_codons_for,
+//                                                                              const std::vector<std::string>& stop_codons_rev,
+//                                                                              size_t num_threads,
+//                                                                              bool is_ref,
+//                                                                              const bool write_idx,
+//                                                                              const bool repeat,
+//                                                                              const bool write_graph,
+//                                                                              const size_t max_path_length,
+//                                                                              const size_t min_ORF_length,
+//                                                                              const size_t max_ORF_overlap,
+//                                                                              const std::string& infile2);
 
 #endif //BIFROST_API_GGCALLER_H
