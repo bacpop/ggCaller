@@ -105,12 +105,12 @@ def get_ORF_info(full_ORF_dict):
         full_ORF_nuccord = (orf_coords[0] + 3, orf_coords[1])
 
         # translate once per frame, then slice
-            aa = str(seq[full_ORF_nuccord[0]:full_ORF_nuccord[1]].translate(table=translation_table, to_stop=False))
+        aa = str(seq[full_ORF_nuccord[0]:full_ORF_nuccord[1]].translate(table=translation_table, to_stop=False))
 
-            ORF_IDs.append(ORF_ID)
-            ORF_seq.append(aa)
-            ORF_coord.append(full_ORF_nuccord)
-            ORF_nucseq.append(ORF)
+        ORF_IDs.append(ORF_ID)
+        ORF_seq.append(aa)
+        ORF_coord.append(full_ORF_nuccord)
+        ORF_nucseq.append(ORF)
 
     return ORF_IDs, ORF_seq, ORF_nucseq, ORF_coord
 
