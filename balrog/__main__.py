@@ -41,51 +41,60 @@ score_threshold = 0.47256101519707244
 weight_ATG = 0.84249804151264
 weight_GTG = 0.7083689705744909
 weight_TTG = 0.7512400826652517
-unidirectional_penalty_per_base = 3.895921717182765 # 3' 5' overlap
-convergent_penalty_per_base = 4.603432608883688 # 3' 3' overlap
-divergent_penalty_per_base = 3.3830814940689975 # 5' 5' overlap
+unidirectional_penalty_per_base = 3.895921717182765  # 3' 5' overlap
+convergent_penalty_per_base = 4.603432608883688  # 3' 3' overlap
+divergent_penalty_per_base = 3.3830814940689975  # 5' 5' overlap
 k_seengene = 10
 multimer_threshold = 2
 
-#find genes
+nuc_encode = {"A": 0,
+              "T": 1,
+              "G": 2,
+              "C": 3,
+              "N": 0,
+              "M": 0,
+              "R": 0,
+              "Y": 0,
+              "W": 0,
+              "K": 0}
+
+start_enc = {"ATG": 0,
+             "GTG": 1,
+             "TTG": 2}
+
+aa_table = {"L": 1,
+            "V": 2,
+            "I": 3,
+            "M": 4,
+            "C": 5,
+            "A": 6,
+            "G": 7,
+            "S": 8,
+            "T": 9,
+            "P": 10,
+            "F": 11,
+             "Y": 12,
+            "W": 13,
+            "E": 14,
+            "D": 15,
+            "N": 16,
+            "Q": 17,
+            "K": 18,
+            "R": 19,
+            "H": 20,
+            "*": 0,
+            "X": 0}
+
+
+@profile
+# find genes
 def tokenize_aa_seq(aa_seq):
     """ Convert amino acid letters to integers."""
-    table = {"L": 1,
-             "V": 2,
-             "I": 3,
-             "M": 4,
-             "C": 5,
-             "A": 6,
-             "G": 7,
-             "S": 8,
-             "T": 9,
-             "P": 10,
-             "F": 11,
-             "Y": 12,
-             "W": 13,
-             "E": 14,
-             "D": 15,
-             "N": 16,
-             "Q": 17,
-             "K": 18,
-             "R": 19,
-             "H": 20,
-             "*": 0,
-             "X": 0}
-    tokenized = torch.tensor([table[aa] for aa in aa_seq])
+    tokenized = torch.tensor([aa_table[aa] for aa in aa_seq])
     return tokenized
 
 
-def get_start_codon(seq, orfcoords, strand):
-    if strand == 1:
-        # forward strand
-        startcoord = orfcoords[0]
-        return seq[startcoord - 3:startcoord]
-    else:
-        # reverse strand
-        startcoord = orfcoords[1]
-        return seq[startcoord:startcoord + 3].reverse_complement()
-
+@profile
 def get_ORF_info(full_ORF_dict):
     ORF_IDs = []
     ORF_seq = []
@@ -114,6 +123,8 @@ def get_ORF_info(full_ORF_dict):
 
     return ORF_IDs, ORF_seq, ORF_nucseq, ORF_coord
 
+
+@profile
 def predict(model, X):
     model.eval()
     with torch.no_grad():
@@ -129,6 +140,7 @@ def predict(model, X):
     return probs
 
 
+@profile
 def predict_tis(model_tis, X):
     model_tis.eval()
     with torch.no_grad():
@@ -140,46 +152,7 @@ def predict_tis(model_tis, X):
     return probs
 
 
-nuc_encode = {"A": 0,
-              "T": 1,
-              "G": 2,
-              "C": 3,
-              "N": 0,
-              "M": 0,
-              "R": 0,
-              "Y": 0,
-              "W": 0,
-              "K": 0}
-
-start_enc = {"ATG": 0,
-             "GTG": 1,
-             "TTG": 2}
-
-
-def tensor_to_seq(tensor):
-    table = {0: "X",
-             1: "L",
-             2: "V",
-             3: "I",
-             4: "M",
-             5: "C",
-             6: "A",
-             7: "G",
-             8: "S",
-             9: "T",
-             10: "P",
-             11: "F",
-             12: "Y",
-             13: "W",
-             14: "E",
-             15: "D",
-             16: "N",
-             17: "Q",
-             18: "K",
-             19: "R",
-             20: "H"}
-    return "".join([table[x] for x in tensor])
-
+@profile
 def kmerize(seq, k):
     kmerset = set()
     for i in range(len(seq) - k + 1):
@@ -188,6 +161,7 @@ def kmerize(seq, k):
     return kmerset
 
 
+@profile
 def score_genes(full_ORF_dict, minimum_ORF_score, num_threads):
     # set up load gene and TIS models
     """ extract and load balrog model """
@@ -212,13 +186,6 @@ def score_genes(full_ORF_dict, minimum_ORF_score, num_threads):
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)
 
-    """Load k-mer filters"""
-    genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
-
-    # load kmer filter
-    with open(genexa_kmer_path, "rb") as f:
-        aa_kmer_set = pickle.load(f)
-
     # get sequences and coordinates of ORFs
     if verbose:
         print("Finding and translating open reading frames...")
@@ -230,8 +197,14 @@ def score_genes(full_ORF_dict, minimum_ORF_score, num_threads):
         print("Encoding amino acids...")
     ORF_seq_enc = [tokenize_aa_seq(x) for x in ORF_seq_list]
 
+    """Load k-mer filters"""
+    genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
+
     # seengene check
     if protein_kmer_filter:
+        # load kmer filter
+        with open(genexa_kmer_path, "rb") as f:
+            aa_kmer_set = pickle.load(f)
         if verbose:
             print("Applying protein kmer filter...")
         seengene = []
@@ -241,6 +214,8 @@ def score_genes(full_ORF_dict, minimum_ORF_score, num_threads):
             seen = np.sum(s) >= multimer_threshold
 
             seengene.append(seen)
+        # clear set to free memory
+        aa_kmer_set.clear()
 
     # score
     if verbose:
@@ -395,12 +370,13 @@ def score_genes(full_ORF_dict, minimum_ORF_score, num_threads):
 
     # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
     ORF_score_dict = {}
+    new_full_ORF_dict = {}
     for i, score in enumerate(ORF_score_flat):
         # if score greater than minimum, add to the ORF_dict
         if score >= minimum_ORF_score:
             ORF_score_dict[ORF_ID_list[i]] = score
-        # else, remove the ORF from the full ORF list
-        else:
-            del full_ORF_dict[ORF_ID_list[i]]
+            new_full_ORF_dict[ORF_ID_list[i]] = full_ORF_dict[ORF_ID_list[i]]
+    # when finished, clear full_ORF_dict
+    full_ORF_dict.clear()
 
-    return full_ORF_dict, ORF_score_dict
+    return new_full_ORF_dict, ORF_score_dict

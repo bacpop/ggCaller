@@ -1,6 +1,7 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
 
+@profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
@@ -60,6 +61,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
     return high_scoring_ORFs
 
 
+@profile
 def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_overlap_dict):
     colour, ORF_ID_list = colour_ORF_tuple
 
@@ -80,11 +82,11 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
         # check if ORF is present in ORF_score_dict, if not, score too low so do not add
         if ORF in ORF_score_dict:
             v = g.add_vertex()
-            # vertex_ID[v] = ORF
+            #vertex_ID[v] = ORF
             ORF_index[ORF] = g.vertex_index[v]
 
     # add vertex sequences to graph
-    # g.vertex_properties["ID"] = vertex_ID
+    #g.vertex_properties["ID"] = vertex_ID
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     if ORF_overlap_dict[colour]:
@@ -106,9 +108,9 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
     # get label components of tc
     components = gt.label_components(tc, directed=False)[0].a
 
-    # component_ids = set(component_assignments.a)
+    #component_ids = set(component_assignments.a)
 
-    # tc.vertex_properties["component"] = component_assignments
+    #tc.vertex_properties["component"] = component_assignments
 
     # create vertex property map to store node IDs and scores
     vertex_ID = tc.new_vertex_property("int")
