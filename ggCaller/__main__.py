@@ -157,7 +157,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    ORF_overlap_dict, ORF_colour_ID_map, full_ORF_dict, nb_colours = called_ORF_tuple
+    ORF_overlap_dict, ORF_colour_ID_map, full_ORF_dict, unitig_map, nb_colours = called_ORF_tuple
 
     # create list for high scoring ORFs to return
     true_genes = {}

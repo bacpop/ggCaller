@@ -78,9 +78,8 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                     // Get nodes traversed by genes. Order by length of the node vector; ORF1 is the longer of the two vectors. ORF_nodes can be reference, ORF2_nodes must copy as may be changed by reversal
                     const auto& ORF1_nodes = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF1_ID).second : ORF_ID_map.at(temp_ORF2_ID).second);
                     auto ORF2_nodes = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF2_ID).second : ORF_ID_map.at(temp_ORF1_ID).second);
-                    size_t& ORF1_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF1_ID : temp_ORF2_ID);
-                    size_t& ORF2_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF2_ID : temp_ORF1_ID);
-
+                    const size_t& ORF1_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF1_ID : temp_ORF2_ID);
+                    const size_t& ORF2_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF2_ID : temp_ORF1_ID);
 
                     const auto& ORF1 = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF1_ID).first : ORF_ID_map.at(temp_ORF2_ID).first);
                     const auto& ORF2 = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF2_ID).first : ORF_ID_map.at(temp_ORF1_ID).first);

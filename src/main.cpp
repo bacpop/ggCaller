@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/home/shorsfield/jobs/ggCaller/all_test_capsular_loci_calls.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_profiling_4threads.fasta";
     //omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
@@ -72,43 +72,43 @@ int main(int argc, char *argv[]) {
     }
 
     // read in compact coloured DBG
-    cout << "Building coloured compacted DBG..." << endl;
+//    cout << "Building coloured compacted DBG..." << endl;
+//
+//    const std::string infile1 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.txt";
+//    const std::string infile2 = "NA";
+//
+//    const int kmer = 31;
+//
+//    if (infile2 != "NA") {
+//        is_ref = 0;
+//    }
+//
+//    ColoredCDBG<> ccdbg;
+//
+//
+//    if (write_graph) {
+//        // build and write graph
+//        size_t lastindex = infile1.find_last_of(".");
+//        std::string outgraph = infile1.substr(0, lastindex);
+//        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, true, outgraph);
+//    } else {
+//        // build graph only
+//        std::string outgraph = "NA";
+//        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, false, outgraph);
+//    }
 
-    const std::string infile1 = "/home/shorsfield/software/ggCaller/data/all_test_capsular_loci_list.txt";
-    const std::string infile2 = "NA";
 
-    const int kmer = 31;
+    cout << "Reading coloured compacted DBG..." << endl;
 
-    if (infile2 != "NA") {
-        is_ref = 0;
-    }
-
-    ColoredCDBG<> ccdbg;
-
-
-    if (write_graph) {
-        // build and write graph
-        size_t lastindex = infile1.find_last_of(".");
-        std::string outgraph = infile1.substr(0, lastindex);
-        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, true, outgraph);
-    } else {
-        // build graph only
-        std::string outgraph = "NA";
-        ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, false, outgraph);
-    }
-
-
-//    cout << "Reading coloured compacted DBG..." << endl;
-
-//    const std::string graphfile = "/home/shorsfield/jobs/ggCaller/clique_556_list.gfa";
-//    const std::string coloursfile = "/home/shorsfield/jobs/ggCaller/clique_556_list.bfg_colors";
+    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.gfa";
+    const std::string coloursfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.bfg_colors";
 
     // read in graph
-//    ColoredCDBG<> ccdbg;
-//    ccdbg.read(graphfile, coloursfile, num_threads);
+    ColoredCDBG<> ccdbg;
+    ccdbg.read(graphfile, coloursfile, num_threads);
 
     //set local variables
-//    const int kmer = ccdbg.getK();
+    const int kmer = ccdbg.getK();
     const int overlap = kmer - 1;
 
     // get the number of colours, generate empty colour vector

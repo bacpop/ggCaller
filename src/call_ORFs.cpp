@@ -506,7 +506,6 @@ std::pair<ORFNodeMap, ColourNodeStrandMap> call_ORFs(const PathPair& path_pair,
                     // check if item in ORF_node_maps already. If not, add colours array. If yes, update the colours array.
                     for (const auto& ORF : ORF_map)
                     {
-                        //ORF_node_paths_private[ORF.first] = ORF.second;
                         // check if ORF is already in ORF_node_paths_private
                         if (ORF_node_paths_private.find(ORF.first) == ORF_node_paths_private.end())
                         {
@@ -526,13 +525,10 @@ std::pair<ORFNodeMap, ColourNodeStrandMap> call_ORFs(const PathPair& path_pair,
         #pragma omp critical
         {
             // Update ORF_node_paths
-            //ORF_node_paths.insert(ORF_node_paths_private.begin(), ORF_node_paths_private.end());
 
             // go through all private ORFs, update colours as before in ORF_node_paths
             for (const auto& ORF : ORF_node_paths_private)
             {
-                //ORF_node_paths_private[ORF.first] = ORF.second;
-
                 if (ORF_node_paths.find(ORF.first) == ORF_node_paths.end())
                 {
                     ORF_node_paths[ORF.first] = ORF.second;
