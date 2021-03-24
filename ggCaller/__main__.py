@@ -157,7 +157,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    ORF_overlap_dict, ORF_colour_ID_map, full_ORF_dict, unitig_map, nb_colours = called_ORF_tuple
+    ORF_overlap_dict, ORF_colour_ID_map, full_ORF_dict, unitig_map, nb_colours, overlap = called_ORF_tuple
 
     # create list for high scoring ORFs to return
     true_genes = {}
@@ -177,7 +177,7 @@ def main():
                     true_genes[gene][colour] = "1"
     else:
         # generate gene scores using Balrog
-        full_ORF_dict, ORF_score_dict = score_genes(full_ORF_dict, minimum_ORF_score, num_threads)
+        full_ORF_dict, ORF_score_dict = score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threads)
 
         print("Generating highest scoring gene paths...")
 
@@ -190,8 +190,8 @@ def main():
 
         # multithread per colour in ORF_dict
         # Turn gt threading on
-        if gt.openmp_enabled():
-            gt.openmp_set_num_threads(1)
+        # if gt.openmp_enabled():
+        #   gt.openmp_set_num_threads(1)
 
         with Pool(processes=num_threads) as pool:
             for colour, high_scoring_ORFs in pool.map(

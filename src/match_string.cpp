@@ -125,17 +125,46 @@ void call_strings(ORFNodeMap& ORF_node_paths,
             }
         }
     }
+}
 
-//    for (const auto& artificial_gene : to_update)
-//    {
-//        // compute number of colours
-//        int sum_colours = accumulate(artificial_gene.second.begin(), artificial_gene.second.end(), 0);
-//        if (sum_colours == 0)
-//        {
-//            query_list.erase(artificial_gene.first);
-//            ORF_node_paths.erase(artificial_gene.first);
-//        } else {
-//            query_list[artificial_gene.first] = artificial_gene.second;
-//        }
-//    }
+//new workflow
+// generate list of fmindexes
+std::vector<fm_index_coll> generate_fmindex(const std::vector<std::string>& assembly_list,
+                                            const bool& write_idx)
+{
+    // compute number of colours
+    const size_t num_colours = assembly_list.size();
+
+    // Read all sequences into memory as Fasta objects (threaded)
+    std::vector<fm_index_coll> seq_idx(num_colours);
+
+    // multithread with openMP
+    #pragma omp parallel for
+    for (size_t i = 0; i < num_colours; i++)
+    {
+        seq_idx[i] = std::move(index_fasta(assembly_list[i], write_idx));
+    }
+
+    return seq_idx;
+}
+
+// determine true colours of sequence
+void check_colours(std::vector<bool>& path_colours,
+                   const std::string& path_sequence,
+                   const std::vector<fm_index_coll>& seq_idx,
+                   const size_t& nb_colours)
+{
+    // convert string to dn5 vector, get colours
+    seqan3::dna5_vector query = path_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+
+    //iterate over colours, if colour present then add to hits
+    for (size_t i = 0; i < nb_colours; i++)
+    {
+        if (path_colours[i]) {
+            int hits = seq_search(query, seq_idx[i]);
+            if (!hits) {
+                path_colours[i] = 0;
+            }
+        }
+    }
 }

@@ -1,8 +1,8 @@
 #include "ggCaller_classes.h"
 
+
 ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
-                                 const ColourNodeStrandMap& pos_strand_map,
-                                 const std::tuple<ORFColoursMap, ORFIDMap, std::vector<size_t>>& ORF_colours_tuple,
+                                 const std::tuple<ORFColoursMap, ORFIDMap, std::vector<size_t>, ColourNodeStrandMap>& ORF_colours_tuple,
                                  const int DBG_overlap,
                                  const size_t max_overlap)
 {
@@ -13,6 +13,7 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
     const auto& ORF_colours_map = std::get<0>(ORF_colours_tuple);
     const auto& ORF_ID_map = std::get<1>(ORF_colours_tuple);
     const auto& ORF_colours_vector = std::get<2>(ORF_colours_tuple);
+    const auto& pos_strand_map = std::get<3>(ORF_colours_tuple);
 
     // iterate over each colour combination in ORF_colours_map
     #pragma omp parallel
@@ -40,7 +41,7 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                 temp_ORF_ID_map[temp_ORF_ID] = ORF_ID;
 
                 // iterate over nodes traversed by ORF
-                const auto& ORF_nodes = std::get<0>(ORF_ID_map.at(ORF_ID).second);
+                const auto& ORF_nodes = std::get<0>(ORF_ID_map.at(ORF_ID));
                 for (const auto& node_traversed : ORF_nodes)
                 {
                     // add to triplet list, with temp_ORF_ID (row), node id (column) and set value as 1 (true)
@@ -70,20 +71,31 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         continue;
                     }
 
-
                     // Assign temporary values for ORF1 and ORF2, not sorted by traversed node vector.
                     auto temp_ORF1_ID = temp_ORF_ID_map.at(init.col());
                     auto temp_ORF2_ID = temp_ORF_ID_map.at(init.row());
 
-                    // Get nodes traversed by genes. Order by length of the node vector; ORF1 is the longer of the two vectors. ORF_nodes can be reference, ORF2_nodes must copy as may be changed by reversal
-                    const auto& ORF1_nodes = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF1_ID).second : ORF_ID_map.at(temp_ORF2_ID).second);
-                    auto ORF2_nodes = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF2_ID).second : ORF_ID_map.at(temp_ORF1_ID).second);
-                    const size_t& ORF1_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF1_ID : temp_ORF2_ID);
-                    const size_t& ORF2_ID = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? temp_ORF2_ID : temp_ORF1_ID);
+                    // Get nodes traversed by genes. Order by length of the node vector; ORF1 is the longer of the two vectors. Need to copy ORF2, as may be reversed
+                    // check if ORF1 traverse more nodes than ORF2
+                    const bool temp_ORF1_longer = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID)).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID)).size()) ? true : false);
 
-                    const auto& ORF1 = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF1_ID).first : ORF_ID_map.at(temp_ORF2_ID).first);
-                    const auto& ORF2 = ((std::get<0>(ORF_ID_map.at(temp_ORF1_ID).second).size() >= std::get<0>(ORF_ID_map.at(temp_ORF2_ID).second).size()) ? ORF_ID_map.at(temp_ORF2_ID).first : ORF_ID_map.at(temp_ORF1_ID).first);
+                    // get respective ORF IDs
+                    const size_t& ORF1_ID = (temp_ORF1_longer ? temp_ORF1_ID : temp_ORF2_ID);
+                    const size_t& ORF2_ID = (temp_ORF1_longer ? temp_ORF2_ID : temp_ORF1_ID);
 
+                    // get reference to ORF1_node information
+                    const auto& ORF1_nodes = ORF_ID_map.at(ORF1_ID);
+
+                    // as copying ORF2, only unpack what is needed from tuple, and then make new tuple
+                    auto ORF2_node_ids = std::get<0>(ORF_ID_map.at(ORF2_ID));
+                    auto ORF2_node_coords = std::get<1>(ORF_ID_map.at(ORF2_ID));
+                    auto ORF2_node_strands = std::get<2>(ORF_ID_map.at(ORF2_ID));
+
+                    auto ORF2_nodes = std::make_tuple(ORF2_node_ids, ORF2_node_coords, ORF2_node_strands);
+
+                    // get ORF lengths
+                    const auto& ORF1_len = std::get<3>(ORF_ID_map.at(ORF1_ID));
+                    const auto& ORF2_len = std::get<3>(ORF_ID_map.at(ORF2_ID));
 
                     // initialise overlap type
                     // n = no overlap
@@ -167,15 +179,15 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         ORF2_end_node = std::get<0>(ORF2_nodes).back();
                     }
 
-                    // check if 3p matches between the two ORFs and node is in the same strand. If so, set as incompatible, and the overlap as the shorter of the two ORFS
-                    if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand)
+                    // check if 3p matches between the two ORFs and node is in the same strand without reversal. If so, set as incompatible, and the overlap as the shorter of the two ORFS
+                    if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand && !reversed)
                     {
                         overlap_type = 'i';
                         overlap_complete = true;
-                        abs_overlap = (ORF1.size() >= ORF2.size() ? ORF2.size() : ORF1.size()) - 16;
+                        abs_overlap = (ORF1_len >= ORF2_len ? ORF2_len : ORF2_len);
 
                         // set the first ORF to be the longest, regardless of strand
-                        first_ORF = ((ORF1.size() >= ORF2.size()) ? 1 : 2);
+                        first_ORF = ((ORF1_len >= ORF2_len) ? 1 : 2);
                     }
 
                     // initialise vectors to capture overlapping node indices for ORFs

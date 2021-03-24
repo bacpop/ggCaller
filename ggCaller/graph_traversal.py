@@ -184,7 +184,6 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
 
     return colour, high_scoring_ORFs_all
 
-
 def update_colour(colour1, colour2):
     updated_colour = ""
     for i in range(0, len(colour1)):

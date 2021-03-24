@@ -46,6 +46,29 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
     std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>> path_pair (head_kmer_list, colour_arr);
     path_list.push_back(std::move(path_pair));
 
+    // testing
+//    std::set<std::pair<std::string, bool>> node_set;
+//    std::vector<std::pair<std::string, bool>> node_vector;
+//
+//    //testing
+//    for (const auto& node : head_kmer_list)
+//    {
+//        std::string node_str = graph_map.at(node.first).head_kmer;
+//        std::pair<std::string, bool> node_pair(node_str, node.second);
+//        node_set.insert(node_pair);
+//        node_vector.push_back(node_pair);
+//    }
+
+//    int test = 0;
+//    //std::pair<std::string, bool> head("GCTTGATATCCATTTCATCCCGCCCGGTCAT", true);
+//    std::pair<std::string, bool> query1("GCTTGATATCCATTTCATCCCGCCCGGTCAT", false);
+//    std::pair<std::string, bool> query2("TATCAAGTGCTTCCTTTGTTTTTAGAATGCG", false);
+//    std::pair<std::string, bool> query3("TCATCTTATGCCTTTTTTATCTTCATTTGGG", false);
+//    if (node_set.find(query1) != node_set.end() && node_set.find(query2) != node_set.end() && node_set.find(query3) != node_set.end() && colour_arr[45])
+//    {
+//        test = 1;
+//    }
+
     // if path not complete, generate unitig object using head kmer
     if (codon_arr != 0)
     {
