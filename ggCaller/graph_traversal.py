@@ -1,7 +1,8 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
 
-@profile
+
+# @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
@@ -61,7 +62,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
     return high_scoring_ORFs
 
 
-@profile
+#@profile
 def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_overlap_dict):
     colour, ORF_ID_list = colour_ORF_tuple
 

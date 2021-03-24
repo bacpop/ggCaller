@@ -87,7 +87,7 @@ aa_table = {"L": 1,
 
 
 # generate ORF sequences from coordinates
-@profile
+# @profile
 def generate_seq(unitig_map, nodelist, node_coords, node_strand, overlap):
     sequence = ""
     for i in range(0, len(nodelist)):
@@ -111,50 +111,50 @@ def generate_seq(unitig_map, nodelist, node_coords, node_strand, overlap):
     return sequence
 
 
-@profile
+#@profile
 def tokenize_aa_seq(aa_seq):
     """ Convert amino acid letters to integers."""
     tokenized = torch.tensor([aa_table[aa] for aa in aa_seq])
     return tokenized
 
 
-@profile
+#@profile
 def get_ORF_info(full_ORF_dict, unitig_map, overlap):
     ORF_IDs = []
     ORF_seq_list = []
-    ORF_TIS_seq = []
+    TIS_seqs = []
     # iterate over list of ORFs
     for ORF_ID, ORFNodeVector in full_ORF_dict.items():
         # need to determine ORF sequences from paths
         ORF_nodelist = ORFNodeVector[0]
         ORF_node_coords = ORFNodeVector[1]
         ORF_node_strand = ORFNodeVector[2]
-        TIS_nodelist = ORFNodeVector[0]
-        TIS_node_coords = ORFNodeVector[1]
-        TIS_node_strand = ORFNodeVector[2]
+        TIS_nodelist = ORFNodeVector[4]
+        TIS_node_coords = ORFNodeVector[5]
+        TIS_node_strand = ORFNodeVector[6]
 
         # generate ORF_seq, as well as upstream and downstream TIS seq
         ORF_seq = generate_seq(unitig_map, ORF_nodelist, ORF_node_coords, ORF_node_strand, overlap)
         upstream_TIS_seq = generate_seq(unitig_map, TIS_nodelist, TIS_node_coords, TIS_node_strand, overlap)
-        downstream_TIS_seq = ORF_seq[0:16]
+        downstream_TIS_seq = ORF_seq[0:19]
 
         seq = Seq(ORF_seq)
         length = len(ORF_seq)
 
-        # translate once per frame, then slice
-        aa = str(seq.translate(table=translation_table, to_stop=False))
+        # translate once per frame, then slice. Note, do not include start or stop codons
+        aa = str(seq[3:-3].translate(table=translation_table, to_stop=False))
 
         ORF_IDs.append(ORF_ID)
         ORF_seq_list.append(aa)
-        ORF_TIS_seq.append((upstream_TIS_seq, downstream_TIS_seq))
+        TIS_seqs.append((upstream_TIS_seq, downstream_TIS_seq))
 
     # convert amino acids into integers
     ORF_seq_enc = [tokenize_aa_seq(x) for x in ORF_seq_list]
 
-    return ORF_IDs, ORF_seq_enc, ORF_TIS_seq
+    return ORF_IDs, ORF_seq_enc, TIS_seqs
 
 
-@profile
+#@profile
 def predict(model, X):
     model.eval()
     with torch.no_grad():
@@ -170,7 +170,7 @@ def predict(model, X):
     return probs
 
 
-@profile
+#@profile
 def predict_tis(model_tis, X):
     model_tis.eval()
     with torch.no_grad():
@@ -182,7 +182,7 @@ def predict_tis(model_tis, X):
     return probs
 
 
-@profile
+#@profile
 def kmerize(seq, k):
     kmerset = set()
     for i in range(len(seq) - k + 1):
@@ -191,7 +191,7 @@ def kmerize(seq, k):
     return kmerset
 
 
-@profile
+#@profile
 def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threads):
     # set up load gene and TIS models
     """ extract and load balrog model """
@@ -220,7 +220,7 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
     if verbose:
         print("Finding and translating open reading frames...")
 
-    ORF_ID_list, ORF_seq_enc, ORF_TIS_seq = get_ORF_info(full_ORF_dict, unitig_map, overlap)
+    ORF_ID_list, ORF_seq_enc, TIS_seqs = get_ORF_info(full_ORF_dict, unitig_map, overlap)
 
     """Load k-mer filters"""
     genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
@@ -287,38 +287,25 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
         print("Scoring translation initiation sites...")
 
     # extract nucleotide sequence surrounding potential start codons
+    ORF_TIS_seq_flat = []
+    ORF_TIS_seq_idx = []
+    ORF_TIS_prob = [None] * len(TIS_seqs)
     ORF_start_codon = [None] * len(ORF_ID_list)
 
-    for i, TIS in enumerate(ORF_TIS_seq):
-        n = 0  # count to index into flat structure # TODO make sure this works as expected
-
+    for i, TIS in enumerate(TIS_seqs):
+        # unpack tuple. Note, downsteam includes start codon, which needs to be removed
         upstream, downstream = TIS
         if len(upstream) == 16:
-            n += 1
-            TIS_seq = torch.tensor([nuc_encode[c] for c in (upstream + downstream)[::-1]],
+            TIS_seq = torch.tensor([nuc_encode[c] for c in (upstream + downstream[3:])[::-1]],
                                    dtype=int)  # model scores 3' to 5' direction
+            ORF_TIS_seq_flat.append(TIS_seq)
+            ORF_TIS_seq_idx.append(i)
         else:
-            TIS_seq = -1  # deal with gene fragments later
+            ORF_TIS_prob[i] = 0.5
 
         # encode start codon
         start_codon = start_enc[downstream[0:3]]
-
-        ORF_TIS_seq[i] = TIS_seq
         ORF_start_codon[i] = start_codon
-
-    # flatten TIS for batching
-    ORF_TIS_prob = [None] * len(ORF_TIS_seq)
-
-    ORF_TIS_seq_flat = []
-    ORF_TIS_seq_idx = []
-    for i, contig in enumerate(ORF_TIS_seq):
-        if type(contig) == int:  # fragment
-            ORF_TIS_prob[i] = 0.5  # HOW BEST TO DEAL WITH FRAGMENT TIS?
-        elif len(contig) != 32:
-            ORF_TIS_prob[i] = 0.5
-        else:
-            ORF_TIS_seq_flat.append(contig)
-            ORF_TIS_seq_idx.append(i)
 
     # batch score TIS
     TIS_prob_list = []
@@ -343,7 +330,8 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
                 ORF_score_flat.append(None)
                 continue
             seengene_idx = 0
-            length = len(ORF_seq_enc[i]) * 3
+            # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
+            length = (len(ORF_seq_enc[i]) * 3) + 6
             TIS_prob = ORF_TIS_prob[i]
             start_codon = ORF_start_codon[i]
             ATG = start_codon == 0
@@ -369,6 +357,7 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
                 ORF_score_flat.append(None)
                 continue
 
+            # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
             length = len(ORF_seq_enc[i]) * 3
             TIS_prob = ORF_TIS_prob[i]
             start_codon = ORF_start_codon[i]
