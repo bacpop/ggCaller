@@ -166,8 +166,8 @@ def main():
     if no_filter == True:
         for colour, gene_set in ORF_colour_ID_map.items():
             for ORF_ID in gene_set.items():
-                # parse out gene string from full_ORF_dict
-                gene = str(full_ORF_dict[ORF_ID][0])[16:]
+                ORFNodeVector = full_ORF_dict[ORF_ID]
+                gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
                 if gene not in true_genes:
                     # create string of zeros, make nth colour 1
                     true_genes[gene] = ["0"] * nb_colours
@@ -200,8 +200,9 @@ def main():
                     ORF_colour_ID_map.items()):
                 # remove TIS, and merge any matching genes which had differing TIS but were called together
                 for ORF_ID in high_scoring_ORFs:
-                    # parse out gene string from full_ORF_dict
-                    gene = str(full_ORF_dict[ORF_ID][0])[16:]
+                    # parse out gene string from full_ORF_dict, generate sequence
+                    ORFNodeVector = full_ORF_dict[ORF_ID]
+                    gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
                     if gene not in true_genes:
                         # create string of zeros, make nth colour 1
                         true_genes[gene] = ["0"] * nb_colours
