@@ -88,17 +88,19 @@ aa_table = {"L": 1,
 
 # generate ORF sequences from coordinates
 # @profile
-def generate_seq(unitig_map, nodelist, node_coords, node_strand, overlap):
+def generate_seq(unitig_map, nodelist, node_coords, overlap):
     sequence = ""
     for i in range(0, len(nodelist)):
         id = nodelist[i]
         coords = node_coords[i]
-        strand = node_strand[i]
+
+        # calculate strand based on value of node (if negative, strand is false)
+        strand = True if id >= 0 else False
 
         if strand:
-            unitig_seq = unitig_map[id].seq
+            unitig_seq = unitig_map[abs(id)].seq
         else:
-            unitig_seq = str(Seq(unitig_map[id].seq).reverse_complement())
+            unitig_seq = str(Seq(unitig_map[abs(id)].seq).reverse_complement())
 
         if len(sequence) == 0:
             substring = unitig_seq[coords[0]:(coords[1] + 1)]
@@ -128,18 +130,16 @@ def get_ORF_info(full_ORF_dict, unitig_map, overlap):
         # need to determine ORF sequences from paths
         ORF_nodelist = ORFNodeVector[0]
         ORF_node_coords = ORFNodeVector[1]
-        ORF_node_strand = ORFNodeVector[2]
-        TIS_nodelist = ORFNodeVector[4]
-        TIS_node_coords = ORFNodeVector[5]
-        TIS_node_strand = ORFNodeVector[6]
+        TIS_nodelist = ORFNodeVector[3]
+        TIS_node_coords = ORFNodeVector[4]
 
         # generate ORF_seq, as well as upstream and downstream TIS seq
-        ORF_seq = generate_seq(unitig_map, ORF_nodelist, ORF_node_coords, ORF_node_strand, overlap)
-        upstream_TIS_seq = generate_seq(unitig_map, TIS_nodelist, TIS_node_coords, TIS_node_strand, overlap)
+        ORF_seq = generate_seq(unitig_map, ORF_nodelist, ORF_node_coords, overlap)
+        upstream_TIS_seq = generate_seq(unitig_map, TIS_nodelist, TIS_node_coords, overlap)
         downstream_TIS_seq = ORF_seq[0:19]
 
+        # generate Seq class for translation
         seq = Seq(ORF_seq)
-        length = len(ORF_seq)
 
         # translate once per frame, then slice. Note, do not include start or stop codons
         aa = str(seq[3:-3].translate(table=translation_table, to_stop=False))

@@ -300,16 +300,16 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    robin_hood::unordered_map<size_t, unitigDict> graph_map;
+    unitigMap graph_map;
     std::vector<size_t> stop_list_for;
     std::vector<size_t> stop_list_rev;
     robin_hood::unordered_map<std::string, size_t> head_kmer_map;
 
     // run unitig indexing in parallel
-    size_t unitig_id = 0;
+    size_t unitig_id = 1;
     #pragma omp parallel
     {
-        robin_hood::unordered_map<size_t, unitigDict> graph_map_private;
+        unitigMap graph_map_private;
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
@@ -335,18 +335,19 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
         }
     }
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
-    size_t graph_map_size = graph_map.size();
+    size_t graph_map_size = graph_map.size() + 1;
     #pragma omp parallel
     {
         std::vector<size_t> stop_list_for_private;
         std::vector<size_t> stop_list_rev_private;
         #pragma omp for nowait
-        for (size_t i = 0; i < graph_map_size; i++)
+        for (size_t i = 1; i < graph_map_size; i++)
         {
             // get a copy of the unitig_Dict object
             mtx1.lock();
             auto unitig_map = graph_map.at(i);
             mtx1.unlock();
+
 
             // initialise neighbours vectors
             unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
@@ -380,14 +381,16 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                 // if colours are viable, add successor information to current unitig
                 if (sum_colours != 0)
                 {
-                    //std::pair<bool, std::unordered_map<int, uint8_t>> stop_index (succ.second, adj_unitig_map.part_codon.at(succ.second));
-                    std::tuple<size_t, bool, std::unordered_map<int, uint8_t>> stop_index (succ_id, succ.second, adj_unitig_map.part_codon.at(succ.second));
-                    unitig_map.neighbours[true].push_back(std::move(stop_index));
+                    //generate integer value of successor ID, if negative strand ID will be negative etc.
+                    int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
+                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (succ_id_int, adj_unitig_map.part_codon.at(succ.second));
+                    unitig_map.neighbours[true].push_back(std::move(neighbour));
                 }
             }
 
             // clear succ_heads
             unitig_map.succ_heads.clear();
+            unitig_map.succ_heads.shrink_to_fit();
 
             // iterate over the connected nodes in predecessors
             for (const auto& pred : unitig_map.pred_heads)
@@ -417,13 +420,16 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                 // if colours are viable, add successor information to current unitig
                 if (sum_colours != 0)
                 {
-                    std::tuple<size_t, bool, std::unordered_map<int, uint8_t>> stop_index (pred_id, pred.second, adj_unitig_map.part_codon.at(pred.second));
-                    unitig_map.neighbours[false].push_back(std::move(stop_index));
+                    //generate integer value of successor ID, if negative strand ID will be negative etc.
+                    int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
+                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (pred_id_int, adj_unitig_map.part_codon.at(pred.second));
+                    unitig_map.neighbours[false].push_back(std::move(neighbour));
                 }
             }
 
             // clear pred_heads
             unitig_map.pred_heads.clear();
+            unitig_map.pred_heads.shrink_to_fit();
 
             // if there are no successors/predecessors or untig colours change, means that unitig is first/last in sequence. Therefore,
             // update full codon array to be 3 frame stop index to enable complete traversal

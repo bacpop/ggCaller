@@ -45,7 +45,9 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                 for (const auto& node_traversed : ORF_nodes)
                 {
                     // add to triplet list, with temp_ORF_ID (row), node id (column) and set value as 1 (true)
-                    tripletList.push_back(ET(temp_ORF_ID, node_traversed, 1));
+                    // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
+                    const size_t abs_node_id = abs(node_traversed) - 1;
+                    tripletList.push_back(ET(temp_ORF_ID, abs_node_id, 1));
                 }
                 temp_ORF_ID++;
             }
@@ -83,19 +85,25 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                     const size_t& ORF1_ID = (temp_ORF1_longer ? temp_ORF1_ID : temp_ORF2_ID);
                     const size_t& ORF2_ID = (temp_ORF1_longer ? temp_ORF2_ID : temp_ORF1_ID);
 
+//                    //testing
+//                    if (ORF1_ID == 6 && ORF2_ID == 156)
+//                    {
+//                        int test = 1;
+//                    }
+
                     // get reference to ORF1_node information
                     const auto& ORF1_nodes = ORF_ID_map.at(ORF1_ID);
 
                     // as copying ORF2, only unpack what is needed from tuple, and then make new tuple
                     auto ORF2_node_ids = std::get<0>(ORF_ID_map.at(ORF2_ID));
                     auto ORF2_node_coords = std::get<1>(ORF_ID_map.at(ORF2_ID));
-                    auto ORF2_node_strands = std::get<2>(ORF_ID_map.at(ORF2_ID));
+                    //auto ORF2_node_strands = std::get<2>(ORF_ID_map.at(ORF2_ID));
 
-                    auto ORF2_nodes = std::make_tuple(ORF2_node_ids, ORF2_node_coords, ORF2_node_strands);
+                    auto ORF2_nodes = std::make_tuple(ORF2_node_ids, ORF2_node_coords);
 
                     // get ORF lengths
-                    const auto& ORF1_len = std::get<3>(ORF_ID_map.at(ORF1_ID));
-                    const auto& ORF2_len = std::get<3>(ORF_ID_map.at(ORF2_ID));
+                    const auto& ORF1_len = std::get<2>(ORF_ID_map.at(ORF1_ID));
+                    const auto& ORF2_len = std::get<2>(ORF_ID_map.at(ORF2_ID));
 
                     // initialise overlap type
                     // n = no overlap
@@ -119,32 +127,37 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                     bool overlap_complete = false;
 
                     // get strand of 3p and 5p for reversal if necessary
-                    const bool& ORF1_5p_strand = std::get<2>(ORF1_nodes)[0];
-                    const bool& ORF1_3p_strand = std::get<2>(ORF1_nodes).back();
-                    const bool& ORF2_5p_strand = std::get<2>(ORF2_nodes)[0];
-                    const bool& ORF2_3p_strand = std::get<2>(ORF2_nodes).back();
+//                    const bool& ORF1_5p_strand = std::get<2>(ORF1_nodes)[0];
+//                    const bool& ORF1_3p_strand = std::get<2>(ORF1_nodes).back();
+//                    const bool& ORF2_5p_strand = std::get<2>(ORF2_nodes)[0];
+//                    const bool& ORF2_3p_strand = std::get<2>(ORF2_nodes).back();
+
+                    const bool& ORF1_5p_strand = (std::get<0>(ORF1_nodes)[0] >= 0) ? true : false;
+                    const bool& ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
+                    const bool& ORF2_5p_strand = (std::get<0>(ORF2_nodes)[0] >= 0) ? true : false;
+                    const bool& ORF2_3p_strand = (std::get<0>(ORF2_nodes).back() >= 0) ? true : false;
 
                     // get ORF1 and ORF2 5' and 3' ends in pair <node_head_kmer, position>. ORF1 can be references, ORF2 cannot as can change
-                    const std::pair<size_t, size_t> ORF1_5p(std::get<0>(ORF1_nodes)[0], std::get<0>(std::get<1>(ORF1_nodes)[0]));
-                    const std::pair<size_t, size_t> ORF1_3p(std::get<0>(ORF1_nodes).back(), std::get<1>(std::get<1>(ORF1_nodes).back()));
-                    std::pair<size_t, size_t> ORF2_5p(std::get<0>(ORF2_nodes)[0], std::get<0>(std::get<1>(ORF2_nodes)[0]));
-                    std::pair<size_t, size_t> ORF2_3p(std::get<0>(ORF2_nodes).back(), std::get<1>(std::get<1>(ORF2_nodes).back()));
+                    const std::pair<int, size_t> ORF1_5p(std::get<0>(ORF1_nodes)[0], std::get<0>(std::get<1>(ORF1_nodes)[0]));
+                    const std::pair<int, size_t> ORF1_3p(std::get<0>(ORF1_nodes).back(), std::get<1>(std::get<1>(ORF1_nodes).back()));
+                    std::pair<int, size_t> ORF2_5p(std::get<0>(ORF2_nodes)[0], std::get<0>(std::get<1>(ORF2_nodes)[0]));
+                    std::pair<int, size_t> ORF2_3p(std::get<0>(ORF2_nodes).back(), std::get<1>(std::get<1>(ORF2_nodes).back()));
 
                     // initialise values for start and end nodes. Again ORF1 can be references, ORF2 cannot as can change
-                    const size_t& ORF1_start_node = std::get<0>(ORF1_nodes)[0];
-                    const size_t& ORF1_end_node = std::get<0>(ORF1_nodes).back();
-                    size_t ORF2_start_node = std::get<0>(ORF2_nodes)[0];
-                    size_t ORF2_end_node = std::get<0>(ORF2_nodes).back();
+                    const int& ORF1_start_node = abs(std::get<0>(ORF1_nodes)[0]);
+                    const int& ORF1_end_node = std::get<0>(ORF1_nodes).back();
+                    int ORF2_start_node = std::get<0>(ORF2_nodes)[0];
+                    int ORF2_end_node = std::get<0>(ORF2_nodes).back();
 
                     // work out if node 1 is negative by checking first node in pos_strand_map. If it doesn't match, it is negatively stranded.
                     bool negative = false;
-                    if (ORF1_5p_strand != pos_strand_map.at(*colit).at(ORF1_start_node))
+                    if (ORF1_5p_strand != pos_strand_map.at(*colit).at(abs(ORF1_start_node)))
                     {
                         negative = true;
                     }
 
                     // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
-                    if ((ORF2_5p_strand != pos_strand_map.at(*colit).at(ORF2_start_node) && !negative) || (ORF2_5p_strand == pos_strand_map.at(*colit).at(ORF2_start_node) && negative))
+                    if ((ORF2_5p_strand != pos_strand_map.at(*colit).at(abs(ORF2_start_node)) && !negative) || (ORF2_5p_strand == pos_strand_map.at(*colit).at(abs(ORF2_start_node)) && negative))
                     {
                         reversed = true;
                     }
@@ -158,6 +171,12 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         std::reverse(std::get<0>(ORF2_nodes).begin(), std::get<0>(ORF2_nodes).end());
                         // Reverse ORF2 node coordinate vector
                         std::reverse(std::get<1>(ORF2_nodes).begin(), std::get<1>(ORF2_nodes).end());
+
+                        // reverse sign on each ID in ORF2_nodes
+                        for (auto & node_id : std::get<0>(ORF2_nodes))
+                        {
+                            node_id = node_id * -1;
+                        }
 
                         // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
                         for (auto & node_coord : std::get<1>(ORF2_nodes))
@@ -175,8 +194,12 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         // correct ORF2 5p and 3p positions, reversing the coordinates
                         ORF2_5p.second = std::get<1>(std::get<1>(ORF2_nodes).back());
                         ORF2_3p.second = std::get<0>(std::get<1>(ORF2_nodes)[0]);
+
+                        // correct node labels
                         ORF2_start_node = std::get<0>(ORF2_nodes)[0];
                         ORF2_end_node = std::get<0>(ORF2_nodes).back();
+                        ORF2_5p.first = ORF2_5p.first * -1;
+                        ORF2_3p.first = ORF2_3p.first * -1;
                     }
 
                     // check if 3p matches between the two ORFs and node is in the same strand without reversal. If so, set as incompatible, and the overlap as the shorter of the two ORFS
@@ -184,10 +207,10 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                     {
                         overlap_type = 'i';
                         overlap_complete = true;
-                        abs_overlap = (ORF1_len >= ORF2_len ? ORF2_len : ORF2_len);
+                        abs_overlap = (ORF1_len >= ORF2_len) ? ORF2_len : ORF1_len;
 
                         // set the first ORF to be the longest, regardless of strand
-                        first_ORF = ((ORF1_len >= ORF2_len) ? 1 : 2);
+                        first_ORF = (ORF1_len >= ORF2_len) ? 1 : 2;
                     }
 
                     // initialise vectors to capture overlapping node indices for ORFs
@@ -228,11 +251,11 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                                 for (const auto& end_index : end_index_list)
                                 {
                                     // check moving in forward direction
-                                    std::vector<size_t> ORF1_nodes_sliced;
+                                    std::vector<int> ORF1_nodes_sliced;
                                     if (start_index <= end_index)
                                     {
                                         // slice ORF1 node vector from first entry to last
-                                        ORF1_nodes_sliced = std::vector<size_t> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).begin() + end_index + 1);
+                                        ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).begin() + end_index + 1);
                                     }
                                     // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
                                     if (ORF1_nodes_sliced == std::get<0>(ORF2_nodes))
@@ -265,16 +288,16 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         for (const auto& start_index : start_index_list)
                         {
                             // check moving in forward direction
-                            std::vector<size_t> ORF1_nodes_sliced;
-                            std::vector<size_t> ORF2_nodes_sliced;
+                            std::vector<int> ORF1_nodes_sliced;
+                            std::vector<int> ORF2_nodes_sliced;
 
                             // slice ORF1 node vector from first entry to last
-                            ORF1_nodes_sliced = std::vector<size_t> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).end());
+                            ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).end());
                             // check if ORF1_slice is too large to slice ORF1 (meaning likely ORF2 is reversed
                             if (ORF1_nodes_sliced.size() <= std::get<0>(ORF2_nodes).size())
                             {
                                 // slice ORF1 node vector from first entry to the equivalent length of ORF2_nodes_sliced
-                                ORF2_nodes_sliced = std::vector<size_t>(std::get<0>(ORF2_nodes).begin(), std::get<0>(ORF2_nodes).begin() + ORF1_nodes_sliced.size());
+                                ORF2_nodes_sliced = std::vector<int>(std::get<0>(ORF2_nodes).begin(), std::get<0>(ORF2_nodes).begin() + ORF1_nodes_sliced.size());
                             }
 
                             // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
@@ -300,16 +323,16 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         for (const auto& end_index : end_index_list)
                         {
                             // check moving in forward direction
-                            std::vector<size_t> ORF1_nodes_sliced;
-                            std::vector<size_t> ORF2_nodes_sliced;
+                            std::vector<int> ORF1_nodes_sliced;
+                            std::vector<int> ORF2_nodes_sliced;
 
                             // slice ORF1 node vector from first entry to last
-                            ORF1_nodes_sliced = std::vector<size_t> (std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).begin() + end_index + 1);
+                            ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).begin() + end_index + 1);
                             // check that slice is small enough to correctly slice ORF2_nodes
                             if (ORF1_nodes_sliced.size() <= std::get<0>(ORF2_nodes).size())
                             {
                                 // slice ORF2 node vector from last entry - end_index to the equivalent length of ORF2_nodes_sliced
-                                ORF2_nodes_sliced = std::vector<size_t>(std::get<0>(ORF2_nodes).end() - end_index - 1, std::get<0>(ORF2_nodes).end());
+                                ORF2_nodes_sliced = std::vector<int>(std::get<0>(ORF2_nodes).end() - end_index - 1, std::get<0>(ORF2_nodes).end());
                             }
 
                             // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
@@ -337,8 +360,8 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                         if (abs_overlap == 0)
                         {
                             // initialise options for computing which type of overlap has occurred
-                            size_t overlap_start;
-                            size_t overlap_end;
+                            size_t overlap_start = 0;
+                            size_t overlap_end = 0;
 
                             for (size_t i = 0; i < ORF_1_overlap_node_index.size(); i++)
                             {
@@ -354,7 +377,7 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                                 const size_t& node_size = std::get<2>(std::get<1>(ORF2_nodes)[ORF2_overlap_node]);
 
                                 // get the first node involved in the overlap
-                                const size_t& overlap_node = std::get<0>(ORF1_nodes)[ORF1_overlap_node];
+                                const int overlap_node = std::get<0>(ORF1_nodes)[ORF1_overlap_node];
 
                                 // check there is an intersection
                                 if ((ORF1_start <= ORF2_end) && (ORF2_start <= ORF1_end))
@@ -445,8 +468,16 @@ ORFOverlapMap calculate_overlaps(const unitigMap& unitig_map,
                             // check if any overlap detected.
                             if (abs_overlap > 0)
                             {
+
                                 std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
                                 int overlap_ID = std::stoi(overlap_ID_str);
+
+                                //testing
+//                                std::vector<int> overlap_ID_check{1523,2513,1513,2523,1315,2325,2313,1323,1313,2515,1525,1515};
+//                                if (std::find(overlap_ID_check.begin(), overlap_ID_check.end(), overlap_ID) == overlap_ID_check.end())
+//                                {
+//                                    int test = 1;
+//                                }
                                 // go over combinations of overlap start and overlap end to determine type of overlap
                                 switch (overlap_ID)
                                 {

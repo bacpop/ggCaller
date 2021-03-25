@@ -50,7 +50,7 @@ namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
-typedef std::vector<std::tuple<size_t, bool, std::unordered_map<int, uint8_t>>> NeighbourVector;
+typedef std::vector<std::pair<int, std::unordered_map<int, uint8_t>>> NeighbourVector;
 
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
@@ -119,11 +119,11 @@ class unitigDict {
 
 // ggCaller typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef robin_hood::unordered_map<size_t, unitigDict> unitigMap;
+typedef std::unordered_map<size_t, unitigDict> unitigMap;
 //a vector of start,stop and length coordinates and strand information for an ORF
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
-typedef std::tuple<std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>, size_t, std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> ORFNodeVector;
+typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
 // maps an ORF node sequence to its colours and path through graph
 typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFNodeVector>> ORFNodeMap;
 // maps individual colour ids to ORF ids in ORFIDMap
@@ -133,11 +133,11 @@ typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFIDMap;
 // a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::tuple<unitigMap, std::vector<size_t>, std::vector<size_t>, robin_hood::unordered_map<std::string, size_t>> GraphTuple;
 // A vector of paths following a head node, which containg complete stop-stop paths (pair of a vector of nodesID+orientation, and colours vector)
-typedef std::vector<std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>>> PathVector;
+typedef std::vector<std::pair<std::vector<int>, std::vector<bool>>> PathVector;
 // Mapping of header kmer ID to PathVector
-typedef robin_hood::unordered_map<std::string, PathVector> PathMap;
+typedef robin_hood::unordered_map<int, PathVector> PathMap;
 // pairing of PathMap and a vector of head-kmer IDs (hashing for PathMap) for parrelisation
-typedef std::pair<PathMap, std::vector<std::string>> PathPair;
+typedef std::pair<PathMap, std::vector<int>> PathPair;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 // mapping of colour ID to a NodeStrandMap
@@ -202,11 +202,10 @@ std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const st
 std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
 PathVector recur_nodes_binary (const unitigMap& graph_map,
-                               const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
-                               const std::vector<std::pair<size_t, bool>>& head_kmer_list,
+                               const std::vector<int>& head_kmer_list,
                                const uint8_t& codon_arr,
                                std::vector<bool> colour_arr,
-                               const std::set<std::pair<size_t, bool>>& kmer_set,
+                               const std::unordered_set<int>& kmer_set,
                                const size_t& length,
                                const size_t& length_max,
                                const bool& repeat,
@@ -249,10 +248,10 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
                          std::vector<bool>& path_colours,
                          const size_t& nb_colours);
 
-std::tuple<std::string, std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
-                                                                                                            const std::vector<size_t>& nodelist,
-                                                                                                            const std::vector<std::vector<size_t>>& node_ranges,
-                                                                                                            const int& overlap);
+std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
+                                                                                      const std::vector<int>& nodelist,
+                                                                                      const std::vector<std::vector<size_t>>& node_ranges,
+                                                                                      const int& overlap);
 
 std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>, ColourNodeStrandMap> call_ORFs(const PathPair& path_pair,
                                                                                              const unitigMap& graph_map,

@@ -7,6 +7,7 @@ import ggCaller_cpp
 from ggCaller.graph_traversal import *
 from multiprocessing import Pool
 from functools import partial
+from memory_profiler import profile
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -132,7 +133,7 @@ def main():
     stop_codon_for = ["TAA", "TGA", "TAG"]
     stop_codon_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/home/shorsfield/jobs/ggCaller/clique_556_list_ORF_string_removal.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_fa_list_integer_paths.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -141,8 +142,8 @@ def main():
     num_threads = 4
 
     called_ORF_tuple = ggCaller_cpp.call_genes_existing(
-        "/home/shorsfield/jobs/ggCaller/clique_556_list.gfa",
-        "/home/shorsfield/jobs/ggCaller/clique_556_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         start_codons,
         stop_codon_for, stop_codon_rev, num_threads, True,
         True, False, no_filter, 10000, 90,
@@ -205,10 +206,11 @@ def main():
         for colour_ORF_tuple in ORF_colour_ID_map.items():
             colour, high_scoring_ORFs = call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict,
                                                         ORF_overlap_dict)
-            # remove TIS, and merge any matching genes which had differing TIS but were called together
+            # merge any matching genes which had differing TIS but were called together
             for ORF_ID in high_scoring_ORFs:
-                # parse out gene string from full_ORF_dict
-                gene = str(full_ORF_dict[ORF_ID][0])[16:]
+                # parse out gene string from full_ORF_dict, generate sequence
+                ORFNodeVector = full_ORF_dict[ORF_ID]
+                gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], overlap)
                 if gene not in true_genes:
                     # create string of zeros, make nth colour 1
                     true_genes[gene] = ["0"] * nb_colours

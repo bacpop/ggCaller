@@ -30,12 +30,10 @@ std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::
 }
 
 PathVector recur_nodes_binary (const unitigMap& graph_map,
-                               const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
-                               //const PathMap& previous_paths,
-                               const std::vector<std::pair<size_t, bool>>& head_kmer_list,
+                               const std::vector<int>& head_kmer_list,
                                const uint8_t& codon_arr,
                                std::vector<bool> colour_arr,
-                               const std::set<std::pair<size_t, bool>>& kmer_set,
+                               const std::unordered_set<int>& kmer_set,
                                const size_t& length,
                                const size_t& length_max,
                                const bool& repeat,
@@ -43,7 +41,7 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
 {
     // generate path list, add head_kmer_list to it
     PathVector path_list;
-    std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>> path_pair (head_kmer_list, colour_arr);
+    std::pair<std::vector<int>, std::vector<bool>> path_pair (head_kmer_list, colour_arr);
     path_list.push_back(std::move(path_pair));
 
     // testing
@@ -72,30 +70,29 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
     // if path not complete, generate unitig object using head kmer
     if (codon_arr != 0)
     {
-        // get last head-kmer pair in list, generate unitig map object
-        const std::pair<size_t, bool>& iter_km_pair = head_kmer_list.back();
+        // get last unitig id in list, this will be an int and needs to be converted to size_t
+        const int& iter_id = head_kmer_list.back();
 
-        // initilise next_unitigs as a reference
-        const auto& next_unitigs = graph_map.at(iter_km_pair.first).neighbours;
+        // determine strand of unitig
+        bool strand = (iter_id >= 0) ? true : false;
+
+        // initilise next_unitigs as a reference using absolute value of iter_id
+        const auto& next_unitigs = graph_map.at(abs(iter_id)).neighbours;
 
         // iterate over neighbours, recurring through incomplete paths
-        for (const auto& neighbour : next_unitigs.at(iter_km_pair.second))
+        for (const auto& neighbour : next_unitigs.at(strand))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            size_t kmer_id = std::get<0>(neighbour);
-            bool unitig_strand = std::get<1>(neighbour);
-            const auto& frame = std::get<2>(neighbour);
-
-            // make path entry for current kmer
-            const auto kmer_pair = make_pair(kmer_id, unitig_strand);
+            const auto& neighbour_id = neighbour.first;
+            const auto& frame = neighbour.second;
 
             // check if unitig has already been traversed
-            const bool is_in = kmer_set.find(kmer_pair) != kmer_set.end();
+            const bool is_in = kmer_set.find(neighbour_id) != kmer_set.end();
 
             // calculate modulus for path and updated cached path reading frame
             int modulus = length % 3;
-            std::string cached_kmer_id = std::to_string(kmer_pair.first) + (kmer_pair.second ? "+" : "-");
 
+            //std::string cached_kmer_id = std::to_string(kmer_id)
             //bool cache_valid = 0;
             // don't need this, need to check if arrays AREN'T completed, this means caching can be used to help branching
             // calculate updated codon and colours array
@@ -109,16 +106,16 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
 
             // update colour array with new information for head/tail k-mer of next unitig
             std::vector<bool> updated_colour_array;
-            updated_colour_array = negate_colours_array(colour_arr, graph_map.at(kmer_pair.first).unitig_head_colour);
+            updated_colour_array = negate_colours_array(colour_arr, graph_map.at(abs(neighbour_id)).unitig_head_colour);
 
             // if node is end of contig (e.g. colour change, no connecting nodes) and path not completed
             // path to enable genes at beginning/end of contig to be returned
-            if (graph_map.at(kmer_pair.first).end_contig)
+            if (graph_map.at(abs(neighbour_id)).end_contig)
             {
                 // create temporary path to account for reaching end of contig
-                std::vector<std::pair<size_t, bool>> temp_path = head_kmer_list;
-                temp_path.push_back(kmer_pair);
-                std::pair<std::vector<std::pair<size_t, bool>>, std::vector<bool>> path_pair (std::move(temp_path), colour_arr);
+                std::vector<int> temp_path = head_kmer_list;
+                temp_path.push_back(neighbour_id);
+                std::pair<std::vector<int>, std::vector<bool>> path_pair (std::move(temp_path), colour_arr);
 
                 // update path_list to enable this to be returned
                 path_list.push_back(std::move(path_pair));
@@ -212,21 +209,21 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
 //                }
                 else {
                     // create new path object for iteration
-                    std::vector<std::pair<size_t, bool>> path = head_kmer_list;
+                    std::vector<int> path = head_kmer_list;
 
                     // add kmer pair to path and kmer_set
-                    path.push_back(kmer_pair);
-                    std::set<std::pair<size_t, bool>> updated_kmer_set = kmer_set;
-                    updated_kmer_set.insert(kmer_pair);
+                    path.push_back(neighbour_id);
+                    std::unordered_set<int> updated_kmer_set = kmer_set;
+                    updated_kmer_set.insert(neighbour_id);
 
                     // calculate updated length and modulus for codon array iteration
                     size_t updated_length = length;
-                    updated_length += graph_map.at(kmer_pair.first).unitig_size.second;
+                    updated_length += graph_map.at(abs(neighbour_id)).unitig_size.second;
 
                     // ensure max length has not been exceeded.
                     if (length <= length_max)
                     {
-                        for (const auto& iteration : recur_nodes_binary(graph_map, head_kmer_map, path, updated_codon_arr, updated_colour_array, updated_kmer_set, updated_length, length_max, repeat, empty_colour_arr))
+                        for (const auto& iteration : recur_nodes_binary(graph_map, path, updated_codon_arr, updated_colour_array, updated_kmer_set, updated_length, length_max, repeat, empty_colour_arr))
                         {
                             path_list.push_back(iteration);
                         }
@@ -235,7 +232,7 @@ PathVector recur_nodes_binary (const unitigMap& graph_map,
                     else if (path.size() == 2)
                     {
                         updated_codon_arr = 0;
-                        for (const auto& iteration : recur_nodes_binary(graph_map, head_kmer_map, path, updated_codon_arr, updated_colour_array, updated_kmer_set, updated_length, length_max, repeat, empty_colour_arr))
+                        for (const auto& iteration : recur_nodes_binary(graph_map, path, updated_codon_arr, updated_colour_array, updated_kmer_set, updated_length, length_max, repeat, empty_colour_arr))
                         {
                             path_list.push_back(iteration);
                         }
@@ -254,8 +251,8 @@ PathPair traverse_graph(const GraphTuple& graph_tuple,
                          const vector<bool>& empty_colour_arr,
                          const size_t max_path_length)
 {
-    // define head_string_arr for parrallelisation
-    std::vector<std::string> head_string_arr;
+    // define head_arr for parrallelisation
+    std::vector<int> head_arr;
 
     // recur through nodes to file paths
     PathMap complete_paths;
@@ -266,28 +263,30 @@ PathPair traverse_graph(const GraphTuple& graph_tuple,
     {
         PathVector unitig_complete_paths;
         PathMap complete_paths_private;
-        std::vector<std::string> head_string_arr_private;
+        std::vector<int> head_arr_private;
         #pragma omp for nowait
         for (auto it = std::get<1>(graph_tuple).begin(); it < std::get<1>(graph_tuple).end(); it++)
         {
-            const auto head_kmer_id = *it;
+            // parse unitig_id
+            const auto unitig_id = *it;
+
+            // generate integer version of unitig_id for recursion
+            const int head_id = (int) unitig_id;
+
             // gather unitig information from graph_map
-            const std::pair<size_t, bool> kmer_pair(head_kmer_id, true);
-            const uint8_t codon_arr = std::get<0>(graph_tuple).at(head_kmer_id).full_codon.at(true).at(0);
-            std::vector<bool> colour_arr = std::get<0>(graph_tuple).at(head_kmer_id).unitig_tail_colour;
-            const size_t unitig_len = std::get<0>(graph_tuple).at(head_kmer_id).unitig_size.first;
+            const uint8_t codon_arr = std::get<0>(graph_tuple).at(unitig_id).full_codon.at(true).at(0);
+            std::vector<bool> colour_arr = std::get<0>(graph_tuple).at(unitig_id).unitig_tail_colour;
+            const size_t unitig_len = std::get<0>(graph_tuple).at(unitig_id).unitig_size.first;
 
             // generate vector and set for traversal
-            std::vector<std::pair<size_t, bool>> head_kmer_list;
-            std::set<std::pair<size_t, bool>> kmer_set;
-            head_kmer_list.push_back(kmer_pair);
-            kmer_set.insert(kmer_pair);
+            std::vector<int> head_kmer_list;
+            std::unordered_set<int> kmer_set;
+            head_kmer_list.push_back(head_id);
+            kmer_set.insert(head_id);
 
             // recur paths
-            unitig_complete_paths = recur_nodes_binary(std::get<0>(graph_tuple), std::get<3>(graph_tuple), head_kmer_list, codon_arr, colour_arr, kmer_set, unitig_len, max_path_length, repeat, empty_colour_arr);
+            unitig_complete_paths = recur_nodes_binary(std::get<0>(graph_tuple), head_kmer_list, codon_arr, colour_arr, kmer_set, unitig_len, max_path_length, repeat, empty_colour_arr);
 
-            // append to complete paths vector
-            std::string head_id = std::to_string(head_kmer_id) + "+";
             if (!unitig_complete_paths.empty())
             {
 //                //critical section, ensure data race is avoided when appending to/reading complete_paths
@@ -296,13 +295,13 @@ PathPair traverse_graph(const GraphTuple& graph_tuple,
 //                head_string_arr.push_back(head_id);
 //                mtx2.unlock();
                 complete_paths_private.emplace(head_id, std::move(unitig_complete_paths));
-                head_string_arr_private.push_back(head_id);
+                head_arr_private.push_back(head_id);
             }
         }
         #pragma omp critical
         {
             complete_paths.insert(complete_paths_private.begin(), complete_paths_private.end());
-            head_string_arr.insert(head_string_arr.end(), std::make_move_iterator(head_string_arr_private.begin()), std::make_move_iterator(head_string_arr_private.end()));
+            head_arr.insert(head_arr.end(), std::make_move_iterator(head_arr_private.begin()), std::make_move_iterator(head_arr_private.end()));
         }
     }
 
@@ -312,28 +311,30 @@ PathPair traverse_graph(const GraphTuple& graph_tuple,
     {
         PathVector unitig_complete_paths;
         PathMap complete_paths_private;
-        std::vector<std::string> head_string_arr_private;
+        std::vector<int> head_arr_private;
         #pragma omp for nowait
         for (auto it = std::get<2>(graph_tuple).begin(); it < std::get<2>(graph_tuple).end(); it++)
         {
-            const auto head_kmer_id = *it;
+            // parse unitig_id
+            const auto unitig_id = *it;
+
+            // generate integer version of unitig_id for recursion
+            const int head_id = unitig_id * -1;
+
             // gather unitig information from graph_map
-            const std::pair<size_t, bool> kmer_pair(head_kmer_id, false);
-            const uint8_t codon_arr = std::get<0>(graph_tuple).at(head_kmer_id).full_codon.at(false).at(0);
-            std::vector<bool> colour_arr = std::get<0>(graph_tuple).at(head_kmer_id).unitig_head_colour;
-            const size_t unitig_len = std::get<0>(graph_tuple).at(head_kmer_id).unitig_size.first;
+            const uint8_t codon_arr = std::get<0>(graph_tuple).at(unitig_id).full_codon.at(false).at(0);
+            std::vector<bool> colour_arr = std::get<0>(graph_tuple).at(unitig_id).unitig_head_colour;
+            const size_t unitig_len = std::get<0>(graph_tuple).at(unitig_id).unitig_size.first;
 
             // generate vector and set for traversal
-            std::vector<std::pair<size_t, bool>> head_kmer_list;
-            std::set<std::pair<size_t, bool>> kmer_set;
-            head_kmer_list.push_back(kmer_pair);
-            kmer_set.insert(kmer_pair);
+            std::vector<int> head_kmer_list;
+            std::unordered_set<int> kmer_set;
+            head_kmer_list.push_back(head_id);
+            kmer_set.insert(head_id);
 
             // recur paths
-            unitig_complete_paths = recur_nodes_binary(std::get<0>(graph_tuple), std::get<3>(graph_tuple), head_kmer_list, codon_arr, colour_arr, kmer_set, unitig_len, max_path_length, repeat, empty_colour_arr);
+            unitig_complete_paths = recur_nodes_binary(std::get<0>(graph_tuple), head_kmer_list, codon_arr, colour_arr, kmer_set, unitig_len, max_path_length, repeat, empty_colour_arr);
 
-            // append to complete paths vector
-            std::string head_id = std::to_string(head_kmer_id) + "-";
             if (!unitig_complete_paths.empty())
             {
 //                //critical section, ensure data race is avoided when appending to/reading complete_paths
@@ -342,17 +343,17 @@ PathPair traverse_graph(const GraphTuple& graph_tuple,
 //                head_string_arr.push_back(head_id);
 //                mtx2.unlock();
                 complete_paths_private.emplace(head_id, std::move(unitig_complete_paths));
-                head_string_arr_private.push_back(head_id);
+                head_arr_private.push_back(head_id);
             }
         }
         #pragma omp critical
         {
             complete_paths.insert(complete_paths_private.begin(), complete_paths_private.end());
-            head_string_arr.insert(head_string_arr.end(), std::make_move_iterator(head_string_arr_private.begin()), std::make_move_iterator(head_string_arr_private.end()));
+            head_arr.insert(head_arr.end(), std::make_move_iterator(head_arr_private.begin()), std::make_move_iterator(head_arr_private.end()));
         }
     }
 
     //std::sort(head_string_arr.begin(), head_string_arr.end());
-    auto path_pair = std::make_pair(complete_paths, head_string_arr);
+    auto path_pair = std::make_pair(complete_paths, head_arr);
     return path_pair;
 }

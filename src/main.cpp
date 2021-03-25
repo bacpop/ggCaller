@@ -5,9 +5,8 @@
 # include "ggCaller_classes.h"
 
 std::string generate_sequence(const unitigMap& graph_map,
-                              const std::vector<size_t>& nodelist,
+                              const std::vector<int>& nodelist,
                               const std::vector<indexTriplet>& node_coords,
-                              const std::vector<bool>& node_strand,
                               const size_t& overlap)
 {
     std::string sequence;
@@ -20,13 +19,13 @@ std::string generate_sequence(const unitigMap& graph_map,
         // parse information
         const auto& id = nodelist[i];
         const auto& coords = node_coords[i];
-        const auto& strand = node_strand[i];
+        bool strand = (id >= 0) ? true : false;
 
         if (strand)
         {
-            unitig_seq = graph_map.at(id).unitig_seq;
+            unitig_seq = graph_map.at(abs(id)).unitig_seq;
         } else {
-            unitig_seq = reverse_complement(graph_map.at(id).unitig_seq);
+            unitig_seq = reverse_complement(graph_map.at(abs(id)).unitig_seq);
         }
 
         if (sequence.empty())
@@ -88,8 +87,8 @@ void write_to_file (const unitigMap& graph_map,
         }
 
         // generate ORF from node sequence
-        const auto ORF_sequence = std::move(generate_sequence(graph_map, std::get<0>(ORF_ID_map.at(ORF.first)), std::get<1>(ORF_ID_map.at(ORF.first)), std::get<2>(ORF_ID_map.at(ORF.first)), overlap));
-        const auto TIS_sequence = std::move(generate_sequence(graph_map, std::get<4>(ORF_ID_map.at(ORF.first)), std::get<5>(ORF_ID_map.at(ORF.first)), std::get<6>(ORF_ID_map.at(ORF.first)), overlap));
+        const auto ORF_sequence = std::move(generate_sequence(graph_map, std::get<0>(ORF_ID_map.at(ORF.first)), std::get<1>(ORF_ID_map.at(ORF.first)), overlap));
+        const auto TIS_sequence = std::move(generate_sequence(graph_map, std::get<3>(ORF_ID_map.at(ORF.first)), std::get<4>(ORF_ID_map.at(ORF.first)), overlap));
 
         std::string total_seq;
 
@@ -108,7 +107,7 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/plasmid_clique_556_list_ORF_string_removal_2.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/plasmid_clique_556_list_integer_paths.fasta";
     omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;

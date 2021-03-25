@@ -198,11 +198,11 @@ def main():
                     partial(call_true_genes, minimum_path_score=minimum_path_score,
                             ORF_score_dict=ORF_score_dict, ORF_overlap_dict=ORF_overlap_dict),
                     ORF_colour_ID_map.items()):
-                # remove TIS, and merge any matching genes which had differing TIS but were called together
+                # merge any matching genes which had differing TIS but were called together
                 for ORF_ID in high_scoring_ORFs:
                     # parse out gene string from full_ORF_dict, generate sequence
                     ORFNodeVector = full_ORF_dict[ORF_ID]
-                    gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
+                    gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], overlap)
                     if gene not in true_genes:
                         # create string of zeros, make nth colour 1
                         true_genes[gene] = ["0"] * nb_colours

@@ -5,7 +5,7 @@
 ORFNodeMap generate_ORFs(const unitigMap& graph_map,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
-                         const std::vector<std::pair<size_t, bool>>& unitig_path,
+                         const std::vector<int>& unitig_path,
                          const int& overlap,
                          const size_t min_len,
                          const bool is_ref,
@@ -20,38 +20,41 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
     std::string path_sequence;
 
     // here generate vector/map which contains the start/end of each node in basepairs. This will then be used to determine which nodes an ORF traverses
-    std::vector<size_t> nodelist;
+    std::vector<int> nodelist;
     std::vector<std::vector<size_t>> node_ranges;
     size_t node_start = 0;
 
     // testing
-    std::set<std::pair<std::string, bool>> node_set;
-    std::vector<std::pair<std::string, bool>> node_vector;
+//    std::set<std::pair<std::string, bool>> node_set;
+//    std::vector<std::pair<std::string, bool>> node_vector;
 
     // generate path sequence by merging nodes in sequence
     for (const auto& node : unitig_path)
     {
+        // parse out information from node integer value
+        bool strand = (node >= 0) ? true : false;
+
         // add node to node list for path coordinates
-        nodelist.push_back(node.first);
-        // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd entry is node length. 3rd is strandedness (1 for forward, 0 for reverse)
-        std::vector<size_t> node_range(4);
+        nodelist.push_back(node);
+        // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd is node end, 3rd entry is node length. 4th is strandedness (1 for forward, 0 for reverse), not used!
+        std::vector<size_t> node_range(3);
 
         // add unitig strand to node_range
-        node_range[3] = node.second;
+        //node_range[3] = strand;
 
         //testing
-        std::string node_str = graph_map.at(node.first).head_kmer;
-        std::pair<std::string, bool> node_pair(node_str, node.second);
-        node_set.insert(node_pair);
-        node_vector.push_back(node_pair);
+//        std::string node_str = graph_map.at(node.first).head_kmer;
+//        std::pair<std::string, bool> node_pair(node_str, node.second);
+//        node_set.insert(node_pair);
+//        node_vector.push_back(node_pair);
 
         // if strand is negative, calculate reverse complement
         std::string unitig_seq;
-        if (node.second)
+        if (strand)
         {
-            unitig_seq = graph_map.at(node.first).unitig_seq;
+            unitig_seq = graph_map.at(abs(node)).unitig_seq;
         } else {
-            unitig_seq = reverse_complement(graph_map.at(node.first).unitig_seq);
+            unitig_seq = reverse_complement(graph_map.at(abs(node)).unitig_seq);
         }
 
         // calculate length of unitig and get end coordinates
@@ -254,7 +257,7 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
             auto ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
 
             // work coordinates for TIS in node space
-            std::tuple<std::string, std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> TIS_coords;
+            std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> TIS_coords;
             if (TIS_present)
             {
                 std::pair<std::size_t, std::size_t> TIS_pair(codon_pair.first - 16, codon_pair.first - 1);
@@ -265,18 +268,18 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
             auto& ORF_path_ID = std::get<0>(ORF_coords);
             auto& ORF_node_id = std::get<1>(ORF_coords);
             auto& ORF_node_coords = std::get<2>(ORF_coords);
-            auto& ORF_node_strand = std::get<3>(ORF_coords);
+            //auto& ORF_node_strand = std::get<3>(ORF_coords);
 
             auto& TIS_path_id = std::get<0>(TIS_coords);
             auto& TIS_node_id = std::get<1>(TIS_coords);
             auto& TIS_node_coords = std::get<2>(TIS_coords);
-            auto& TIS_node_strand = std::get<3>(TIS_coords);
+            //auto& TIS_node_strand = std::get<3>(TIS_coords);
 
             // add TIS_path_id to ORF_path_ID to ensure ORFs with same sequence but different TIS are not merged
             ORF_path_ID += TIS_path_id;
 
             // create ORF_node_vector, populate with results from node traversal
-            ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_node_strand, ORF_len, TIS_node_id, TIS_node_coords, TIS_node_strand);
+            ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords);
 
             // add create colours/ORF_node_vector return object
             std::pair<std::vector<bool>, ORFNodeVector> colour_path_pair(ORF_colours, std::move(ORF_node_vector));
@@ -288,15 +291,15 @@ ORFNodeMap generate_ORFs(const unitigMap& graph_map,
 }
 
 // calculate node coordinates for an ORF
-std::tuple<std::string, std::vector<size_t>, std::vector<indexTriplet>, std::vector<bool>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
-                                                                                                            const std::vector<size_t>& nodelist,
-                                                                                                            const std::vector<std::vector<size_t>>& node_ranges,
-                                                                                                            const int& overlap)
+std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
+                                                                                        const std::vector<int>& nodelist,
+                                                                                        const std::vector<std::vector<size_t>>& node_ranges,
+                                                                                        const int& overlap)
 {
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
-    std::vector<size_t> ORF_node_id;
+    std::vector<int> ORF_node_id;
     std::vector<indexTriplet> ORF_node_coords;
-    std::vector<bool> ORF_node_strand;
+    //std::vector<bool> ORF_node_strand;
 
     // generate a unique string for the ORF for storage using nodes traversed (will match across matching ORFs)
     std::string ORF_path_ID;
@@ -344,32 +347,20 @@ std::tuple<std::string, std::vector<size_t>, std::vector<indexTriplet>, std::vec
             indexTriplet node_coords = std::make_tuple(traversed_node_start, traversed_node_end, node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));
-            ORF_node_strand.push_back(node_ranges[i][3]);
+            //ORF_node_strand.push_back(node_ranges[i][3]);
 
             // add to ORF_path_ID with node ID and strand. If the ORF_path_ID is empty, add the start position to make the ORF unique
             if (ORF_path_ID.empty())
             {
                 ORF_path_ID += std::to_string(std::get<0>(node_coords));
             }
-            ORF_path_ID += std::to_string(nodelist[i]) + (node_ranges[i][3] ? "+" : "-");
+            ORF_path_ID += std::to_string(nodelist[i]);
         }
     }
 
-    const auto return_tuple = std::make_tuple(ORF_path_ID, ORF_node_id, ORF_node_coords, ORF_node_strand);
+    const auto return_tuple = std::make_tuple(ORF_path_ID, ORF_node_id, ORF_node_coords);
     return return_tuple;
 }
-
-//std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> filter_artificial_ORFS(ORFNodeMap& ORF_node_paths,
-//                                                                                    const std::vector<std::string>& fasta_files,
-//                                                                                    const bool write_index)
-//{
-//    // run call strings for ORF_node_paths in place
-//    call_strings(ORF_node_paths, fasta_files, write_index);
-//
-//    // generate a colours dictionary for gene overlap analysis
-//    auto return_tuple = sort_ORF_colours(ORF_node_paths);
-//    return return_tuple;
-//}
 
 std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> sort_ORF_colours(ORFNodeMap& ORF_node_paths)
 {
@@ -425,7 +416,6 @@ ColourNodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_paths)
     {
         // unpack tuple, colours is ORF_nodes.second.first, path is ORF_nodes.second.second
         const auto& nodes = std::get<0>(ORF_nodes.second.second);
-        const auto& node_strands = std::get<2>(ORF_nodes.second.second);
         const auto& ORF_colours = ORF_nodes.second.first;
 
         // generate string for colours
@@ -453,9 +443,10 @@ ColourNodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_paths)
 
             // create new map to store node info
             NodeStrandMap new_map;
-            for (int node_index = 0; node_index < nodes.size(); node_index++)
+            for (const auto& n : nodes)
             {
-                new_map[nodes.at(node_index)] = node_strands.at(node_index);
+                // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
+                new_map[abs(n)] = (n >= 0) ? true : false;
             }
 
             // create vector to keep track of which maps need to be added to, and whether this is in positive (true) or negative (false) orientation
