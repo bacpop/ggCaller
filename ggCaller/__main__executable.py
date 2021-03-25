@@ -88,7 +88,7 @@ def get_options():
     return parser.parse_args()
 
 
-##@profile
+@profile
 def main():
     # options = get_options()
     #
@@ -132,7 +132,7 @@ def main():
     stop_codon_for = ["TAA", "TGA", "TAG"]
     stop_codon_rev = ["TTA", "TCA", "CTA"]
 
-    output = "group3_capsular_fa_list_ORF_string_removal.fasta"
+    output = "/home/shorsfield/jobs/ggCaller/clique_556_list_ORF_string_removal.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -141,8 +141,8 @@ def main():
     num_threads = 4
 
     called_ORF_tuple = ggCaller_cpp.call_genes_existing(
-        "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/PhD_project/ggCaller_cpp/data/group3_capsular_fa_list.bfg_colors",
+        "/home/shorsfield/jobs/ggCaller/clique_556_list.gfa",
+        "/home/shorsfield/jobs/ggCaller/clique_556_list.bfg_colors",
         start_codons,
         stop_codon_for, stop_codon_rev, num_threads, True,
         True, False, no_filter, 10000, 90,
@@ -202,35 +202,37 @@ def main():
 
         print("Generating highest scoring gene paths...")
 
-        # # merge full_ORF_dict and ORF_overlap_dict for mulitprocessing and free up memory
-        # ORF_dict = {}
-        # for colour in full_ORF_dict.keys():
-        #     ORF_dict[colour] = {}
-        #     ORF_dict[colour]["ID"] = full_ORF_dict[colour]
-        #     ORF_dict[colour]["overlap"] = ORF_overlap_dict[colour]
+        for colour_ORF_tuple in ORF_colour_ID_map.items():
+            colour, high_scoring_ORFs = call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict,
+                                                        ORF_overlap_dict)
+            # remove TIS, and merge any matching genes which had differing TIS but were called together
+            for ORF_ID in high_scoring_ORFs:
+                # parse out gene string from full_ORF_dict
+                gene = str(full_ORF_dict[ORF_ID][0])[16:]
+                if gene not in true_genes:
+                    # create string of zeros, make nth colour 1
+                    true_genes[gene] = ["0"] * nb_colours
+                    true_genes[gene][colour] = "1"
+                else:
+                    # make nth colour 1
+                    true_genes[gene][colour] = "1"
 
-        # multithread per colour in ORF_dict
-        # Turn gt threading on
-        # if gt.openmp_enabled():
-        #   gt.openmp_set_num_threads(1)
-
-        with Pool(processes=num_threads) as pool:
-            for colour, high_scoring_ORFs in pool.map(
-                    partial(call_true_genes, minimum_path_score=minimum_path_score,
-                            ORF_score_dict=ORF_score_dict, ORF_overlap_dict=ORF_overlap_dict),
-                    ORF_colour_ID_map.items()):
-                # remove TIS, and merge any matching genes which had differing TIS but were called together
-                for ORF_ID in high_scoring_ORFs:
-                    # parse out gene string from full_ORF_dict, generate sequence
-                    ORFNodeVector = full_ORF_dict[ORF_ID]
-                    gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
-                    if gene not in true_genes:
-                        # create string of zeros, make nth colour 1
-                        true_genes[gene] = ["0"] * nb_colours
-                        true_genes[gene][colour] = "1"
-                    else:
-                        # make nth colour 1
-                        true_genes[gene][colour] = "1"
+        # with Pool(processes=num_threads) as pool:
+        #     for colour, high_scoring_ORFs in pool.map(
+        #             partial(call_true_genes, minimum_path_score=minimum_path_score,
+        #                     ORF_score_dict=ORF_score_dict, ORF_overlap_dict=ORF_overlap_dict),
+        #             ORF_colour_ID_map.items()):
+        #         # remove TIS, and merge any matching genes which had differing TIS but were called together
+        #         for ORF_ID in high_scoring_ORFs:
+        #             # parse out gene string from full_ORF_dict
+        #             gene = str(full_ORF_dict[ORF_ID][0])[16:]
+        #             if gene not in true_genes:
+        #                 # create string of zeros, make nth colour 1
+        #                 true_genes[gene] = ["0"] * nb_colours
+        #                 true_genes[gene][colour] = "1"
+        #             else:
+        #                 # make nth colour 1
+        #                 true_genes[gene][colour] = "1"
 
     print("Generating fasta file of gene calls...")
     # print output to file
