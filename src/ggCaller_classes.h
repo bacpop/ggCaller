@@ -93,6 +93,7 @@ class unitigDict {
 
     // unitig properties
     std::pair<size_t, std::size_t> unitig_size;
+    std::vector<bool> unitig_full_colour;
     std::vector<bool> unitig_head_colour;
     std::vector<bool> unitig_tail_colour;
     bool head_tail_colours_equal = true;
@@ -119,7 +120,11 @@ class unitigDict {
 
 // ggCaller typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef std::unordered_map<size_t, unitigDict> unitigMap;
+typedef std::vector<unitigDict> UnitigVector;
+// mapping of each colour to component nodes in graph
+typedef std::vector<std::vector<size_t>> NodeColourVector;
+// a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
+typedef std::pair<UnitigVector, NodeColourMap> GraphPair;
 //a vector of start,stop and length coordinates and strand information for an ORF
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
@@ -130,8 +135,6 @@ typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFN
 typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
 // maps a unique ID to a path through graph
 typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFIDMap;
-// a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
-typedef std::tuple<unitigMap, std::vector<size_t>, std::vector<size_t>, robin_hood::unordered_map<std::string, size_t>> GraphTuple;
 // A vector of paths following a head node, which containg complete stop-stop paths (pair of a vector of nodesID+orientation, and colours vector)
 typedef std::vector<std::pair<std::vector<int>, std::vector<bool>>> PathVector;
 // Mapping of header kmer ID to PathVector

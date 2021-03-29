@@ -221,6 +221,114 @@ std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size
     return return_tuple;
 }
 
+GraphPair py_index_graph_exists(const std::string& graphfile,
+                               const std::string& coloursfile,
+                               const std::vector<std::string>& start_codons,
+                               const std::vector<std::string>& stop_codons_for,
+                               const std::vector<std::string>& stop_codons_rev,
+                               size_t num_threads,
+                               const bool is_ref,
+                               const bool write_idx)
+{
+        // Set number of threads
+    if (num_threads < 1)
+    {
+        num_threads = 1;
+    }
+
+    // read in compact coloured DBG
+    cout << "Reading coloured compacted DBG..." << endl;
+
+    // set OMP number of threads
+    omp_set_num_threads(num_threads);
+
+    // initialise persistent variables
+    GraphPair graph_pair;
+    int kmer;
+    int overlap;
+    size_t nb_colours;
+    std::vector<std::string> input_colours;
+
+     // scope for ccdbg
+    {
+        // read in graph
+        ColoredCDBG<> ccdbg;
+        ccdbg.read(graphfile, coloursfile, num_threads);
+
+        //set local variables
+        kmer = ccdbg.getK();
+        overlap = kmer - 1;
+
+        // get the number of colours
+        nb_colours = ccdbg.getNbColors();
+
+        // get colour names
+        input_colours = ccdbg.getColorNames();
+
+        // generate codon index for graph
+        cout << "Generating graph stop codon index..." << endl;
+        graph_pair = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+    }
+
+    return graph_pair;
+}
+
+GraphPair py_index_graph_build(const std::string& infile1,
+                              const int kmer,
+                              const std::vector<std::string>& start_codons,
+                              const std::vector<std::string>& stop_codons_for,
+                              const std::vector<std::string>& stop_codons_rev,
+                              size_t num_threads,
+                              bool is_ref,
+                              const bool write_idx,
+                              const bool repeat,
+                              const bool write_graph,
+                              const std::string& infile2)
+{
+    // Set number of threads
+    if (num_threads < 1)
+    {
+        num_threads = 1;
+    }
+
+    // read in compact coloured DBG
+    cout << "Building coloured compacted DBG..." << endl;
+
+    // set OMP number of threads
+    omp_set_num_threads(num_threads);
+
+    // initialise persistent variables
+    GraphPair graph_tuple;
+    const int overlap = kmer - 1;
+    size_t nb_colours;
+    std::vector<std::string> input_colours;
+
+    if (infile2 != "NA") {
+        is_ref = 0;
+    }
+
+    // scope for ccdbg
+    {
+        // generate graph, writing if write_graph == true
+        size_t lastindex = infile1.find_last_of(".");
+        std::string outgraph = infile1.substr(0, lastindex);
+        ColoredCDBG<> ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, write_graph, outgraph);
+
+        // get the number of colours
+        nb_colours = ccdbg.getNbColors();
+
+        // get colour names
+        input_colours = ccdbg.getColorNames();
+
+        // generate codon index for graph
+        cout << "Generating graph stop codon index..." << endl;
+        graph_pair = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+    }
+
+    return graph_pair;
+}
+
+
 PYBIND11_MODULE(ggCaller_cpp, m)
 {
     m.doc() = "Call ORFs in Bifrost graph.";

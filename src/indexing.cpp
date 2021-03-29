@@ -151,6 +151,9 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
         if (it_uc.getKmerPosition() == position)
         {
             colours_arr[it_uc.getColorID()] = 1;
+        } else if (it_uc.getKmerPosition() > position)
+        {
+           break;
         }
     }
     return colours_arr;
@@ -211,6 +214,12 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     if (unitig_map.unitig_head_colour != unitig_map.unitig_tail_colour)
     {
         unitig_map.head_tail_colours_equal = false;
+        // calculate the full assortment of colours for a unitig
+        unitig_map.unitig_full_colour = std::move(add_colours_array(unitig_map.unitig_head_colour, unitig_map.unitig_tail_colour));
+    } else
+    {
+        // if colours match, just set to head colour
+        unitig_map.unitig_full_colour = unitig_map.unitig_head_colour;
     }
 
     // generate successor head kmers (need to flip sign to get successors in reverse strand)
@@ -286,7 +295,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     return unitig_map;
 }
 
-GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
+GraphPair index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
                        const int kmer,
@@ -300,16 +309,16 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    unitigMap graph_map;
-    std::vector<size_t> stop_list_for;
-    std::vector<size_t> stop_list_rev;
+    UnitigVector graph_vector(head_kmer_arr.size());
+    NodeColourVector node_colour_vector(nb_colours);
     robin_hood::unordered_map<std::string, size_t> head_kmer_map;
 
     // run unitig indexing in parallel
     size_t unitig_id = 1;
     #pragma omp parallel
     {
-        unitigMap graph_map_private;
+        UnitigVector graph_vector_private;
+        NodeColourMap node_colour_vector_private(nb_colours);
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
@@ -322,24 +331,36 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
             #pragma omp atomic capture
             unitig_map.unitig_id = unitig_id++;
 
+            // add to node_colour_map_private
+            for (size_t i = 0; i < unitig_map.unitig_full_colour.size(); i++)
+            {
+                if (unitig_map.unitig_full_colour.at(i))
+                {
+                    node_colour_vector_private[i].push_back(unitig_map.unitig_id)
+                }
+            }
+
             // add head_kmer and unitig id to map
             head_kmer_map_private[unitig_map.head_kmer] = unitig_map.unitig_id;
 
-            // add unitig to graphmap
-            graph_map_private[unitig_map.unitig_id] = std::move(unitig_map);
+            // add unitig to graph_vector, minus 1 as zero based
+            graph_vector[unitig_map.unitig_id - 1] = std::move(unitig_map));
         }
         #pragma omp critical
         {
-            graph_map.insert(graph_map_private.begin(), graph_map_private.end());
             head_kmer_map.insert(head_kmer_map_private.begin(), head_kmer_map_private.end());
+
+            // update node_colour_vector with calculated colours
+            for (int i = 0; i < node_colour_vector_private.size(); i++)
+            {
+                node_colour_vector[i].insert(node_colour_vector[i].end(), std::make_move_iterator(node_colour_vector_private[i].begin()), std::make_move_iterator(node_colour_vector_private[i].end()));
+            }
         }
     }
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
     size_t graph_map_size = graph_map.size() + 1;
     #pragma omp parallel
     {
-        std::vector<size_t> stop_list_for_private;
-        std::vector<size_t> stop_list_rev_private;
         #pragma omp for nowait
         for (size_t i = 1; i < graph_map_size; i++)
         {
@@ -347,7 +368,6 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
             mtx1.lock();
             auto unitig_map = graph_map.at(i);
             mtx1.unlock();
-
 
             // initialise neighbours vectors
             unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
@@ -450,28 +470,13 @@ GraphTuple index_graph(const ColoredCDBG<>& ccdbg,
                 unitig_map.end_contig = true;
             }
 
-            // add results to private maps and vectors
-            if (unitig_map.forward_stop)
-            {
-                stop_list_for_private.push_back(unitig_map.unitig_id);
-            }
-            if (unitig_map.reverse_stop)
-            {
-                stop_list_rev_private.push_back(unitig_map.unitig_id);
-            }
-
             // update graph_map with new entry
             mtx1.lock();
             graph_map[i] = std::move(unitig_map);
             mtx1.unlock();
         }
-        #pragma omp critical
-        {
-            stop_list_for.insert(stop_list_for.end(), std::make_move_iterator(stop_list_for_private.begin()), std::make_move_iterator(stop_list_for_private.end()));
-            stop_list_rev.insert(stop_list_rev.end(), std::make_move_iterator(stop_list_rev_private.begin()), std::make_move_iterator(stop_list_rev_private.end()));
-        }
     }
 
-    const auto graph_tuple = std::make_tuple(graph_map, stop_list_for, stop_list_rev, head_kmer_map);
-    return graph_tuple;
+    const auto graph_pair = std::make_pair(graph_vector, node_colour_vector);
+    return graph_pair;
 }
