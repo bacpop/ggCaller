@@ -114,6 +114,7 @@ int main(int argc, char *argv[]) {
     const bool repeat = false;
     const int max_path_length = 10000;
     const int min_ORF_length = 90;
+    const bool no_filter = false;
 
     const std::vector<std::string> stop_codons_for = {"TAA", "TGA", "TAG"};
     const std::vector<std::string> stop_codons_rev = {"TTA", "TCA", "CTA"};
@@ -211,13 +212,34 @@ int main(int argc, char *argv[]) {
         ORF_tuple = std::move(call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, seq_idx, nb_colours));
     }
 
-    cout << "Calculating gene overlap" << endl;
-    auto overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_tuple, overlap, 90));
+    // if no filtering required, do not calculate overlaps
+    ORFOverlapMap ORF_overlap_map;
+    if (!no_filter)
+    {
+        cout << "Calculating gene overlap" << endl;
+        ORF_overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_tuple, overlap, 90));
+    }
 
-    // write fasta files to file
-    write_to_file(std::get<0>(graph_tuple), outfile, std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), nb_colours, overlap);
+    // convert robin_hood maps to unordered_maps for return. Mapped by ID, so just iterate over numbers
+    PyORFColoursMap ORF_colours_map;
+    for (size_t i = 0; i < std::get<0>(ORF_tuple).size(); i++)
+    {
+        ORF_colours_map[i] = std::move(std::get<0>(ORF_tuple)[i]);
+    }
 
-    cout << "Done." << endl;
+    PyORFIDMap ORF_ID_Map;
+    for (size_t i = 0; i < std::get<1>(ORF_tuple).size(); i++)
+    {
+        ORF_ID_Map[i] = std::move(std::get<1>(ORF_tuple)[i]);
+    }
+
+    PyUnitigMap unitig_map;
+    for (size_t i = 0; i < std::get<0>(graph_tuple).size(); i++)
+    {
+        unitig_map[i] = std::move(std::get<0>(graph_tuple)[i]);
+    }
+
+    std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size_t> return_tuple = std::make_tuple(ORF_overlap_map, ORF_colours_map, ORF_ID_Map, unitig_map, nb_colours, overlap);
 
     return 0;
 }
