@@ -220,6 +220,9 @@ int main(int argc, char *argv[]) {
         ORF_overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_tuple, overlap, 90));
     }
 
+    // write fasta files to file
+    write_to_file(std::get<0>(graph_tuple), outfile, std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), nb_colours, overlap);
+
     // convert robin_hood maps to unordered_maps for return. Mapped by ID, so just iterate over numbers
     PyORFColoursMap ORF_colours_map;
     for (size_t i = 0; i < std::get<0>(ORF_tuple).size(); i++)
@@ -240,9 +243,6 @@ int main(int argc, char *argv[]) {
     }
 
     std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size_t> return_tuple = std::make_tuple(ORF_overlap_map, ORF_colours_map, ORF_ID_Map, unitig_map, nb_colours, overlap);
-
-    // write fasta files to file
-    write_to_file(std::get<0>(graph_tuple), outfile, std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), nb_colours, overlap);
 
     return 0;
 }
