@@ -241,5 +241,8 @@ int main(int argc, char *argv[]) {
 
     std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size_t> return_tuple = std::make_tuple(ORF_overlap_map, ORF_colours_map, ORF_ID_Map, unitig_map, nb_colours, overlap);
 
+    // write fasta files to file
+    write_to_file(std::get<0>(graph_tuple), outfile, std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), nb_colours, overlap);
+
     return 0;
 }
