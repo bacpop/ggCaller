@@ -149,8 +149,8 @@ typedef std::pair<PathMap, std::vector<int>> PathPair;
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 // mapping of colour ID to a NodeStrandMap
 typedef robin_hood::unordered_map<size_t, NodeStrandMap> ColourNodeStrandMap;
-// mapping colour to each colour to map of overlapping ORFs, detailed by ORFIDMap
-typedef std::unordered_map<size_t, std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>>> ORFOverlapMap;
+// mapping of overlapping ORFs, detailed by ORFIDMap
+typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
 // maps individual colour ids to ORF ids in ORFIDMap, output for pybind
 typedef std::unordered_map<size_t, std::vector<size_t>> PyORFColoursMap;
 // maps a unique ID to an ORF sequence and path through graph. output for pybind
