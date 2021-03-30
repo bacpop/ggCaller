@@ -92,7 +92,7 @@ class unitigDict {
     std::unordered_map<bool, std::unordered_map<int, uint8_t>> part_codon;
 
     // unitig properties
-    std::pair<size_t, std::size_t> unitig_size;
+    std::pair<std::size_t, std::size_t> unitig_size;
     std::vector<bool> unitig_full_colour;
     std::vector<bool> unitig_head_colour;
     std::vector<bool> unitig_tail_colour;
@@ -122,9 +122,11 @@ class unitigDict {
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef std::vector<unitigDict> UnitigVector;
 // mapping of each colour to component nodes in graph
-typedef std::vector<std::vector<size_t>> NodeColourVector;
-// a tuple of unitigMap, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
+typedef std::vector<std::unordered_set<size_t>> NodeColourVector;
+// a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::pair<UnitigVector, NodeColourMap> GraphPair;
+// tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
+typedef std::pair<UnitigVector, NodeColourMap, size_t, int> GraphTuple;
 //a vector of start,stop and length coordinates and strand information for an ORF
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
@@ -135,8 +137,10 @@ typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFN
 typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
 // maps a unique ID to a path through graph
 typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFIDMap;
-// A vector of paths following a head node, which containg complete stop-stop paths (pair of a vector of nodesID+orientation, and colours vector)
-typedef std::vector<std::pair<std::vector<int>, std::vector<bool>>> PathVector;
+// A vector of paths following a head node, which containg complete stop-stop paths (a vector of nodesID+orientation)
+typedef std::vector<std::vector<int>> PathVector;
+// A vector of all paths generated from recursive traversal
+typedef std::vector<PathVector> AllPaths;
 // Mapping of header kmer ID to PathVector
 typedef robin_hood::unordered_map<int, PathVector> PathMap;
 // pairing of PathMap and a vector of head-kmer IDs (hashing for PathMap) for parrelisation

@@ -336,7 +336,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             {
                 if (unitig_map.unitig_full_colour.at(i))
                 {
-                    node_colour_vector_private[i].push_back(unitig_map.unitig_id)
+                    node_colour_vector_private[i].insert(unitig_map.unitig_id)
                 }
             }
 

@@ -221,14 +221,13 @@ std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size
     return return_tuple;
 }
 
-GraphPair py_index_graph_exists(const std::string& graphfile,
+GraphTuple py_index_graph_exists(const std::string& graphfile,
                                const std::string& coloursfile,
                                const std::vector<std::string>& start_codons,
                                const std::vector<std::string>& stop_codons_for,
                                const std::vector<std::string>& stop_codons_rev,
                                size_t num_threads,
-                               const bool is_ref,
-                               const bool write_idx)
+                               const bool is_ref)
 {
         // Set number of threads
     if (num_threads < 1)
@@ -270,18 +269,19 @@ GraphPair py_index_graph_exists(const std::string& graphfile,
         graph_pair = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
     }
 
-    return graph_pair;
+    // make tuple containing all information needed in python back-end
+    GraphTuple graph_tuple = std::make_tuple(graph_pair.first, graph_pair.second, nb_colours, overlap);
+
+    return graph_tuple;
 }
 
-GraphPair py_index_graph_build(const std::string& infile1,
+GraphTuple py_index_graph_build(const std::string& infile1,
                               const int kmer,
                               const std::vector<std::string>& start_codons,
                               const std::vector<std::string>& stop_codons_for,
                               const std::vector<std::string>& stop_codons_rev,
                               size_t num_threads,
                               bool is_ref,
-                              const bool write_idx,
-                              const bool repeat,
                               const bool write_graph,
                               const std::string& infile2)
 {
@@ -299,7 +299,7 @@ GraphPair py_index_graph_build(const std::string& infile1,
 
     // initialise persistent variables
     GraphPair graph_tuple;
-    const int overlap = kmer - 1;
+    int overlap = kmer - 1;
     size_t nb_colours;
     std::vector<std::string> input_colours;
 
@@ -325,8 +325,13 @@ GraphPair py_index_graph_build(const std::string& infile1,
         graph_pair = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
     }
 
-    return graph_pair;
+    // make tuple containing all information needed in python back-end
+    GraphTuple graph_tuple = std::make_tuple(graph_pair.first, graph_pair.second, nb_colours, overlap);
+
+    return graph_tuple;
 }
+
+std::pair<ORFOverlapMap, PyORFIDMap> calculate_ORFs ()
 
 
 PYBIND11_MODULE(ggCaller_cpp, m)
@@ -339,24 +344,55 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def_readwrite("colours_equal", &unitigDict::head_tail_colours_equal)
             .def_readwrite("neighbours", &unitigDict::neighbours)
             .def_readwrite("end_contig", &unitigDict::end_contig)
-            .def_readwrite("seq", &unitigDict::unitig_seq);
+            .def_readwrite("seq", &unitigDict::unitig_seq)
+            .def_readwrite("forward_stop" &unitigDict::forward_stop)
+            .def_readwrite("reverse_stop" &unitigDict::reverse_stop)
+            .def_readwrite("full_codon" &unitigDict::full_codon)
+            .def_readwrite("part_codon" &unitigDict::part_codon)
+            .def_readwrite("unitig_size" &unitigDict::unitig_size);
 
-    m.def("call_genes_existing", &py_ggCaller_graphexists, "Traverses pre-existing Bifrost graph, calling open reading frames.",
+//    m.def("call_genes_existing", &py_ggCaller_graphexists, "Traverses pre-existing Bifrost graph, calling open reading frames.",
+//    py::arg("graphfile"),
+//    py::arg("coloursfile"),
+//    py::arg("start_codons"),
+//    py::arg("stop_codons_for"),
+//    py::arg("stop_codons_rev"),
+//    py::arg("num_threads") = 1,
+//    py::arg("is_ref") = 0,
+//    py::arg("write_idx") = 1,
+//    py::arg("repeat") = 0,
+//    py::arg("no_repeat") = 0,
+//    py::arg("max_path_length") = 10000,
+//    py::arg("min_ORF_length") = 90,
+//    py::arg("max_ORF_overlap") = 60);
+//
+//    m.def("call_genes_build", &py_ggCaller_graphbuild, "Builds and then traverses Bifrost graph, calling open reading frames.",
+//    py::arg("infile1"),
+//    py::arg("kmer"),
+//    py::arg("start_codons"),
+//    py::arg("stop_codons_for"),
+//    py::arg("stop_codons_rev"),
+//    py::arg("num_threads") = 1,
+//    py::arg("is_ref") = 1,
+//    py::arg("write_idx") = 1,
+//    py::arg("repeat") = 0,
+//    py::arg("write_graph") = 1,
+//    py::arg("no_repeat") = 0,
+//    py::arg("max_path_length") = 10000,
+//    py::arg("min_ORF_length") = 90,
+//    py::arg("max_ORF_overlap") = 60,
+//    py::arg("infile2") = "NA");
+
+    m.def("index_existing", &py_index_graph_exists, "Traverses pre-existing Bifrost graph, calling open reading frames.",
     py::arg("graphfile"),
     py::arg("coloursfile"),
     py::arg("start_codons"),
     py::arg("stop_codons_for"),
     py::arg("stop_codons_rev"),
     py::arg("num_threads") = 1,
-    py::arg("is_ref") = 0,
-    py::arg("write_idx") = 1,
-    py::arg("repeat") = 0,
-    py::arg("no_repeat") = 0,
-    py::arg("max_path_length") = 10000,
-    py::arg("min_ORF_length") = 90,
-    py::arg("max_ORF_overlap") = 60);
+    py::arg("is_ref") = 0);
 
-    m.def("call_genes_build", &py_ggCaller_graphbuild, "Builds and then traverses Bifrost graph, calling open reading frames.",
+    m.def("index_build", &py_ggCaller_graphbuild, "Builds and then traverses Bifrost graph, calling open reading frames.",
     py::arg("infile1"),
     py::arg("kmer"),
     py::arg("start_codons"),
@@ -364,12 +400,6 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     py::arg("stop_codons_rev"),
     py::arg("num_threads") = 1,
     py::arg("is_ref") = 1,
-    py::arg("write_idx") = 1,
-    py::arg("repeat") = 0,
     py::arg("write_graph") = 1,
-    py::arg("no_repeat") = 0,
-    py::arg("max_path_length") = 10000,
-    py::arg("min_ORF_length") = 90,
-    py::arg("max_ORF_overlap") = 60,
     py::arg("infile2") = "NA");
 }
