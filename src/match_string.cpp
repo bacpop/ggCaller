@@ -149,22 +149,19 @@ std::vector<fm_index_coll> generate_fmindex(const std::vector<std::string>& asse
 }
 
 // determine true colours of sequence
-void check_colours(std::vector<bool>& path_colours,
-                   const std::string& path_sequence,
-                   const std::vector<fm_index_coll>& seq_idx,
-                   const size_t& nb_colours)
+bool check_colours(const std::string& path_sequence,
+                   const fm_index_coll& fm_idx)
 {
+    // initialise present
+    bool present = true;
+
     // convert string to dn5 vector, get colours
     seqan3::dna5_vector query = path_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
 
-    //iterate over colours, if colour present then add to hits
-    for (size_t i = 0; i < nb_colours; i++)
+    //if sequence present then add to hits
+    int hits = seq_search(query, fm_idx);
+    if (!hits)
     {
-        if (path_colours[i]) {
-            int hits = seq_search(query, seq_idx[i]);
-            if (!hits) {
-                path_colours[i] = 0;
-            }
-        }
+        present = false;
     }
 }

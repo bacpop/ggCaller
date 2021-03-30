@@ -131,12 +131,12 @@ typedef std::pair<UnitigVector, NodeColourMap, size_t, int> GraphTuple;
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
 typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
-// maps an ORF node sequence to its colours and path through graph
-typedef robin_hood::unordered_map<std::string, std::pair<std::vector<bool>, ORFNodeVector>> ORFNodeMap;
+// maps an ORF node sequence to its path through graph
+typedef robin_hood::unordered_map<std::string, ORFNodeVector>> ORFNodeMap;
 // maps individual colour ids to ORF ids in ORFIDMap
 typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
-// maps a unique ID to a path through graph
-typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFIDMap;
+// vector of ORF paths throughg graphs
+typedef std::vector<ORFNodeVector> ORFVector;
 // A vector of paths following a head node, which containg complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
