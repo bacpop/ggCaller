@@ -124,9 +124,9 @@ typedef std::vector<unitigDict> UnitigVector;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::unordered_set<size_t>> NodeColourVector;
 // a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
-typedef std::pair<UnitigVector, NodeColourMap> GraphPair;
+typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
-typedef std::pair<UnitigVector, NodeColourMap, size_t, int> GraphTuple;
+typedef std::pair<UnitigVector, NodeColourVector, size_t, int> GraphTuple;
 //a vector of start,stop and length coordinates and strand information for an ORF
 typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
