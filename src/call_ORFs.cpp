@@ -12,7 +12,7 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                          const fm_index_coll& fm_idx)
 {
     // ORF dictionary for locating ORF position in graph. Nodes traversed by ORF is ordered map to ensure ordering is kept for overlap comparisons.
-    ORFNodeMap ORF_map;
+    ORFNodeMap ORF_node_map;
 
     // initialise path sequence
     std::string path_sequence;
@@ -239,8 +239,6 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                 }
 
                 // check path sequence is real if is_ref
-
-                // check the colours of the ORF
                 const bool present = check_colours(ORF_seq, fm_idx);
 
                 // check if real sequence, if not pass on the ORF
@@ -279,7 +277,7 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
             ORF_node_map.emplace(std::move(ORF_path_ID), std::move(ORF_node_vector));
         }
     }
-    return ORF_map;
+    return ORF_node_map;
 }
 
 // calculate node coordinates for an ORF
@@ -404,13 +402,13 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map)
     size_t ORF_ID = 0;
     for (const auto& ORF : ORF_node_map)
     {
-        ORF_Vector[ORF_ID] = std::move(ORF.second);
+        ORF_vector[ORF_ID] = std::move(ORF.second);
 
         // iterate ORF_ID
         ORF_ID++;
     }
 
-    // clear ORF_node_paths
+    // clear ORF_node_map
     ORF_node_map.clear();
 
     return ORF_vector;
@@ -422,7 +420,7 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
     // initialise map to store orientation of nodes (colour is an ID, not a string
     std::vector<NodeStrandMap> pos_strand_vector;
 
-    for (const auto& ORF_nodes : ORF_node_paths)
+    for (const auto& ORF_nodes : ORF_node_map)
     {
         // unpack tuple to get nodes vector
         const auto& nodes = std::get<0>(ORF_nodes.second);
@@ -555,30 +553,19 @@ std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
 
-    #pragma omp parallel
+    // iterate over all_paths
+    for (auto it = all_paths.begin(); it < all_paths.end(); it++)
     {
-        ORFNodeMap ORF_node_map_private;
-
-        // iterate over head_kmer_strings
-        #pragma omp for nowait
-        for (auto it = all_paths.begin(); it < all_paths.end(); it++)
+        const auto& unitig_paths = *it;
+        // iterate over paths following head_kmer
+        for (const auto& path : unitig_paths)
         {
-            const auto& unitig_paths = *it;
-            // iterate over paths following head_kmer
-            for (const auto& path : unitig_paths)
-            {
-                // CALL ORFS
-                // generate all ORFs within the path for start and stop codon pairs
-                const auto ORF_map = std::move(generate_ORFs(graph_vector, stop_codons_for, start_codons_for, path.first, overlap, min_ORF_length, is_ref, fm_idx));
+            // CALL ORFS
+            // generate all ORFs within the path for start and stop codon pairs
+            const auto ORF_map = std::move(generate_ORFs(graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx));
 
-                // update ORF_node_map_private
-                ORF_node_map_private.insert(ORF_map.begin(), ORF_map.end());
-            }
-        }
-        #pragma omp critical
-        {
-            // Update ORF_node_paths
-            ORF_node_map.insert(ORF_node_map_private.begin(), ORF_node_map_private.end());
+            // update ORF_node_map_private
+            ORF_node_map.insert(ORF_map.begin(), ORF_map.end());
         }
     }
 

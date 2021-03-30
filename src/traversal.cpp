@@ -3,32 +3,6 @@
 // define mutex for safe addition to robinhood_maps
 //std::mutex mtx2;
 
-std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < array1.size(); i++)
-    {
-        if (array1[i] == 1 && array2[i] == 0)
-        {
-            output_array[i] = 0;
-        }
-    }
-    return output_array;
-}
-
-std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < array1.size(); i++)
-    {
-        if (array1[i] == 0 && array2[i] == 1)
-        {
-            output_array[i] = 1;
-        }
-    }
-    return output_array;
-}
-
 PathVector recur_nodes_binary (const UnitigVector& graph_vector,
                                const std::vector<int>& head_kmer_list,
                                const uint8_t& codon_arr,
@@ -161,96 +135,74 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
                          const bool repeat,
                          const size_t max_path_length)
 {
-    // recur through nodes to file paths
+    // initialise all_paths
     AllPaths all_paths;
 
-    cout << "Traversing nodes in forward direction..." << endl;
     // traverse nodes in forward direction
-    #pragma omp parallel
+    for (auto it = node_ids.begin(); it < node_ids.end(); it++)
     {
-        PathVector unitig_complete_paths;
-        AllPaths all_paths_private;
-        #pragma omp for nowait
-        for (auto it = node_ids.begin(); it < node_ids.end(); it++)
+        // parse unitig_id. Zero based, so take 1
+        const auto unitig_id = *it - 1;
+
+        // check if stop codons present. If not, pass
+        if (!graph_vector.at(unitig_id).forward_stop)
         {
-            // parse unitig_id. Zero based, so take 1
-            const auto unitig_id = *it - 1;
-
-            // check if stop codons present. If not, pass
-            if (!graph_vector.at(unitig_id).forward_stop)
-            {
-                continue;
-            }
-
-            // generate integer version of unitig_id for recursion
-            const int head_id = (int) *it;
-
-            // gather unitig information from graph_vector
-            const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(true).at(0);
-            const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
-
-            // generate vector and set for traversal
-            std::vector<int> head_kmer_list;
-            std::unordered_set<int> kmer_set;
-            head_kmer_list.push_back(head_id);
-            kmer_set.insert(head_id);
-
-            // recur paths
-            unitig_complete_paths = recur_nodes_binary(graph_vector, head_kmer_list, codon_arr, colour_ID, kmer_set, unitig_len, max_path_length, repeat);
-
-            if (!unitig_complete_paths.empty())
-            {
-                all_paths_private.push_back(std::move(unitig_complete_paths));
-            }
+            continue;
         }
-        #pragma omp critical
+
+        // generate integer version of unitig_id for recursion
+        const int head_id = (int) *it;
+
+        // gather unitig information from graph_vector
+        const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(true).at(0);
+        const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
+
+        // generate vector and set for traversal
+        std::vector<int> head_kmer_list;
+        std::unordered_set<int> kmer_set;
+        head_kmer_list.push_back(head_id);
+        kmer_set.insert(head_id);
+
+        // recur paths
+        PathVector unitig_complete_paths = recur_nodes_binary(graph_vector, head_kmer_list, codon_arr, colour_ID, kmer_set, unitig_len, max_path_length, repeat);
+
+        if (!unitig_complete_paths.empty())
         {
-            all_paths.insert(all_paths.end(), std::make_move_iterator(all_paths_private.begin()), std::make_move_iterator(all_paths_private.end()));
+            all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
 
-    cout << "Traversing nodes in reverse direction..." << endl;
     // traverse nodes in reverse direction
-    #pragma omp parallel
+    for (auto it = node_ids.begin(); it < node_ids.end(); it++)
     {
-        PathVector unitig_complete_paths;
-        AllPaths all_paths_private;
-        #pragma omp for nowait
-        for (auto it = node_ids.begin(); it < node_ids.end(); it++)
+        // parse unitig_id. Zero based, so take 1
+        const auto unitig_id = *it - 1;
+
+        // check if stop codons present. If not, pass
+        if (!graph_vector.at(unitig_id).reverse_stop)
         {
-            // parse unitig_id. Zero based, so take 1
-            const auto unitig_id = *it - 1;
-
-            // check if stop codons present. If not, pass
-            if (!graph_vector.at(unitig_id).reverse_stop)
-            {
-                continue;
-            }
-
-            // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
-            const int head_id = (int) *it * -1;
-
-            // gather unitig information from graph_vector
-            const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(false).at(0);
-            const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
-
-            // generate vector and set for traversal
-            std::vector<int> head_kmer_list;
-            std::unordered_set<int> kmer_set;
-            head_kmer_list.push_back(head_id);
-            kmer_set.insert(head_id);
-
-            // recur paths
-            unitig_complete_paths = recur_nodes_binary(graph_vector, head_kmer_list, codon_arr, colour_ID, kmer_set, unitig_len, max_path_length, repeat);
-
-            if (!unitig_complete_paths.empty())
-            {
-                all_paths_private.push_back(std::move(unitig_complete_paths));
-            }
+            continue;
         }
-        #pragma omp critical
+
+        // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
+        const int head_id = (int) *it * -1;
+
+        // gather unitig information from graph_vector
+        const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(false).at(0);
+        const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
+
+        // generate vector and set for traversal
+        std::vector<int> head_kmer_list;
+        std::unordered_set<int> kmer_set;
+        head_kmer_list.push_back(head_id);
+        kmer_set.insert(head_id);
+
+        // recur paths
+        PathVector unitig_complete_paths = recur_nodes_binary(graph_vector, head_kmer_list, codon_arr, colour_ID, kmer_set, unitig_len, max_path_length, repeat);
+
+        if (!unitig_complete_paths.empty())
         {
-            all_paths.insert(all_paths.end(), std::make_move_iterator(all_paths_private.begin()), std::make_move_iterator(all_paths_private.end()));
+            all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
 

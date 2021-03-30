@@ -159,6 +159,32 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
     return colours_arr;
 }
 
+std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
+{
+    std::vector<bool> output_array = array1;
+    for (size_t i = 0; i < array1.size(); i++)
+    {
+        if (array1[i] == 1 && array2[i] == 0)
+        {
+            output_array[i] = 0;
+        }
+    }
+    return output_array;
+}
+
+std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
+{
+    std::vector<bool> output_array = array1;
+    for (size_t i = 0; i < array1.size(); i++)
+    {
+        if (array1[i] == 0 && array2[i] == 1)
+        {
+            output_array[i] = 1;
+        }
+    }
+    return output_array;
+}
+
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator)
 {
@@ -318,7 +344,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
     #pragma omp parallel
     {
         UnitigVector graph_vector_private;
-        NodeColourMap node_colour_vector_private(nb_colours);
+        NodeColourVector node_colour_vector_private(nb_colours);
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
@@ -336,7 +362,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             {
                 if (unitig_map.unitig_full_colour.at(i))
                 {
-                    node_colour_vector_private[i].insert(unitig_map.unitig_id)
+                    node_colour_vector_private[i].insert(unitig_map.unitig_id);
                 }
             }
 
@@ -344,7 +370,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             head_kmer_map_private[unitig_map.head_kmer] = unitig_map.unitig_id;
 
             // add unitig to graph_vector, minus 1 as zero based
-            graph_vector[unitig_map.unitig_id - 1] = std::move(unitig_map));
+            graph_vector[unitig_map.unitig_id - 1] = std::move(unitig_map);
         }
         #pragma omp critical
         {
@@ -353,20 +379,20 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             // update node_colour_vector with calculated colours
             for (int i = 0; i < node_colour_vector_private.size(); i++)
             {
-                node_colour_vector[i].insert(node_colour_vector[i].end(), std::make_move_iterator(node_colour_vector_private[i].begin()), std::make_move_iterator(node_colour_vector_private[i].end()));
+                node_colour_vector[i].insert(node_colour_vector_private[i].begin(), node_colour_vector_private[i].end());
             }
         }
     }
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
-    size_t graph_map_size = graph_map.size() + 1;
+    size_t graph_vector_size = graph_vector.size();
     #pragma omp parallel
     {
         #pragma omp for nowait
-        for (size_t i = 1; i < graph_map_size; i++)
+        for (size_t i = 0; i < graph_vector_size; i++)
         {
             // get a copy of the unitig_Dict object
             mtx1.lock();
-            auto unitig_map = graph_map.at(i);
+            auto unitig_map = graph_vector.at(i);
             mtx1.unlock();
 
             // initialise neighbours vectors
@@ -381,7 +407,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
 
                 // get copy of successor unitig_ID
                 mtx1.lock();
-                auto adj_unitig_map = graph_map.at(succ_id);
+                auto adj_unitig_map = graph_vector.at(succ_id - 1);
                 mtx1.unlock();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
@@ -420,7 +446,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
 
                 // get copy of successor unitig_ID
                 mtx1.lock();
-                auto adj_unitig_map = graph_map.at(pred_id);
+                auto adj_unitig_map = graph_vector.at(pred_id - 1);
                 mtx1.unlock();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
@@ -470,9 +496,9 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
                 unitig_map.end_contig = true;
             }
 
-            // update graph_map with new entry
+            // update graph_vector with new entry
             mtx1.lock();
-            graph_map[i] = std::move(unitig_map);
+            graph_vector[i] = std::move(unitig_map);
             mtx1.unlock();
         }
     }
