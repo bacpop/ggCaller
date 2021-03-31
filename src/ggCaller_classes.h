@@ -46,7 +46,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-//namespace py = pybind11;
+namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames

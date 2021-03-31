@@ -189,77 +189,49 @@ def main():
 
     # calculate ORFs within graph
     for colour_ID, node_set in enumerate(node_colour_vector):
+        print("Colour number: " + str(colour_ID))
         ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
                                                                    overlap, max_path_length, is_ref, no_filter,
-                                                                   stop_codon_for, start_codons, min_ORF_length,
+                                                                   stop_codons_for, start_codons, min_ORF_length,
                                                                    max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-        # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_threads)
+        # if not filter specified, just append directly to true_genes
+        if no_filter:
+            for ORFNodeVector in ORF_vector:
+                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
+                if gene not in true_genes:
+                    # create tuple to hold ORF sequence, colours and graph traversal information
+                    empty_colours_list = ["0"] * nb_colours
+                    true_genes[gene] = (empty_colours_list, ORFNodeVector)
+                # update colours with current colour_ID
+                true_genes[gene][0][colour_ID] = "1"
+        else:
+            # calculate scores for genes
+            print("Calculating gene scores...")
+            ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_threads)
 
-        # determine
-        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+            # determine highest scoring genes
+            print("Calculating highest scoring genes...")
+            high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
-    # if no filter specified, generate ORF sequences and combine colours of identical ORFS
-    # if no_filter == True:
-    #     for colour, gene_set in ORF_colour_ID_map.items():
-    #         for ORF_ID in gene_set.items():
-    #             ORFNodeVector = full_ORF_dict[ORF_ID]
-    #             gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
-    #             if gene not in true_genes:
-    #                 # create string of zeros, make nth colour 1
-    #                 true_genes[gene] = ["0"] * nb_colours
-    #                 true_genes[gene][colour] = "1"
-    #             else:
-    #                 # make nth colour 1
-    #                 true_genes[gene][colour] = "1"
-    # else:
-    #     # generate gene scores using Balrog
-    #     full_ORF_dict, ORF_score_dict = score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threads)
-    #
-    #     print("Generating highest scoring gene paths...")
-    #
-    #     for colour_ORF_tuple in ORF_colour_ID_map.items():
-    #         colour, high_scoring_ORFs = call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict,
-    #                                                     ORF_overlap_dict)
-    #         # merge any matching genes which had differing TIS but were called together
-    #         for ORF_ID in high_scoring_ORFs:
-    #             # parse out gene string from full_ORF_dict, generate sequence
-    #             ORFNodeVector = full_ORF_dict[ORF_ID]
-    #             gene = generate_seq(unitig_map, ORFNodeVector[0], ORFNodeVector[1], overlap)
-    #             if gene not in true_genes:
-    #                 # create string of zeros, make nth colour 1
-    #                 true_genes[gene] = ["0"] * nb_colours
-    #                 true_genes[gene][colour] = "1"
-    #             else:
-    #                 # make nth colour 1
-    #                 true_genes[gene][colour] = "1"
+            for ORF_id in high_scoring_ORFs:
+                ORFNodeVector = ORF_vector[ORF_id]
+                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
+                if gene not in true_genes:
+                    # create tuple to hold ORF sequence, colours and graph traversal information
+                    empty_colours_list = ["0"] * nb_colours
+                    true_genes[gene] = (empty_colours_list, ORFNodeVector)
+                # update colours with current colour_ID
+                true_genes[gene][0][colour_ID] = "1"
 
-    # with Pool(processes=num_threads) as pool:
-    #     for colour, high_scoring_ORFs in pool.map(
-    #             partial(call_true_genes, minimum_path_score=minimum_path_score,
-    #                     ORF_score_dict=ORF_score_dict, ORF_overlap_dict=ORF_overlap_dict),
-    #             ORF_colour_ID_map.items()):
-    #         # remove TIS, and merge any matching genes which had differing TIS but were called together
-    #         for ORF_ID in high_scoring_ORFs:
-    #             # parse out gene string from full_ORF_dict
-    #             gene = str(full_ORF_dict[ORF_ID][0])[16:]
-    #             if gene not in true_genes:
-    #                 # create string of zeros, make nth colour 1
-    #                 true_genes[gene] = ["0"] * nb_colours
-    #                 true_genes[gene][colour] = "1"
-    #             else:
-    #                 # make nth colour 1
-    #                 true_genes[gene][colour] = "1"
-
-    # print("Generating fasta file of gene calls...")
-    # # print output to file
-    # ORF_count = 1
-    # with open(output, "w") as f:
-    #     for gene, colour in true_genes.items():
-    #         colour_str = "".join(colour)
-    #         f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
-    #         ORF_count += 1
+    print("Generating fasta file of gene calls...")
+    # print output to file
+    ORF_count = 1
+    with open(output, "w") as f:
+        for gene, info_pair in true_genes.items():
+            colour_str = "".join(info_pair[0])
+            f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
+            ORF_count += 1
 
     print("Finished.")
 

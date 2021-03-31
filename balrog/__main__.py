@@ -201,22 +201,21 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_thread
         tar.close()
 
     torch.hub.set_dir(model_dir)
-    print("Loading convolutional model...")
+    # print("Loading convolutional model...")
     if torch.cuda.device_count() > 0:
-        print("GPU detected...")
+        # print("GPU detected...")
         model = torch.hub.load(model_dir, "geneTCN", source='local').cuda()
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local').cuda()
         time.sleep(0.5)
     else:
-        print("No GPU detected, using CPU...")
+        # print("No GPU detected, using CPU...")
         torch.set_num_threads(num_threads)
         model = torch.hub.load(model_dir, "geneTCN", source='local')
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)
 
     # get sequences and coordinates of ORFs
-    if verbose:
-        print("Finding and translating open reading frames...")
+    # print("Finding and translating open reading frames...")
 
     ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph_vector, overlap)
 
@@ -228,8 +227,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_thread
         # load kmer filter
         with open(genexa_kmer_path, "rb") as f:
             aa_kmer_set = pickle.load(f)
-        if verbose:
-            print("Applying protein kmer filter...")
+        # print("Applying protein kmer filter...")
         seengene = []
         for s in ORF_seq_enc:
             kmerset = kmerize(s, k_seengene)
@@ -241,8 +239,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_thread
         aa_kmer_set.clear()
 
     # score
-    if verbose:
-        print("Scoring ORFs with temporal convolutional network...")
+    # print("Scoring ORFs with temporal convolutional network...")
 
     # sort by length to minimize impact of batch padding
     ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
@@ -281,8 +278,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_thread
         ORF_gene_score[k] = float(ORF_prob[idx])
         idx += 1
 
-    if verbose:
-        print("Scoring translation initiation sites...")
+    # print("Scoring translation initiation sites...")
 
     # extract nucleotide sequence surrounding potential start codons
     ORF_TIS_seq_flat = []

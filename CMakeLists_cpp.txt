@@ -49,7 +49,7 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)
 
 # add executable
-add_executable(ggCaller_cpp src/main.cpp src/call_ORFs.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp)
+add_executable(ggCaller_cpp src/main.cpp src/call_ORFs.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ggCaller_bindings.cpp)
 
 # link libraries
 target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads)
