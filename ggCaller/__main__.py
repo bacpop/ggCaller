@@ -147,6 +147,11 @@ def main():
     # create list for high scoring ORFs to return
     true_genes = {}
 
+    # load in scoring models if required
+    if not options.no_filter:
+        print("Loading Gene scoring models...")
+        model, model_tis, aa_kmer_set = load_models(options.threads)
+
     # calculate ORFs within graph
     for colour_ID, node_set in enumerate(node_colour_vector):
         print("Colour number: " + str(colour_ID))
@@ -170,7 +175,8 @@ def main():
         else:
             # calculate scores for genes
             print("Calculating gene scores...")
-            ORF_score_dict = score_genes(ORF_vector, graph_vector, options.min_orf_score, overlap, options.threads)
+            ORF_score_dict = score_genes(ORF_vector, graph_vector, options.min_orf_score, overlap, model, model_tis,
+                                         aa_kmer_set)
 
             # determine highest scoring genes
             print("Calculating highest scoring genes...")
