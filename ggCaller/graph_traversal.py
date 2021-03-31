@@ -63,9 +63,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
 
 #@profile
-def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_overlap_dict):
-    colour, ORF_ID_list = colour_ORF_tuple
-
+def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
 
@@ -79,26 +77,23 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
     # vertex_ID = g.new_vertex_property("int")
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in ORF_ID_list:
-        # check if ORF is present in ORF_score_dict, if not, score too low so do not add
-        if ORF in ORF_score_dict:
-            v = g.add_vertex()
-            #vertex_ID[v] = ORF
-            ORF_index[ORF] = g.vertex_index[v]
+    for ORF in ORF_score_dict.keys():
+        v = g.add_vertex()
+        # vertex_ID[v] = ORF
+        ORF_index[ORF] = g.vertex_index[v]
 
     # add vertex sequences to graph
-    #g.vertex_properties["ID"] = vertex_ID
+    # g.vertex_properties["ID"] = vertex_ID
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
-    if ORF_overlap_dict[colour]:
-        for ORF1, overlap_dict in ORF_overlap_dict[colour].items():
-            # check that ORF1 nodes exist in graph, may have been removed due to low score
-            if ORF1 in ORF_index:
-                for ORF2 in overlap_dict.keys():
-                    # check that ORF2 nodes exist in graph as before
-                    if (ORF2 in ORF_index):
-                        # add new edge between the two ORFs, where ORF2 is the source and ORF1 is the sink
-                        e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
+    for ORF1, overlap_dict in ORF_overlap_dict.items():
+        # check that ORF1 nodes exist in graph, may have been removed due to low score
+        if ORF1 in ORF_index:
+            for ORF2 in overlap_dict.keys():
+                # check that ORF2 nodes exist in graph as before
+                if ORF2 in ORF_index:
+                    # add new edge between the two ORFs, where ORF2 is the source and ORF1 is the sink
+                    e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
 
     # generate a transative closure of the graph to add all directed edges and add vertex properties
     tc = gt.transitive_closure(g)
@@ -140,14 +135,14 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
         ORF_score = ORF_score_dict[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
-        if ORF1 not in ORF_overlap_dict[colour]:
+        if ORF1 not in ORF_overlap_dict:
             edge_weights[e] = -(ORF_score)
             continue
-        elif ORF2 not in ORF_overlap_dict[colour][ORF1]:
+        elif ORF2 not in ORF_overlap_dict[ORF1]:
             edge_weights[e] = -(ORF_score)
             continue
         # parse overlap info, calculate edge weight
-        overlap_type, abs_overlap = ORF_overlap_dict[colour][ORF1][ORF2]
+        overlap_type, abs_overlap = ORF_overlap_dict[ORF1][ORF2]
 
         # set penalty to 0 for "n" or "w" or "i" overlaps
         penalty = 0
@@ -183,7 +178,7 @@ def call_true_genes(colour_ORF_tuple, minimum_path_score, ORF_score_dict, ORF_ov
         high_scoring_ORFs = traverse_components(component, tc, components, edge_weights, minimum_path_score)
         high_scoring_ORFs_all.update(high_scoring_ORFs)
 
-    return colour, high_scoring_ORFs_all
+    return high_scoring_ORFs_all
 
 def update_colour(colour1, colour2):
     updated_colour = ""

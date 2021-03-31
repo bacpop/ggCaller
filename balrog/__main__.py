@@ -88,7 +88,7 @@ aa_table = {"L": 1,
 
 # generate ORF sequences from coordinates
 # @profile
-def generate_seq(unitig_map, nodelist, node_coords, overlap):
+def generate_seq(graph_vector, nodelist, node_coords, overlap):
     sequence = ""
     for i in range(0, len(nodelist)):
         id = nodelist[i]
@@ -98,9 +98,9 @@ def generate_seq(unitig_map, nodelist, node_coords, overlap):
         strand = True if id >= 0 else False
 
         if strand:
-            unitig_seq = unitig_map[abs(id)].seq
+            unitig_seq = graph_vector[abs(id) - 1].seq
         else:
-            unitig_seq = str(Seq(unitig_map[abs(id)].seq).reverse_complement())
+            unitig_seq = str(Seq(graph_vector[abs(id) - 1].seq).reverse_complement())
 
         if len(sequence) == 0:
             substring = unitig_seq[coords[0]:(coords[1] + 1)]
@@ -121,12 +121,11 @@ def tokenize_aa_seq(aa_seq):
 
 
 #@profile
-def get_ORF_info(full_ORF_dict, unitig_map, overlap):
-    ORF_IDs = []
+def get_ORF_info(ORF_vector, graph_vector, overlap):
     ORF_seq_list = []
     TIS_seqs = []
     # iterate over list of ORFs
-    for ORF_ID, ORFNodeVector in full_ORF_dict.items():
+    for ORFNodeVector in ORF_vector:
         # need to determine ORF sequences from paths
         ORF_nodelist = ORFNodeVector[0]
         ORF_node_coords = ORFNodeVector[1]
@@ -134,8 +133,8 @@ def get_ORF_info(full_ORF_dict, unitig_map, overlap):
         TIS_node_coords = ORFNodeVector[4]
 
         # generate ORF_seq, as well as upstream and downstream TIS seq
-        ORF_seq = generate_seq(unitig_map, ORF_nodelist, ORF_node_coords, overlap)
-        upstream_TIS_seq = generate_seq(unitig_map, TIS_nodelist, TIS_node_coords, overlap)
+        ORF_seq = generate_seq(graph_vector, ORF_nodelist, ORF_node_coords, overlap)
+        upstream_TIS_seq = generate_seq(graph_vector, TIS_nodelist, TIS_node_coords, overlap)
         downstream_TIS_seq = ORF_seq[0:19]
 
         # generate Seq class for translation
@@ -144,14 +143,13 @@ def get_ORF_info(full_ORF_dict, unitig_map, overlap):
         # translate once per frame, then slice. Note, do not include start or stop codons
         aa = str(seq[3:-3].translate(table=translation_table, to_stop=False))
 
-        ORF_IDs.append(ORF_ID)
         ORF_seq_list.append(aa)
         TIS_seqs.append((upstream_TIS_seq, downstream_TIS_seq))
 
     # convert amino acids into integers
     ORF_seq_enc = [tokenize_aa_seq(x) for x in ORF_seq_list]
 
-    return ORF_IDs, ORF_seq_enc, TIS_seqs
+    return ORF_seq_enc, TIS_seqs
 
 
 #@profile
@@ -192,7 +190,7 @@ def kmerize(seq, k):
 
 
 #@profile
-def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threads):
+def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, num_threads):
     # set up load gene and TIS models
     """ extract and load balrog model """
 
@@ -220,7 +218,7 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
     if verbose:
         print("Finding and translating open reading frames...")
 
-    ORF_ID_list, ORF_seq_enc, TIS_seqs = get_ORF_info(full_ORF_dict, unitig_map, overlap)
+    ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph_vector, overlap)
 
     """Load k-mer filters"""
     genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
@@ -278,7 +276,7 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
 
     # recombine ORFs
     idx = 0
-    ORF_gene_score = [None] * len(ORF_ID_list)
+    ORF_gene_score = [None] * len(ORF_seq_enc)
     for k, coord in enumerate(ORF_gene_score):
         ORF_gene_score[k] = float(ORF_prob[idx])
         idx += 1
@@ -290,7 +288,7 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
     ORF_TIS_seq_flat = []
     ORF_TIS_seq_idx = []
     ORF_TIS_prob = [None] * len(TIS_seqs)
-    ORF_start_codon = [None] * len(ORF_ID_list)
+    ORF_start_codon = [None] * len(ORF_seq_enc)
 
     for i, TIS in enumerate(TIS_seqs):
         # unpack tuple. Note, downsteam includes start codon, which needs to be removed
@@ -378,13 +376,9 @@ def score_genes(full_ORF_dict, minimum_ORF_score, unitig_map, overlap, num_threa
 
     # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
     ORF_score_dict = {}
-    new_full_ORF_dict = {}
     for i, score in enumerate(ORF_score_flat):
-        # if score greater than minimum, add to the ORF_dict
+        # if score greater than minimum, add to the ORF_score_dict
         if score >= minimum_ORF_score:
-            ORF_score_dict[ORF_ID_list[i]] = score
-            new_full_ORF_dict[ORF_ID_list[i]] = full_ORF_dict[ORF_ID_list[i]]
-    # when finished, clear full_ORF_dict
-    full_ORF_dict.clear()
+            ORF_score_dict[i] = score
 
-    return new_full_ORF_dict, ORF_score_dict
+    return ORF_score_dict
