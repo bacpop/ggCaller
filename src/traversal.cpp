@@ -10,8 +10,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
                                const std::unordered_set<int>& kmer_set,
                                const size_t& length,
                                const size_t& length_max,
-                               const bool& repeat,
-                               const vector<bool>& empty_colour_arr)
+                               const bool& repeat)
 {
     // generate path list, add head_kmer_list to it
     PathVector path_list;
@@ -139,10 +138,10 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
     AllPaths all_paths;
 
     // traverse nodes in forward direction
-    for (auto it = node_ids.begin(); it < node_ids.end(); it++)
+    for (const auto& node_id : node_ids)
     {
         // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = *it - 1;
+        const auto unitig_id = node_id - 1;
 
         // check if stop codons present. If not, pass
         if (!graph_vector.at(unitig_id).forward_stop)
@@ -151,7 +150,7 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         }
 
         // generate integer version of unitig_id for recursion
-        const int head_id = (int) *it;
+        const int head_id = (int) node_id;
 
         // gather unitig information from graph_vector
         const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(true).at(0);
@@ -173,10 +172,10 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
     }
 
     // traverse nodes in reverse direction
-    for (auto it = node_ids.begin(); it < node_ids.end(); it++)
+    for (const auto& node_id : node_ids)
     {
         // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = *it - 1;
+        const auto unitig_id = node_id - 1;
 
         // check if stop codons present. If not, pass
         if (!graph_vector.at(unitig_id).reverse_stop)
@@ -185,7 +184,7 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         }
 
         // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
-        const int head_id = (int) *it * -1;
+        const int head_id = ((int) node_id) * -1;
 
         // gather unitig information from graph_vector
         const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(false).at(0);
