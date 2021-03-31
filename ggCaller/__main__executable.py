@@ -152,35 +152,6 @@ def main():
         "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, True)
 
-    # # if build graph specified, build graph and then call ORFs
-    # if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):
-    #     called_ORF_tuple = ggCaller_cpp.call_genes_existing(graph_file, colours_file, start_codons, stop_codon_for,
-    #                                                         stop_codon_rev, num_threads, is_ref, write_idx, repeat,
-    #                                                         no_filter, max_path_length, min_ORF_length, max_ORF_overlap)
-    # # if refs file specified for building
-    # elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file == None):
-    #     called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev,
-    #                                                      num_threads, True, write_idx, repeat, write_graph, no_filter,
-    #                                                      max_path_length, min_ORF_length, max_ORF_overlap)
-    # # if reads file specified for building
-    # elif (graph_file == None) and (colours_file == None) and (refs_file == None) and (reads_file != None):
-    #     called_ORF_tuple = ggCaller_cpp.call_genes_build(reads_file, ksize, start_codons, stop_codon_for,
-    #                                                      stop_codon_rev, num_threads, False, write_idx, repeat,
-    #                                                      write_graph, no_filter, max_path_length, min_ORF_length,
-    #                                                      max_ORF_overlap)
-    # # if both reads and refs file specified for building
-    # elif (graph_file == None) and (colours_file == None) and (refs_file != None) and (reads_file != None):
-    #     called_ORF_tuple = ggCaller_cpp.call_genes_build(refs_file, ksize, start_codons, stop_codon_for, stop_codon_rev,
-    #                                                      num_threads, False, write_idx, repeat, write_graph, no_filter,
-    #                                                      max_path_length, min_ORF_length, max_ORF_overlap, reads_file)
-    # else:
-    #     print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
-    #           "- Bifrost GFA and Bifrost colours file\n"
-    #           "- List of reference files\n"
-    #           "- List of read files\n"
-    #           "- A list of reference files and a list of read files.")
-    #     sys.exit(1)
-
     # unpack ORF pair into overlap dictionary and list for gene scoring
     graph_vector, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
@@ -198,7 +169,7 @@ def main():
         # if not filter specified, just append directly to true_genes
         if no_filter:
             for ORFNodeVector in ORF_vector:
-                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], ORFNodeVector[2], overlap)
+                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
                 if gene not in true_genes:
                     # create tuple to hold ORF sequence, colours and graph traversal information
                     empty_colours_list = ["0"] * nb_colours
