@@ -4,7 +4,7 @@
 
 # include "ggCaller_classes.h"
 
-std::string generate_sequence(const unitigMap& graph_map,
+std::string generate_sequence(const UnitigVector& graph_vector,
                               const std::vector<int>& nodelist,
                               const std::vector<indexTriplet>& node_coords,
                               const size_t& overlap)
@@ -23,9 +23,9 @@ std::string generate_sequence(const unitigMap& graph_map,
 
         if (strand)
         {
-            unitig_seq = graph_map.at(abs(id)).unitig_seq;
+            unitig_seq = graph_vector.at(abs(id) - 1).unitig_seq;
         } else {
-            unitig_seq = reverse_complement(graph_map.at(abs(id)).unitig_seq);
+            unitig_seq = reverse_complement(graph_vector.at(abs(id) - 1).unitig_seq);
         }
 
         if (sequence.empty())
@@ -48,33 +48,12 @@ std::string generate_sequence(const unitigMap& graph_map,
     return sequence;
 }
 
-void write_to_file (const unitigMap& graph_map,
-                    const std::string& outfile_name,
-                    const ORFColoursMap& ORF_colours_map,
-                    const ORFIDMap& ORF_ID_map,
-                    const size_t nb_colours,
-                    const size_t overlap)
+void write_to_file (const robin_hood::unordered_map<std::string, std::vector<bool>>& ORF_print_map,
+                    const std::string& outfile_name)
 {
     int gene_id = 1;
     ofstream outfile;
     outfile.open(outfile_name);
-
-    robin_hood::unordered_map<size_t, std::vector<bool>> ORF_print_map;
-    std::vector<bool> empty_vector(nb_colours, 0);
-    for (size_t i = 0; i < ORF_ID_map.size(); i++)
-    {
-        ORF_print_map[i] = empty_vector;
-    }
-
-    // iterate over all colours in colours_map
-    for (const auto& colour : ORF_colours_map)
-    {
-        // iterate over all ORF_IDs that have that colour and add in correct positive into vector
-        for (const auto& ORF : colour.second)
-        {
-            ORF_print_map[ORF][colour.first] = 1;
-        }
-    }
 
     // iterate over ORFs in all_ORFs
     for (const auto& ORF : ORF_print_map)
@@ -86,17 +65,8 @@ void write_to_file (const unitigMap& graph_map,
             colours += std::to_string(i);
         }
 
-        // generate ORF from node sequence
-        const auto ORF_sequence = std::move(generate_sequence(graph_map, std::get<0>(ORF_ID_map.at(ORF.first)), std::get<1>(ORF_ID_map.at(ORF.first)), overlap));
-        const auto TIS_sequence = std::move(generate_sequence(graph_map, std::get<3>(ORF_ID_map.at(ORF.first)), std::get<4>(ORF_ID_map.at(ORF.first)), overlap));
-
-        std::string total_seq;
-
-        total_seq += TIS_sequence;
-        total_seq += ORF_sequence;
-
         // append to file
-        outfile << ">" << std::to_string(gene_id) << "_" << colours << "\n" << total_seq << "\n";
+        outfile << ">" << std::to_string(gene_id) << "_" << colours << "\n" << ORF.first << "\n";
         gene_id++;
     }
 
@@ -107,13 +77,14 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/plasmid_clique_556_list_integer_paths_build.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list.fasta";
     omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
     const bool repeat = false;
-    const int max_path_length = 10000;
-    const int min_ORF_length = 90;
+    const size_t max_path_length = 10000;
+    const size_t min_ORF_length = 90;
+    const size_t max_ORF_overlap = 60;
     const bool no_filter = false;
 
     const std::vector<std::string> stop_codons_for = {"TAA", "TGA", "TAG"};
@@ -127,122 +98,60 @@ int main(int argc, char *argv[]) {
         num_threads = 1;
     }
 
-    // read in compact coloured DBG, comment out from here if not building...
-    GraphTuple graph_tuple;
-    const int kmer = 31;
-    const int overlap = kmer - 1;
-    size_t nb_colours;
-    std::vector<std::string> input_colours;
+//    GraphTuple graph_tuple = py_index_graph_exists(
+//        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+//        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+//        stop_codons_for, stop_codons_rev, num_threads, is_ref);
 
-    //scope for ccdbg
+    GraphTuple graph_tuple = py_index_graph_build(
+            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt", 31,
+            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
+
+    const auto& graph_vector = std::get<0>(graph_tuple);
+    const auto& node_colour_vector = std::get<1>(graph_tuple);
+    const auto& input_colours = std::get<2>(graph_tuple);
+    const auto& nb_colours = std::get<3>(graph_tuple);
+    const auto& overlap = std::get<4>(graph_tuple);
+
+    // initialise print map
+    robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
+
+    for (int colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
     {
-        cout << "Building coloured compacted DBG..." << endl;
-        // generate graph, writing if write_graph == true
-        const std::string infile1 = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.txt";
-        const std::string infile2 = "NA";
-        size_t lastindex = infile1.find_last_of(".");
-        std::string outgraph = infile1.substr(0, lastindex);
-        ColoredCDBG<> ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, write_graph, outgraph);
+        const auto& node_set = node_colour_vector.at(colour_ID);
 
-        // get the number of colours
-        nb_colours = ccdbg.getNbColors();
+        std::pair<ORFOverlapMap, ORFVector> ORF_pair = py_calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
+                                                               overlap, max_path_length, is_ref, no_filter,
+                                                               stop_codons_for, start_codons_for, min_ORF_length,
+                                                               max_ORF_overlap, write_idx, input_colours.at(colour_ID));
 
-        // get colour names
-        input_colours = ccdbg.getColorNames();
+        auto& ORF_vector = ORF_pair.second;
 
-        // generate codon index for graph
-        cout << "Generating graph stop codon index..." << endl;
-        graph_tuple = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
-    }
-    //  ...to here
-
-    // read DBG, comment out from here if not reading...
-//    cout << "Reading coloured compacted DBG..." << endl;
-//
-//    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.gfa";
-//    const std::string coloursfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_list.bfg_colors";
-//
-//    GraphTuple graph_tuple;
-//    int kmer;
-//    int overlap;
-//    size_t nb_colours;
-//    std::vector<std::string> input_colours;
-//
-//    // scope for ccdbg
-//    {
-//        // read in graph
-//        ColoredCDBG<> ccdbg;
-//        ccdbg.read(graphfile, coloursfile, num_threads);
-//
-//        //set local variables
-//        kmer = ccdbg.getK();
-//        overlap = kmer - 1;
-//
-//        // get the number of colours
-//        nb_colours = ccdbg.getNbColors();
-//
-//        // get colour names
-//        input_colours = ccdbg.getColorNames();
-//
-//        // generate codon index for graph
-//        cout << "Generating graph stop codon index..." << endl;
-//        graph_tuple = std::move(index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
-//    }
-//  ...to here
-
-    std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>, ColourNodeStrandMap> ORF_tuple;
-    // scope for path_pair
-    {
-        // generate empty colour vector
-        std::vector<bool> empty_colour_arr(nb_colours, 0);
-
-        // generate complete paths
-        cout << "Generating complete stop-stop paths..." << endl;
-        auto path_pair = std::move(traverse_graph(graph_tuple, repeat, empty_colour_arr, max_path_length));
-
-        // generate FMIndexes if is_ref
-        std::vector<fm_index_coll> seq_idx;
-        if (is_ref)
+        // add to ORF_print_map for writing to file
+        std::vector<bool> empty_colours_vector(nb_colours, 0);
+        for (const auto ORF : ORF_vector)
         {
-            seq_idx = generate_fmindex(input_colours, write_idx);
+            // generate ORF seq
+            const auto ORF_sequence = std::move(generate_sequence(graph_vector, std::get<0>(ORF), std::get<1>(ORF), overlap));
+            const auto TIS_sequence = std::move(generate_sequence(graph_vector, std::get<3>(ORF), std::get<4>(ORF), overlap));
+
+            std::string total_seq;
+
+            total_seq += TIS_sequence;
+            total_seq += ORF_sequence;
+
+            // add colour index to the colours vector
+            if (ORF_print_map.find(total_seq) == ORF_print_map.end())
+            {
+                ORF_print_map[total_seq] = empty_colours_vector;
+            }
+
+            ORF_print_map[total_seq][colour_ID] = 1;
         }
-
-        // generate ORF sequences - get this bit to work!
-        cout << "Generating ORF sequences from complete paths..." << endl;
-        ORF_tuple = std::move(call_ORFs(path_pair, std::get<0>(graph_tuple), stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, seq_idx, nb_colours));
     }
 
-    // if no filtering required, do not calculate overlaps
-    ORFOverlapMap ORF_overlap_map;
-    if (!no_filter)
-    {
-        cout << "Calculating gene overlap" << endl;
-        ORF_overlap_map = std::move(calculate_overlaps(std::get<0>(graph_tuple), ORF_tuple, overlap, 90));
-    }
-
-    // write fasta files to file
-    write_to_file(std::get<0>(graph_tuple), outfile, std::get<0>(ORF_tuple), std::get<1>(ORF_tuple), nb_colours, overlap);
-
-    // convert robin_hood maps to unordered_maps for return. Mapped by ID, so just iterate over numbers
-    PyORFColoursMap ORF_colours_map;
-    for (size_t i = 0; i < std::get<0>(ORF_tuple).size(); i++)
-    {
-        ORF_colours_map[i] = std::move(std::get<0>(ORF_tuple)[i]);
-    }
-
-    PyORFIDMap ORF_ID_Map;
-    for (size_t i = 0; i < std::get<1>(ORF_tuple).size(); i++)
-    {
-        ORF_ID_Map[i] = std::move(std::get<1>(ORF_tuple)[i]);
-    }
-
-    PyUnitigMap unitig_map;
-    for (size_t i = 0; i < std::get<0>(graph_tuple).size(); i++)
-    {
-        unitig_map[i] = std::move(std::get<0>(graph_tuple)[i]);
-    }
-
-    std::tuple<ORFOverlapMap, PyORFColoursMap, PyORFIDMap, PyUnitigMap, size_t, size_t> return_tuple = std::make_tuple(ORF_overlap_map, ORF_colours_map, ORF_ID_Map, unitig_map, nb_colours, overlap);
+    // print to file
+    write_to_file(ORF_print_map, outfile);
 
     return 0;
 }

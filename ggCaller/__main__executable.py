@@ -130,8 +130,8 @@ def main():
     #     stop_codon_rev = ["TTA", "TCA", "CTA"]
 
     start_codons = ["ATG", "GTG", "TTG"]
-    stop_codon_for = ["TAA", "TGA", "TAG"]
-    stop_codon_rev = ["TTA", "TCA", "CTA"]
+    stop_codons_for = ["TAA", "TGA", "TAG"]
+    stop_codons_rev = ["TTA", "TCA", "CTA"]
 
     output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_fa_list_integer_paths.fasta"
     # set mimimum path score
@@ -150,8 +150,7 @@ def main():
     graph_tuple = ggCaller_cpp.index_existing(
         "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
         "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
-        start_codons,
-        stop_codon_for, stop_codon_rev, num_threads, True)
+        stop_codons_for, stop_codons_rev, num_threads, True)
 
     # # if build graph specified, build graph and then call ORFs
     # if (graph_file != None) and (colours_file != None) and (refs_file == None) and (reads_file == None):

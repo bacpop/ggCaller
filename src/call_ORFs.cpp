@@ -536,8 +536,16 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
         pos_strand_vector.erase(pos_strand_vector.begin() + 1, pos_strand_vector.begin() + pos_strand_vector.size());
     }
 
-    // return only first entry of pos_strand_vector, as this structure is now flat
-    return pos_strand_vector[0];
+    // if no ORFs present, need to just return an empty NodeStrandMap
+    if (pos_strand_vector.empty())
+    {
+        NodeStrandMap empty_map;
+        return empty_map;
+    } else
+    {
+        // return only first entry of pos_strand_vector, as this structure is now flat
+        return pos_strand_vector[0];
+    }
 }
 
 

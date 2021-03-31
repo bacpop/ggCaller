@@ -46,7 +46,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-namespace py = pybind11;
+//namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -133,30 +133,16 @@ typedef std::tuple<size_t, size_t, size_t> indexTriplet;
 typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
 // maps an ORF node sequence to its path through graph
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
-// maps individual colour ids to ORF ids in ORFIDMap
-typedef robin_hood::unordered_map<size_t, std::vector<size_t>> ORFColoursMap;
 // vector of ORF paths throughg graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // A vector of paths following a head node, which containg complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
 typedef std::vector<PathVector> AllPaths;
-// Mapping of header kmer ID to PathVector
-typedef robin_hood::unordered_map<int, PathVector> PathMap;
-// pairing of PathMap and a vector of head-kmer IDs (hashing for PathMap) for parrelisation
-typedef std::pair<PathMap, std::vector<int>> PathPair;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
-// mapping of colour ID to a NodeStrandMap
-typedef robin_hood::unordered_map<size_t, NodeStrandMap> ColourNodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
-// maps individual colour ids to ORF ids in ORFIDMap, output for pybind
-typedef std::unordered_map<size_t, std::vector<size_t>> PyORFColoursMap;
-// maps a unique ID to an ORF sequence and path through graph. output for pybind
-typedef std::unordered_map<size_t, ORFNodeVector> PyORFIDMap;
-// mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef std::unordered_map<size_t, unitigDict> PyUnitigMap;
 
 // function headers
 // indexing
@@ -228,13 +214,6 @@ fm_index_coll index_fasta(const std::string& fasta_file,
 
 int seq_search(const seqan3::dna5_vector& query,
                const fm_index_coll& ref_idx);
-//
-//void call_strings(ORFNodeMap& ORF_node_paths,
-//                  const std::vector<std::string>& assembly_list,
-//                  const bool& write_idx);
-//
-//std::vector<fm_index_coll> generate_fmindex(const std::vector<std::string>& assembly_list,
-//                                            const bool& write_idx);
 
 bool check_colours(const std::string& path_sequence,
                    const fm_index_coll& fm_idx);
@@ -275,22 +254,20 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
 
 // ggCaller_bindings
 GraphTuple py_index_graph_exists(const std::string& graphfile,
-                               const std::string& coloursfile,
-                               const std::vector<std::string>& start_codons,
-                               const std::vector<std::string>& stop_codons_for,
-                               const std::vector<std::string>& stop_codons_rev,
-                               size_t num_threads,
-                               const bool is_ref);
+                                 const std::string& coloursfile,
+                                 const std::vector<std::string>& stop_codons_for,
+                                 const std::vector<std::string>& stop_codons_rev,
+                                 size_t num_threads,
+                                 const bool is_ref);
 
 GraphTuple py_index_graph_build(const std::string& infile1,
-                              const int kmer,
-                              const std::vector<std::string>& start_codons,
-                              const std::vector<std::string>& stop_codons_for,
-                              const std::vector<std::string>& stop_codons_rev,
-                              size_t num_threads,
-                              bool is_ref,
-                              const bool write_graph,
-                              const std::string& infile2);
+                                const int kmer,
+                                const std::vector<std::string>& stop_codons_for,
+                                const std::vector<std::string>& stop_codons_rev,
+                                size_t num_threads,
+                                bool is_ref,
+                                const bool write_graph,
+                                const std::string& infile2);
 
 std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph_vector,
                                                      const size_t& colour_ID,
