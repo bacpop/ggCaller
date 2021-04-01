@@ -1,5 +1,6 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
+import ggCaller_cpp
 
 
 # @profile
@@ -180,11 +181,41 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 
     return high_scoring_ORFs_all
 
-def update_colour(colour1, colour2):
-    updated_colour = ""
-    for i in range(0, len(colour1)):
-        if colour1[i] == "1" or colour2[i] == "1":
-            updated_colour += "1"
-        else:
-            updated_colour += "0"
-    return updated_colour
+
+def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_length, is_ref, no_filter,
+                       stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
+                       minimum_path_score, write_idx, input_colours, nb_colours, model, model_tis, aa_kmer_set):
+    # unpack tuple
+    colour_ID, node_set = node_set_tuple
+
+    # initiate true genes dictionary
+    true_genes = {}
+
+    # determine all ORFs in Bifrost graph
+    ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
+                                                               overlap, max_path_length, is_ref, no_filter,
+                                                               stop_codons_for, start_codons, min_ORF_length,
+                                                               max_ORF_overlap, write_idx, input_colours[colour_ID])
+
+    # if not filter specified, just append directly to true_genes
+    if no_filter:
+        for ORFNodeVector in ORF_vector:
+            gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
+            # create tuple to hold ORF sequence, colours and graph traversal information
+            true_genes[gene] = ORFNodeVector
+            # update colours with current colour_ID
+    else:
+        # calculate scores for genes
+        ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis,
+                                     aa_kmer_set)
+
+        # determine highest scoring genes
+        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+
+        for ORF_id in high_scoring_ORFs:
+            ORFNodeVector = ORF_vector[ORF_id]
+            gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
+            # create tuple to hold ORF sequence, colours and graph traversal information
+            true_genes[gene] = ORFNodeVector
+
+    return colour_ID, true_genes
