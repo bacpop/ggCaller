@@ -5,8 +5,9 @@ import json
 from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
-from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from memory_profiler import profile
 
 
 def get_options():
@@ -80,7 +81,7 @@ def get_options():
                     default=True,
                     help='Do not write Bifrost GFA and colours to file. '
                          '[Default = False] ')
-    IO.add_argument('--options.repeat',
+    IO.add_argument('--repeat',
                     action="store_true",
                     default=False,
                     help='Enable traversal of nodes mulitple times. '
@@ -144,46 +145,30 @@ def main():
     # unpack ORF pair into overlap dictionary and list for gene scoring
     graph_vector, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
+    if not options.no_filter:
+        print("Loading gene scoring models...")
+        model, model_tis, aa_kmer_set = load_models(options.threads)
+    else:
+        model, model_tis, aa_kmer_set = None
+
+    # run run_calculate_ORFs with multithreading
     # create list for high scoring ORFs to return
     true_genes = {}
-
-    # load in scoring models if required
-    if not options.no_filter:
-        print("Loading Gene scoring models...")
-        model, model_tis, aa_kmer_set = load_models(options.threads)
-
-    # calculate ORFs within graph
-    for colour_ID, node_set in enumerate(node_colour_vector):
-        print("Colour number: " + str(colour_ID))
-        ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, options.repeat,
-                                                                   overlap, options.path, options.not_ref,
-                                                                   options.no_filter,
-                                                                   stop_codons_for, start_codons, options.orf,
-                                                                   options.maxoverlap, options.no_write_idx,
-                                                                   input_colours[colour_ID])
-
-        # if not filter specified, just append directly to true_genes
-        if options.no_filter:
-            for ORFNodeVector in ORF_vector:
-                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
-                if gene not in true_genes:
-                    # create tuple to hold ORF sequence, colours and graph traversal information
-                    empty_colours_list = ["0"] * nb_colours
-                    true_genes[gene] = (empty_colours_list, ORFNodeVector)
-                # update colours with current colour_ID
-                true_genes[gene][0][colour_ID] = "1"
-        else:
-            # calculate scores for genes
-            print("Calculating gene scores...")
-            ORF_score_dict = score_genes(ORF_vector, graph_vector, options.min_orf_score, overlap, model, model_tis,
-                                         aa_kmer_set)
-
-            # determine highest scoring genes
-            print("Calculating highest scoring genes...")
-            high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, options.min_path_score)
-
-            for ORF_id in high_scoring_ORFs:
-                ORFNodeVector = ORF_vector[ORF_id]
+    print("Generating high scoring ORF calls...")
+    with ThreadPoolExecutor(max_workers=options.threads) as executor:
+        for colour_ID, col_true_genes in executor.map(
+                partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=options.repeat, overlap=overlap,
+                        max_path_length=options.path,
+                        is_ref=options.not_ref, no_filter=options.no_filter, stop_codons_for=stop_codons_for,
+                        start_codons=start_codons,
+                        min_ORF_length=options.orf,
+                        max_ORF_overlap=options.maxoverlap, minimum_ORF_score=options.min_orf_score,
+                        minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
+                        input_colours=input_colours, nb_colours=nb_colours, model=model, model_tis=model_tis,
+                        aa_kmer_set=aa_kmer_set),
+                enumerate(node_colour_vector)):
+            # iterate over entries in col_true_genes to generate the sequences
+            for ORFNodeVector in col_true_genes:
                 gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
                 if gene not in true_genes:
                     # create tuple to hold ORF sequence, colours and graph traversal information
@@ -193,7 +178,7 @@ def main():
                 true_genes[gene][0][colour_ID] = "1"
 
     print("Generating fasta file of gene calls...")
-    # print options.out to file
+    # print output to file
     ORF_count = 1
     with open(options.out, "w") as f:
         for gene, info_pair in true_genes.items():
@@ -204,6 +189,3 @@ def main():
     print("Finished.")
 
     sys.exit(0)
-
-if __name__ == '__main__':
-    main()

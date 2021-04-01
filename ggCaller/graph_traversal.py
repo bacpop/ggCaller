@@ -189,7 +189,7 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     colour_ID, node_set = node_set_tuple
 
     # initiate true genes dictionary
-    true_genes = {}
+    true_genes = []
 
     # determine all ORFs in Bifrost graph
     ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
@@ -197,13 +197,9 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
                                                                stop_codons_for, start_codons, min_ORF_length,
                                                                max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-    # if not filter specified, just append directly to true_genes
+    # if not filter specified, just copy ORF_vector to true_genes
     if no_filter:
-        for ORFNodeVector in ORF_vector:
-            gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
-            # create tuple to hold ORF sequence, colours and graph traversal information
-            true_genes[gene] = ORFNodeVector
-            # update colours with current colour_ID
+        true_genes = ORF_vector
     else:
         # calculate scores for genes
         ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis,
@@ -212,10 +208,10 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
         # determine highest scoring genes
         high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
-        for ORF_id in high_scoring_ORFs:
-            ORFNodeVector = ORF_vector[ORF_id]
-            gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
-            # create tuple to hold ORF sequence, colours and graph traversal information
-            true_genes[gene] = ORFNodeVector
+        true_genes = [None] * len(high_scoring_ORFs)
+
+        for index, ORF_id in enumerate(high_scoring_ORFs):
+            # add only high scoring ORFs to true_genes
+            true_genes[index] = ORF_vector[ORF_id]
 
     return colour_ID, true_genes

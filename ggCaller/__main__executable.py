@@ -175,7 +175,8 @@ def main():
                         input_colours=input_colours, nb_colours=nb_colours, model=model, model_tis=model_tis,
                         aa_kmer_set=aa_kmer_set),
                 enumerate(node_colour_vector)):
-            for gene, ORFNodeVector in col_true_genes.items():
+            # iterate over entries in col_true_genes to generate the sequences
+            for ORFNodeVector in col_true_genes:
                 gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
                 if gene not in true_genes:
                     # create tuple to hold ORF sequence, colours and graph traversal information
