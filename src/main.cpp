@@ -6,7 +6,7 @@
 
 std::string generate_sequence(const UnitigVector& graph_vector,
                               const std::vector<int>& nodelist,
-                              const std::vector<indexTriplet>& node_coords,
+                              const std::vector<indexPair>& node_coords,
                               const size_t& overlap)
 {
     std::string sequence;

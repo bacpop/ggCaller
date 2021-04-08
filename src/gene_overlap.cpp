@@ -153,17 +153,16 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                 }
 
                 // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
-                for (auto & node_coord : ORF2_nodes.second)
                 for (int i = 0; i < ORF2_nodes.first.size(); i++)
                 {
-                    // get absolute last node index (same as unitig length)
-                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).unitig_size.first;
+                    // get absolute last node index (same as unitig length minus 1 as zero indexed)
+                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).unitig_size.first - 1;
                     // get difference from original start to absolute last node index
                     size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
                     // get difference from original end to absolute last node index
-                    size_t reversed_start = node_end -std::get<1>(ORF2_nodes.second.at(i));
+                    size_t reversed_start = node_end - std::get<1>(ORF2_nodes.second.at(i));
                     // reassigned the entry in-place in ORF2_nodes.second
-                    node_coord = std::make_pair(reversed_start, reversed_end);
+                    ORF2_nodes.second[i] = std::make_pair(reversed_start, reversed_end);
                 }
 
                 // correct ORF2 5p and 3p positions, reversing the coordinates
