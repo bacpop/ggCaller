@@ -144,13 +144,18 @@ def main():
     min_ORF_length = 90
     max_ORF_overlap = 60
     write_idx = True
+    write_graph = True
 
     num_threads = 4
 
-    graph_tuple = ggCaller_cpp.index_existing(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
-        stop_codons_for, stop_codons_rev, num_threads, True)
+    # graph_tuple = ggCaller_cpp.index_existing(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+    #     stop_codons_for, stop_codons_rev, num_threads, True)
+
+    graph_tuple = ggCaller_cpp.index_build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.txt",
+        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     graph_vector, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
