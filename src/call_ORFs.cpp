@@ -252,7 +252,7 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
             auto ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
 
             // work coordinates for TIS in node space
-            std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> TIS_coords;
+            std::tuple<std::string, std::vector<int>, std::vector<indexPair>> TIS_coords;
             if (TIS_present)
             {
                 std::pair<std::size_t, std::size_t> TIS_pair(codon_pair.first - 16, codon_pair.first - 1);
@@ -281,14 +281,14 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
 }
 
 // calculate node coordinates for an ORF
-std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
+std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                                                                                         const std::vector<int>& nodelist,
                                                                                         const std::vector<std::vector<size_t>>& node_ranges,
                                                                                         const int& overlap)
 {
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
     std::vector<int> ORF_node_id;
-    std::vector<indexTriplet> ORF_node_coords;
+    std::vector<indexPair> ORF_node_coords;
 
     // generate a unique string for the ORF for storage using nodes traversed (will match across matching ORFs)
     std::string ORF_path_ID;
@@ -332,8 +332,9 @@ std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_c
         // if the ORF traverses node, update coordinates
         if (start_assigned && end_assigned)
         {
-            size_t node_end = node_ranges[i][2];
-            indexTriplet node_coords = std::make_tuple(traversed_node_start, traversed_node_end, node_end);
+            //size_t node_end = node_ranges[i][2];
+            //indexTriplet node_coords = std::make_tuple(traversed_node_start, traversed_node_end, node_end);
+            indexPair node_coords = std::make_pair(traversed_node_start, traversed_node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));
 
@@ -349,49 +350,6 @@ std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_c
     const auto return_tuple = std::make_tuple(ORF_path_ID, ORF_node_id, ORF_node_coords);
     return return_tuple;
 }
-
-//std::tuple<ORFColoursMap, ORFIDMap, std::vector<std::size_t>> sort_ORF_colours(ORFNodeMap& ORF_node_paths)
-//{
-//    ORFColoursMap ORF_colours_map;
-//    ORFIDMap ORF_ID_map;
-//    std::unordered_set<size_t> ORF_colours_set;
-//
-//    // generate string for colours and IDs for each ORF
-//    size_t ORF_ID = 0;
-//    for (const auto& ORF : ORF_node_paths)
-//    {
-//        std::vector<size_t> colours_vector;
-//        const auto& ORF_colours = ORF.second.first;
-//        for (size_t i = 0; i < ORF_colours.size(); i++)
-//        {
-//            if (ORF_colours[i])
-//            {
-//                colours_vector.push_back(i);
-//            }
-//        }
-//        // generate new ORFIDMap entry, taking ORF PathVector only
-//        ORF_ID_map[ORF_ID] = std::move(ORF.second.second);
-//
-//        for (const auto& colours : colours_vector)
-//        {
-//            ORF_colours_map[colours].push_back(ORF_ID);
-//            ORF_colours_set.insert(colours);
-//        }
-//
-//        // iterate ORF_ID
-//        ORF_ID++;
-//    }
-//
-//    // convert set to vector to enable parallelisation
-//    std::vector<size_t> ORF_colours_vector(ORF_colours_set.begin(), ORF_colours_set.end());
-//
-//    // clear ORF_node_paths
-//    ORF_node_paths.clear();
-//
-//    // generate return tuple
-//    const auto return_tuple = std::make_tuple(ORF_colours_map, ORF_ID_map, ORF_colours_vector);
-//    return return_tuple;
-//}
 
 // converts ORF entries into a vector
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map)

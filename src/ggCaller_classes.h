@@ -127,10 +127,14 @@ typedef std::vector<std::unordered_set<size_t>> NodeColourVector;
 typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<UnitigVector, NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
-//a vector of start,stop and length coordinates and strand information for an ORF
-typedef std::tuple<size_t, size_t, size_t> indexTriplet;
+////a vector of start,stop and length coordinates and strand information for an ORF
+//typedef std::tuple<size_t, size_t, size_t> indexTriplet;
+//// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
+//typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
+//a pair of start and end coordinates for an ORF across a node
+typedef std::pair<size_t, size_t> indexPair;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
-typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>> ORFNodeVector;
 // maps an ORF node sequence to its path through graph
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths throughg graphs
@@ -230,7 +234,7 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                          const bool is_ref,
                          const fm_index_coll& fm_idx);
 
-std::tuple<std::string, std::vector<int>, std::vector<indexTriplet>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
+std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                                                                                     const std::vector<int>& nodelist,
                                                                                     const std::vector<std::vector<size_t>>& node_ranges,
                                                                                     const int& overlap);

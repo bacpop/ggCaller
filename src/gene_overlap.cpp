@@ -154,15 +154,16 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
 
                 // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
                 for (auto & node_coord : ORF2_nodes.second)
+                for (int i = 0; i < ORF2_nodes.first.size(); i++)
                 {
-                    // get absolute last node index
-                    size_t node_end = std::get<2>(node_coord);
+                    // get absolute last node index (same as unitig length)
+                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).unitig_size.first;
                     // get difference from original start to absolute last node index
-                    size_t reversed_end = node_end - std::get<0>(node_coord);
+                    size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
                     // get difference from original end to absolute last node index
-                    size_t reversed_start = node_end - std::get<1>(node_coord);
+                    size_t reversed_start = node_end -std::get<1>(ORF2_nodes.second.at(i));
                     // reassigned the entry in-place in ORF2_nodes.second
-                    node_coord = make_tuple(reversed_start, reversed_end, node_end);
+                    node_coord = std::make_pair(reversed_start, reversed_end);
                 }
 
                 // correct ORF2 5p and 3p positions, reversing the coordinates
@@ -348,7 +349,6 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                         const size_t& ORF1_end = std::get<1>(std::get<1>(ORF1_nodes)[ORF1_overlap_node]);
                         const size_t& ORF2_start = std::get<0>(ORF2_nodes.second[ORF2_overlap_node]);
                         const size_t& ORF2_end = std::get<1>(ORF2_nodes.second[ORF2_overlap_node]);
-                        const size_t& node_size = std::get<2>(ORF2_nodes.second[ORF2_overlap_node]);
 
                         // get the first node involved in the overlap
                         const int overlap_node = std::get<0>(ORF1_nodes)[ORF1_overlap_node];
