@@ -185,6 +185,9 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const int& kmer,
                                    const size_t& nb_colours);
 
+void update_neighbour_index(UnitigVector& graph_vector,
+                            robin_hood::unordered_map<std::string, size_t> head_kmer_map);
+
 GraphPair index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
@@ -208,7 +211,6 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
                          const size_t max_path_length);
 
 // match_strings
-
 fm_index_coll index_fasta(const std::string& fasta_file,
                           const bool& write_idx);
 

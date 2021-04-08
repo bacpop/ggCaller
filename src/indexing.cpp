@@ -321,6 +321,156 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     return unitig_map;
 }
 
+void update_neighbour_index(UnitigVector& graph_vector,
+                            robin_hood::unordered_map<std::string, size_t> head_kmer_map)
+{
+    // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
+    size_t graph_vector_size = graph_vector.size();
+    #pragma omp parallel
+    {
+        #pragma omp for nowait
+        for (size_t i = 0; i < graph_vector_size; i++)
+        {
+            // get a copy of the unitig_Dict object
+            mtx1.lock();
+            auto unitig_map = graph_vector.at(i);
+            mtx1.unlock();
+
+            // initialise neighbours vectors
+            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
+            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(false, NeighbourVector()));
+
+            // get copy of unitig_map.unitig_full_colour to determine whether unitig gains a new colour not present in
+            // gains a new colour not present in predecessors/successors
+            auto full_colours = unitig_map.unitig_full_colour;
+
+            // iterate over the connected nodes in successors
+            for (const auto& succ : unitig_map.succ_heads)
+            {
+                // get numerical successor ID
+                const size_t succ_id = head_kmer_map.at(succ.first);
+
+                // get copy of successor unitig_ID
+                mtx1.lock();
+                auto adj_unitig_map = graph_vector.at(succ_id - 1);
+                mtx1.unlock();
+
+                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
+                // for current untiig, should negate tail, as this portion will overlap with next unitig
+                std::vector<bool> colours;
+                if (succ.second)
+                {
+                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_head_colour));
+                } else
+                {
+                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_tail_colour));
+                }
+
+                // negate adjacent full colours from full colours
+                full_colours = std::move(negate_colours_array(full_colours, adj_unitig_map.unitig_full_colour));
+
+                // calculate sum_colours
+                int sum_colours = accumulate(colours.begin(), colours.end(), 0);
+
+                // if colours are viable, add successor information to current unitig
+                if (sum_colours != 0)
+                {
+                    //generate integer value of successor ID, if negative strand ID will be negative etc.
+                    int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
+                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (succ_id_int, adj_unitig_map.part_codon.at(succ.second));
+                    unitig_map.neighbours[true].push_back(std::move(neighbour));
+                }
+            }
+
+            // determine if unitig has new colour not found in successor, if so set end_contig as true
+            int sum_colours = accumulate(full_colours.begin(), full_colours.end(), 0);
+            if (sum_colours != 0)
+            {
+                unitig_map.end_contig = true;
+            }
+
+            // reset full_colours to repeat with predecessors
+            full_colours = unitig_map.unitig_full_colour;
+
+            // clear succ_heads
+            unitig_map.succ_heads.clear();
+            unitig_map.succ_heads.shrink_to_fit();
+
+            // iterate over the connected nodes in predecessors
+            for (const auto& pred : unitig_map.pred_heads)
+            {
+                // get numerical successor ID
+                const size_t pred_id = head_kmer_map.at(pred.first);
+
+                // get copy of successor unitig_ID
+                mtx1.lock();
+                auto adj_unitig_map = graph_vector.at(pred_id - 1);
+                mtx1.unlock();
+
+                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
+                // for current untiig, should negate head, as this portion will overlap with next unitig
+                std::vector<bool> colours;
+                if (pred.second)
+                {
+                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_head_colour));
+                } else
+                {
+                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_tail_colour));
+                }
+
+                // negate adjacent full colours from full colours
+                full_colours = std::move(negate_colours_array(full_colours, adj_unitig_map.unitig_full_colour));
+
+                // calculate sum_colours
+                int sum_colours = accumulate(colours.begin(), colours.end(), 0);
+
+                // if colours are viable, add successor information to current unitig
+                if (sum_colours != 0)
+                {
+                    //generate integer value of successor ID, if negative strand ID will be negative etc.
+                    int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
+                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (pred_id_int, adj_unitig_map.part_codon.at(pred.second));
+                    unitig_map.neighbours[false].push_back(std::move(neighbour));
+                }
+            }
+
+            // determine if unitig has new colour not found in predecessor, if so set end_contig as true
+            sum_colours = accumulate(full_colours.begin(), full_colours.end(), 0);
+            if (sum_colours != 0)
+            {
+                unitig_map.end_contig = true;
+            }
+
+            // clear pred_heads
+            unitig_map.pred_heads.clear();
+            unitig_map.pred_heads.shrink_to_fit();
+
+            // if there are no successors/predecessors or unitig colours change, means that unitig is first/last in sequence. Therefore,
+            // update full codon array to be 3 frame stop index to enable complete traversal
+            if (unitig_map.neighbours.at(true).empty() || unitig_map.neighbours.at(false).empty() || !unitig_map.head_tail_colours_equal || unitig_map.end_contig)
+            {
+                // set first three bits to 1
+                uint8_t full_binary = 7;
+
+                // update full codon indexes
+                unitig_map.add_codon(true, true, 0, full_binary);
+                unitig_map.add_codon(true, false, 0, full_binary);
+
+                unitig_map.forward_stop = true;
+                unitig_map.reverse_stop = true;
+
+                // set unitig to end of contig
+                unitig_map.end_contig = true;
+            }
+
+            // update graph_vector with new entry
+            mtx1.lock();
+            graph_vector[i] = std::move(unitig_map);
+            mtx1.unlock();
+        }
+    }
+}
+
 GraphPair index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
@@ -383,125 +533,8 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             }
         }
     }
-    // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
-    size_t graph_vector_size = graph_vector.size();
-    #pragma omp parallel
-    {
-        #pragma omp for nowait
-        for (size_t i = 0; i < graph_vector_size; i++)
-        {
-            // get a copy of the unitig_Dict object
-            mtx1.lock();
-            auto unitig_map = graph_vector.at(i);
-            mtx1.unlock();
-
-            // initialise neighbours vectors
-            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
-            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(false, NeighbourVector()));
-
-            // iterate over the connected nodes in successors
-            for (const auto& succ : unitig_map.succ_heads)
-            {
-                // get numerical successor ID
-                const size_t succ_id = head_kmer_map.at(succ.first);
-
-                // get copy of successor unitig_ID
-                mtx1.lock();
-                auto adj_unitig_map = graph_vector.at(succ_id - 1);
-                mtx1.unlock();
-
-                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
-                // for current untiig, should negate tail, as this portion will overlap with next unitig
-                std::vector<bool> colours;
-                if (succ.second)
-                {
-                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_head_colour));
-                } else
-                {
-                    colours = std::move(negate_colours_array(unitig_map.unitig_tail_colour, adj_unitig_map.unitig_tail_colour));
-                }
-
-                // calculate sum_colours
-                int sum_colours = accumulate(colours.begin(), colours.end(), 0);
-
-                // if colours are viable, add successor information to current unitig
-                if (sum_colours != 0)
-                {
-                    //generate integer value of successor ID, if negative strand ID will be negative etc.
-                    int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
-                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (succ_id_int, adj_unitig_map.part_codon.at(succ.second));
-                    unitig_map.neighbours[true].push_back(std::move(neighbour));
-                }
-            }
-
-            // clear succ_heads
-            unitig_map.succ_heads.clear();
-            unitig_map.succ_heads.shrink_to_fit();
-
-            // iterate over the connected nodes in predecessors
-            for (const auto& pred : unitig_map.pred_heads)
-            {
-                // get numerical successor ID
-                const size_t pred_id = head_kmer_map.at(pred.first);
-
-                // get copy of successor unitig_ID
-                mtx1.lock();
-                auto adj_unitig_map = graph_vector.at(pred_id - 1);
-                mtx1.unlock();
-
-                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
-                // for current untiig, should negate head, as this portion will overlap with next unitig
-                std::vector<bool> colours;
-                if (pred.second)
-                {
-                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_head_colour));
-                } else
-                {
-                    colours = std::move(negate_colours_array(unitig_map.unitig_head_colour, adj_unitig_map.unitig_tail_colour));
-                }
-
-                // calculate sum_colours
-                int sum_colours = accumulate(colours.begin(), colours.end(), 0);
-
-                // if colours are viable, add successor information to current unitig
-                if (sum_colours != 0)
-                {
-                    //generate integer value of successor ID, if negative strand ID will be negative etc.
-                    int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
-                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (pred_id_int, adj_unitig_map.part_codon.at(pred.second));
-                    unitig_map.neighbours[false].push_back(std::move(neighbour));
-                }
-            }
-
-            // clear pred_heads
-            unitig_map.pred_heads.clear();
-            unitig_map.pred_heads.shrink_to_fit();
-
-            // if there are no successors/predecessors or untig colours change, means that unitig is first/last in sequence. Therefore,
-            // update full codon array to be 3 frame stop index to enable complete traversal
-            if (unitig_map.neighbours.at(true).empty() || unitig_map.neighbours.at(false).empty() || !unitig_map.head_tail_colours_equal)
-            {
-                // set first three bits to 1
-                uint8_t full_binary = 7;
-
-
-                // update full codon indexes
-                unitig_map.add_codon(true, true, 0, full_binary);
-                unitig_map.add_codon(true, false, 0, full_binary);
-
-                unitig_map.forward_stop = true;
-                unitig_map.reverse_stop = true;
-
-                // set unitig to end of contig
-                unitig_map.end_contig = true;
-            }
-
-            // update graph_vector with new entry
-            mtx1.lock();
-            graph_vector[i] = std::move(unitig_map);
-            mtx1.unlock();
-        }
-    }
+    // update neighbour index in place within graph_vector
+    update_neighbour_index(graph_vector, head_kmer_map);
 
     const auto graph_pair = std::make_pair(graph_vector, node_colour_vector);
     return graph_pair;
