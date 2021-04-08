@@ -159,7 +159,7 @@ def main():
         print("Loading gene scoring models...")
         model, model_tis, aa_kmer_set = load_models(num_threads)
     else:
-        model, model_tis, aa_kmer_set = None
+        model, model_tis, aa_kmer_set = None, None, None
 
     # run run_calculate_ORFs with multithreading
     true_genes = {}
