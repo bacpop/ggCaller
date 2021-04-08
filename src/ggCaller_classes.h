@@ -88,8 +88,6 @@ class unitigDict {
     std::string head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
-//    std::unordered_map<bool, std::unordered_map<int, uint8_t>> full_codon;
-//    std::unordered_map<bool, std::unordered_map<int, uint8_t>> part_codon;
     std::vector<std::vector<uint8_t>> full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
     std::vector<std::vector<uint8_t>> part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
 
@@ -109,7 +107,6 @@ class unitigDict {
     // node neighbours. Neighbours map contains successors (true) and predecessors (false)
     std::vector<std::pair<std::string, bool>> succ_heads;
     std::vector<std::pair<std::string, bool>> pred_heads;
-    //std::unordered_map<bool, NeighbourVector> neighbours;
     std::vector<NeighbourVector> neighbours{NeighbourVector(), NeighbourVector()};
 
     // forward_stop presence/absence
@@ -125,7 +122,7 @@ class unitigDict {
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef std::vector<unitigDict> UnitigVector;
 // mapping of each colour to component nodes in graph
-typedef std::vector<std::unordered_set<size_t>> NodeColourVector;
+typedef std::vector<std::vector<size_t>> NodeColourVector;
 // a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
@@ -209,7 +206,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
 
 AllPaths traverse_graph(const UnitigVector& graph_vector,
                          const size_t& colour_ID,
-                         const std::unordered_set<size_t>& node_ids,
+                         const std::vector<size_t>& node_ids,
                          const bool repeat,
                          const size_t max_path_length);
 
@@ -276,7 +273,7 @@ GraphTuple py_index_graph_build(const std::string& infile1,
 
 std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph_vector,
                                                      const size_t& colour_ID,
-                                                     const std::unordered_set<size_t>& node_ids,
+                                                     const std::vector<size_t>& node_ids,
                                                      const bool& repeat,
                                                      const size_t& overlap,
                                                      const size_t& max_path_length,

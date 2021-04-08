@@ -197,7 +197,7 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
                                                                stop_codons_for, start_codons, min_ORF_length,
                                                                max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-    # if not filter specified, just copy ORF_vector to true_genes
+    # if no filter specified, just copy ORF_vector to true_genes
     if no_filter:
         true_genes = ORF_vector
     else:

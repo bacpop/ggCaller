@@ -111,7 +111,7 @@ GraphTuple py_index_graph_build(const std::string& infile1,
 
 std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph_vector,
                                                      const size_t& colour_ID,
-                                                     const std::unordered_set<size_t>& node_ids,
+                                                     const std::vector<size_t>& node_ids,
                                                      const bool& repeat,
                                                      const size_t& overlap,
                                                      const size_t& max_path_length,

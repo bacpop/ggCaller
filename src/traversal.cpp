@@ -130,7 +130,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
 
 AllPaths traverse_graph(const UnitigVector& graph_vector,
                          const size_t& colour_ID,
-                         const std::unordered_set<size_t>& node_ids,
+                         const std::vector<size_t>& node_ids,
                          const bool repeat,
                          const size_t max_path_length)
 {

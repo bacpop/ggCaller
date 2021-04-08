@@ -336,9 +336,6 @@ void update_neighbour_index(UnitigVector& graph_vector,
             auto unitig_map = graph_vector.at(i);
             mtx1.unlock();
 
-            // initialise neighbours vectors
-//            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
-//            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(false, NeighbourVector()));
 
             // get copy of unitig_map.unitig_full_colour to determine whether unitig gains a new colour not present in
             // gains a new colour not present in predecessors/successors
@@ -512,7 +509,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             {
                 if (unitig_map.unitig_full_colour.at(i))
                 {
-                    node_colour_vector_private[i].insert(unitig_map.unitig_id);
+                    node_colour_vector_private[i].push_back(unitig_map.unitig_id);
                 }
             }
 
@@ -529,7 +526,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             // update node_colour_vector with calculated colours
             for (int i = 0; i < node_colour_vector_private.size(); i++)
             {
-                node_colour_vector[i].insert(node_colour_vector_private[i].begin(), node_colour_vector_private[i].end());
+                node_colour_vector[i].insert(node_colour_vector[i].end(), make_move_iterator(node_colour_vector_private[i].begin()), make_move_iterator(node_colour_vector_private[i].end()));
             }
         }
     }
