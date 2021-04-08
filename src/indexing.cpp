@@ -337,8 +337,8 @@ void update_neighbour_index(UnitigVector& graph_vector,
             mtx1.unlock();
 
             // initialise neighbours vectors
-            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
-            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(false, NeighbourVector()));
+//            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(true, NeighbourVector()));
+//            unitig_map.neighbours.insert(std::pair<bool, NeighbourVector>(false, NeighbourVector()));
 
             // get copy of unitig_map.unitig_full_colour to determine whether unitig gains a new colour not present in
             // gains a new colour not present in predecessors/successors
@@ -377,7 +377,7 @@ void update_neighbour_index(UnitigVector& graph_vector,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
-                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (succ_id_int, adj_unitig_map.part_codon.at(succ.second));
+                    std::pair<int, std::vector<uint8_t>> neighbour (succ_id_int, adj_unitig_map.part_codon.at(succ.second));
                     unitig_map.neighbours[true].push_back(std::move(neighbour));
                 }
             }
@@ -429,7 +429,7 @@ void update_neighbour_index(UnitigVector& graph_vector,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
-                    std::pair<int, std::unordered_map<int, uint8_t>> neighbour (pred_id_int, adj_unitig_map.part_codon.at(pred.second));
+                    std::pair<int, std::vector<uint8_t>> neighbour (pred_id_int, adj_unitig_map.part_codon.at(pred.second));
                     unitig_map.neighbours[false].push_back(std::move(neighbour));
                 }
             }

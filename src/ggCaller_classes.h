@@ -50,7 +50,7 @@ namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
-typedef std::vector<std::pair<int, std::unordered_map<int, uint8_t>>> NeighbourVector;
+typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
@@ -87,9 +87,11 @@ class unitigDict {
     size_t unitig_id;
     std::string head_kmer;
 
-    // codon arrays
-    std::unordered_map<bool, std::unordered_map<int, uint8_t>> full_codon;
-    std::unordered_map<bool, std::unordered_map<int, uint8_t>> part_codon;
+    // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
+//    std::unordered_map<bool, std::unordered_map<int, uint8_t>> full_codon;
+//    std::unordered_map<bool, std::unordered_map<int, uint8_t>> part_codon;
+    std::vector<std::vector<uint8_t>> full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
+    std::vector<std::vector<uint8_t>> part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
 
     // unitig properties
     std::pair<std::size_t, std::size_t> unitig_size;
@@ -107,7 +109,8 @@ class unitigDict {
     // node neighbours. Neighbours map contains successors (true) and predecessors (false)
     std::vector<std::pair<std::string, bool>> succ_heads;
     std::vector<std::pair<std::string, bool>> pred_heads;
-    std::unordered_map<bool, NeighbourVector> neighbours;
+    //std::unordered_map<bool, NeighbourVector> neighbours;
+    std::vector<NeighbourVector> neighbours{NeighbourVector(), NeighbourVector()};
 
     // forward_stop presence/absence
     bool forward_stop = false;
@@ -127,10 +130,6 @@ typedef std::vector<std::unordered_set<size_t>> NodeColourVector;
 typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<UnitigVector, NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
-////a vector of start,stop and length coordinates and strand information for an ORF
-//typedef std::tuple<size_t, size_t, size_t> indexTriplet;
-//// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
-//typedef std::tuple<std::vector<int>, std::vector<indexTriplet>, size_t, std::vector<int>, std::vector<indexTriplet>> ORFNodeVector;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
