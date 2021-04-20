@@ -1,11 +1,12 @@
-#imports
+# imports
 import argparse
 import sys
 import json
 from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
-from multiprocessing import Pool
+# from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from memory_profiler import profile
 
@@ -160,7 +161,8 @@ def main():
     if gt.openmp_enabled():
         gt.openmp_set_num_threads(1)
 
-    with Pool(processes=options.threads) as executor:
+    # with Pool(processes=options.threads) as executor:
+    with ThreadPoolExecutor(max_workers=options.threads) as executor:
         for colour_ID, col_true_genes in executor.map(
                 partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=options.repeat, overlap=overlap,
                         max_path_length=options.path,
