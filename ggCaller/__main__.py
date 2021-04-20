@@ -5,7 +5,7 @@ import json
 from Bio.Seq import Seq
 import ggCaller_cpp
 from ggCaller.graph_traversal import *
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
 from functools import partial
 from memory_profiler import profile
 
@@ -155,7 +155,12 @@ def main():
     # create list for high scoring ORFs to return
     true_genes = {}
     print("Generating high scoring ORF calls...")
-    with ThreadPoolExecutor(max_workers=options.threads) as executor:
+
+    # Turn gt threading off
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(1)
+
+    with Pool(processes=options.threads) as executor:
         for colour_ID, col_true_genes in executor.map(
                 partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=options.repeat, overlap=overlap,
                         max_path_length=options.path,

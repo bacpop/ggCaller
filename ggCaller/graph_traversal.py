@@ -181,7 +181,6 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     colour_ID, node_set = node_set_tuple
 
     # determine all ORFs in Bifrost graph
-    print("Getting ORFs for: " + str(colour_ID))
     ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons, min_ORF_length,
