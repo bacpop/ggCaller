@@ -254,11 +254,6 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap);
 
-std::string generate_sequence(const UnitigVector& graph_vector,
-                              const std::vector<int>& nodelist,
-                              const std::vector<indexPair>& node_coords,
-                              const size_t& overlap);
-
 // ggCaller_bindings
 GraphTuple py_index_graph_exists(const std::string& graphfile,
                                  const std::string& coloursfile,
