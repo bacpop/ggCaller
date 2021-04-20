@@ -1,32 +1,6 @@
 // ggCaller header
 #include "ggCaller_classes.h"
 
-// print pos_strand_map
-void write_strand_map (const UnitigVector& graph_vector,
-                        const NodeStrandMap& pos_strand_map,
-                        const std::string& outfile_name)
-{
-    ofstream outfile;
-    outfile.open(outfile_name);
-
-    std::map<std::string, std::string> temp_strand_map;
-
-    // iterate over ORFs in all_ORFs
-    for (const auto& node : pos_strand_map)
-    {
-        // append to file
-        temp_strand_map[graph_vector.at(node.first - 1).head_kmer] = ((node.second) ? "1" : "0");
-    }
-
-    for (const auto& node : temp_strand_map)
-    {
-        // append to file
-        outfile << node.first << "\t" << node.second << "\n";
-    }
-
-    outfile.close();
-}
-
 // generate ORFs from paths
 ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
@@ -563,8 +537,6 @@ std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
 
     // generate pos_strand_map to determine relative strands of each node for each colour
     auto pos_strand_map = std::move(calculate_pos_strand(ORF_node_map));
-
-    write_strand_map(graph_vector, pos_strand_map, "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/pos_strand_map.txt");
 
     // group colours of ORFs together
     ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map));

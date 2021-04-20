@@ -169,17 +169,17 @@ def main():
     # run run_calculate_ORFs with multithreading
     true_genes = {}
     print("Generating high scoring ORF calls...")
-    node_set_tuple = (28, node_colour_vector[28])
-    return_genes = run_calculate_ORFs(node_set_tuple, graph_vector=graph_vector, repeat=repeat, overlap=overlap,
-                                      max_path_length=max_path_length,
-                                      is_ref=is_ref, no_filter=no_filter, stop_codons_for=stop_codons_for,
-                                      start_codons=start_codons,
-                                      min_ORF_length=min_ORF_length,
-                                      max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-                                      minimum_path_score=minimum_path_score, write_idx=write_idx,
-                                      input_colours=input_colours, nb_colours=nb_colours, model=model,
-                                      model_tis=model_tis,
-                                      aa_kmer_set=aa_kmer_set)
+    # node_set_tuple = (28, node_colour_vector[28])
+    # return_genes = run_calculate_ORFs(node_set_tuple, graph_vector=graph_vector, repeat=repeat, overlap=overlap,
+    #                                   max_path_length=max_path_length,
+    #                                   is_ref=is_ref, no_filter=no_filter, stop_codons_for=stop_codons_for,
+    #                                   start_codons=start_codons,
+    #                                   min_ORF_length=min_ORF_length,
+    #                                   max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
+    #                                   minimum_path_score=minimum_path_score, write_idx=write_idx,
+    #                                   input_colours=input_colours, nb_colours=nb_colours, model=model,
+    #                                   model_tis=model_tis,
+    #                                   aa_kmer_set=aa_kmer_set)
 
     # for node_set_tuple in enumerate(node_colour_vector):
     #     return_genes = run_calculate_ORFs(node_set_tuple, graph_vector=graph_vector, repeat=repeat, overlap=overlap,
@@ -191,29 +191,29 @@ def main():
     #                     input_colours=input_colours, nb_colours=nb_colours, model=model, model_tis=model_tis,
     #                     aa_kmer_set=aa_kmer_set)
 
-    # # run run_calculate_ORFs with multithreading
-    # true_genes = {}
-    # print("Generating high scoring ORF calls...")
-    # with ThreadPoolExecutor(max_workers=num_threads) as executor:
-    #     for colour_ID, col_true_genes in executor.map(
-    #             partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=repeat, overlap=overlap,
-    #                     max_path_length=max_path_length,
-    #                     is_ref=is_ref, no_filter=no_filter, stop_codons_for=stop_codons_for, start_codons=start_codons,
-    #                     min_ORF_length=min_ORF_length,
-    #                     max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-    #                     minimum_path_score=minimum_path_score, write_idx=write_idx,
-    #                     input_colours=input_colours, nb_colours=nb_colours, model=model, model_tis=model_tis,
-    #                     aa_kmer_set=aa_kmer_set),
-    #             enumerate(node_colour_vector)):
-    #         # iterate over entries in col_true_genes to generate the sequences
-    #         for ORFNodeVector in col_true_genes:
-    #             gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
-    #             if gene not in true_genes:
-    #                 # create tuple to hold ORF sequence, colours and graph traversal information
-    #                 empty_colours_list = ["0"] * nb_colours
-    #                 true_genes[gene] = (empty_colours_list, ORFNodeVector)
-    #             # update colours with current colour_ID
-    #             true_genes[gene][0][colour_ID] = "1"
+    # run run_calculate_ORFs with multithreading
+    true_genes = {}
+    print("Generating high scoring ORF calls...")
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        for colour_ID, col_true_genes in executor.map(
+                partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=repeat, overlap=overlap,
+                        max_path_length=max_path_length,
+                        is_ref=is_ref, no_filter=no_filter, stop_codons_for=stop_codons_for, start_codons=start_codons,
+                        min_ORF_length=min_ORF_length,
+                        max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
+                        minimum_path_score=minimum_path_score, write_idx=write_idx,
+                        input_colours=input_colours, nb_colours=nb_colours, model=model, model_tis=model_tis,
+                        aa_kmer_set=aa_kmer_set),
+                enumerate(node_colour_vector)):
+            # iterate over entries in col_true_genes to generate the sequences
+            for ORFNodeVector in col_true_genes:
+                gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
+                if gene not in true_genes:
+                    # create tuple to hold ORF sequence, colours and graph traversal information
+                    empty_colours_list = ["0"] * nb_colours
+                    true_genes[gene] = (empty_colours_list, ORFNodeVector)
+                # update colours with current colour_ID
+                true_genes[gene][0][colour_ID] = "1"
 
     print("Generating fasta file of gene calls...")
     # print output to file
