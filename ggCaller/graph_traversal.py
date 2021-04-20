@@ -64,7 +64,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
 
 #@profile
-def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
+def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score, ORF_vector, graph_vector):
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
 
@@ -75,16 +75,54 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     ORF_index = {}
 
     # create new graph item with node labels
-    # vertex_ID = g.new_vertex_property("int")
+    vertex_str = g.new_vertex_property("string")
+    vertex_ID = g.new_vertex_property("int")
 
     # add vertexes to graph, store ORF information in ORF_index
     for ORF in ORF_score_dict.keys():
         v = g.add_vertex()
-        # vertex_ID[v] = ORF
         ORF_index[ORF] = g.vertex_index[v]
+        vertex_str[v] = generate_seq(graph_vector, ORF_vector[ORF][0], ORF_vector[ORF][1], 30)
+        vertex_ID[g.vertex_index[v]] = ORF
 
     # add vertex sequences to graph
-    # g.vertex_properties["ID"] = vertex_ID
+    g.vertex_properties["seq"] = vertex_str
+    g.vertex_properties["ID"] = vertex_ID
+
+    for v in g.vertices():
+        if g.vertex_properties["seq"][
+            v] == "GTGTCTGGTGGCGGAGAAATTTACCGAGAAACATTACCCATGGCCTCTACGCTCCACTTATCGACGATCGACATCGAGCCAGAGGGGGATGTTTTCTTCCCGAGTATTCCAAATACCTTCGAAGTTGTTTTTGAGCAACACTTTACTTCAAACATTAACTATTGCTATCAAATTTGGAAAAAGGGTTAA":
+            n12 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "ATGATCGCATTCAATCACGTTGTTCCGGTACTTAATCTGTCGGTGTTCAACGTCAGACGGGCACCGGCCTTCGCGTTTGAGCAGAGCAAGCGCGCGACCATAGGCGGGCGCTTTATCCGTGTTGATGAATCGCGGGATCTGCCACTTCTTCACGTTGTTGAGGATTTTACCCAGAAACCGGTATGCAGCTTTGCTGTTACGACGGGAGGAGAGATAAAAATCGACAGTGCGGCCCCGGCTGTCGACGGCCCGGTACAGATACGCCCAGCGGCCATTGACCTTCACGTAGGTTTCATCCATGTGCCACGGGCAAAGATCGGAAGGGTTACGCCAGTACCAGCGCAGCCGTTTTTCCATTTCAGGCGCATAACGCTGAACCCAGCGGTAAATCGTGGAGTGATCGACATTCACTCCGCGTTCAGCCAGCATCTCCTGCAGCTCACGGTAACTGATGCCGTATTTGCAGTACCAGCGTACGGCCCACAGAATGATGTCACGCTGAAAATGCCGGCCTTTGAATGGGTTCATGTGCAGCTCCATCAGCAAAAGGGGATGATAAGTTTATCACCACCGACTATTTGCAACAGTGCCGTCCTGCGAATATGTGAGTTTTGA":
+            n1130 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "GTGTTCAACGTCAGACGGGCACCGGCCTTCGCGTTTGAGCAGAGCAAGCGCGCGACCATAGGCGGGCGCTTTATCCGTGTTGATGAATCGCGGGATCTGCCACTTCTTCACGTTGTTGAGGATTTTACCCAGAAACCGGTATGCAGCTTTGCTGTTACGACGGGAGGAGAGATAAAAATCGACAGTGCGGCCCCGGCTGTCGACGGCCCGGTACAGATACGCCCAGCGGCCATTGACCTTCACGTAGGTTTCATCCATGTGCCACGGGCAAAGATCGGAAGGGTTACGCCAGTACCAGCGCAGCCGTTTTTCCATTTCAGGCGCATAACGCTGAACCCAGCGGTAAATCGTGGAGTGATCGACATTCACTCCGCGTTCAGCCAGCATCTCCTGCAGCTCACGGTAACTGATGCCGTATTTGCAGTACCAGCGTACGGCCCACAGAATGATGTCACGCTGAAAATGCCGGCCTTTGAATGGGTTCATGTGCAGCTCCATCAGCAAAAGGGGATGATAAGTTTATCACCACCGACTATTTGCAACAGTGCCGTCCTGCGAATATGTGAGTTTTGA":
+            n270 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "GTGAATGTCGATCACTCCACGATTTACCGCTGGGTTCAGCGTTATGCGCCTGAAATGGAAAAACGGCTGCGCTGGTACTGGCGTAACCCTTCCGATCTTTGCCCGTGGCACATGGATGAAACCTACGTGAAGGTCAATGGCCGCTGGGCGTATCTGTACCGGGCCGTCGACAGCCGGGGCCGCACTGTCGATTTTTATCTCTCCTCCCGTCGTAACAGCAAAGCTGCATACCGGTTTCTGGGTAAAATCCTCAACAACGTGAAGAAGTGGCAGATCCCGCGATTCATCAACACGGATAAAGCGCCCGCCTATGGTCGCGCGCTTGCTCTGCTCAAACGCGAAGGCCGGTGCCCGTCTGACGTTGAACACCGACAGATTAAGTACCGGAACAACGTGATTGAATGCGATCATGGCAAACTGAAACGGATAATCGGCGCCACGCTGGGATTTAAATCCATGAAGACGGCTTACGCCACCATCAAAGGTATTGAGGTGATGCGTGCACTACGCAAAGGCCAGGCCTCAGCATTTTATTATGGTGATCCCCTGGGCGAAATGCGCCTGGTAAGCAGAGTTTTTGAAATGTAA":
+            n63 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "GTGAAGGTCAATGGCCGCTGGGCGTATCTGTACCGGGCCGTCGACAGCCGGGGCCGCACTGTCGATTTTTATCTCTCCTCCCGTCGTAACAGCAAAGCTGCATACCGGTTTCTGGGTAAAATCCTCAACAACGTGAAGAAGTGGCAGATCCCGCGATTCATCAACACGGATAAAGCGCCCGCCTATGGTCGCGCGCTTGCTCTGCTCAAACGCGAAGGCCGGTGCCCGTCTGACGTTGAACACCGACAGATTAAGTACCGGAACAACGTGATTGAATGCGATCATGGCAAACTGAAACGGATAATCGGCGCCACGCTGGGATTTAAATCCATGAAGACGGCTTACGCCACCATCAAAGGTATTGAGGTGATGCGTGCACTACGCAAAGGCCAGGCCTCAGCATTTTATTATGGTGATCCCCTGGGCGAAATGCGCCTGGTAAGCAGAGTTTTTGAAATGTAA":
+            n86 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "GTGATTGAATGCGATCATGGCAAACTGAAACGGATAATCGGCGCCACGCTGGGATTTAAATCCATGAAGACGGCTTACGCCACCATCAAAGGTATTGAGGTGATGCGTGCACTACGCAAAGGCCAGGCCTCAGCATTTTATTATGGTGATCCCCTGGGCGAAATGCGCCTGGTAAGCAGAGTTTTTGAAATGTAA":
+            n291 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "TTGCGTGAGCGCATACGCTACTTGCATTACAGTTTACGAACCGAACAGGCTTATGTCCACTGGGTTCGTGCCTTCATCCGTTTCCACGGTGTGCGTCACCCGGCAACCTTGGGCAGCAGCGAAGTCGAGGCATTTCTGTCCTGGCTGGCGAACGAGCGCAAGGTTTCGGTCTCCACGCATCGTCAGGCATTGGCGGCCTTGCTGTTCTTCTACGGCAAGGTGCTGTGCACGGATCTGCCCTGGCTTCAGGAGATCGGAAGACCTCGGCCGTCGCGGCGCTTGCCGGTGGTGCTGACCCCGGATGAAGTGGTTCGCATCCTCGGTTTTCTGGAAGGCGAGCATCGTTTGTTCGCCCAGCTTCTGTATGGAACGGGCATGCGGATCAGTGAGGGTTTGCAACTGCGGGTCAAGGATCTGGATTTCGATCACGGCACGATCATCGTGCGGGAGGGCAAGGGCTCCAAGGATCGGGCCTTGATGTTACCCGAGAGCTTGGCACCCAGCCTGCGCGAGCAGCTGTCGCGTGCACGGGCATGGTGGCTGAAGGACCAGGCCGAGGGCCGCAGCGGCGTTGCGCTTCCCGACGCCCTTGAGCGGAAGTATCCGCGCGCCGGGCATTCCTGGCCGTGGTTCTGGGTTTTTGCGCAGCACACGCATTCGACCGATCCACGGAGCGGTGTCGTGCGTCGCCATCACATGTATGACCAGACCTTTCAGCGCGCCTTCAAACGTGCCGTAGAACAAGCAGGCATCACGAAGCCCGCCACACCGCACACCCTCCGCCACTCGTTCGCGACGGCCTTGCTCCGCAGCGGTTACGACATTCGAACCGTGCAGGATCTGCTCGGCCATTCCGACGTCTCTACGACGATGATTTACACGCATGTGCTGAAAGTTGGCGGTGCCGGAGTGCGCTCACCGCTTGATGCGCTGCCGCCCCTCACTAGTGGGCACTGTTGCAAAGTTAGCGATGAGGCAGCCTTTTGTCTTATTCAAAGGCCTTACATTTCAAAAACTCTGCTTACCAGGCGCATTTCGCCCAGGGGATCACCATAA":
+            n405 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "TTGACCGAACGCAGCGGTGGTAACGGCGCAGTGGCGGTTTTCATGGCTTGTTATGACTGTTTTTTTGTACAGTCTATGCCTCGGGCATCCAAGCAGCAAGCGCGTTACGCCGTGGGTCGATGTTTGATGTTATGGAGCAGCAACGATGTTACGCAGCAGGGCAGTCGCCCTAAAACAAAGTTAACCCAGGATGAGAACCTTGAAAGTATCATTGATGGCTGCGAAAGCGAAAAACGGCGTGATTGGTTGCGGTCCAGACATACCCTGGTCCGCGAAAGGGGAGCAGCTACTTTTTAA":
+            n1046 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "ATGGCTTGTTATGACTGTTTTTTTGTACAGTCTATGCCTCGGGCATCCAAGCAGCAAGCGCGTTACGCCGTGGGTCGATGTTTGATGTTATGGAGCAGCAACGATGTTACGCAGCAGGGCAGTCGCCCTAAAACAAAGTTAACCCAGGATGAGAACCTTGAAAGTATCATTGATGGCTGCGAAAGCGAAAAACGGCGTGATTGGTTGCGGTCCAGACATACCCTGGTCCGCGAAAGGGGAGCAGCTACTTTTTAA":
+            n603 = g.vertex_properties["ID"][v]
+        if g.vertex_properties["seq"][
+            v] == "TTGACCTACAATCAGTGGCTTCTGGTGGGTCGCAAGACGTTTGAATCTATGGGCGCACTCCCCAATAGGAAATACGCGGTCGTTACCCGCTCAGGTTGGACATCAAATGATGACAATGTAGTTGTATTTCAGTCAATCGAAGAGGCCATGGACAGGCTAGCTGAATTCACCGGTCACGTTATAGTGTCTGGTGGCGGAGAAATTTACCGAGAAACATTACCCATGGCCTCTACGCTCCACTTATCGACGATCGACATCGAGCCAGAGGGGGATGTTTTCTTCCCGAGTATTCCAAATACCTTCGAAGTTGTTTTTGAGCAACACTTTACTTCAAACATTAACTATTGCTATCAAATTTGGAAAAAGGGTTAA":
+            n810 = g.vertex_properties["ID"][v]
+    vertex_list = [n12, n1130, n270, n63, n86, n291, n405, n1046, n603, n810]
+
+    edge_list = []
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     for ORF1, overlap_dict in ORF_overlap_dict.items():
@@ -93,21 +131,86 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
             for ORF2 in overlap_dict.keys():
                 # check that ORF2 nodes exist in graph as before
                 if ORF2 in ORF_index:
+                    if any([True for x in vertex_list if x == ORF1]) and any([True for x in vertex_list if x == ORF2]):
+                        test = 1
+                        edge_list.append((ORF2, ORF1))
                     # add new edge between the two ORFs, where ORF2 is the source and ORF1 is the sink
                     e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
+
+    # determine if cycles present. If so, break them by removing edge before repeated node and re-test
+    while gt.all_circuits(g):
+        try:
+            circuit = next(gt.all_circuits(g))
+        except StopIteration:
+            break
+        end_cycle = circuit[-1]
+        start_cycle = circuit[0]
+        e = g.edge(end_cycle, start_cycle)
+        g.remove_edge(e)
+
+    converted_edge_list = []
+    for edge in edge_list:
+        node1, node2 = edge
+        converted_node1 = ""
+        converted_node2 = ""
+        if node1 == n12:
+            converted_node1 = "n12"
+        elif node1 == n1130:
+            converted_node1 = "n1130"
+        elif node1 == n270:
+            converted_node1 = "n270"
+        elif node1 == n63:
+            converted_node1 = "n63"
+        elif node1 == n86:
+            converted_node1 = "n86"
+        elif node1 == n291:
+            converted_node1 = "n291"
+        elif node1 == n405:
+            converted_node1 = "n405"
+        elif node1 == n1046:
+            converted_node1 = "n1046"
+        elif node1 == n603:
+            converted_node1 = "n603"
+        elif node1 == n810:
+            converted_node1 = "n810"
+
+        if node2 == n12:
+            converted_node2 = "n12"
+        elif node2 == n1130:
+            converted_node2 = "n1130"
+        elif node2 == n270:
+            converted_node2 = "n270"
+        elif node2 == n63:
+            converted_node2 = "n63"
+        elif node2 == n86:
+            converted_node2 = "n86"
+        elif node2 == n291:
+            converted_node2 = "n291"
+        elif node2 == n405:
+            converted_node2 = "n405"
+        elif node2 == n1046:
+            converted_node2 = "n1046"
+        elif node2 == n603:
+            converted_node2 = "n603"
+        elif node2 == n810:
+            converted_node2 = "n810"
+
+        converted_edge_list.append((converted_node1, converted_node2))
+
+    for edge in converted_edge_list:
+        node1, node2 = edge
+        print(node1 + " -> " + node2)
 
     # generate a transative closure of the graph to add all directed edges and add vertex properties
     tc = gt.transitive_closure(g)
 
     # clear original graph
-    g.clear()
+    # g.clear()
+
+    g.save("circuits_original.graphml")
 
     # get label components of tc
     components = gt.label_components(tc, directed=False)[0].a
-
-    #component_ids = set(component_assignments.a)
-
-    #tc.vertex_properties["component"] = component_assignments
 
     # create vertex property map to store node IDs and scores
     vertex_ID = tc.new_vertex_property("int")
@@ -131,6 +234,9 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
         # parse sink and source nodes, order same as before
         ORF1 = tc.vertex_properties["ID"][e.target()]
         ORF2 = tc.vertex_properties["ID"][e.source()]
+
+        if any([True for x in vertex_list if x == ORF1]) and any([True for x in vertex_list if x == ORF2]):
+            test = 1
 
         # parse sink ORF score calculated by Balrog
         ORF_score = ORF_score_dict[ORF1]
@@ -167,12 +273,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
         tc.remove_edge(e)
 
     # create graph view
-    #tc.save(colour + "_1threads_tc.graphml")
-    #g.save(colour + "_1threads_original.graphml")
-
-    # for debugging if negative cycles encountered.
-    # for c in gt.all_circuits(g):
-    #    print(c)
+    tc.save("circuits_tc.graphml")
 
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
     for component in set(components):
@@ -188,10 +289,14 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
+    # testing
+    print("Colour set: " + str(colour_ID))
+
     # initiate true genes dictionary
     true_genes = []
 
     # determine all ORFs in Bifrost graph
+    print("Getting ORFs for: " + str(colour_ID))
     ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons, min_ORF_length,
@@ -201,12 +306,15 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     if no_filter:
         true_genes = ORF_vector
     else:
+        print("Scoring genes for: " + str(colour_ID))
         # calculate scores for genes
         ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis,
                                      aa_kmer_set)
 
         # determine highest scoring genes
-        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+        print("Generating highest scoring paths for: " + str(colour_ID))
+        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score, ORF_vector,
+                                            graph_vector)
 
         true_genes = [None] * len(high_scoring_ORFs)
 

@@ -1,5 +1,48 @@
 #include "ggCaller_classes.h"
 
+std::string generate_sequence(const UnitigVector& graph_vector,
+                              const std::vector<int>& nodelist,
+                              const std::vector<indexPair>& node_coords,
+                              const size_t& overlap)
+{
+    std::string sequence;
+    for (size_t i = 0; i < nodelist.size(); i++)
+    {
+        // initialise sequence items
+        std::string unitig_seq;
+        std::string substring;
+
+        // parse information
+        const auto& id = nodelist[i];
+        const auto& coords = node_coords[i];
+        bool strand = (id >= 0) ? true : false;
+
+        if (strand)
+        {
+            unitig_seq = graph_vector.at(abs(id) - 1).unitig_seq;
+        } else {
+            unitig_seq = reverse_complement(graph_vector.at(abs(id) - 1).unitig_seq);
+        }
+
+        if (sequence.empty())
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
+            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
+        } else
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
+            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
+            if (node_seq_len > 0)
+            {
+                substring = unitig_seq.substr(overlap, node_seq_len);
+            }
+        }
+        sequence += substring;
+    }
+    return sequence;
+}
 
 ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                                  const std::pair<ORFVector, NodeStrandMap>& ORF_pair,
@@ -75,7 +118,27 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
 
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
 
-            // get ORF lengths
+            // testing
+            std::string ORF1_seq = generate_sequence(graph_vector, std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap);
+            std::string ORF2_seq = generate_sequence(graph_vector, std::get<0>(ORF2_nodes), std::get<1>(ORF2_nodes), DBG_overlap);
+            // n405
+            std::string query1 = "TTGCGTGAGCGCATACGCTACTTGCATTACAGTTTACGAACCGAACAGGCTTATGTCCACTGGGTTCGTGCCTTCATCCGTTTCCACGGTGTGCGTCACCCGGCAACCTTGGGCAGCAGCGAAGTCGAGGCATTTCTGTCCTGGCTGGCGAACGAGCGCAAGGTTTCGGTCTCCACGCATCGTCAGGCATTGGCGGCCTTGCTGTTCTTCTACGGCAAGGTGCTGTGCACGGATCTGCCCTGGCTTCAGGAGATCGGAAGACCTCGGCCGTCGCGGCGCTTGCCGGTGGTGCTGACCCCGGATGAAGTGGTTCGCATCCTCGGTTTTCTGGAAGGCGAGCATCGTTTGTTCGCCCAGCTTCTGTATGGAACGGGCATGCGGATCAGTGAGGGTTTGCAACTGCGGGTCAAGGATCTGGATTTCGATCACGGCACGATCATCGTGCGGGAGGGCAAGGGCTCCAAGGATCGGGCCTTGATGTTACCCGAGAGCTTGGCACCCAGCCTGCGCGAGCAGCTGTCGCGTGCACGGGCATGGTGGCTGAAGGACCAGGCCGAGGGCCGCAGCGGCGTTGCGCTTCCCGACGCCCTTGAGCGGAAGTATCCGCGCGCCGGGCATTCCTGGCCGTGGTTCTGGGTTTTTGCGCAGCACACGCATTCGACCGATCCACGGAGCGGTGTCGTGCGTCGCCATCACATGTATGACCAGACCTTTCAGCGCGCCTTCAAACGTGCCGTAGAACAAGCAGGCATCACGAAGCCCGCCACACCGCACACCCTCCGCCACTCGTTCGCGACGGCCTTGCTCCGCAGCGGTTACGACATTCGAACCGTGCAGGATCTGCTCGGCCATTCCGACGTCTCTACGACGATGATTTACACGCATGTGCTGAAAGTTGGCGGTGCCGGAGTGCGCTCACCGCTTGATGCGCTGCCGCCCCTCACTAGTGGGCACTGTTGCAAAGTTAGCGATGAGGCAGCCTTTTGTCTTATTCAAAGGCCTTACATTTCAAAAACTCTGCTTACCAGGCGCATTTCGCCCAGGGGATCACCATAA";
+            // n63
+            std::string query2 = "TTGACCGAACGCAGCGGTGGTAACGGCGCAGTGGCGGTTTTCATGGCTTGTTATGACTGTTTTTTTGTACAGTCTATGCCTCGGGCATCCAAGCAGCAAGCGCGTTACGCCGTGGGTCGATGTTTGATGTTATGGAGCAGCAACGATGTTACGCAGCAGGGCAGTCGCCCTAAAACAAAGTTAACCCAGGATGAGAACCTTGAAAGTATCATTGATGGCTGCGAAAGCGAAAAACGGCGTGATTGGTTGCGGTCCAGACATACCCTGGTCCGCGAAAGGGGAGCAGCTACTTTTTAA";
+
+            int test = 0;
+            if (ORF1_seq == query1 && ORF2_seq == query2)
+            {
+                test = 1;
+                cout << "ORF1 == N405, ORF2 == N1046" << endl;
+            }
+            if (ORF1_seq == query2 && ORF2_seq == query1)
+            {
+                test = 2;
+                cout << "ORF2 == N405, ORF1 == N1046" << endl;
+            }
+
+                // get ORF lengths
             const auto& ORF1_len = std::get<2>(ORF_vector.at(ORF1_ID));
             const auto& ORF2_len = std::get<2>(ORF_vector.at(ORF2_ID));
 
@@ -99,12 +162,6 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
 
             // initialise overlap_complete check
             bool overlap_complete = false;
-
-            // get strand of 3p and 5p for reversal if necessary
-//                    const bool& ORF1_5p_strand = std::get<2>(ORF1_nodes)[0];
-//                    const bool& ORF1_3p_strand = std::get<2>(ORF1_nodes).back();
-//                    const bool& ORF2_5p_strand = std::get<2>(ORF2_nodes)[0];
-//                    const bool& ORF2_3p_strand = std::get<2>(ORF2_nodes).back();
 
             const bool& ORF1_5p_strand = (std::get<0>(ORF1_nodes)[0] >= 0) ? true : false;
             const bool& ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
@@ -153,7 +210,7 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                 }
 
                 // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
-                for (int i = 0; i < ORF2_nodes.first.size(); i++)
+                for (int i = 0; i < ORF2_nodes.second.size(); i++)
                 {
                     // get absolute last node index (same as unitig length minus 1 as zero indexed)
                     size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).unitig_size.first - 1;
@@ -563,9 +620,19 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                 {
                     std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
                     ORF_overlap_map[ORF2_ID][ORF1_ID] = std::move(overlap_tuple);
+                    if (test > 0)
+                    {
+                        cout << ORF1_seq << " -> " << ORF2_seq << endl;
+                    }
+
                 } else {
                     std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
                     ORF_overlap_map[ORF1_ID][ORF2_ID] = std::move(overlap_tuple);
+
+                    if (test > 0)
+                    {
+                        cout << ORF2_seq << " -> " << ORF1_seq << endl;
+                    }
                 }
             }
         }

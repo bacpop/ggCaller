@@ -133,9 +133,9 @@ typedef std::pair<size_t, size_t> indexPair;
 typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>> ORFNodeVector;
 // maps an ORF node sequence to its path through graph
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
-// vector of ORF paths throughg graphs
+// vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
-// A vector of paths following a head node, which containg complete stop-stop paths (a vector of nodesID+orientation)
+// A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
 typedef std::vector<PathVector> AllPaths;
@@ -253,6 +253,11 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                                  const std::pair<ORFVector, NodeStrandMap>& ORF_pair,
                                  const int DBG_overlap,
                                  const size_t max_overlap);
+
+std::string generate_sequence(const UnitigVector& graph_vector,
+                              const std::vector<int>& nodelist,
+                              const std::vector<indexPair>& node_coords,
+                              const size_t& overlap);
 
 // ggCaller_bindings
 GraphTuple py_index_graph_exists(const std::string& graphfile,
