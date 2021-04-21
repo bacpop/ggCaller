@@ -38,6 +38,7 @@
 // pybind11 headers
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -121,6 +122,8 @@ class unitigDict {
 // ggCaller typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef std::vector<unitigDict> UnitigVector;
+// mapping of unitig IDs (size_t) to unitigDict class for each unitig using numpy array
+//typedef py::array_t<unitigDict> UnitigArray;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
 // a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
@@ -271,7 +274,7 @@ GraphTuple py_index_graph_build(const std::string& infile1,
                                 const bool write_graph,
                                 const std::string& infile2);
 
-std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph_vector,
+std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs(const UnitigVector& graph_vector,
                                                      const size_t& colour_ID,
                                                      const std::vector<size_t>& node_ids,
                                                      const bool& repeat,

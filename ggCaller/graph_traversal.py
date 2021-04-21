@@ -1,6 +1,18 @@
+import sys
 import graph_tool.all as gt
 from balrog.__main__ import *
 import ggCaller_cpp
+import collections
+import numpy as np
+
+try:
+    from multiprocessing import shared_memory
+    from multiprocessing.managers import SharedMemoryManager
+
+    NumpyShared = collections.namedtuple('NumpyShared', ('name', 'shape', 'dtype'))
+except ImportError as e:
+    sys.stderr.write("This version of ggCaller requires python v3.8 or higher\n")
+    sys.exit(1)
 
 
 # @profile
@@ -176,12 +188,30 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 
 def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, input_colours, nb_colours, model, model_tis, aa_kmer_set):
+                       minimum_path_score, write_idx, input_colours, aa_kmer_set, model, model_tis):
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
+    # load shared memory items
+    graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
+    graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
+
+    # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
+    # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
+
+    model_shm = shared_memory.SharedMemory(name=model.name)
+    model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
+
+    model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
+    model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
+
+    # parse data from np_arrays
+    model_obj = model[0]
+    model_tis_obj = model_tis[0]
+    graph_vector_list = graph_vector.tolist()
+
     # determine all ORFs in Bifrost graph
-    ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
+    ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector_list, colour_ID, node_set, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons, min_ORF_length,
                                                                max_ORF_overlap, write_idx, input_colours[colour_ID])
@@ -191,12 +221,11 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
         true_genes = ORF_vector
     else:
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis,
+        ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model_obj, model_tis_obj,
                                      aa_kmer_set)
 
         # determine highest scoring genes
-        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score, ORF_vector,
-                                            graph_vector)
+        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
         # initiate true genes list
         true_genes = [None] * len(high_scoring_ORFs)
@@ -206,3 +235,12 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
             true_genes[index] = ORF_vector[ORF_id]
 
     return colour_ID, true_genes
+
+
+def generate_shared_mem_array(in_array, smm):
+    """Generates a shared memory representation of a numpy array"""
+    array_raw = smm.SharedMemory(size=in_array.nbytes)
+    array_shared = np.ndarray(in_array.shape, dtype=in_array.dtype, buffer=array_raw.buf)
+    array_shared[:] = in_array[:]
+    array_shared = NumpyShared(name=array_raw.name, shape=in_array.shape, dtype=in_array.dtype)
+    return (array_shared)

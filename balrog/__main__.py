@@ -21,7 +21,7 @@ verbose = True
 
 """ Use kmer prefilter to increase gene sensitivity. 
 May not play nice with very high GC genomes."""
-protein_kmer_filter = True
+protein_kmer_filter = False
 
 """ Nucleotide to amino acid translation table. 11 for most bacteria/archaea.
 4 for Mycoplasma/Spiroplasma."""
@@ -180,7 +180,7 @@ def predict_tis(model_tis, X):
     return probs
 
 
-#@profile
+# @profile
 def kmerize(seq, k):
     kmerset = set()
     for i in range(len(seq) - k + 1):
@@ -188,7 +188,24 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-def load_models(num_threads):
+
+def load_kmer_model():
+    # check if directory exists. If not, unzip file
+    if not os.path.exists(model_dir):
+        tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
+        tar.extractall(module_dir)
+        tar.close()
+
+    """Load k-mer filters"""
+    genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
+
+    with open(genexa_kmer_path, "rb") as f:
+        aa_kmer_set = pickle.load(f)
+
+    return aa_kmer_set
+
+
+def load_gene_models():
     # check if directory exists. If not, unzip file
     if not os.path.exists(model_dir):
         tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
@@ -204,18 +221,12 @@ def load_models(num_threads):
         time.sleep(0.5)
     else:
         # print("No GPU detected, using CPU...")
-        torch.set_num_threads(num_threads)
+        #torch.set_num_threads(num_threads)
         model = torch.hub.load(model_dir, "geneTCN", source='local')
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)
 
-    """Load k-mer filters"""
-    genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
-
-    with open(genexa_kmer_path, "rb") as f:
-        aa_kmer_set = pickle.load(f)
-
-    return (model, model_tis, aa_kmer_set)
+    return (model, model_tis)
 
 
 # @profile
@@ -233,8 +244,9 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
         seengene = []
         for s in ORF_seq_enc:
             kmerset = kmerize(s, k_seengene)
-            s = [x in aa_kmer_set for x in kmerset]
-            seen = np.sum(s) >= multimer_threshold
+            # s = [x in aa_kmer_set for x in kmerset]
+            s = np.isin(list(kmerset), aa_kmer_set)
+            seen = np.count_nonzero(s) >= multimer_threshold
             seengene.append(seen)
 
     # score

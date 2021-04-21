@@ -55,13 +55,13 @@ GraphTuple py_index_graph_exists(const std::string& graphfile,
 }
 
 GraphTuple py_index_graph_build(const std::string& infile1,
-                              const int kmer,
-                              const std::vector<std::string>& stop_codons_for,
-                              const std::vector<std::string>& stop_codons_rev,
-                              size_t num_threads,
-                              bool is_ref,
-                              const bool write_graph,
-                              const std::string& infile2)
+                                const int kmer,
+                                const std::vector<std::string>& stop_codons_for,
+                                const std::vector<std::string>& stop_codons_rev,
+                                size_t num_threads,
+                                bool is_ref,
+                                const bool write_graph,
+                                const std::string& infile2)
 {
     // Set number of threads
     if (num_threads < 1)
@@ -109,7 +109,7 @@ GraphTuple py_index_graph_build(const std::string& infile1,
     return graph_tuple;
 }
 
-std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph_vector,
+std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs(const UnitigVector& graph_vector,
                                                      const size_t& colour_ID,
                                                      const std::vector<size_t>& node_ids,
                                                      const bool& repeat,
@@ -128,6 +128,7 @@ std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph
     // traverse graph, set scope for all_paths and fm_idx
     {
         // recursive traversal
+        //cout << "Traversing graph: " << to_string(colour_ID) << endl;
         AllPaths all_paths = traverse_graph(graph_vector, colour_ID, node_ids, repeat, max_path_length);
 
         // if no FM_fasta_file specified, cannot generate FM Index
@@ -144,6 +145,7 @@ std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph
         }
 
         // generate ORF calls
+        //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
         ORF_pair = call_ORFs(all_paths, graph_vector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
 
@@ -151,6 +153,7 @@ std::pair<ORFOverlapMap, ORFVector> py_calculate_ORFs (const UnitigVector& graph
     ORFOverlapMap ORF_overlap_map;
     if (!no_filter)
     {
+        // << "Determining overlaps: " << to_string(colour_ID) << endl;
         ORF_overlap_map = std::move(calculate_overlaps(graph_vector, ORF_pair, overlap, max_overlap));
     }
 
@@ -174,7 +177,34 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def_readwrite("full_codon", &unitigDict::full_codon)
             .def_readwrite("part_codon", &unitigDict::part_codon)
             .def_readwrite("unitig_size", &unitigDict::unitig_size);
-
+//            .def(py::pickle(
+//                 [](const unitigDict &u) { // pickling __getstate__
+//                    return py::make_tuple(u.unitig_full_colour, u.head_tail_colours_equal, u.neighbours, u.end_contig,
+//                                          u.unitig_seq, u.forward_stop, u.reverse_stop, u.full_codon, u.part_codon,
+//                                          u.unitig_size);
+//                 },
+//                 [](py::tuple t) { // pickling __setstate__
+//                    if (t.size() != 10)
+//                        throw std::runtime_error("Invalid state!");
+//
+//                    /* Create a new C++ instance */
+//                    unitigDict u;
+//
+//                    /* Fill with entries for __setstate__ */
+//                    u.unitig_full_colour = t[0].cast<std::vector<bool>>();
+//                    u.head_tail_colours_equal = t[0].cast<bool>();
+//                    u.neighbours = t[0].cast<std::vector<NeighbourVector>>();
+//                    u.end_contig = t[0].cast<bool>();
+//                    u.unitig_seq = t[0].cast<std::string>();
+//                    u.forward_stop = t[0].cast<bool>();
+//                    u.reverse_stop = t[0].cast<bool>();
+//                    u.full_codon = t[0].cast<std::vector<std::vector<uint8_t>>>();
+//                    u.part_codon = t[0].cast<std::vector<std::vector<uint8_t>>>();
+//                    u.unitig_size = t[0].cast<std::pair<std::size_t, std::size_t>>();
+//
+//                    return u;
+//                 }
+//                 ))
 
     m.def("index_existing", &py_index_graph_exists, "Indexes pre-existing Bifrost graph.",
     py::arg("graphfile"),
@@ -209,4 +239,7 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     py::arg("max_overlap"),
     py::arg("write_idx"),
     py::arg("FM_fasta_file"));
+
+//    PYBIND11_NUMPY_DTYPE(unitigDict, unitig_full_colour, head_tail_colours_equal, neighbours, end_contig, unitig_seq
+//                     forward_stop, reverse_stop, full_codon, part_codon, unitig_size);
 }
