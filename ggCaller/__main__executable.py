@@ -107,7 +107,7 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/clique_119_230_372_list.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/clique_556_10_list.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -122,14 +122,14 @@ def main():
 
     num_threads = 4
 
-    graph_tuple = ggCaller_cpp.index_existing(
-        "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.gfa",
-        "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.bfg_colors",
-        stop_codons_for, stop_codons_rev, num_threads, True)
+    # graph_tuple = ggCaller_cpp.index_existing(
+    #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.gfa",
+    #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.bfg_colors",
+    #     stop_codons_for, stop_codons_rev, num_threads, True)
 
-    # graph_tuple = ggCaller_cpp.index_build(
-    #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.txt",
-    #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph)
+    graph_tuple = ggCaller_cpp.index_build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/clique_556_list_10.txt",
+        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     graph_vector, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple

@@ -102,15 +102,21 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
                     e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
 
     # determine if cycles present. If so, break them by removing edge before repeated node and re-test
-    while gt.all_circuits(g):
-        try:
-            circuit = next(gt.all_circuits(g))
-        except StopIteration:
-            break
+    cycle = True
+    try:
+        circuit = next(gt.all_circuits(g))
+    except StopIteration:
+        cycle = False
+
+    while cycle:
         end_cycle = circuit[-1]
         start_cycle = circuit[0]
         e = g.edge(end_cycle, start_cycle)
         g.remove_edge(e)
+        try:
+            circuit = next(gt.all_circuits(g))
+        except StopIteration:
+            break
 
     # generate a transative closure of the graph to add all directed edges and add vertex properties
     tc = gt.transitive_closure(g)
@@ -192,6 +198,8 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
+    print("Started analysing: " + str(colour_ID))
+
     # load shared memory items
     graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
     graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
@@ -233,6 +241,8 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
         for index, ORF_id in enumerate(high_scoring_ORFs):
             # add only high scoring ORFs to true_genes
             true_genes[index] = ORF_vector[ORF_id]
+
+    print("Finished analysing: " + str(colour_ID))
 
     return colour_ID, true_genes
 
