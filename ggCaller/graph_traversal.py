@@ -198,7 +198,7 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
-    print("Started analysing: " + str(colour_ID))
+    # print("Started analysing: " + str(colour_ID))
 
     # load shared memory items
     graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
@@ -242,7 +242,7 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
             # add only high scoring ORFs to true_genes
             true_genes[index] = ORF_vector[ORF_id]
 
-    print("Finished analysing: " + str(colour_ID))
+    #print("Finished analysing: " + str(colour_ID))
 
     return colour_ID, true_genes
 
