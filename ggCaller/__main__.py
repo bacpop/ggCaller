@@ -182,8 +182,9 @@ def main():
         # generate shared numpy arrays
         graph_vector = generate_shared_mem_array(graph_vector, smm)
         # aa_kmer_set = generate_shared_mem_array(aa_kmer_set, smm)
-        model = generate_shared_mem_array(model, smm)
-        model_tis = generate_shared_mem_array(model_tis, smm)
+        if not options.no_filter:
+            model = generate_shared_mem_array(model, smm)
+            model_tis = generate_shared_mem_array(model_tis, smm)
 
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:

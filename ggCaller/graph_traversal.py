@@ -204,18 +204,20 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
     graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
 
-    # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
-    # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
+    # generate and parse data from np_arrays if no_filter is False
+    if not no_filter:
+        # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
+        # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
 
-    model_shm = shared_memory.SharedMemory(name=model.name)
-    model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
+        model_shm = shared_memory.SharedMemory(name=model.name)
+        model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
 
-    model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
-    model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
+        model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
+        model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
 
-    # parse data from np_arrays
-    model_obj = model[0]
-    model_tis_obj = model_tis[0]
+        model_obj = model[0]
+        model_tis_obj = model_tis[0]
+
     graph_vector_list = graph_vector.tolist()
 
     # determine all ORFs in Bifrost graph
