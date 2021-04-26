@@ -1,6 +1,35 @@
 // ggCaller header
 #include "ggCaller_classes.h"
 
+// iterate over a string, determine if first/last entry in specific frame
+size_t get_codon_position(const std::string& path_sequence,
+                          const std::string& codon,
+                          const size_t& frame,
+                          const bool is_start)
+{
+    if (is_start)
+    {
+        size_t pos = path_sequence.find(codon);
+        // check that codon is present and that frame does not match, if it does then return pos
+        while(pos != string::npos && pos % 3 != frame)
+        {
+            pos = path_sequence.find(path_sequence, pos + 1);
+        }
+        return pos;
+    } else
+    {
+        size_t pos = path_sequence.rfind(codon);
+        // check that codon is present and that frame does not match, if it does then return pos
+        while(pos != string::npos && pos % 3 != frame)
+        {
+            pos = path_sequence.rfind(codon, pos - 1);
+        }
+        // as look for reverse, need to negate 2 to get position of starting base in stop codon
+        return pos;
+    }
+}
+
+
 // generate ORFs from paths
 ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
@@ -21,6 +50,22 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
     std::vector<int> nodelist;
     std::vector<std::vector<size_t>> node_ranges;
     size_t node_start = 0;
+
+    // identify the frames of the stop codons in path
+    const int & start_node = unitig_path[0];
+    const uint8_t& codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1 ).full_codon.at(true).at(0) : graph_vector.at(abs(start_node) - 1 ).full_codon.at(false).at(0);
+
+    // create vector with each frame
+    std::vector<bool> stop_frames(3, 0);
+
+    // check if each bit is set, starting from 0 and add to stop_frames
+    for (size_t i = 0; i < 4; i++)
+    {
+        if (codon_arr & (1 << (i - 1)))
+        {
+            stop_frames[i] = 1;
+        }
+    }
 
     // testing
 //    std::set<std::pair<std::string, bool>> node_set;
@@ -94,118 +139,157 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
 //    }
 
 
-    // generate codon indexes using FindIndex function for start and stop codons
-    std::vector<size_t> start_codon_indices;
-    std::vector<size_t> stop_codon_indices;
-    std::vector<std::size_t> found_indices;
+//    // generate codon indexes using FindIndex function for start and stop codons
+//    std::vector<size_t> start_codon_indices;
+//    std::vector<size_t> stop_codon_indices;
+//    std::vector<std::size_t> found_indices;
 
-    // iterate over each stop codon
-    for (const auto& codon : stop_codons)
+    // generate vector of pairs for start and stop codons
+    std::vector<std::pair<size_t, size_t>> codon_pair_list;
+
+    // for each stop codon frame, determine first start codon and last stop codon and pair
+    for (int frame; frame < stop_frames.size(); frame++)
     {
-        found_indices = findIndex(path_sequence, codon, 0, 0, false);
-        stop_codon_indices.insert(stop_codon_indices.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-        found_indices.clear();
-    }
-
-    // iterate over each start codon
-    for (const auto& codon : start_codons)
-    {
-        found_indices = findIndex(path_sequence, codon, 0, 0, false);
-        start_codon_indices.insert(start_codon_indices.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-        found_indices.clear();
-    }
-
-    // create pair for each paired start and stop codon
-    std::vector<std::pair<std::size_t, std::size_t>> ORF_index_pairs;
-
-    // sort codon index arrays into ascending order
-    std::sort(start_codon_indices.begin(), start_codon_indices.end());
-    std::sort(stop_codon_indices.begin(), stop_codon_indices.end());
-
-    // generate dictionaries for start and stop codon indices for each frame
-    std::unordered_map<size_t, std::vector<size_t>> start_codon_dict;
-    std::unordered_map<size_t, std::vector<size_t>> stop_codon_dict;
-
-    // initialise vectors to determine indexes in each frame of path
-    std::vector<size_t> frame1;
-    std::vector<size_t> frame2;
-    std::vector<size_t> frame3;
-
-    // parse indexes of start codons
-    for (auto& index : start_codon_indices)
-    {
-        if (index % 3 == 0 || index == 0)
+        if (stop_frames[frame])
         {
-            frame1.push_back(index);
-        } else if (index % 3 == 1 || index == 1)
-        {
-            frame2.push_back(index);
-        } else if (index % 3 == 2 || index == 2)
-        {
-            frame3.push_back(index);
-        }
-    }
-    // update start codon indexes
-    start_codon_dict[0] = std::move(frame1);
-    start_codon_dict[1] = std::move(frame2);
-    start_codon_dict[2] = std::move(frame3);
-    // clear all index vectors
-    frame1.clear();
-    frame2.clear();
-    frame3.clear();
-    start_codon_indices.clear();
+            size_t start_pos = path_sequence.size();
+            size_t stop_pos = 0;
 
-    // parse indexes of stop codons
-    for (auto& index : stop_codon_indices)
-    {
-        if (index % 3 == 0 || index == 0)
-        {
-            frame1.push_back(index);
-        } else if (index % 3 == 1 || index == 1)
-        {
-            frame2.push_back(index);
-        } else if (index % 3 == 2 || index == 2)
-        {
-            frame3.push_back(index);
-        }
-    }
-    // update stop codon indexes
-    stop_codon_dict[0] = std::move(frame1);
-    stop_codon_dict[1] = std::move(frame2);
-    stop_codon_dict[2] = std::move(frame3);
-    // clear all index vectors
-    frame1.clear();
-    frame2.clear();
-    frame3.clear();
-    stop_codon_indices.clear();
-
-    // iterate through frames, pair sequential start+stop codons after first stop codon
-    for (int modulus = 0; modulus < 3; modulus++)
-    {
-        // initialise stop and start index iterators
-        auto start_index = start_codon_dict[modulus].begin();
-        auto stop_index = stop_codon_dict[modulus].begin();
-
-        // iterate over start and stop indices until you reach the end
-        while (stop_index != stop_codon_dict[modulus].end() && start_index != start_codon_dict[modulus].end())
-        {
-            if (*start_index < *stop_index)
+            // go through start codons and check to see which is the smallest
+            for (const auto& codon : start_codons)
             {
-                // stop index is indexed at first base, therefore end of ORF is two bases after
-                std::pair<size_t, size_t> codon_pair(*start_index, *stop_index + 2);
-                ORF_index_pairs.push_back(std::move(codon_pair));
+                size_t temp_pos = get_codon_position(path_sequence, codon, frame, true);
+                if (temp_pos !=std::string::npos && temp_pos < start_pos)
+                {
+                    start_pos = temp_pos;
+                }
+            }
 
-                // iterate start index
-                start_index++;
-            } else {
-                // start is greater than stop, so iterate stop_iterator
-                stop_index++;
+            for (const auto& codon : stop_codons)
+            {
+                size_t temp_pos = get_codon_position(path_sequence, codon, frame, false);
+                if (temp_pos !=std::string::npos && temp_pos > stop_pos)
+                {
+                    stop_pos = temp_pos;
+                }
+            }
+
+            // if no start codons found, do not include pairing
+            if (start_pos != path_sequence.size())
+            {
+                codon_pair_list.push_back(std::make_pair(start_pos, stop_pos));
             }
         }
     }
 
+
+//    // iterate over each stop codon
+//    for (const auto& codon : stop_codons)
+//    {
+//        found_indices = findIndex(path_sequence, codon, 0, 0, false);
+//        stop_codon_indices.insert(stop_codon_indices.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
+//        found_indices.clear();
+//    }
+//
+//    // iterate over each start codon
+//    for (const auto& codon : start_codons)
+//    {
+//        found_indices = findIndex(path_sequence, codon, 0, 0, false);
+//        start_codon_indices.insert(start_codon_indices.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
+//        found_indices.clear();
+//    }
+//
+//    // create pair for each paired start and stop codon
+//    std::vector<std::pair<std::size_t, std::size_t>> ORF_index_pairs;
+//
+//    // sort codon index arrays into ascending order
+//    std::sort(start_codon_indices.begin(), start_codon_indices.end());
+//    std::sort(stop_codon_indices.begin(), stop_codon_indices.end());
+//
+//    // generate dictionaries for start and stop codon indices for each frame
+//    std::unordered_map<size_t, std::vector<size_t>> start_codon_dict;
+//    std::unordered_map<size_t, std::vector<size_t>> stop_codon_dict;
+//
+//    // initialise vectors to determine indexes in each frame of path
+//    std::vector<size_t> frame1;
+//    std::vector<size_t> frame2;
+//    std::vector<size_t> frame3;
+//
+//    // parse indexes of start codons
+//    for (auto& index : start_codon_indices)
+//    {
+//        if (index % 3 == 0 || index == 0)
+//        {
+//            frame1.push_back(index);
+//        } else if (index % 3 == 1 || index == 1)
+//        {
+//            frame2.push_back(index);
+//        } else if (index % 3 == 2 || index == 2)
+//        {
+//            frame3.push_back(index);
+//        }
+//    }
+//    // update start codon indexes
+//    start_codon_dict[0] = std::move(frame1);
+//    start_codon_dict[1] = std::move(frame2);
+//    start_codon_dict[2] = std::move(frame3);
+//    // clear all index vectors
+//    frame1.clear();
+//    frame2.clear();
+//    frame3.clear();
+//    start_codon_indices.clear();
+//
+//    // parse indexes of stop codons
+//    for (auto& index : stop_codon_indices)
+//    {
+//        if (index % 3 == 0 || index == 0)
+//        {
+//            frame1.push_back(index);
+//        } else if (index % 3 == 1 || index == 1)
+//        {
+//            frame2.push_back(index);
+//        } else if (index % 3 == 2 || index == 2)
+//        {
+//            frame3.push_back(index);
+//        }
+//    }
+//    // update stop codon indexes
+//    stop_codon_dict[0] = std::move(frame1);
+//    stop_codon_dict[1] = std::move(frame2);
+//    stop_codon_dict[2] = std::move(frame3);
+//    // clear all index vectors
+//    frame1.clear();
+//    frame2.clear();
+//    frame3.clear();
+//    stop_codon_indices.clear();
+//
+//    // iterate through frames, pair sequential start+stop codons after first stop codon
+//    for (int modulus = 0; modulus < 3; modulus++)
+//    {
+//        // initialise stop and start index iterators
+//        auto start_index = start_codon_dict[modulus].begin();
+//        auto stop_index = stop_codon_dict[modulus].begin();
+//
+//        // iterate over start and stop indices until you reach the end
+//        while (stop_index != stop_codon_dict[modulus].end() && start_index != start_codon_dict[modulus].end())
+//        {
+//            if (*start_index < *stop_index)
+//            {
+//                // stop index is indexed at first base, therefore end of ORF is two bases after
+//                std::pair<size_t, size_t> codon_pair(*start_index, *stop_index + 2);
+//                ORF_index_pairs.push_back(std::move(codon_pair));
+//
+//                // iterate start index
+//                start_index++;
+//            } else {
+//                // start is greater than stop, so iterate stop_iterator
+//                stop_index++;
+//            }
+//        }
+//    }
+
     // generate sequences for ORFs from codon pairs
-    for (const auto& codon_pair : ORF_index_pairs)
+    for (const auto& codon_pair : codon_pair_list)
     {
 
         // add one as codon_pair is zero-indexed

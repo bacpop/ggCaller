@@ -224,6 +224,11 @@ bool check_colours(const std::string& path_sequence,
                    const fm_index_coll& fm_idx);
 
 // call_ORFs
+size_t get_codon_position(const std::string& path_sequence,
+                          const std::string& codon,
+                          const size_t& frame,
+                          const bool is_start);
+
 ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
