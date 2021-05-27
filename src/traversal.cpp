@@ -45,21 +45,24 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
         // get last unitig id in list, this will be an int and needs to be converted to size_t
         const int& iter_id = head_kmer_list.back();
 
+        // get unitig_dict entry in graph_vector
+        const auto& unitig_dict = graph_vector.at(abs(iter_id) - 1);
+
         // determine strand of unitig
         bool strand = (iter_id >= 0) ? true : false;
 
-        // initilise next_unitigs as a reference using absolute value of iter_id less 1 (zero-based)
-        const auto& next_unitigs = graph_vector.at(abs(iter_id) - 1).neighbours;
-
         // iterate over neighbours, recurring through incomplete paths
-        for (const auto& neighbour : next_unitigs.at(strand))
+        for (const auto& neighbour : unitig_dict.get_neighbours(strand))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
             const auto& frame = neighbour.second;
 
+            // get reference to unitig_dict object for neighbour
+            neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
+
             // determine if neighbour is in same colour as iteration, if not pass
-            if (!graph_vector.at(abs(neighbour_id) - 1).unitig_full_colour.at(colour_ID))
+            if (!unitig_dict.full_colour().at(colour_ID))
             {
                 continue;
             }
@@ -75,7 +78,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
 
             // if node is end of contig (e.g. colour change, no connecting nodes) and path not completed
             // path to enable genes at beginning/end of contig to be returned
-            if (graph_vector.at(abs(neighbour_id) - 1).end_contig)
+            if (neighbour_dict.end_contig())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> temp_path = head_kmer_list;
@@ -101,7 +104,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
 
                 // calculate updated length and modulus for codon array iteration
                 size_t updated_length = length;
-                updated_length += graph_vector.at(abs(neighbour_id) -1).unitig_size.second;
+                updated_length += neighbour_dict.size().second;
 
                 // ensure max length has not been exceeded.
                 if (length <= length_max)
@@ -143,8 +146,11 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         // parse unitig_id. Zero based, so take 1
         const auto unitig_id = node_id - 1;
 
+        // get reference to unitig_dict object
+        const auto& unitig_dict = graph_vector.at(unitig_id);
+
         // check if stop codons present. If not, pass
-        if (!graph_vector.at(unitig_id).forward_stop)
+        if (!unitig_dict.forward_stop())
         {
             continue;
         }
@@ -153,8 +159,8 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         const int head_id = (int) node_id;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(true).at(0);
-        const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
+        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, true, 0);
+        const size_t unitig_len = unitig_dict.size().first;
 
         // generate vector and set for traversal
         std::vector<int> head_kmer_list;
@@ -177,8 +183,11 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         // parse unitig_id. Zero based, so take 1
         const auto unitig_id = node_id - 1;
 
+        // get reference to unitig_dict object
+        const auto& unitig_dict = graph_vector.at(unitig_id);
+
         // check if stop codons present. If not, pass
-        if (!graph_vector.at(unitig_id).reverse_stop)
+        if (!unitig_dict.reverse_stop())
         {
             continue;
         }
@@ -187,8 +196,8 @@ AllPaths traverse_graph(const UnitigVector& graph_vector,
         const int head_id = ((int) node_id) * -1;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = graph_vector.at(unitig_id).full_codon.at(false).at(0);
-        const size_t unitig_len = graph_vector.at(unitig_id).unitig_size.first;
+        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, false, 0);
+        const size_t unitig_len = unitig_dict.size().first;
 
         // generate vector and set for traversal
         std::vector<int> head_kmer_list;

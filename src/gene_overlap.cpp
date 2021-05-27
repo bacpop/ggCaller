@@ -143,7 +143,7 @@ ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                 for (int i = 0; i < ORF2_nodes.second.size(); i++)
                 {
                     // get absolute last node index (same as unitig length minus 1 as zero indexed)
-                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).unitig_size.first - 1;
+                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).size().first - 1;
                     // get difference from original start to absolute last node index
                     size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
                     // get difference from original end to absolute last node index

@@ -5,26 +5,26 @@
 void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array) {
     if (full)
     {
-        full_codon[forward][frame] = array;
+        _full_codon[forward][frame] = array;
 
         // update forward/reverse stop codon presence
-        if (forward && !forward_stop_defined)
+        if (forward && !_forward_stop_defined)
         {
-            if (full_codon[forward][frame] != 0)
+            if (_full_codon[forward][frame] != 0)
             {
-                forward_stop = true;
+                _forward_stop = true;
             }
-            forward_stop_defined = true;
-        } else if (!forward && !reverse_stop_defined)
+            _forward_stop_defined = true;
+        } else if (!forward && !_reverse_stop_defined)
         {
-            if (full_codon[forward][frame] != 0)
+            if (_full_codon[forward][frame] != 0)
             {
-                reverse_stop = true;
+                _reverse_stop = true;
             }
-            reverse_stop_defined = true;
+            _reverse_stop_defined = true;
         }
     } else {
-        part_codon[forward][frame] = array;
+        _part_codon[forward][frame] = array;
     }
 }
 
@@ -32,36 +32,75 @@ void unitigDict::add_codon (const bool& full, const bool& forward, const int& fr
 void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array) {
     if (full)
     {
-        full_codon[forward][frame] = std::move(array);
+        _full_codon[forward][frame] = std::move(array);
 
         // update forward/reverse stop codon presence
-        if (forward && !forward_stop_defined)
+        if (forward && !_forward_stop_defined)
         {
-            if (full_codon[forward][frame] != 0)
+            if (_full_codon[forward][frame] != 0)
             {
-                forward_stop = true;
+                _forward_stop = true;
             }
-            forward_stop_defined = true;
-        } else if (!forward && !reverse_stop_defined)
+            _forward_stop_defined = true;
+        } else if (!forward && !_reverse_stop_defined)
         {
-            if (full_codon[forward][frame] != 0)
+            if (_full_codon[forward][frame] != 0)
             {
-                reverse_stop = true;
+                _reverse_stop = true;
             }
-            reverse_stop_defined = true;
+            _reverse_stop_defined = true;
         }
     } else {
-        part_codon[forward][frame] = std::move(array);
+        _part_codon[forward][frame] = std::move(array);
     }
 }
 
 // add size, copy semantics
 void unitigDict::add_size(const size_t& full_len, const size_t& part_len) {
     std::pair pair(full_len, part_len);
-    unitig_size = pair;
+    _unitig_size = pair;
 }
 
 // add size, move semantics
 void unitigDict::add_size(size_t& full_len, size_t& part_len) {
-    unitig_size = make_pair(full_len, part_len);
+    _unitig_size = make_pair(full_len, part_len);
+}
+
+void unitigDict::_check_head_tail_equal() {
+    if (!_unitig_full_colour.empty() && !_unitig_tail_colour.empty())
+    {
+        if (_unitig_full_colour == _unitig_tail_colour)
+        {
+            _head_tail_colours_equal = true;
+            _unitig_full_colour = _unitig_full_colour;
+        }
+        else
+        {
+            _head_tail_colours_equal = false;
+            _end_contig = true;
+            _unitig_full_colour = add_colours_array(_unitig_full_colour, _unitig_tail_colour);
+        }
+    }
+}
+
+uint8_t unitigDict::get_codon_arr (bool full, bool forward, bool frame)
+{
+    if (full)
+    {
+        return _full_codon.at(forward).at(frame);
+    } else
+    {
+        return _part_codon.at(forward).at(frame);
+    }
+}
+
+std::vector<uint8_t>> get_codon_dict (bool full, bool forward);
+{
+    if (full)
+    {
+        return _full_codon.at(forward);
+    } else
+    {
+        return _part_codon.at(forward);
+    }
 }

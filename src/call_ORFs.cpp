@@ -29,14 +29,14 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
     std::vector<bool> stop_frames(3, 0);
 
     // determine if start or end of the path has a end-unitig. If so, set all frames to true, else calculate correct frames
-    if (graph_vector.at(abs(start_node) - 1).end_contig || graph_vector.at(abs(end_node) - 1).end_contig) {
+    if (graph_vector.at(abs(start_node) - 1).end_contig() || graph_vector.at(abs(end_node) - 1).end_contig()) {
         stop_frames[0] = 1;
         stop_frames[1] = 1;
         stop_frames[2] = 1;
     } else {
         // get codon_arr from start_node
-        const uint8_t &codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1).full_codon.at(true).at(0)
-                                                     : graph_vector.at(abs(start_node) - 1).full_codon.at(false).at(0);
+        const uint8_t &codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1).get_codon_arr(true, true, 0);
+                                                     : graph_vector.at(abs(start_node) - 1).get_codon_arr(true, false, 0);;
 
         // check if each bit is set, starting from 0 and add to stop_frames
         for (size_t i = 0; i < 3; i++) {
@@ -72,9 +72,9 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
         // if strand is negative, calculate reverse complement
         std::string unitig_seq;
         if (strand) {
-            unitig_seq = graph_vector.at(abs(node) - 1).unitig_seq;
+            unitig_seq = graph_vector.at(abs(node) - 1).seq();
         } else {
-            unitig_seq = reverse_complement(graph_vector.at(abs(node) - 1).unitig_seq);
+            unitig_seq = reverse_complement(graph_vector.at(abs(node) - 1).seq());
         }
 
         // calculate length of unitig and get end coordinates

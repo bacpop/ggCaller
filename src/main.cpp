@@ -2,7 +2,12 @@
 // Created by sth19 on 15/12/2020.
 //
 
-# include "ggCaller_classes.h"
+#include "ggCaller_classes.h"
+#include "traversal.h"
+#include "call_ORFs.h"
+#include "match_string.h"
+#include "gene_overlap.h"
+#include "bindings.h"
 
 std::string generate_sequence(const UnitigVector& graph_vector,
                               const std::vector<int>& nodelist,
