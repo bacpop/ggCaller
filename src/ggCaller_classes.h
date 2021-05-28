@@ -110,6 +110,6 @@ typedef std::vector<unitigDict> UnitigVector;
 // a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
-typedef std::tuple<UnitigVector, NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
+typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
 
 #endif //UNITIG_DICT_H
