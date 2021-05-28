@@ -1,5 +1,5 @@
 // ggCaller header
-#include "ggCaller_classes.h"
+#include "traversal.h"
 // define mutex for safe addition to robinhood_maps
 //std::mutex mtx2;
 
@@ -59,7 +59,7 @@ PathVector recur_nodes_binary (const UnitigVector& graph_vector,
             const auto& frame = neighbour.second;
 
             // get reference to unitig_dict object for neighbour
-            neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
+            const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
 
             // determine if neighbour is in same colour as iteration, if not pass
             if (!unitig_dict.full_colour().at(colour_ID))

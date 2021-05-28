@@ -1,5 +1,6 @@
 // ggCaller header
-#include "ggCaller_classes.h"
+
+#include "call_ORFs.h"
 
 // generate ORFs from paths
 ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
@@ -35,8 +36,8 @@ ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
         stop_frames[2] = 1;
     } else {
         // get codon_arr from start_node
-        const uint8_t &codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1).get_codon_arr(true, true, 0);
-                                                     : graph_vector.at(abs(start_node) - 1).get_codon_arr(true, false, 0);;
+        const uint8_t &codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1).get_codon_arr(true, true, 0)
+                                                     : graph_vector.at(abs(start_node) - 1).get_codon_arr(true, false, 0);
 
         // check if each bit is set, starting from 0 and add to stop_frames
         for (size_t i = 0; i < 3; i++) {

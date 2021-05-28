@@ -2,6 +2,9 @@
 #define BINDINGS_H
 
 #include "ggCaller_classes.h"
+#include "traversal.h"
+#include "call_ORFs.h"
+#include "gene_overlap.h"
 
 // ggCaller_bindings
 GraphTuple py_index_graph_exists(const std::string& graphfile,

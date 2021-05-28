@@ -1,26 +1,13 @@
 #ifndef UNITIG_DICT_H
 #define UNITIG_DICT_H
 
-#include "indexing.h"
+#include "definitions.h"
 
-// UnitigDict typedefs
+// UnitigDict typedefs and functions
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
 typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 
-// fmindex typedef
-using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
-        sdsl::rank_support_v<>,
-        sdsl::select_support_scan<>,
-        sdsl::select_support_scan<0>>,
-        16,
-        10000000,
-        sdsl::sa_order_sa_sampling<>,
-        sdsl::isa_sampling<>,
-        sdsl::plain_byte_alphabet>;
-typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
-using seqan3::operator""_dna5;
-
-// class declaration
+// unitigDict class declaration
 class unitigDict {
     public:
 
@@ -34,47 +21,47 @@ class unitigDict {
     // add codon information
     void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
     void add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array);
-    void set_forward_stop (bool& choice) {_forward_stop = choice;};
-    void set_reverse_stop (bool& choice) {_reverse_stop = choice;};
-    bool forward_stop () {return _forward_stop;};
-    bool reverse_stop () {return _reverse_stop;};
+    void set_forward_stop (bool choice) {_forward_stop = choice;};
+    void set_reverse_stop (bool choice) {_reverse_stop = choice;};
+    bool forward_stop () const {return _forward_stop;};
+    bool reverse_stop () const {return _reverse_stop;};
 
     // get codon information
-    std::vector<uint8_t>> get_codon_dict (bool full, bool forward);
-    uint8_t get_codon_arr (bool full, bool forward, size_t frame);
+    uint8_t get_codon_arr (bool full, bool forward, bool frame) const;
+    std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
 
     // add size information
     void add_size(const size_t& full_len, const size_t& part_len);
     void add_size(size_t& full_len, size_t& part_len);
-    std::pair<std::size_t, std::size_t> size() {return _unitig_size;};
+    std::pair<std::size_t, std::size_t> size() const {return _unitig_size;};
 
     // add and return unitig seqs
-    void add_seq(std::string& seq) {_unitig_seq = seq};
-    std::string seq() {return _unitig_seq;};
+    void add_seq(const std::string& seq) {_unitig_seq = seq;};
+    std::string seq() const {return _unitig_seq;};
 
     // add and return unitig colours
-    void add_head_colour(std::vector<bool>& colours) {_unitig_head_colour = colours; _check_head_tail_equal();};
-    std::vector<bool> head_colour() {return _unitig_head_colour;};
-    void add_full_colour(std::vector<bool>& colours) {_unitig_full_colour = colours;};
-    std::vector<bool> full_colour() {return _unitig_full_colour;};
-    void add_tail_colour(std::vector<bool>& colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
-    std::vector<bool> tail_colour() {return _unitig_tail_colour;};
-    bool head_tail_colours_equal() {return _head_tail_colours_equal};
+    void add_head_colour(std::vector<bool> colours) {_unitig_head_colour = colours; _check_head_tail_equal();};
+    std::vector<bool> head_colour() const {return _unitig_head_colour;};
+    void add_full_colour(std::vector<bool> colours) {_unitig_full_colour = colours;};
+    std::vector<bool> full_colour() const {return _unitig_full_colour;};
+    void add_tail_colour(std::vector<bool> colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
+    std::vector<bool> tail_colour() const {return _unitig_tail_colour;};
+    bool head_tail_colours_equal() const {return _head_tail_colours_equal;};
 
     // access end_contig
-    void set_end_contig (bool& choice) {_end_contig = choice};
-    bool end_contig() {return _end_contig;};
+    void set_end_contig (bool choice) {_end_contig = choice;};
+    bool end_contig() const {return _end_contig;};
 
     //assign and return neighbours
-    void set_succ (std::vector<std::pair<std::string, bool>>& vect) {_succ_heads = vect;};
+    void set_succ (std::vector<std::pair<std::string, bool>> vect) {_succ_heads = vect;};
     void clear_succ() {_succ_heads.clear(); _succ_heads.shrink_to_fit();}
     const std::vector<std::pair<std::string, bool>> & get_succs () {return _succ_heads;};
-    void set_pred (std::vector<std::pair<std::string, bool>>& vect) {_pred_heads = vect;};
+    void set_pred (std::vector<std::pair<std::string, bool>> vect) {_pred_heads = vect;};
     void clear_pred() {_pred_heads.clear(); _pred_heads.shrink_to_fit();}
-    const std::vector<std::pair<std::string, bool>> & get_preds () {return _pred_heads;};
-    void add_neighbour (bool& strand, std::pair<int, std::vector<uint8_t>> neighbour) {_neighbours[strand].pushback(std::move(neighbour))};
+    const std::vector<std::pair<std::string, bool>> & get_preds () const {return _pred_heads;};
+    void add_neighbour (bool strand, std::pair<int, std::vector<uint8_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
 
-    const NeighbourVector & get_neighbours(bool strand) {return _neighbours[strand];};
+    const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
 
     private:
     size_t _unitig_id;
@@ -114,5 +101,15 @@ class unitigDict {
     std::vector<std::pair<std::string, bool>> _pred_heads;
     std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 };
+
+// unitigDict typedefs
+// mapping of unitig IDs (size_t) to unitigDict class for each unitig
+typedef std::vector<unitigDict> UnitigVector;
+// mapping of unitig IDs (size_t) to unitigDict class for each unitig using numpy array
+//typedef py::array_t<unitigDict> UnitigArray;
+// a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
+typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
+// tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
+typedef std::tuple<UnitigVector, NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
 
 #endif //UNITIG_DICT_H

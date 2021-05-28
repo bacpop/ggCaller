@@ -1,5 +1,6 @@
 // ggCaller header
 #include "ggCaller_classes.h"
+#include "indexing.h"
 
 // add codon, copy semantics
 void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array) {
@@ -83,8 +84,7 @@ void unitigDict::_check_head_tail_equal() {
     }
 }
 
-uint8_t unitigDict::get_codon_arr (bool full, bool forward, bool frame)
-{
+uint8_t unitigDict::get_codon_arr (bool full, bool forward, bool frame) const {
     if (full)
     {
         return _full_codon.at(forward).at(frame);
@@ -94,8 +94,7 @@ uint8_t unitigDict::get_codon_arr (bool full, bool forward, bool frame)
     }
 }
 
-std::vector<uint8_t>> get_codon_dict (bool full, bool forward);
-{
+std::vector<uint8_t> unitigDict::get_codon_dict (bool full, bool forward) const {
     if (full)
     {
         return _full_codon.at(forward);

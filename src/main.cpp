@@ -28,9 +28,9 @@ std::string generate_sequence(const UnitigVector& graph_vector,
 
         if (strand)
         {
-            unitig_seq = graph_vector.at(abs(id) - 1).unitig_seq;
+            unitig_seq = graph_vector.at(abs(id) - 1).seq();
         } else {
-            unitig_seq = reverse_complement(graph_vector.at(abs(id) - 1).unitig_seq);
+            unitig_seq = reverse_complement(graph_vector.at(abs(id) - 1).seq());
         }
 
         if (sequence.empty())

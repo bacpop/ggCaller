@@ -1,5 +1,5 @@
 // ggCaller header
-#include "ggCaller_classes.h"
+#include "match_string.h"
 
 // index fasta files
 fm_index_coll index_fasta(const std::string& fasta_file,

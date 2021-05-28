@@ -1,7 +1,7 @@
 #ifndef MATCH_STRING_H
 #define MATCH_STRING_H
 
-#include "ggCaller_class.h"
+#include "ggCaller_classes.h"
 
 // match_strings
 fm_index_coll index_fasta(const std::string& fasta_file,

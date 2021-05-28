@@ -1,8 +1,9 @@
 #ifndef BIFROST_API_GGCALLER_H
 #define BIFROST_API_GGCALLER_H
 
-#include "ggCaller_class.h"
+#include "ggCaller_classes.h"
 #include "match_string.h"
+#include "indexing.h"
 
 // call_ORFs
 ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,

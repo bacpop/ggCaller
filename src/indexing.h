@@ -1,7 +1,7 @@
 #ifndef INDEXING_H
 #define INDEXING_H
 
-#include "definitions.h"
+#include "ggCaller_classes.h"
 
 // function headers
 // indexing
@@ -14,6 +14,8 @@ std::vector<std::size_t> findIndex(const std::string& seq,
 uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list);
 
 uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame);
+
+std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
 ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& infile_2,
@@ -30,8 +32,6 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
                                    const size_t position);
 
 std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
-
-std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);

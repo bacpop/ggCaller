@@ -1,7 +1,7 @@
 #ifndef GENE_OVERLAP_H
 #define GENE_OVERLAP_H
 
-#include "ggCaller_class.h"
+#include "ggCaller_classes.h"
 
 // gene_overlap.cpp
 ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,

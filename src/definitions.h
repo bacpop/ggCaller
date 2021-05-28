@@ -36,9 +36,9 @@
 #include <seqan3/std/ranges>
 
 // pybind11 headers
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <pybind11/numpy.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
+//#include <pybind11/numpy.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -47,7 +47,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-namespace py = pybind11;
+//namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -69,17 +69,9 @@ using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
 typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
 using seqan3::operator""_dna5;
 
-// ggCaller typedefs
-// mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef std::vector<unitigDict> UnitigVector;
-// mapping of unitig IDs (size_t) to unitigDict class for each unitig using numpy array
-//typedef py::array_t<unitigDict> UnitigArray;
+// general typedefs
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
-// a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
-typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
-// tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
-typedef std::tuple<UnitigVector, NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information

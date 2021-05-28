@@ -1,5 +1,6 @@
 // ggCaller header
-#include "ggCaller_classes.h"
+#include "bindings.h"
+
 
 GraphTuple py_index_graph_exists(const std::string& graphfile,
                                const std::string& coloursfile,
