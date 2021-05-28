@@ -29,32 +29,32 @@ void unitigDict::add_codon (const bool& full, const bool& forward, const int& fr
     }
 }
 
-// add codon, move semantics
-void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array) {
-    if (full)
-    {
-        _full_codon[forward][frame] = std::move(array);
-
-        // update forward/reverse stop codon presence
-        if (forward && !_forward_stop_defined)
-        {
-            if (_full_codon[forward][frame] != 0)
-            {
-                _forward_stop = true;
-            }
-            _forward_stop_defined = true;
-        } else if (!forward && !_reverse_stop_defined)
-        {
-            if (_full_codon[forward][frame] != 0)
-            {
-                _reverse_stop = true;
-            }
-            _reverse_stop_defined = true;
-        }
-    } else {
-        _part_codon[forward][frame] = std::move(array);
-    }
-}
+//// add codon, move semantics
+//void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array) {
+//    if (full)
+//    {
+//        _full_codon[forward][frame] = std::move(array);
+//
+//        // update forward/reverse stop codon presence
+//        if (forward && !_forward_stop_defined)
+//        {
+//            if (_full_codon[forward][frame] != 0)
+//            {
+//                _forward_stop = true;
+//            }
+//            _forward_stop_defined = true;
+//        } else if (!forward && !_reverse_stop_defined)
+//        {
+//            if (_full_codon[forward][frame] != 0)
+//            {
+//                _reverse_stop = true;
+//            }
+//            _reverse_stop_defined = true;
+//        }
+//    } else {
+//        _part_codon[forward][frame] = std::move(array);
+//    }
+//}
 
 // add size, copy semantics
 void unitigDict::add_size(const size_t& full_len, const size_t& part_len) {
@@ -67,20 +67,18 @@ void unitigDict::add_size(size_t& full_len, size_t& part_len) {
     _unitig_size = make_pair(full_len, part_len);
 }
 
+// check if head and tail colours are the same
 void unitigDict::_check_head_tail_equal() {
-    if (!_unitig_full_colour.empty() && !_unitig_tail_colour.empty())
+    if (_unitig_head_colour == _unitig_tail_colour)
     {
-        if (_unitig_full_colour == _unitig_tail_colour)
-        {
-            _head_tail_colours_equal = true;
-            _unitig_full_colour = _unitig_full_colour;
-        }
-        else
-        {
-            _head_tail_colours_equal = false;
-            _end_contig = true;
-            _unitig_full_colour = add_colours_array(_unitig_full_colour, _unitig_tail_colour);
-        }
+        _head_tail_colours_equal = true;
+        _unitig_full_colour = _unitig_head_colour;
+    }
+    else
+    {
+        _head_tail_colours_equal = false;
+        _end_contig = true;
+        _unitig_full_colour = add_colours_array(_unitig_head_colour, _unitig_tail_colour);
     }
 }
 

@@ -20,7 +20,7 @@ class unitigDict {
 
     // add codon information
     void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
-    void add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array);
+    //void add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array);
     void set_forward_stop (bool choice) {_forward_stop = choice;};
     void set_reverse_stop (bool choice) {_reverse_stop = choice;};
     bool forward_stop () const {return _forward_stop;};
@@ -40,7 +40,7 @@ class unitigDict {
     std::string seq() const {return _unitig_seq;};
 
     // add and return unitig colours
-    void add_head_colour(std::vector<bool> colours) {_unitig_head_colour = colours; _check_head_tail_equal();};
+    void add_head_colour(std::vector<bool> colours) {_unitig_head_colour = colours;};
     std::vector<bool> head_colour() const {return _unitig_head_colour;};
     void add_full_colour(std::vector<bool> colours) {_unitig_full_colour = colours;};
     std::vector<bool> full_colour() const {return _unitig_full_colour;};

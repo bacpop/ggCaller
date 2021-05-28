@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_post_class.fasta";
     omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
