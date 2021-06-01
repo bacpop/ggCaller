@@ -2,56 +2,12 @@
 // Created by sth19 on 15/12/2020.
 //
 
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 #include "traversal.h"
 #include "call_ORFs.h"
 #include "match_string.h"
 #include "gene_overlap.h"
-#include "bindings.h"
-
-std::string generate_sequence(const UnitigVector& graph_vector,
-                              const std::vector<int>& nodelist,
-                              const std::vector<indexPair>& node_coords,
-                              const size_t& overlap)
-{
-    std::string sequence;
-    for (size_t i = 0; i < nodelist.size(); i++)
-    {
-        // initialise sequence items
-        std::string unitig_seq;
-        std::string substring;
-
-        // parse information
-        const auto& id = nodelist[i];
-        const auto& coords = node_coords[i];
-        bool strand = (id >= 0) ? true : false;
-
-        if (strand)
-        {
-            unitig_seq = graph_vector.at(abs(id) - 1).seq();
-        } else {
-            unitig_seq = reverse_complement(graph_vector.at(abs(id) - 1).seq());
-        }
-
-        if (sequence.empty())
-        {
-            // get node_seq_len, add one as zero indexed
-            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
-            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
-        } else
-        {
-            // get node_seq_len, add one as zero indexed
-            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
-            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
-            if (node_seq_len > 0)
-            {
-                substring = unitig_seq.substr(overlap, node_seq_len);
-            }
-        }
-        sequence += substring;
-    }
-    return sequence;
-}
+#include "graph.h"
 
 void write_to_file (const robin_hood::unordered_map<std::string, std::vector<bool>>& ORF_print_map,
                     const std::string& outfile_name)
@@ -82,7 +38,7 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_post_class.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_graph_class.fasta";
     omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
@@ -103,20 +59,22 @@ int main(int argc, char *argv[]) {
         num_threads = 1;
     }
 
-//    GraphTuple graph_tuple = py_index_graph_exists(
-//        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
-//        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
-//        stop_codons_for, stop_codons_rev, num_threads, is_ref);
+    // initialise and build graph
+    Graph unitig_graph = Graph();
 
-    GraphTuple graph_tuple = py_index_graph_build(
-            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt", 31,
-            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
+//    GraphTuple graph_tuple = unitig_graph.build(
+//            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt", 31,
+//            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
 
-    const auto& graph_vector = std::get<0>(graph_tuple);
-    const auto& node_colour_vector = std::get<1>(graph_tuple);
-    const auto& input_colours = std::get<2>(graph_tuple);
-    const auto& nb_colours = std::get<3>(graph_tuple);
-    const auto& overlap = std::get<4>(graph_tuple);
+    GraphTuple graph_tuple = unitig_graph.build(
+            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.gfa",
+            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.bfg_colors",
+            stop_codons_for, stop_codons_rev, num_threads, is_ref);
+
+    const auto& node_colour_vector = std::get<0>(graph_tuple);
+    const auto& input_colours = std::get<1>(graph_tuple);
+    const auto& nb_colours = std::get<2>(graph_tuple);
+    const auto& overlap = std::get<3>(graph_tuple);
 
     // initialise print map
     robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
@@ -125,7 +83,7 @@ int main(int argc, char *argv[]) {
     {
         const auto& node_set = node_colour_vector.at(colour_ID);
 
-        std::pair<ORFOverlapMap, ORFVector> ORF_pair = py_calculate_ORFs(graph_vector, colour_ID, node_set, repeat,
+        std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, node_set, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons_for, min_ORF_length,
                                                                max_ORF_overlap, write_idx, input_colours.at(colour_ID));
@@ -137,8 +95,8 @@ int main(int argc, char *argv[]) {
         for (const auto ORF : ORF_vector)
         {
             // generate ORF seq
-            const auto ORF_sequence = std::move(generate_sequence(graph_vector, std::get<0>(ORF), std::get<1>(ORF), overlap));
-            const auto TIS_sequence = std::move(generate_sequence(graph_vector, std::get<3>(ORF), std::get<4>(ORF), overlap));
+            const auto ORF_sequence = std::move(unitig_graph.generate_sequence(std::get<0>(ORF), std::get<1>(ORF), overlap));
+            const auto TIS_sequence = std::move(unitig_graph.generate_sequence(std::get<3>(ORF), std::get<4>(ORF), overlap));
 
             std::string total_seq;
 

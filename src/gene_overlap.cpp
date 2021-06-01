@@ -1,4 +1,4 @@
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 
 ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
                                  const std::pair<ORFVector, NodeStrandMap>& ORF_pair,

@@ -1,7 +1,7 @@
 #ifndef INDEXING_H
 #define INDEXING_H
 
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 
 // function headers
 // indexing

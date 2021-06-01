@@ -1,7 +1,7 @@
 #ifndef TRAVERSAL_H
 #define TRAVERSAL_H
 
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 
 // traversal.cpp
 PathVector recur_nodes_binary (const UnitigVector& graph_vector,

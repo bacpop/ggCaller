@@ -8,7 +8,7 @@ GraphTuple Graph::build (const std::string& infile1,
                     const int kmer,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
-                    const size_t num_threads,
+                    size_t num_threads,
                     bool is_ref,
                     const bool write_graph,
                     const std::string& infile2) {
@@ -29,6 +29,7 @@ GraphTuple Graph::build (const std::string& infile1,
     int overlap = kmer - 1;
     size_t nb_colours;
     std::vector<std::string> input_colours;
+    NodeColourVector node_colour_vector;
 
     if (infile2 != "NA") {
         is_ref = 0;
@@ -49,7 +50,7 @@ GraphTuple Graph::build (const std::string& infile1,
 
         // generate codon index for graph
         cout << "Generating graph stop codon index..." << endl;
-        auto node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
     }
 
     // make tuple containing all information needed in python back-end
@@ -63,7 +64,7 @@ GraphTuple Graph::build (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
-                    const size_t num_threads,
+                    size_t num_threads,
                     const bool is_ref) {
 
     // Set number of threads
@@ -83,6 +84,7 @@ GraphTuple Graph::build (const std::string& graphfile,
     int overlap;
     size_t nb_colours;
     std::vector<std::string> input_colours;
+    NodeColourVector node_colour_vector;
 
     // scope for ccdbg
     {
@@ -102,7 +104,7 @@ GraphTuple Graph::build (const std::string& graphfile,
 
         // generate codon index for graph
         cout << "Generating graph stop codon index..." << endl;
-        auto node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
     }
 
     // make tuple containing all information needed in python back-end
@@ -111,7 +113,102 @@ GraphTuple Graph::build (const std::string& graphfile,
     return graph_tuple;
 }
 
-NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
+std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
+                                                     const std::vector<size_t>& node_ids,
+                                                     const bool& repeat,
+                                                     const size_t& overlap,
+                                                     const size_t& max_path_length,
+                                                     bool& is_ref,
+                                                     const bool& no_filter,
+                                                     const std::vector<std::string>& stop_codons_for,
+                                                     const std::vector<std::string>& start_codons_for,
+                                                     const size_t min_ORF_length,
+                                                     const size_t max_overlap,
+                                                     const bool write_idx,
+                                                     const std::string& FM_fasta_file)
+{
+    std::pair<ORFVector, NodeStrandMap> ORF_pair;
+    // traverse graph, set scope for all_paths and fm_idx
+    {
+        // recursive traversal
+        //cout << "Traversing graph: " << to_string(colour_ID) << endl;
+        AllPaths all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
+
+        // if no FM_fasta_file specified, cannot generate FM Index
+        if (FM_fasta_file == "NA")
+        {
+            is_ref = false;
+        }
+
+        // generate FM_index if is_ref
+        fm_index_coll fm_idx;
+        if (is_ref)
+        {
+            fm_idx = index_fasta(FM_fasta_file, write_idx);
+        }
+
+        // generate ORF calls
+        //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
+        ORF_pair = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
+    }
+
+    // if no filtering required, do not calculate overlaps
+    ORFOverlapMap ORF_overlap_map;
+    if (!no_filter)
+    {
+        // << "Determining overlaps: " << to_string(colour_ID) << endl;
+        ORF_overlap_map = std::move(calculate_overlaps(_GraphVector, ORF_pair, overlap, max_overlap));
+    }
+
+    std::pair<ORFOverlapMap, ORFVector> return_pair = std::make_pair(ORF_overlap_map, ORF_pair.first);
+
+    return return_pair;
+}
+
+std::string Graph::generate_sequence(const std::vector<int>& nodelist,
+                                     const std::vector<indexPair>& node_coords,
+                                     const size_t& overlap)
+{
+    std::string sequence;
+    for (size_t i = 0; i < nodelist.size(); i++)
+    {
+        // initialise sequence items
+        std::string unitig_seq;
+        std::string substring;
+
+        // parse information
+        const auto& id = nodelist[i];
+        const auto& coords = node_coords[i];
+        bool strand = (id >= 0) ? true : false;
+
+        if (strand)
+        {
+            unitig_seq = _GraphVector.at(abs(id) - 1).seq();
+        } else {
+            unitig_seq = reverse_complement(_GraphVector.at(abs(id) - 1).seq());
+        }
+
+        if (sequence.empty())
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
+            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
+        } else
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
+            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
+            if (node_seq_len > 0)
+            {
+                substring = unitig_seq.substr(overlap, node_seq_len);
+            }
+        }
+        sequence += substring;
+    }
+    return sequence;
+}
+
+NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons_for,
                          const std::vector<std::string>& stop_codons_rev,
                          const int kmer,
@@ -176,8 +273,8 @@ NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
     // update neighbour index in place within graph_vector
     update_neighbour_index(graph_vector, head_kmer_map);
 
-    // assign the graph vector to the graph _UnitigVector
-    _UnitigVector = std::move(graph_vector);
+    // assign the graph vector to the graph _GraphVector
+    _GraphVector = std::move(graph_vector);
 
     // return node_colour vector
     return node_colour_vector;

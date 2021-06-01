@@ -1,5 +1,5 @@
 // ggCaller header
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 #include "indexing.h"
 
 // add codon, copy semantics
@@ -28,33 +28,6 @@ void unitigDict::add_codon (const bool& full, const bool& forward, const int& fr
         _part_codon[forward][frame] = array;
     }
 }
-
-//// add codon, move semantics
-//void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array) {
-//    if (full)
-//    {
-//        _full_codon[forward][frame] = std::move(array);
-//
-//        // update forward/reverse stop codon presence
-//        if (forward && !_forward_stop_defined)
-//        {
-//            if (_full_codon[forward][frame] != 0)
-//            {
-//                _forward_stop = true;
-//            }
-//            _forward_stop_defined = true;
-//        } else if (!forward && !_reverse_stop_defined)
-//        {
-//            if (_full_codon[forward][frame] != 0)
-//            {
-//                _reverse_stop = true;
-//            }
-//            _reverse_stop_defined = true;
-//        }
-//    } else {
-//        _part_codon[forward][frame] = std::move(array);
-//    }
-//}
 
 // add size, copy semantics
 void unitigDict::add_size(const size_t& full_len, const size_t& part_len) {

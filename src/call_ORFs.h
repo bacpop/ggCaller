@@ -1,7 +1,7 @@
 #ifndef BIFROST_API_GGCALLER_H
 #define BIFROST_API_GGCALLER_H
 
-#include "ggCaller_classes.h"
+#include "unitigDict.h"
 #include "match_string.h"
 #include "indexing.h"
 
