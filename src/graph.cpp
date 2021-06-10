@@ -59,8 +59,8 @@ GraphTuple Graph::build (const std::string& infile1,
     return graph_tuple;
 }
 
-// build from existing graph and index
-GraphTuple Graph::build (const std::string& graphfile,
+// read existing graph and index
+GraphTuple Graph::read (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,

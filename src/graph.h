@@ -20,8 +20,8 @@ class Graph {
                     const bool write_graph,
                     const std::string& infile2);
 
-    // build from existing graph and index
-    GraphTuple build (const std::string& graphfile,
+    // read existing graph and index
+    GraphTuple read (const std::string& graphfile,
                      const std::string& coloursfile,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& stop_codons_rev,

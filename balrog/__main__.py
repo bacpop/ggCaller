@@ -88,7 +88,7 @@ aa_table = {"L": 1,
 
 # generate ORF sequences from coordinates
 # @profile
-def generate_seq(graph_vector, nodelist, node_coords, overlap):
+def generate_sequence(graph_vector, nodelist, node_coords, overlap):
     sequence = ""
     for i in range(0, len(nodelist)):
         id = nodelist[i]
@@ -121,7 +121,7 @@ def tokenize_aa_seq(aa_seq):
 
 
 #@profile
-def get_ORF_info(ORF_vector, graph_vector, overlap):
+def get_ORF_info(ORF_vector, graph, overlap):
     ORF_seq_list = []
     TIS_seqs = []
     # iterate over list of ORFs
@@ -133,8 +133,8 @@ def get_ORF_info(ORF_vector, graph_vector, overlap):
         TIS_node_coords = ORFNodeVector[4]
 
         # generate ORF_seq, as well as upstream and downstream TIS seq
-        ORF_seq = generate_seq(graph_vector, ORF_nodelist, ORF_node_coords, overlap)
-        upstream_TIS_seq = generate_seq(graph_vector, TIS_nodelist, TIS_node_coords, overlap)
+        ORF_seq = graph.generate_sequence(ORF_nodelist, ORF_node_coords, overlap)
+        upstream_TIS_seq = graph.generate_sequence(TIS_nodelist, TIS_node_coords, overlap)
         downstream_TIS_seq = ORF_seq[0:19]
 
         # generate Seq class for translation

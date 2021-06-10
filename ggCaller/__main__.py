@@ -129,22 +129,25 @@ def main():
         stop_codons_for = ["TAA", "TGA", "TAG"]
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
+    # initialise graph
+    graph = ggCaller_cpp.Graph()
+
     # if build graph specified, build graph and then call ORFs
     if (options.graph != None) and (options.colours != None) and (options.refs == None) and (options.reads == None):
-        graph_tuple = ggCaller_cpp.index_existing(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                                  options.threads, True)
+        graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
+                                 options.threads, True)
     # if refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads == None):
-        graph_tuple = ggCaller_cpp.index_build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                               options.threads, True, options.no_write_graph)
+        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
+                                  options.threads, True, options.no_write_graph, "NA")
     # if reads file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (options.reads != None):
-        graph_tuple = ggCaller_cpp.index_build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
-                                               options.threads, False, options.no_write_graph)
+        graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
+                                  options.threads, False, options.no_write_graph, "NA")
     # if both reads and refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads != None):
-        graph_tuple = ggCaller_cpp.index_build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                               options.threads, False, options.no_write_graph, options.reads)
+        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
+                                  options.threads, False, options.no_write_graph, options.reads)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
@@ -154,10 +157,10 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    graph_vector_original, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+    node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
     # create numpy arrays for shared memory
-    graph_vector = np.array(graph_vector_original)
+    graph_arr = np.array([graph])
 
     # load balrog models if required
     if not options.no_filter:
@@ -180,7 +183,7 @@ def main():
     print("Generating high scoring ORF calls...")
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
-        graph_vector = generate_shared_mem_array(graph_vector, smm)
+        graph_shd = generate_shared_mem_array(graph_arr, smm)
         # aa_kmer_set = generate_shared_mem_array(aa_kmer_set, smm)
         if not options.no_filter:
             model = generate_shared_mem_array(model, smm)
@@ -189,7 +192,7 @@ def main():
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:
             for colour_ID, col_true_genes in pool.map(
-                    partial(run_calculate_ORFs, graph_vector=graph_vector, repeat=options.repeat, overlap=overlap,
+                    partial(run_calculate_ORFs, graph=graph_shd, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.path, is_ref=options.not_ref, no_filter=options.no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=options.orf,
                             max_ORF_overlap=options.maxoverlap, minimum_ORF_score=options.min_orf_score,
@@ -199,7 +202,7 @@ def main():
                     enumerate(node_colour_vector)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:
-                    gene = generate_seq(graph_vector_original, ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                     if gene not in true_genes:
                         # create tuple to hold ORF sequence, colours and graph traversal information
                         empty_colours_list = ["0"] * nb_colours

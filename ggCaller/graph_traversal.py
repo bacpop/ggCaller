@@ -192,7 +192,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     return high_scoring_ORFs_all
 
 
-def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_length, is_ref, no_filter,
+def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
                        minimum_path_score, write_idx, input_colours, aa_kmer_set, model, model_tis):
     # unpack tuple
@@ -201,13 +201,16 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
     # print("Started analysing: " + str(colour_ID))
 
     # load shared memory items
-    graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
-    graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
+    # graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
+    # graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
 
     # generate and parse data from np_arrays if no_filter is False
     if not no_filter:
         # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
         # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
+
+        graph_shm = shared_memory.SharedMemory(name=graph.name)
+        graph = np.ndarray(graph.shape, dtype=model.dtype, buffer=graph_shm.buf)
 
         model_shm = shared_memory.SharedMemory(name=model.name)
         model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
@@ -215,23 +218,25 @@ def run_calculate_ORFs(node_set_tuple, graph_vector, repeat, overlap, max_path_l
         model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
         model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
 
+        graph = graph[0]
         model_obj = model[0]
         model_tis_obj = model_tis[0]
 
-    graph_vector_list = graph_vector.tolist()
+    # graph_vector_list = graph_vector.tolist()
 
     # determine all ORFs in Bifrost graph
-    ORF_overlap_dict, ORF_vector = ggCaller_cpp.calculate_ORFs(graph_vector_list, colour_ID, node_set, repeat,
-                                                               overlap, max_path_length, is_ref, no_filter,
-                                                               stop_codons_for, start_codons, min_ORF_length,
-                                                               max_ORF_overlap, write_idx, input_colours[colour_ID])
+    print("Finding ORFs...")
+    ORF_overlap_dict, ORF_vector = graph.findORFs(colour_ID, node_set, repeat,
+                                                  overlap, max_path_length, is_ref, no_filter,
+                                                  stop_codons_for, start_codons, min_ORF_length,
+                                                  max_ORF_overlap, write_idx, input_colours[colour_ID])
 
     # if no filter specified, just copy ORF_vector to true_genes
     if no_filter:
         true_genes = ORF_vector
     else:
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model_obj, model_tis_obj,
+        ORF_score_dict = score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model_obj, model_tis_obj,
                                      aa_kmer_set)
 
         # determine highest scoring genes

@@ -107,11 +107,11 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/clique_556_10_list.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_fa_list_pointer.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
-    no_filter = False
+    no_filter = True
     repeat = False
     max_path_length = 10000
     is_ref = True
@@ -127,15 +127,14 @@ def main():
     #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.bfg_colors",
     #     stop_codons_for, stop_codons_rev, num_threads, True)
 
-    graph_tuple = ggCaller_cpp.index_build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/clique_556_list_10.txt",
-        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph)
+    graph = ggCaller_cpp.Graph()
+
+    graph_tuple = graph.build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.txt",
+        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    graph_vector, node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
-
-    # create numpy arrays for shared memory
-    graph_vector_shd = np.array(graph_vector)
+    node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
     # load balrog models if required
     if not no_filter:
@@ -158,7 +157,8 @@ def main():
     print("Generating high scoring ORF calls...")
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
-        graph_vector_shd = generate_shared_mem_array(graph_vector_shd, smm)
+        graph_arr = np.array([graph])
+        graph_shd = generate_shared_mem_array(graph_arr, smm)
         # aa_kmer_set = generate_shared_mem_array(aa_kmer_set, smm)
         if not no_filter:
             model = generate_shared_mem_array(model, smm)
@@ -167,7 +167,7 @@ def main():
         # run run_calculate_ORFs with multithreading
         with Pool(processes=num_threads) as pool:
             for colour_ID, col_true_genes in pool.map(
-                    partial(run_calculate_ORFs, graph_vector=graph_vector_shd, repeat=repeat, overlap=overlap,
+                    partial(run_calculate_ORFs, graph=graph_shd, repeat=repeat, overlap=overlap,
                             max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons,
                             min_ORF_length=min_ORF_length, max_ORF_overlap=max_ORF_overlap,
@@ -177,7 +177,7 @@ def main():
                     enumerate(node_colour_vector)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:
-                    gene = generate_seq(graph_vector, ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                     if gene not in true_genes:
                         # create tuple to hold ORF sequence, colours and graph traversal information
                         empty_colours_list = ["0"] * nb_colours
