@@ -181,6 +181,13 @@ def main():
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls...")
+
+    # set number of threads for graphtool and pytorch to 1
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(1)
+
+    torch.set_num_threads(1)
+
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
         graph_shd = generate_shared_mem_array(graph_arr, smm)

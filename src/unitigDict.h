@@ -105,8 +105,6 @@ class unitigDict {
 // unitigDict typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef std::vector<unitigDict> UnitigVector;
-// mapping of unitig IDs (size_t) to unitigDict class for each unitig using numpy array
-//typedef py::array_t<unitigDict> UnitigArray;
 // a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
 typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
 // tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap

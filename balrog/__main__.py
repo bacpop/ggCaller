@@ -8,9 +8,7 @@ from scipy.special import expit
 from scipy.special import logit
 
 import torch
-#import torch.nn as nn
 import torch.nn.functional as F
-#from torch.nn.utils import weight_norm
 
 """ Get directories for model and seengenes """
 module_dir = os.path.dirname(os.path.realpath(__file__))
@@ -221,7 +219,6 @@ def load_gene_models():
         time.sleep(0.5)
     else:
         # print("No GPU detected, using CPU...")
-        #torch.set_num_threads(num_threads)
         model = torch.hub.load(model_dir, "geneTCN", source='local')
         model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
         time.sleep(0.5)
@@ -231,9 +228,6 @@ def load_gene_models():
 
 # @profile
 def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis, aa_kmer_set):
-    # set up load gene and TIS models
-    """ extract and load balrog model """
-
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")
 

@@ -107,11 +107,11 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_fa_list_pointer.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_fa_list_pointer_filter.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
-    no_filter = True
+    no_filter = False
     repeat = False
     max_path_length = 10000
     is_ref = True
@@ -155,6 +155,14 @@ def main():
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls...")
+
+    # set number of threads for graphtool and pytorch to 1
+    if gt.openmp_enabled():
+        gt.openmp_set_num_threads(1)
+
+    torch.set_num_threads(1)
+
+    # use shared memory for multiprocessing
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
         graph_arr = np.array([graph])

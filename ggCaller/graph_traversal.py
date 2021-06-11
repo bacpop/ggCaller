@@ -8,6 +8,7 @@ import numpy as np
 try:
     from multiprocessing import shared_memory
     from multiprocessing.managers import SharedMemoryManager
+    from multiprocessing import set_start_method
 
     NumpyShared = collections.namedtuple('NumpyShared', ('name', 'shape', 'dtype'))
 except ImportError as e:
@@ -77,6 +78,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
 #@profile
 def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
+
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
 
@@ -198,19 +200,15 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
-    # print("Started analysing: " + str(colour_ID))
-
     # load shared memory items
-    # graph_vector_shm = shared_memory.SharedMemory(name=graph_vector.name)
-    # graph_vector = np.ndarray(graph_vector.shape, dtype=graph_vector.dtype, buffer=graph_vector_shm.buf)
+    graph_shm = shared_memory.SharedMemory(name=graph.name)
+    graph = np.ndarray(graph.shape, dtype=graph.dtype, buffer=graph_shm.buf)
+    graph = graph[0]
 
     # generate and parse data from np_arrays if no_filter is False
     if not no_filter:
         # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
         # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
-
-        graph_shm = shared_memory.SharedMemory(name=graph.name)
-        graph = np.ndarray(graph.shape, dtype=model.dtype, buffer=graph_shm.buf)
 
         model_shm = shared_memory.SharedMemory(name=model.name)
         model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
@@ -218,14 +216,10 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
         model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
         model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
 
-        graph = graph[0]
         model_obj = model[0]
         model_tis_obj = model_tis[0]
 
-    # graph_vector_list = graph_vector.tolist()
-
     # determine all ORFs in Bifrost graph
-    print("Finding ORFs...")
     ORF_overlap_dict, ORF_vector = graph.findORFs(colour_ID, node_set, repeat,
                                                   overlap, max_path_length, is_ref, no_filter,
                                                   stop_codons_for, start_codons, min_ORF_length,
@@ -248,8 +242,6 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
         for index, ORF_id in enumerate(high_scoring_ORFs):
             # add only high scoring ORFs to true_genes
             true_genes[index] = ORF_vector[ORF_id]
-
-    #print("Finished analysing: " + str(colour_ID))
 
     return colour_ID, true_genes
 
