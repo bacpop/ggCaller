@@ -85,7 +85,7 @@ aa_table = {"L": 1,
 
 
 # generate ORF sequences from coordinates
-@profile
+# @profile
 def generate_sequence(graph_vector, nodelist, node_coords, overlap):
     sequence = ""
     for i in range(0, len(nodelist)):
@@ -111,14 +111,14 @@ def generate_sequence(graph_vector, nodelist, node_coords, overlap):
     return sequence
 
 
-@profile
+#@profile
 def tokenize_aa_seq(aa_seq):
     """ Convert amino acid letters to integers."""
     tokenized = torch.tensor([aa_table[aa] for aa in aa_seq])
     return tokenized
 
 
-@profile
+#@profile
 def get_ORF_info(ORF_vector, graph, overlap):
     ORF_seq_list = []
     TIS_seqs = []
@@ -150,7 +150,7 @@ def get_ORF_info(ORF_vector, graph, overlap):
     return ORF_seq_enc, TIS_seqs
 
 
-@profile
+#@profile
 def predict(model, X):
     model.eval()
     with torch.no_grad():
@@ -166,7 +166,7 @@ def predict(model, X):
     return probs
 
 
-@profile
+#@profile
 def predict_tis(model_tis, X):
     model_tis.eval()
     with torch.no_grad():
@@ -178,7 +178,7 @@ def predict_tis(model_tis, X):
     return probs
 
 
-@profile
+#@profile
 def kmerize(seq, k):
     kmerset = set()
     for i in range(len(seq) - k + 1):
@@ -226,7 +226,7 @@ def load_gene_models():
     return (model, model_tis)
 
 
-@profile
+#@profile
 def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis, aa_kmer_set):
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")

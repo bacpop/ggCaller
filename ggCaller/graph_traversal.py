@@ -17,7 +17,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-@profile
+# @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs = set()
@@ -77,7 +77,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
     return high_scoring_ORFs
 
 
-@profile
+#@profile
 def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 
     # initilise high scoring ORF set to return
@@ -195,7 +195,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     return high_scoring_ORFs_all
 
 
-@profile
+#@profile
 def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
                        minimum_path_score, write_idx, input_colours, aa_kmer_set, model, model_tis):
