@@ -43,7 +43,7 @@ def get_options():
                     help='List of reference genomes (one file path per line). ')
     IO.add_argument('--reads',
                     default=None,
-                    help='List of reference genomes (one file path per line). ')
+                    help='List of read files (one file path per line). ')
     IO.add_argument('--codons',
                     default=None,
                     help='JSON file containing start and stop codon sequences. ')
@@ -95,16 +95,16 @@ def get_options():
     IO.add_argument('--repeat',
                     action="store_true",
                     default=False,
-                    help='Enable traversal of nodes mulitple times. '
+                    help='Enable traversal of nodes multiple times. '
                          '[Default = False] ')
     IO.add_argument('--threads',
                     type=int,
                     default=1,
-                    help='Number of threads for FMIndexing '
+                    help='Number of threads to use. '
                          '[Default = 1] ')
     IO.add_argument('--out',
                     default='calls.fasta',
-                    help='options.out FASTA file containing ORF sequences. ')
+                    help='FASTA file containing ORF sequences. ')
     return parser.parse_args()
 
 def main():

@@ -106,7 +106,7 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group2_capsular_v1.2.4.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/all_test_capsular_v1.2.4.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -129,7 +129,7 @@ def main():
     graph = ggCaller_cpp.Graph()
 
     graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_test_capsular_list.txt",
         31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     # unpack ORF pair into overlap dictionary and list for gene scoring

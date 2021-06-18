@@ -205,7 +205,7 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
     # load shared memory items
     graph_shm = shared_memory.SharedMemory(name=graph.name)
     graph = np.ndarray(graph.shape, dtype=graph.dtype, buffer=graph_shm.buf)
-    graph = graph[0]
+    #graph = graph[0]
 
     # generate and parse data from np_arrays if no_filter is False
     if not no_filter:
@@ -218,21 +218,21 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
         model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
         model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
 
-        model_obj = model[0]
-        model_tis_obj = model_tis[0]
+        # model_obj = model[0]
+        #model_tis_obj = model_tis[0]
 
     # determine all ORFs in Bifrost graph
-    ORF_overlap_dict, ORF_vector = graph.findORFs(colour_ID, node_set, repeat,
-                                                  overlap, max_path_length, is_ref, no_filter,
-                                                  stop_codons_for, start_codons, min_ORF_length,
-                                                  max_ORF_overlap, write_idx, input_colours[colour_ID])
+    ORF_overlap_dict, ORF_vector = graph[0].findORFs(colour_ID, node_set, repeat,
+                                                     overlap, max_path_length, is_ref, no_filter,
+                                                     stop_codons_for, start_codons, min_ORF_length,
+                                                     max_ORF_overlap, write_idx, input_colours[colour_ID])
 
     # if no filter specified, just copy ORF_vector to true_genes
     if no_filter:
         true_genes = ORF_vector
     else:
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model_obj, model_tis_obj,
+        ORF_score_dict = score_genes(ORF_vector, graph[0], minimum_ORF_score, overlap, model[0], model_tis[0],
                                      aa_kmer_set)
 
         # determine highest scoring genes
