@@ -10,6 +10,53 @@
 
 class Graph {
     public:
+    // constructors
+    // default constructor
+    Graph()
+    {
+        cout << "Graph default constructor" << endl;
+    };
+
+    // copy
+    Graph(const Graph & rhs)
+    {
+          std::cout << "Graph copy constructor" << std::endl;
+          _GraphVector = rhs._GraphVector;
+    };
+    // copy operator
+    Graph & operator = (const Graph & rhs)
+    {
+          std::cout << "Graph copy operator" << std::endl;
+          if(this != &rhs)
+          {
+            _GraphVector = rhs._GraphVector;
+          }
+          return *this;
+    };
+
+    // move
+    Graph(const Graph && rhs) noexcept
+    {
+          std::cout << "Graph move constructor" << std::endl;
+          _GraphVector = std::move(rhs._GraphVector);
+    };
+    // move operator
+    Graph & operator = (const Graph && rhs) noexcept
+    {
+          std::cout << "Graph move operator" << std::endl;
+          if(this != &rhs)
+          {
+            _GraphVector = std::move(rhs._GraphVector);
+          }
+          return *this;
+    };
+
+    // destructor
+    ~Graph()
+    {
+        std::cout << "Graph destructor" << std::endl;
+    };
+
     // build new bifrost graph and index
     GraphTuple build (const std::string& infile1,
                     const int kmer,
