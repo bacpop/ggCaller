@@ -3,7 +3,7 @@
 #include "call_ORFs.h"
 
 // generate ORFs from paths
-ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
+ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
                          const std::vector<int>& unitig_path,
@@ -561,7 +561,7 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
 
 
 std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
-                                             const UnitigVector& graph_vector,
+                                             const GraphVector& graph_vector,
                                              const std::vector<std::string>& stop_codons_for,
                                              const std::vector<std::string>& start_codons_for,
                                              const int overlap,

@@ -64,7 +64,6 @@ class unitigDict {
     const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
 
     private:
-    size_t _unitig_id;
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
@@ -104,10 +103,10 @@ class unitigDict {
 
 // unitigDict typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef std::vector<unitigDict> UnitigVector;
-// a tuple of UnitigVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
-typedef std::pair<UnitigVector, NodeColourVector> GraphPair;
-// tuple of UnitigVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
+typedef std::vector<unitigDict> GraphVector;
+// a tuple of GraphVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
+typedef std::pair<GraphVector, NodeColourVector> GraphPair;
+// tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
 
 #endif //UNITIG_DICT_H

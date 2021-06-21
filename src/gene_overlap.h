@@ -4,7 +4,7 @@
 #include "unitigDict.h"
 
 // gene_overlap.cpp
-ORFOverlapMap calculate_overlaps(const UnitigVector& graph_vector,
+ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const std::pair<ORFVector, NodeStrandMap>& ORF_pair,
                                  const int DBG_overlap,
                                  const size_t max_overlap);

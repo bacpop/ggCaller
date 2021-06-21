@@ -15,8 +15,6 @@ uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list);
 
 uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame);
 
-std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
-
 ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& infile_2,
                           const bool is_ref,
@@ -31,7 +29,11 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
                                    const size_t& nb_colours,
                                    const size_t position);
 
-std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2);
+std::vector<bool> bool_and(const std::vector<bool>& array1, const std::vector<bool>& array2);
+
+std::vector<bool> bool_subtract(const std::vector<bool>& array1, const std::vector<bool>& array2);
+
+std::vector<bool> bool_or(const std::vector<bool>& array1, const std::vector<bool>& array2);
 
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);
@@ -44,7 +46,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const int& kmer,
                                    const size_t& nb_colours);
 
-void update_neighbour_index(UnitigVector& graph_vector,
+void update_neighbour_index(GraphVector& graph_vector,
                             robin_hood::unordered_map<std::string, size_t> head_kmer_map);
 
 GraphPair index_graph(const ColoredCDBG<>& ccdbg,

@@ -99,8 +99,8 @@ class Graph {
     NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,
-                             const int kmer,
-                             const size_t nb_colours);
+                             const int& kmer,
+                             const size_t& nb_colours);
 
     // stored unitigDict objects
     std::vector<unitigDict> _GraphVector;

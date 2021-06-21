@@ -159,7 +159,7 @@ std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<
     return colours_arr;
 }
 
-std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
+std::vector<bool> bool_and(const std::vector<bool>& array1, const std::vector<bool>& array2)
 {
     std::vector<bool> output_array = array1;
     for (size_t i = 0; i < array1.size(); i++)
@@ -172,7 +172,20 @@ std::vector<bool> negate_colours_array(const std::vector<bool>& array1, const st
     return output_array;
 }
 
-std::vector<bool> add_colours_array(const std::vector<bool>& array1, const std::vector<bool>& array2)
+std::vector<bool> bool_subtract(const std::vector<bool>& array1, const std::vector<bool>& array2)
+{
+    std::vector<bool> output_array = array1;
+    for (size_t i = 0; i < array1.size(); i++)
+    {
+        if (array1[i] == 1 && array2[i] == 1)
+        {
+            output_array[i] = 0;
+        }
+    }
+    return output_array;
+}
+
+std::vector<bool> bool_or(const std::vector<bool>& array1, const std::vector<bool>& array2)
 {
     std::vector<bool> output_array = array1;
     for (size_t i = 0; i < array1.size(); i++)
@@ -310,7 +323,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     return unitig_dict;
 }
 
-void update_neighbour_index(UnitigVector& graph_vector,
+void update_neighbour_index(GraphVector& graph_vector,
                             robin_hood::unordered_map<std::string, size_t> head_kmer_map)
 {
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
@@ -346,14 +359,14 @@ void update_neighbour_index(UnitigVector& graph_vector,
                 std::vector<bool> colours;
                 if (succ.second)
                 {
-                    colours = std::move(negate_colours_array(unitig_dict.tail_colour(), adj_unitig_dict.head_colour()));
+                    colours = std::move(bool_and(unitig_dict.tail_colour(), adj_unitig_dict.head_colour()));
                 } else
                 {
-                    colours = std::move(negate_colours_array(unitig_dict.tail_colour(), adj_unitig_dict.tail_colour()));
+                    colours = std::move(bool_and(unitig_dict.tail_colour(), adj_unitig_dict.tail_colour()));
                 }
 
                 // negate adjacent full colours from full colours
-                full_colours = std::move(negate_colours_array(full_colours, adj_unitig_dict.full_colour()));
+                full_colours = std::move(bool_subtract(full_colours, adj_unitig_dict.full_colour()));
 
                 // calculate sum_colours
                 int sum_colours = accumulate(colours.begin(), colours.end(), 0);
@@ -397,14 +410,14 @@ void update_neighbour_index(UnitigVector& graph_vector,
                 std::vector<bool> colours;
                 if (pred.second)
                 {
-                    colours = std::move(negate_colours_array(unitig_dict.head_colour(), adj_unitig_dict.head_colour()));
+                    colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.head_colour()));
                 } else
                 {
-                    colours = std::move(negate_colours_array(unitig_dict.head_colour(), adj_unitig_dict.tail_colour()));
+                    colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.tail_colour()));
                 }
 
                 // negate adjacent full colours from full colours
-                full_colours = std::move(negate_colours_array(full_colours, adj_unitig_dict.full_colour()));
+                full_colours = std::move(bool_subtract(full_colours, adj_unitig_dict.full_colour()));
 
                 // calculate sum_colours
                 int sum_colours = accumulate(colours.begin(), colours.end(), 0);
@@ -469,7 +482,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    UnitigVector graph_vector(head_kmer_arr.size());
+    GraphVector graph_vector(head_kmer_arr.size());
     NodeColourVector node_colour_vector(nb_colours);
     robin_hood::unordered_map<std::string, size_t> head_kmer_map;
 
@@ -477,7 +490,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
     size_t unitig_id = 1;
     #pragma omp parallel
     {
-        UnitigVector graph_vector_private;
+        GraphVector graph_vector_private;
         NodeColourVector node_colour_vector_private(nb_colours);
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait

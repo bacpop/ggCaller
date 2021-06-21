@@ -211,8 +211,8 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
 NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons_for,
                          const std::vector<std::string>& stop_codons_rev,
-                         const int kmer,
-                         const size_t nb_colours)
+                         const int& kmer,
+                         const size_t& nb_colours)
 {
     // get all head kmers for parrellelisation
     std::vector<Kmer> head_kmer_arr;
@@ -222,7 +222,7 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    UnitigVector graph_vector(head_kmer_arr.size());
+    GraphVector graph_vector(head_kmer_arr.size());
     NodeColourVector node_colour_vector(nb_colours);
     robin_hood::unordered_map<std::string, size_t> head_kmer_map;
 
@@ -230,7 +230,7 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
     size_t unitig_id = 1;
     #pragma omp parallel
     {
-        UnitigVector graph_vector_private;
+        GraphVector graph_vector_private;
         NodeColourVector node_colour_vector_private(nb_colours);
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait

@@ -2,18 +2,16 @@
 #define TRAVERSAL_H
 
 #include "unitigDict.h"
+#include "indexing.h"
 
 // traversal.cpp
-PathVector recur_nodes_binary (const UnitigVector& graph_vector,
-                               const std::vector<int>& head_kmer_list,
-                               const uint8_t& codon_arr,
-                               const size_t& colour_ID,
-                               const std::unordered_set<int>& kmer_set,
-                               const size_t& length,
-                               const size_t& length_max,
-                               const bool& repeat);
+PathVector iter_nodes_binary (const GraphVector& graph_vector,
+                              const NodeTuple& head_node_tuple,
+                              const size_t& current_colour,
+                              const size_t& length_max,
+                              const bool& repeat);
 
-AllPaths traverse_graph(const UnitigVector& graph_vector,
+AllPaths traverse_graph(const GraphVector& graph_vector,
                          const size_t& colour_ID,
                          const std::vector<size_t>& node_ids,
                          const bool repeat,

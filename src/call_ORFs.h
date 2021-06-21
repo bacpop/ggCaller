@@ -6,7 +6,7 @@
 #include "indexing.h"
 
 // call_ORFs
-ORFNodeMap generate_ORFs(const UnitigVector& graph_vector,
+ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
                          const std::vector<int>& unitig_path,
@@ -21,7 +21,7 @@ std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coor
                                                                                     const int& overlap);
 
 std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
-                                             const UnitigVector& graph_vector,
+                                             const GraphVector& graph_vector,
                                              const std::vector<std::string>& stop_codons_for,
                                              const std::vector<std::string>& start_codons_for,
                                              const int overlap,
