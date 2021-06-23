@@ -1,20 +1,6 @@
-import sys
 import graph_tool.all as gt
 from balrog.__main__ import *
-import ggCaller_cpp
-import collections
-import numpy as np
-
-
-try:
-    from multiprocessing import shared_memory
-    from multiprocessing.managers import SharedMemoryManager
-    from multiprocessing import set_start_method
-
-    NumpyShared = collections.namedtuple('NumpyShared', ('name', 'shape', 'dtype'))
-except ImportError as e:
-    sys.stderr.write("This version of ggCaller requires python v3.8 or higher\n")
-    sys.exit(1)
+from ggCaller.shared_memory import *
 
 
 # @profile
@@ -196,43 +182,28 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 
 
 #@profile
-def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, is_ref, no_filter,
+def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, input_colours, aa_kmer_set, model, model_tis):
+                       minimum_path_score, write_idx, input_colours, aa_kmer_set):
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
     # load shared memory items
-    graph_shm = shared_memory.SharedMemory(name=graph.name)
-    graph = np.ndarray(graph.shape, dtype=graph.dtype, buffer=graph_shm.buf)
-    #graph = graph[0]
-
-    # generate and parse data from np_arrays if no_filter is False
-    if not no_filter:
-        # aa_kmer_set_shm = shared_memory.SharedMemory(name=aa_kmer_set.name)
-        # aa_kmer_set = np.ndarray(aa_kmer_set.shape, dtype=aa_kmer_set.dtype, buffer=aa_kmer_set_shm.buf)
-
-        model_shm = shared_memory.SharedMemory(name=model.name)
-        model = np.ndarray(model.shape, dtype=model.dtype, buffer=model_shm.buf)
-
-        model_tis_shm = shared_memory.SharedMemory(name=model_tis.name)
-        model_tis = np.ndarray(model_tis.shape, dtype=model_tis.dtype, buffer=model_tis_shm.buf)
-
-        # model_obj = model[0]
-        #model_tis_obj = model_tis[0]
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
     # determine all ORFs in Bifrost graph
-    ORF_overlap_dict, ORF_vector = graph[0].findORFs(colour_ID, node_set, repeat,
-                                                     overlap, max_path_length, is_ref, no_filter,
-                                                     stop_codons_for, start_codons, min_ORF_length,
-                                                     max_ORF_overlap, write_idx, input_colours[colour_ID])
+    ORF_overlap_dict, ORF_vector = shd_arr[0].findORFs(colour_ID, node_set, repeat,
+                                                       overlap, max_path_length, is_ref, no_filter,
+                                                       stop_codons_for, start_codons, min_ORF_length,
+                                                       max_ORF_overlap, write_idx, input_colours[colour_ID])
 
     # if no filter specified, just copy ORF_vector to true_genes
     if no_filter:
         true_genes = ORF_vector
     else:
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, graph[0], minimum_ORF_score, overlap, model[0], model_tis[0],
+        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2],
                                      aa_kmer_set)
 
         # determine highest scoring genes
@@ -246,12 +217,3 @@ def run_calculate_ORFs(node_set_tuple, graph, repeat, overlap, max_path_length, 
             true_genes[index] = ORF_vector[ORF_id]
 
     return colour_ID, true_genes
-
-
-def generate_shared_mem_array(in_array, smm):
-    """Generates a shared memory representation of a numpy array"""
-    array_raw = smm.SharedMemory(size=in_array.nbytes)
-    array_shared = np.ndarray(in_array.shape, dtype=in_array.dtype, buffer=array_raw.buf)
-    array_shared[:] = in_array[:]
-    array_shared = NumpyShared(name=array_raw.name, shape=in_array.shape, dtype=in_array.dtype)
-    return (array_shared)

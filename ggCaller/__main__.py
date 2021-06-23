@@ -1,25 +1,12 @@
 # imports
 import argparse
-import sys
 import json
-from Bio.Seq import Seq
-import ggCaller_cpp
 from ggCaller.graph_traversal import *
-import numpy as np
-import collections
+import ggCaller_cpp
 from functools import partial
 # from memory_profiler import profile
 from balrog.__main__ import *
-
-try:
-    from multiprocessing import Pool, shared_memory
-    from multiprocessing.managers import SharedMemoryManager
-
-    NumpyShared = collections.namedtuple('NumpyShared', ('name', 'shape', 'dtype'))
-except ImportError as e:
-    sys.stderr.write("This version of ggCaller requires python v3.8 or higher\n")
-    sys.exit(1)
-
+from ggCaller.shared_memory import *
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -160,7 +147,7 @@ def main():
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
     # create numpy arrays for shared memory
-    graph_arr = np.array([graph])
+    total_arr = np.array([graph])
 
     # load balrog models if required
     if not options.no_filter:
@@ -169,10 +156,6 @@ def main():
         aa_kmer_set = None
         model, model_tis = load_gene_models()
 
-        # create numpy arrays for shared memory
-        # aa_kmer_set = np.array(list(aa_kmer_set))
-        model = np.array([model])
-        model_tis = np.array([model_tis])
     else:
         model, model_tis, aa_kmer_set = None, None, None
 
@@ -190,21 +173,18 @@ def main():
 
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
-        graph_shd = generate_shared_mem_array(graph_arr, smm)
-        # aa_kmer_set = generate_shared_mem_array(aa_kmer_set, smm)
-        if not options.no_filter:
-            model = generate_shared_mem_array(model, smm)
-            model_tis = generate_shared_mem_array(model_tis, smm)
+        total_arr = np.append(total_arr, [[model], [model_tis]])
+        array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:
             for colour_ID, col_true_genes in pool.map(
-                    partial(run_calculate_ORFs, graph=graph_shd, repeat=options.repeat, overlap=overlap,
+                    partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.path, is_ref=options.not_ref, no_filter=options.no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=options.orf,
                             max_ORF_overlap=options.maxoverlap, minimum_ORF_score=options.min_orf_score,
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
-                            input_colours=input_colours, model=model, model_tis=model_tis,
+                            input_colours=input_colours,
                             aa_kmer_set=aa_kmer_set),
                     enumerate(node_colour_vector)):
                 # iterate over entries in col_true_genes to generate the sequences

@@ -49,6 +49,7 @@ find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)
 # link libraries
 target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads)
 
+#find OpenMP library
 find_package(OpenMP)
 
 if(OpenMP_CXX_FOUND)
