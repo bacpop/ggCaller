@@ -1,5 +1,0 @@
-/mnt/c/Users/sth19/Documents/PhD/data/genomes/Pneumo_capsular_genes/fastas/CR931719_Streptococcus_pneumoniae_strain_Eddy_nr._73_serotype_46.fa
-/mnt/c/Users/sth19/Documents/PhD/data/genomes/Pneumo_capsular_genes/fastas/CR931658_Streptococcus_pneumoniae_strain_559_66_serotype_12a.fa
-/mnt/c/Users/sth19/Documents/PhD/data/genomes/Pneumo_capsular_genes/fastas/CR931659_Streptococcus_pneumoniae_strain_Gambia_1_81_serotype_12b.fa
-/mnt/c/Users/sth19/Documents/PhD/data/genomes/Pneumo_capsular_genes/fastas/CR931660_Streptococcus_pneumoniae_strain_6312_serotype_12f.fa
-/mnt/c/Users/sth19/Documents/PhD/data/genomes/Pneumo_capsular_genes/fastas/CR931717_Streptococcus_pneumoniae_strain_Hammer_serotype_44.fa
