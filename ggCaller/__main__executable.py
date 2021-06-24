@@ -106,7 +106,7 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/all_test_capsular_v1.2.4.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_v1.2.4.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -129,11 +129,14 @@ def main():
     graph = ggCaller_cpp.Graph()
 
     graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_test_capsular_list.txt",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.txt",
         31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+
+    # create numpy arrays for shared memory
+    total_arr = np.array([graph])
 
     # load balrog models if required
     if not no_filter:
@@ -142,10 +145,6 @@ def main():
         aa_kmer_set = None
         model, model_tis = load_gene_models()
 
-        # create numpy arrays for shared memory
-        # aa_kmer_set = np.array(list(aa_kmer_set))
-        model = np.array([model])
-        model_tis = np.array([model_tis])
     else:
         model, model_tis, aa_kmer_set = None, None, None
 
@@ -161,54 +160,47 @@ def main():
 
     torch.set_num_threads(1)
 
-    # use shared memory for multiprocessing
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
-        graph_arr = np.array([graph])
-        graph_shd = generate_shared_mem_array(graph_arr, smm)
-        # aa_kmer_set = generate_shared_mem_array(aa_kmer_set, smm)
-        if not no_filter:
-            model = generate_shared_mem_array(model, smm)
-            model_tis = generate_shared_mem_array(model_tis, smm)
-
-        # run run_calculate_ORFs with multithreading
-        for node_set_tuple in enumerate(node_colour_vector):
-            colour_ID, col_true_genes = run_calculate_ORFs(node_set_tuple, graph_shd, repeat, overlap, max_path_length,
-                                                           is_ref, no_filter,
-                                                           stop_codons_for, start_codons, min_ORF_length,
-                                                           max_ORF_overlap, minimum_ORF_score,
-                                                           minimum_path_score, write_idx, input_colours, aa_kmer_set,
-                                                           model, model_tis)
-            # iterate over entries in col_true_genes to generate the sequences
-            for ORFNodeVector in col_true_genes:
-                gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                if gene not in true_genes:
-                    # create tuple to hold ORF sequence, colours and graph traversal information
-                    empty_colours_list = ["0"] * nb_colours
-                    true_genes[gene] = (empty_colours_list, ORFNodeVector)
-                # update colours with current colour_ID
-                true_genes[gene][0][colour_ID] = "1"
+        total_arr = np.append(total_arr, [[model], [model_tis]])
+        array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # # run run_calculate_ORFs with multithreading
-        # with Pool(processes=num_threads) as pool:
-        #     for colour_ID, col_true_genes in pool.map(
-        #             partial(run_calculate_ORFs, graph=graph_shd, repeat=repeat, overlap=overlap,
-        #                     max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
-        #                     stop_codons_for=stop_codons_for, start_codons=start_codons,
-        #                     min_ORF_length=min_ORF_length, max_ORF_overlap=max_ORF_overlap,
-        #                     minimum_ORF_score=minimum_ORF_score, minimum_path_score=minimum_path_score,
-        #                     write_idx=write_idx,
-        #                     input_colours=input_colours, aa_kmer_set=aa_kmer_set, model=model, model_tis=model_tis),
-        #             enumerate(node_colour_vector)):
-        #         # iterate over entries in col_true_genes to generate the sequences
-        #         for ORFNodeVector in col_true_genes:
-        #             gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-        #             if gene not in true_genes:
-        #                 # create tuple to hold ORF sequence, colours and graph traversal information
-        #                 empty_colours_list = ["0"] * nb_colours
-        #                 true_genes[gene] = (empty_colours_list, ORFNodeVector)
-        #             # update colours with current colour_ID
-        #             true_genes[gene][0][colour_ID] = "1"
+        # for node_set_tuple in enumerate(node_colour_vector):
+        #     colour_ID, col_true_genes = run_calculate_ORFs(node_set_tuple, array_shd_tup, repeat, overlap, max_path_length,
+        #                                                    is_ref, no_filter,stop_codons_for, start_codons, min_ORF_length,
+        #                                                    max_ORF_overlap, minimum_ORF_score,minimum_path_score, write_idx,
+        #                                                    input_colours, aa_kmer_set)
+        #     # iterate over entries in col_true_genes to generate the sequences
+        #     for ORFNodeVector in col_true_genes:
+        #         gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        #         if gene not in true_genes:
+        #             # create tuple to hold ORF sequence, colours and graph traversal information
+        #             empty_colours_list = ["0"] * nb_colours
+        #             true_genes[gene] = (empty_colours_list, ORFNodeVector)
+        #         # update colours with current colour_ID
+        #         true_genes[gene][0][colour_ID] = "1"
+
+        # run run_calculate_ORFs with multithreading
+        with Pool(processes=num_threads) as pool:
+            for colour_ID, col_true_genes in pool.map(
+                    partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
+                            max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
+                            stop_codons_for=stop_codons_for, start_codons=start_codons,
+                            min_ORF_length=min_ORF_length, max_ORF_overlap=max_ORF_overlap,
+                            minimum_ORF_score=minimum_ORF_score, minimum_path_score=minimum_path_score,
+                            write_idx=write_idx,
+                            input_colours=input_colours, aa_kmer_set=aa_kmer_set),
+                    enumerate(node_colour_vector)):
+                # iterate over entries in col_true_genes to generate the sequences
+                for ORFNodeVector in col_true_genes:
+                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    if gene not in true_genes:
+                        # create tuple to hold ORF sequence, colours and graph traversal information
+                        empty_colours_list = ["0"] * nb_colours
+                        true_genes[gene] = (empty_colours_list, ORFNodeVector)
+                    # update colours with current colour_ID
+                    true_genes[gene][0][colour_ID] = "1"
 
     print("Generating fasta file of gene calls...")
     # print output to file

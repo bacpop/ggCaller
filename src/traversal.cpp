@@ -1,18 +1,27 @@
 // ggCaller header
 #include "traversal.h"
-// define mutex for safe addition to robinhood_maps
-//std::mutex mtx2;
+// define mutex
+std::mutex mtx2;
 
-PathVector iter_nodes_binary (const GraphVector& graph_vector,
-                              const NodeTuple& head_node_tuple,
-                               const size_t& current_colour,
-                               const size_t& length_max,
-                               const bool& repeat)
+void iter_nodes_binary (const GraphVector& graph_vector,
+                      NodeColourVector& node_colour_vector,
+                      NodeColourVector& node_colour_vector_traversed,
+                      std::vector<AllPaths>& colour_graph_paths,
+                      const NodeTuple& head_node_tuple,
+                      const size_t& current_colour,
+                      const size_t& length_max,
+                      const bool& repeat)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
     std::vector<int> node_vector;
     NodeStack node_stack;
+
+    // copy colours vector for head node for caching
+    const std::vector<bool> cached_colours = std::get<3>(head_node_tuple);
+
+    // get head node id
+    const int & head_node_id = std::get<1>(head_node_tuple);
 
     // create node set for identification of repeats
     std::unordered_set<int> node_set;
@@ -77,6 +86,8 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
             // determine if neighbour is in same colour as iteration, if not pass
             if (!updated_colours_arr.at(current_colour))
             {
+                // determine which colours are part of divergent path to avoid caching
+                cached_colours = bool_subtract(cached_colours, updated_colours_arr);
                 continue;
             }
 
@@ -126,87 +137,102 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
             node_set.insert(neighbour_id);
         }
     }
-    return path_list;
-}
 
-AllPaths traverse_graph(const GraphVector& graph_vector,
-                         const size_t& colour_ID,
-                         const std::vector<size_t>& node_ids,
-                         const bool repeat,
-                         const size_t max_path_length)
-{
-    // initialise all_paths
-    AllPaths all_paths;
-
-    // traverse nodes in forward direction
-    for (const auto& node_id : node_ids)
+    // update path array for all correctly cached colours
+    mtx2.lock();
+    for (i=0; i < cached_colours.size(); i++)
     {
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = node_id - 1;
-
-        // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
-
-        // check if stop codons present. If not, pass
-        if (!unitig_dict.forward_stop())
+        if (cached_colours[i] == 1)
         {
-            continue;
-        }
-
-        // generate integer version of unitig_id for recursion
-        const int head_id = (int) node_id;
-
-        // gather unitig information from graph_vector
-        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, true, 0);
-        const size_t unitig_len = unitig_dict.size().first;
-        const std::vector<bool> colour_arr = unitig_dict.full_colour();
-
-        // generate node tuple for iteration
-        NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
-
-        // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
-
-        if (!unitig_complete_paths.empty())
-        {
-            all_paths.push_back(std::move(unitig_complete_paths));
+            // if the node hasn't been traversed in that colour yet, set traversed to true and add the path colours
+            if (node_colour_vector_traversed.at(i).find(head_node_id) == node_colour_vector_traversed.at(i).end())
+            {
+                node_colour_vector_traversed[i].insert(head_node_id);
+                colour_graph_paths[i].push_back(path_list);
+            }
         }
     }
-
-    // traverse nodes in reverse direction
-    for (const auto& node_id : node_ids)
-    {
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = node_id - 1;
-
-        // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
-
-        // check if stop codons present. If not, pass
-        if (!unitig_dict.reverse_stop())
-        {
-            continue;
-        }
-
-        // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
-        const int head_id = ((int) node_id) * -1;
-
-        // gather unitig information from graph_vector
-        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, false, 0);
-        const size_t unitig_len = unitig_dict.size().first;
-        const std::vector<bool> colour_arr = unitig_dict.full_colour();
-
-        // generate node tuple for iteration
-        NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
-
-        // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
-
-        if (!unitig_complete_paths.empty())
-        {
-            all_paths.push_back(std::move(unitig_complete_paths));
-        }
-    }
-
-    return all_paths;
+    mtx2.unlock();
 }
+
+//AllPaths traverse_graph(const GraphVector& graph_vector,
+//                         const size_t& colour_ID,
+//                         const std::vector<size_t>& node_ids,
+//                         const bool repeat,
+//                         const size_t max_path_length)
+//{
+//    // initialise all_paths
+//    AllPaths all_paths;
+//
+//    // traverse nodes in forward direction
+//    for (const auto& node_id : node_ids)
+//    {
+//        // parse unitig_id. Zero based, so take 1
+//        const auto unitig_id = node_id - 1;
+//
+//        // get reference to unitig_dict object
+//        const auto& unitig_dict = graph_vector.at(unitig_id);
+//
+//        // check if stop codons present. If not, pass
+//        if (!unitig_dict.forward_stop())
+//        {
+//            continue;
+//        }
+//
+//        // generate integer version of unitig_id for recursion
+//        const int head_id = (int) node_id;
+//
+//        // gather unitig information from graph_vector
+//        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, true, 0);
+//        const size_t unitig_len = unitig_dict.size().first;
+//        const std::vector<bool> colour_arr = unitig_dict.full_colour();
+//
+//        // generate node tuple for iteration
+//        NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
+//
+//        // recur paths
+//        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
+//
+//        if (!unitig_complete_paths.empty())
+//        {
+//            all_paths.push_back(std::move(unitig_complete_paths));
+//        }
+//    }
+//
+//    // traverse nodes in reverse direction
+//    for (const auto& node_id : node_ids)
+//    {
+//        // parse unitig_id. Zero based, so take 1
+//        const auto unitig_id = node_id - 1;
+//
+//        // get reference to unitig_dict object
+//        const auto& unitig_dict = graph_vector.at(unitig_id);
+//
+//        // check if stop codons present. If not, pass
+//        if (!unitig_dict.reverse_stop())
+//        {
+//            continue;
+//        }
+//
+//        // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
+//        const int head_id = ((int) node_id) * -1;
+//
+//        // gather unitig information from graph_vector
+//        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, false, 0);
+//        const size_t unitig_len = unitig_dict.size().first;
+//        const std::vector<bool> colour_arr = unitig_dict.full_colour();
+//
+//        // generate node tuple for iteration
+//        NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
+//
+//        // recur paths
+//        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
+//
+//        if (!unitig_complete_paths.empty())
+//        {
+//            all_paths.push_back(std::move(unitig_complete_paths));
+//        }
+//    }
+//
+//    return all_paths;
+//}

@@ -96,11 +96,25 @@ class Graph {
 
     private:
     // index graph
-    NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
-                             const std::vector<std::string>& stop_codons_for,
-                             const std::vector<std::string>& stop_codons_rev,
-                             const int& kmer,
-                             const size_t& nb_colours);
+    void _index_graph (const ColoredCDBG<>& ccdbg,
+                     const std::vector<std::string>& stop_codons_for,
+                     const std::vector<std::string>& stop_codons_rev,
+                     const int& kmer,
+                     const size_t& nb_colours);
+
+    // traverse graph
+    void _traverse_graph(const size_t& colour_ID,
+                         const bool repeat,
+                         const size_t max_path_length);
+
+    // stored head nodes for traversal
+    NodeColourVector _NodeColourVector;
+
+    // stored head nodes that have been traversed
+    NodeColourVector _NodeColourVectorTraversed;
+
+    // stored paths for ORF calling per colour
+    std::vector<AllPaths> _ColourGraphPaths;
 
     // stored unitigDict objects
     std::vector<unitigDict> _GraphVector;

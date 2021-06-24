@@ -3,6 +3,8 @@
 //
 
 #include "graph.h"
+// define mutex
+std::mutex mtx3;
 
 GraphTuple Graph::build (const std::string& infile1,
                     const int kmer,
@@ -48,13 +50,15 @@ GraphTuple Graph::build (const std::string& infile1,
         // get colour names
         input_colours = ccdbg.getColorNames();
 
-        // generate codon index for graph
+        // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
-        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+        _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+        _ColourGraphPaths.std::resize(nb_colours);
+        _NodeColourVectorTraversed.std::resize(nb_colours);
     }
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
 
     return graph_tuple;
 }
@@ -102,19 +106,20 @@ GraphTuple Graph::read (const std::string& graphfile,
         // get colour names
         input_colours = ccdbg.getColorNames();
 
-        // generate codon index for graph
+        // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
-        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours));
+        _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+        _ColourGraphPaths.std::resize(nb_colours);
+        _NodeColourVectorTraversed.std::resize(nb_colours);
     }
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
 
     return graph_tuple;
 }
 
 std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
-                                                     const std::vector<size_t>& node_ids,
                                                      const bool& repeat,
                                                      const size_t& overlap,
                                                      const size_t& max_path_length,
@@ -128,11 +133,15 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
                                                      const std::string& FM_fasta_file)
 {
     std::pair<ORFVector, NodeStrandMap> ORF_pair;
+
+    // get reference to _node_ids for specific colour
+    auto & node_ids = _NodeColourVector.at(colour_ID);
+
     // traverse graph, set scope for all_paths and fm_idx
     {
         // recursive traversal
         //cout << "Traversing graph: " << to_string(colour_ID) << endl;
-        AllPaths all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
+        _traverse_graph(colour_ID, repeat, max_path_length);
 
         // if no FM_fasta_file specified, cannot generate FM Index
         if (FM_fasta_file == "NA")
@@ -147,9 +156,9 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
             fm_idx = index_fasta(FM_fasta_file, write_idx);
         }
 
-        // generate ORF calls
+        // generate ORF calls, beware of race condition here
         //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_pair = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
+        ORF_pair = call_ORFs(_ColourGraphPaths.at(colour_ID), _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
 
     // if no filtering required, do not calculate overlaps
@@ -208,7 +217,7 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return sequence;
 }
 
-NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
+void Graph::_index_graph (const ColoredCDBG<>& ccdbg,
                          const std::vector<std::string>& stop_codons_for,
                          const std::vector<std::string>& stop_codons_rev,
                          const int& kmer,
@@ -249,7 +258,15 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
             {
                 if (unitig_dict.full_colour().at(i))
                 {
-                    node_colour_vector_private[i].push_back(unitig_dict.id);
+                    // check if forward and reverse stops present
+                    if (unitig_dict.forward_stop())
+                    {
+                        node_colour_vector_private[i].insert(((int) unitig_dict.id));
+                    }
+                    if (unitig_dict.reverse_stop())
+                    {
+                        node_colour_vector_private[i].insert((((int) unitig_dict.id)) * -1);
+                    }
                 }
             }
 
@@ -273,9 +290,69 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
     // update neighbour index in place within graph_vector
     update_neighbour_index(graph_vector, head_kmer_map);
 
-    // assign the graph vector to the graph _GraphVector
+    // assign the graph vector to the graph _GraphVector and colour vector to _NodeColourVector
     _GraphVector = std::move(graph_vector);
+    _NodeColourVector = std::move(node_colour_vector);
+}
 
-    // return node_colour vector
-    return node_colour_vector;
+void _traverse_graph(const size_t& colour_ID,
+                     const bool repeat,
+                     const size_t max_path_length)
+{
+    // get reference to position in _ColourGraphPaths
+    auto & all_paths = _ColourGraphPaths[colour_ID];
+
+    // get reference to position in _NodeColourVector
+    auto & node_ids = _NodeColourVector[colour_ID];
+
+    // get reference to position in _NodeColourVectorTraversed
+    auto & traversed_node_ids = _NodeColourVectorTraversed[colour_ID];
+
+    // need to think about a mutex here to prevent node from interferring with traversing colour
+    // traverse nodes
+    for (const auto& head_id : node_ids)
+    {
+        // check if head has already been traversed by another thread
+        mtx3.lock();
+        if (traversed_node_ids.find(head_id) != traversed_node_ids.end();)
+        {
+            continue;
+        }
+        mtx3.unlock();
+
+        // parse unitig_id. Zero based, so get as positive and then zero base
+        int unitig_id;
+        bool pos;
+        if (node_id > 0)
+        {
+            unitig_id = head_id - 1;
+            pos = true;
+        } else
+        {
+            unitig_id = (head_id * -1) - 1;
+            pos = false;
+        }
+
+        // get reference to unitig_dict object
+        const auto& unitig_dict = _GraphVector.at(unitig_id);
+
+
+        // gather unitig information from graph_vector
+        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, pos, 0);
+        const size_t unitig_len = unitig_dict.size().first;
+        const std::vector<bool> colour_arr = unitig_dict.full_colour();
+
+        // generate node tuple for iteration
+        NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
+
+        // recur paths
+        PathVector unitig_complete_paths = iter_nodes_binary(_GraphVector, _NodeColourVector, _ColourGraphPaths, head_node_tuple, colour_ID, max_path_length, repeat);
+
+        if (!unitig_complete_paths.empty())
+        {
+            all_paths.push_back(std::move(unitig_complete_paths));
+        }
+    }
+
+    return all_paths;
 }
