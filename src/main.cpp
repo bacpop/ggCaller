@@ -71,19 +71,17 @@ int main(int argc, char *argv[]) {
 //            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.bfg_colors",
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref);
 
-    const auto& node_colour_vector = std::get<0>(graph_tuple);
-    const auto& input_colours = std::get<1>(graph_tuple);
-    const auto& nb_colours = std::get<2>(graph_tuple);
-    const auto& overlap = std::get<3>(graph_tuple);
+    const auto& input_colours = std::get<0>(graph_tuple);
+    const auto& nb_colours = std::get<1>(graph_tuple);
+    const auto& overlap = std::get<2>(graph_tuple);
 
     // initialise print map
     robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
 
-    for (int colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
+    for (int colour_ID = 0; colour_ID < nb_colours; colour_ID++)
     {
-        const auto& node_set = node_colour_vector.at(colour_ID);
 
-        std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, node_set, repeat,
+        std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons_for, min_ORF_length,
                                                                max_ORF_overlap, write_idx, input_colours.at(colour_ID));

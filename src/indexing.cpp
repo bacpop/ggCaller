@@ -468,7 +468,8 @@ void update_neighbour_index(GraphVector& graph_vector,
     }
 }
 
-GraphPair index_graph(const ColoredCDBG<>& ccdbg,
+// function to allow correct template definition of analyse_unitigs_binary
+void index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
                        const int kmer,
@@ -481,58 +482,12 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
         head_kmer_arr.push_back(um.getUnitigHead());
     }
 
-    // structures for results
-    GraphVector graph_vector(head_kmer_arr.size());
-    NodeColourVector node_colour_vector(nb_colours);
-    robin_hood::unordered_map<std::string, size_t> head_kmer_map;
-
-    // run unitig indexing in parallel
-    size_t unitig_id = 1;
-    #pragma omp parallel
+    for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
     {
-        GraphVector graph_vector_private;
-        NodeColourVector node_colour_vector_private(nb_colours);
-        robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
-        #pragma omp for nowait
-        for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
-        {
-            // convert Kmer defined in *it to unitig
-            auto unitig = ccdbg.find(*it, true);
+        // convert Kmer defined in *it to unitig
+        auto unitig = ccdbg.find(*it, true);
 
-            // generate results per unitig
-            unitigDict unitig_dict = std::move(analyse_unitigs_binary(ccdbg, unitig, stop_codons_for, stop_codons_rev, kmer, nb_colours));
-            #pragma omp atomic capture
-            unitig_dict.id = unitig_id++;
-
-            // add to node_colour_map_private
-            for (size_t i = 0; i < unitig_dict.full_colour().size(); i++)
-            {
-                if (unitig_dict.full_colour().at(i))
-                {
-                    node_colour_vector_private[i].push_back(unitig_dict.id);
-                }
-            }
-
-            // add head_kmer and unitig id to map
-            head_kmer_map_private[unitig_dict.head_kmer()] = unitig_dict.id;
-
-            // add unitig to graph_vector, minus 1 as zero based
-            graph_vector[unitig_dict.id - 1] = std::move(unitig_dict);
-        }
-        #pragma omp critical
-        {
-            head_kmer_map.insert(head_kmer_map_private.begin(), head_kmer_map_private.end());
-
-            // update node_colour_vector with calculated colours
-            for (int i = 0; i < node_colour_vector_private.size(); i++)
-            {
-                node_colour_vector[i].insert(node_colour_vector[i].end(), make_move_iterator(node_colour_vector_private[i].begin()), make_move_iterator(node_colour_vector_private[i].end()));
-            }
-        }
+        // generate results per unitig
+        unitigDict unitig_dict = std::move(analyse_unitigs_binary(ccdbg, unitig, stop_codons_for, stop_codons_rev, kmer, nb_colours));
     }
-    // update neighbour index in place within graph_vector
-    update_neighbour_index(graph_vector, head_kmer_map);
-
-    const auto graph_pair = std::make_pair(graph_vector, node_colour_vector);
-    return graph_pair;
 }

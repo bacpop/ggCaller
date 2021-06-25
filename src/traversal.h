@@ -6,12 +6,12 @@
 
 // traversal.cpp
 void iter_nodes_binary (const GraphVector& graph_vector,
-                              NodeColourVector& node_colour_vector,
-                              std::vector<AllPaths> colour_graph_paths,
-                              const NodeTuple& head_node_tuple,
-                              const size_t& current_colour,
-                              const size_t& length_max,
-                              const bool& repeat)
+                      NodeColourVector& node_colour_vector_traversed,
+                      std::vector<AllPaths>& colour_graph_paths,
+                      const NodeTuple& head_node_tuple,
+                      const size_t& current_colour,
+                      const size_t& length_max,
+                      const bool& repeat);
 
 //AllPaths traverse_graph(const GraphVector& graph_vector,
 //                         const size_t& colour_ID,

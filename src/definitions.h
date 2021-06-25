@@ -70,7 +70,7 @@ using seqan3::operator""_dna5;
 
 // general typedefs
 // mapping of each colour to component nodes in graph
-typedef std::vector<robin_hood::unordered_set<int>> NodeColourVector;
+typedef std::vector<std::unordered_set<int>> NodeColourVector;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information

@@ -49,7 +49,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 void update_neighbour_index(GraphVector& graph_vector,
                             robin_hood::unordered_map<std::string, size_t> head_kmer_map);
 
-GraphPair index_graph(const ColoredCDBG<>& ccdbg,
+void index_graph(const ColoredCDBG<>& ccdbg,
                        const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
                        const int kmer,

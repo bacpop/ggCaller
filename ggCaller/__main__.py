@@ -144,7 +144,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+    input_colours, nb_colours, overlap = graph_tuple
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
@@ -186,7 +186,7 @@ def main():
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
                             input_colours=input_colours,
                             aa_kmer_set=aa_kmer_set),
-                    enumerate(node_colour_vector)):
+                    range(0, nb_colours)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:
                     gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)

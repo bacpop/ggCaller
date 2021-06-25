@@ -4,7 +4,6 @@
 std::mutex mtx2;
 
 void iter_nodes_binary (const GraphVector& graph_vector,
-                      NodeColourVector& node_colour_vector,
                       NodeColourVector& node_colour_vector_traversed,
                       std::vector<AllPaths>& colour_graph_paths,
                       const NodeTuple& head_node_tuple,
@@ -18,7 +17,7 @@ void iter_nodes_binary (const GraphVector& graph_vector,
     NodeStack node_stack;
 
     // copy colours vector for head node for caching
-    const std::vector<bool> cached_colours = std::get<3>(head_node_tuple);
+    std::vector<bool> cached_colours = std::get<3>(head_node_tuple);
 
     // get head node id
     const int & head_node_id = std::get<1>(head_node_tuple);
@@ -139,20 +138,24 @@ void iter_nodes_binary (const GraphVector& graph_vector,
     }
 
     // update path array for all correctly cached colours
-    mtx2.lock();
-    for (i=0; i < cached_colours.size(); i++)
+    if (!path_list.empty())
     {
-        if (cached_colours[i] == 1)
+        for (size_t i=0; i < cached_colours.size(); i++)
         {
-            // if the node hasn't been traversed in that colour yet, set traversed to true and add the path colours
-            if (node_colour_vector_traversed.at(i).find(head_node_id) == node_colour_vector_traversed.at(i).end())
+            if (cached_colours[i] == 1)
             {
-                node_colour_vector_traversed[i].insert(head_node_id);
-                colour_graph_paths[i].push_back(path_list);
+                // if the node hasn't been traversed in that colour yet, set traversed to true and add the path colours
+                mtx2.lock();
+                if (node_colour_vector_traversed.at(i).find(head_node_id) == node_colour_vector_traversed.at(i).end())
+                {
+
+                    node_colour_vector_traversed[i].insert(head_node_id);
+                    colour_graph_paths[i].push_back(path_list);
+                }
+                mtx2.unlock();
             }
         }
     }
-    mtx2.unlock();
 }
 
 //AllPaths traverse_graph(const GraphVector& graph_vector,

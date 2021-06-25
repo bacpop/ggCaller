@@ -4,7 +4,7 @@
 
 #include "graph.h"
 // define mutex
-std::mutex mtx3;
+//std::mutex mtx3;
 
 GraphTuple Graph::build (const std::string& infile1,
                     const int kmer,
@@ -53,8 +53,8 @@ GraphTuple Graph::build (const std::string& infile1,
         // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
         _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
-        _ColourGraphPaths.std::resize(nb_colours);
-        _NodeColourVectorTraversed.std::resize(nb_colours);
+        _ColourGraphPaths.resize(nb_colours);
+        _NodeColourVectorTraversed.resize(nb_colours);
     }
 
     // make tuple containing all information needed in python back-end
@@ -109,8 +109,8 @@ GraphTuple Graph::read (const std::string& graphfile,
         // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
         _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
-        _ColourGraphPaths.std::resize(nb_colours);
-        _NodeColourVectorTraversed.std::resize(nb_colours);
+        _ColourGraphPaths.resize(nb_colours);
+        _NodeColourVectorTraversed.resize(nb_colours);
     }
 
     // make tuple containing all information needed in python back-end
@@ -156,7 +156,6 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
             fm_idx = index_fasta(FM_fasta_file, write_idx);
         }
 
-        // generate ORF calls, beware of race condition here
         //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
         ORF_pair = call_ORFs(_ColourGraphPaths.at(colour_ID), _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
@@ -283,7 +282,7 @@ void Graph::_index_graph (const ColoredCDBG<>& ccdbg,
             // update node_colour_vector with calculated colours
             for (int i = 0; i < node_colour_vector_private.size(); i++)
             {
-                node_colour_vector[i].insert(node_colour_vector[i].end(), make_move_iterator(node_colour_vector_private[i].begin()), make_move_iterator(node_colour_vector_private[i].end()));
+                node_colour_vector[i].merge(node_colour_vector_private[i]);
             }
         }
     }
@@ -295,7 +294,7 @@ void Graph::_index_graph (const ColoredCDBG<>& ccdbg,
     _NodeColourVector = std::move(node_colour_vector);
 }
 
-void _traverse_graph(const size_t& colour_ID,
+void Graph::_traverse_graph(const size_t& colour_ID,
                      const bool repeat,
                      const size_t max_path_length)
 {
@@ -313,17 +312,15 @@ void _traverse_graph(const size_t& colour_ID,
     for (const auto& head_id : node_ids)
     {
         // check if head has already been traversed by another thread
-        mtx3.lock();
-        if (traversed_node_ids.find(head_id) != traversed_node_ids.end();)
+        if (traversed_node_ids.find(head_id) != traversed_node_ids.end())
         {
             continue;
         }
-        mtx3.unlock();
 
         // parse unitig_id. Zero based, so get as positive and then zero base
         int unitig_id;
         bool pos;
-        if (node_id > 0)
+        if (head_id > 0)
         {
             unitig_id = head_id - 1;
             pos = true;
@@ -346,13 +343,8 @@ void _traverse_graph(const size_t& colour_ID,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(_GraphVector, _NodeColourVector, _ColourGraphPaths, head_node_tuple, colour_ID, max_path_length, repeat);
-
-        if (!unitig_complete_paths.empty())
-        {
-            all_paths.push_back(std::move(unitig_complete_paths));
-        }
+        iter_nodes_binary(_GraphVector, _NodeColourVectorTraversed, _ColourGraphPaths, head_node_tuple, colour_ID, max_path_length, repeat);
     }
-
-    return all_paths;
+    // clear node_ids after full traversal
+    node_ids.clear();
 }

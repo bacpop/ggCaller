@@ -133,7 +133,7 @@ def main():
         31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+    input_colours, nb_colours, overlap = graph_tuple
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
@@ -166,8 +166,8 @@ def main():
         array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # # run run_calculate_ORFs with multithreading
-        # for node_set_tuple in enumerate(node_colour_vector):
-        #     colour_ID, col_true_genes = run_calculate_ORFs(node_set_tuple, array_shd_tup, repeat, overlap, max_path_length,
+        # for colour in range(0, nb_colours):
+        #     colour_ID, col_true_genes = run_calculate_ORFs(colour, array_shd_tup, repeat, overlap, max_path_length,
         #                                                    is_ref, no_filter,stop_codons_for, start_codons, min_ORF_length,
         #                                                    max_ORF_overlap, minimum_ORF_score,minimum_path_score, write_idx,
         #                                                    input_colours, aa_kmer_set)
@@ -191,7 +191,7 @@ def main():
                             minimum_ORF_score=minimum_ORF_score, minimum_path_score=minimum_path_score,
                             write_idx=write_idx,
                             input_colours=input_colours, aa_kmer_set=aa_kmer_set),
-                    enumerate(node_colour_vector)):
+                    range(0, nb_colours)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:
                     gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
