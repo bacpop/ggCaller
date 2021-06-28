@@ -4,7 +4,7 @@
 
 #include "graph.h"
 // define mutex
-//std::mutex mtx3;
+std::mutex mtx3;
 
 GraphTuple Graph::build (const std::string& infile1,
                     const int kmer,
@@ -312,10 +312,12 @@ void Graph::_traverse_graph(const size_t& colour_ID,
     for (const auto& head_id : node_ids)
     {
         // check if head has already been traversed by another thread
+        mtx3.lock();
         if (traversed_node_ids.find(head_id) != traversed_node_ids.end())
         {
             continue;
         }
+        mtx3.unlock();
 
         // parse unitig_id. Zero based, so get as positive and then zero base
         int unitig_id;
