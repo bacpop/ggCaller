@@ -85,8 +85,10 @@ typedef std::tuple<size_t, int, uint8_t, std::vector<bool>, size_t> NodeTuple;
 typedef std::stack<NodeTuple> NodeStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
-// A vector of all paths generated from recursive traversal
-typedef std::vector<PathVector> AllPaths;
+// A vector of all paths generated from recursive traversal and their shared colours
+typedef std::vector<std::pair<std::vector<bool>, PathVector>> AllPaths;
+// per-colour vector of paths and shared paths
+typedef std::vector<AllPaths> ColourGraphPaths;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap

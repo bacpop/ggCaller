@@ -86,25 +86,36 @@ class Graph {
                                                          const std::vector<std::string>& start_codons_for,
                                                          const size_t min_ORF_length,
                                                          const size_t max_overlap,
-                                                         const bool write_idx,
-                                                         const std::string& FM_fasta_file);
+                                                         const bool write_idx);
 
     std::string generate_sequence(const std::vector<int>& nodelist,
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
     private:
-        // stored head nodes for traversal
+       // stored head nodes for traversal
     NodeColourVector _NodeColourVector;
 
     // stored head nodes that have been traversed
     NodeColourVector _NodeColourVectorTraversed;
 
     // stored paths for ORF calling per colour
-    std::vector<AllPaths> _ColourGraphPaths;
+    ColourGraphPaths _ColourGraphPaths;
 
     // stored unitigDict objects
     std::vector<unitigDict> _GraphVector;
+
+    // stored ORFs
+    std::vector<ORFNodeMap> _TotalORFNodeMap;
+
+    // file names for colours
+    std::vector<std::string> _InputColours;
+
+    // FM-indexes stored in memory
+    std::vector<fm_index_coll> _FMIndexVector;
+
+    // vector to determine if ORFs called for colour completely
+    std::vector<bool> _ColourComplete;
 
     // index graph
     void _index_graph (const ColoredCDBG<>& ccdbg,
@@ -117,6 +128,14 @@ class Graph {
     void _traverse_graph(const size_t& colour_ID,
                          const bool repeat,
                          const size_t max_path_length);
+
+    // call ORFs within graph
+    std::pair<ORFVector, NodeStrandMap> _call_ORFs(const std::vector<std::string>& stop_codons_for,
+                                                     const std::vector<std::string>& start_codons_for,
+                                                     const int overlap,
+                                                     const size_t min_ORF_length,
+                                                     const bool is_ref,
+                                                     const fm_index_coll& fm_idx);
 };
 
 #endif //GRAPH_H

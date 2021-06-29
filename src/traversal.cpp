@@ -5,7 +5,7 @@ std::mutex mtx2;
 
 void iter_nodes_binary (const GraphVector& graph_vector,
                       NodeColourVector& node_colour_vector_traversed,
-                      std::vector<AllPaths>& colour_graph_paths,
+                      AllPaths& colour_graph_paths,
                       const NodeTuple& head_node_tuple,
                       const size_t& current_colour,
                       const size_t& length_max,
@@ -144,17 +144,17 @@ void iter_nodes_binary (const GraphVector& graph_vector,
         {
             if (cached_colours[i] == 1)
             {
-                // if the node hasn't been traversed in that colour yet, set traversed to true and add the path colours
+                // check across already traversed nodes
                 mtx2.lock();
                 if (node_colour_vector_traversed.at(i).find(head_node_id) == node_colour_vector_traversed.at(i).end())
                 {
-
                     node_colour_vector_traversed[i].insert(head_node_id);
-                    colour_graph_paths[i].push_back(path_list);
                 }
                 mtx2.unlock();
             }
         }
+        // add to path list
+        colour_graph_paths[current_colour].push_back(std::move(std::make_pair(cached_colours, path_list)));
     }
 }
 

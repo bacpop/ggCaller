@@ -6,14 +6,18 @@
 #include "indexing.h"
 
 // call_ORFs
-ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
+void generate_ORFs(std::vector<ORFNodeMap>& total_ORF_node_map,
+                         const GraphVector& graph_vector,
                          const std::vector<std::string>& stop_codons,
                          const std::vector<std::string>& start_codons,
-                         const std::vector<int>& unitig_path,
+                         const size_t& colour_ID,
+                         const std::vector<bool>& colours,
+                         const std::vector<bool>& colour_complete,
+                         const std::vector<int>& path,
                          const int& overlap,
                          const size_t min_len,
                          const bool is_ref,
-                         const fm_index_coll& fm_idx);
+                         const std::vector<fm_index_coll>& fm_idx_vector);
 
 std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                                                                                     const std::vector<int>& nodelist,

@@ -13,6 +13,7 @@ GraphTuple Graph::build (const std::string& infile1,
                     size_t num_threads,
                     bool is_ref,
                     const bool write_graph,
+                    const bool write_idx,
                     const std::string& infile2) {
     // Set number of threads
     if (num_threads < 1)
@@ -30,8 +31,6 @@ GraphTuple Graph::build (const std::string& infile1,
     GraphPair graph_pair;
     int overlap = kmer - 1;
     size_t nb_colours;
-    std::vector<std::string> input_colours;
-    NodeColourVector node_colour_vector;
 
     if (infile2 != "NA") {
         is_ref = 0;
@@ -48,19 +47,30 @@ GraphTuple Graph::build (const std::string& infile1,
         nb_colours = ccdbg.getNbColors();
 
         // get colour names
-        input_colours = ccdbg.getColorNames();
+        _InputColours = ccdbg.getColorNames();
 
         // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
         _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
         _ColourGraphPaths.resize(nb_colours);
         _NodeColourVectorTraversed.resize(nb_colours);
+        _ColourComplete.resize(nb_colours, false);
+
+        // generate FM-indexes
+        if (is_ref)
+        {
+            cout << "Generating FM-indexes of source genomes..." << endl;
+            for (const auto& source_file : _InputColours)
+            {
+                _FMIndexVector.push_back(std::move(index_fasta(source_file, write_idx)));
+            }
+        }
     }
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
+    GraphPair graph_pair = std::make_pair(nb_colours, overlap);
 
-    return graph_tuple;
+    return graph_pair;
 }
 
 // read existing graph and index
@@ -87,8 +97,6 @@ GraphTuple Graph::read (const std::string& graphfile,
     int kmer;
     int overlap;
     size_t nb_colours;
-    std::vector<std::string> input_colours;
-    NodeColourVector node_colour_vector;
 
     // scope for ccdbg
     {
@@ -104,19 +112,30 @@ GraphTuple Graph::read (const std::string& graphfile,
         nb_colours = ccdbg.getNbColors();
 
         // get colour names
-        input_colours = ccdbg.getColorNames();
+        _InputColours = ccdbg.getColorNames();
 
         // generate codon index for graph and resize _ColourGraphPaths, add to graph object
         cout << "Generating graph stop codon index..." << endl;
         _index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours);
         _ColourGraphPaths.resize(nb_colours);
         _NodeColourVectorTraversed.resize(nb_colours);
+        _ColourComplete.resize(nb_colours);
+
+        // generate FM-indexes
+        if (is_ref)
+        {
+            cout << "Generating FM-indexes of source genomes..." << endl;
+            for (const auto& source_file : _InputColours)
+            {
+                _FMIndexVector.push_back(std::move(index_fasta(source_file, write_idx)));
+            }
+        }
     }
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
+    GraphPair graph_pair = std::make_pair(nb_colours, overlap);
 
-    return graph_tuple;
+    return graph_pair;
 }
 
 std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
@@ -128,9 +147,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
                                                      const std::vector<std::string>& stop_codons_for,
                                                      const std::vector<std::string>& start_codons_for,
                                                      const size_t min_ORF_length,
-                                                     const size_t max_overlap,
-                                                     const bool write_idx,
-                                                     const std::string& FM_fasta_file)
+                                                     const size_t max_overlap)
 {
     std::pair<ORFVector, NodeStrandMap> ORF_pair;
 
@@ -143,21 +160,8 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
         //cout << "Traversing graph: " << to_string(colour_ID) << endl;
         _traverse_graph(colour_ID, repeat, max_path_length);
 
-        // if no FM_fasta_file specified, cannot generate FM Index
-        if (FM_fasta_file == "NA")
-        {
-            is_ref = false;
-        }
-
-        // generate FM_index if is_ref
-        fm_index_coll fm_idx;
-        if (is_ref)
-        {
-            fm_idx = index_fasta(FM_fasta_file, write_idx);
-        }
-
         //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_pair = call_ORFs(_ColourGraphPaths.at(colour_ID), _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
+        ORF_pair = _call_ORFs(colour_ID, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref);
     }
 
     // if no filtering required, do not calculate overlaps
@@ -346,8 +350,47 @@ void Graph::_traverse_graph(const size_t& colour_ID,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        iter_nodes_binary(_GraphVector, _NodeColourVectorTraversed, _ColourGraphPaths, head_node_tuple, colour_ID, max_path_length, repeat);
+        iter_nodes_binary(_GraphVector, _NodeColourVectorTraversed, _ColourGraphPaths.at(colour_ID), head_node_tuple, colour_ID, max_path_length, repeat);
     }
     // clear node_ids after full traversal
     node_ids.clear();
+}
+
+std::pair<ORFVector, NodeStrandMap> Graph::_call_ORFs(const size_t& colour_ID,
+                                                     const std::vector<std::string>& stop_codons_for,
+                                                     const std::vector<std::string>& start_codons_for,
+                                                     const int overlap,
+                                                     const size_t min_ORF_length,
+                                                     const bool is_ref)
+{
+    const auto& all_paths = _ColourGraphPaths.at(colour_ID);
+
+    // iterate over all_paths
+    for (auto it = all_paths.begin(); it < all_paths.end(); it++)
+    {
+//        const auto& path_pair = *it;
+        const auto& colours = std::get<0>(*it);
+        const auto& colour_paths = std::get<1>(*it);
+        // iterate over paths following head_kmer
+        for (const auto& path : colour_paths)
+        {
+            // CALL ORFS
+            // generate all ORFs within the path for start and stop codon pairs
+            generate_ORFs(_TotalORFNodeMap, _GraphVector, stop_codons_for, start_codons_for, colour_ID, colours,
+                          _ColourComplete, path, overlap, min_ORF_length, is_ref, _FMIndexVector);
+        }
+    }
+
+    mtx3.lock();
+    _ColourComplete[colour_ID] = true;
+    mtx3.unlock();
+
+    // generate pos_strand_map to determine relative strands of each node for each colour
+    auto pos_strand_map = std::move(calculate_pos_strand(_TotalORFNodeMap.at(colour_ID)));
+
+    // group colours of ORFs together
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(_TotalORFNodeMap.at(colour_ID)));
+
+    const auto ORF_pair = std::make_pair(ORF_vector, pos_strand_map);
+    return ORF_pair;
 }
