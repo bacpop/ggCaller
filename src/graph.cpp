@@ -6,7 +6,7 @@
 // define mutex
 std::mutex mtx3;
 
-GraphTuple Graph::build (const std::string& infile1,
+GraphPair Graph::build (const std::string& infile1,
                     const int kmer,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
@@ -28,7 +28,6 @@ GraphTuple Graph::build (const std::string& infile1,
     omp_set_num_threads(num_threads);
 
     // initialise persistent variables
-    GraphPair graph_pair;
     int overlap = kmer - 1;
     size_t nb_colours;
 
@@ -74,11 +73,12 @@ GraphTuple Graph::build (const std::string& infile1,
 }
 
 // read existing graph and index
-GraphTuple Graph::read (const std::string& graphfile,
+GraphPair Graph::read (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
                     size_t num_threads,
+                    const bool write_idx,
                     const bool is_ref) {
 
     // Set number of threads
@@ -350,7 +350,7 @@ void Graph::_traverse_graph(const size_t& colour_ID,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        iter_nodes_binary(_GraphVector, _NodeColourVectorTraversed, _ColourGraphPaths.at(colour_ID), head_node_tuple, colour_ID, max_path_length, repeat);
+        iter_nodes_binary(_GraphVector, _NodeColourVectorTraversed, _ColourGraphPaths, head_node_tuple, colour_ID, max_path_length, repeat);
     }
     // clear node_ids after full traversal
     node_ids.clear();

@@ -5,7 +5,7 @@ std::mutex mtx2;
 
 void iter_nodes_binary (const GraphVector& graph_vector,
                       NodeColourVector& node_colour_vector_traversed,
-                      AllPaths& colour_graph_paths,
+                      ColourGraphPaths& colour_graph_paths,
                       const NodeTuple& head_node_tuple,
                       const size_t& current_colour,
                       const size_t& length_max,

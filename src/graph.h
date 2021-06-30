@@ -58,35 +58,36 @@ class Graph {
     };
 
     // build new bifrost graph and index
-    GraphTuple build (const std::string& infile1,
+    GraphPair build (const std::string& infile1,
                     const int kmer,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
                     size_t num_threads,
                     bool is_ref,
                     const bool write_graph,
+                    const bool write_idx,
                     const std::string& infile2);
 
     // read existing graph and index
-    GraphTuple read (const std::string& graphfile,
-                     const std::string& coloursfile,
-                     const std::vector<std::string>& stop_codons_for,
-                     const std::vector<std::string>& stop_codons_rev,
-                     size_t num_threads,
-                     const bool is_ref);
+    GraphPair read (const std::string& graphfile,
+                    const std::string& coloursfile,
+                    const std::vector<std::string>& stop_codons_for,
+                    const std::vector<std::string>& stop_codons_rev,
+                    size_t num_threads,
+                    const bool write_idx,
+                    const bool is_ref);
 
     // find ORFs
     std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
-                                                         const bool& repeat,
-                                                         const size_t& overlap,
-                                                         const size_t& max_path_length,
-                                                         bool& is_ref,
-                                                         const bool& no_filter,
-                                                         const std::vector<std::string>& stop_codons_for,
-                                                         const std::vector<std::string>& start_codons_for,
-                                                         const size_t min_ORF_length,
-                                                         const size_t max_overlap,
-                                                         const bool write_idx);
+                                                     const bool& repeat,
+                                                     const size_t& overlap,
+                                                     const size_t& max_path_length,
+                                                     bool& is_ref,
+                                                     const bool& no_filter,
+                                                     const std::vector<std::string>& stop_codons_for,
+                                                     const std::vector<std::string>& start_codons_for,
+                                                     const size_t min_ORF_length,
+                                                     const size_t max_overlap);
 
     std::string generate_sequence(const std::vector<int>& nodelist,
                                   const std::vector<indexPair>& node_coords,
@@ -129,13 +130,12 @@ class Graph {
                          const bool repeat,
                          const size_t max_path_length);
 
-    // call ORFs within graph
-    std::pair<ORFVector, NodeStrandMap> _call_ORFs(const std::vector<std::string>& stop_codons_for,
+    std::pair<ORFVector, NodeStrandMap> _call_ORFs(const size_t& colour_ID,
+                                                     const std::vector<std::string>& stop_codons_for,
                                                      const std::vector<std::string>& start_codons_for,
                                                      const int overlap,
                                                      const size_t min_ORF_length,
-                                                     const bool is_ref,
-                                                     const fm_index_coll& fm_idx);
+                                                     const bool is_ref);
 };
 
 #endif //GRAPH_H
