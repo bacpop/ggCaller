@@ -145,12 +145,11 @@ void iter_nodes_binary (const GraphVector& graph_vector,
             if (cached_colours[i] == 1)
             {
                 // check across already traversed nodes
-                mtx2.lock();
+                const std::lock_guard<std::mutex> lock(mtx2);
                 if (node_colour_vector_traversed.at(i).find(head_node_id) == node_colour_vector_traversed.at(i).end())
                 {
                     node_colour_vector_traversed[i].insert(head_node_id);
                 }
-                mtx2.unlock();
             }
         }
         // add to path list

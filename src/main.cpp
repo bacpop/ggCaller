@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 
     int num_threads = 4;
     bool is_ref = true;
-    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_iter_traversal.fasta";
+    const std::string outfile = "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/group3_capsular_fa_list_gene_caching.fasta";
     omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
@@ -62,29 +62,29 @@ int main(int argc, char *argv[]) {
     // initialise and build graph
     Graph unitig_graph = Graph();
 
-    GraphTuple graph_tuple = unitig_graph.build(
+    GraphPair graph_pair = unitig_graph.build(
             "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.txt", 31,
-            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
+            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, write_idx, "NA");
 
 //    GraphTuple graph_tuple = unitig_graph.read(
 //            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.gfa",
 //            "/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_capsular_fa_list.bfg_colors",
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref);
 
-    const auto& input_colours = std::get<0>(graph_tuple);
-    const auto& nb_colours = std::get<1>(graph_tuple);
-    const auto& overlap = std::get<2>(graph_tuple);
+    const auto& nb_colours = std::get<0>(graph_pair);
+    const auto& overlap = std::get<1>(graph_pair);
 
     // initialise print map
     robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
 
-    for (int colour_ID = 0; colour_ID < nb_colours; colour_ID++)
+    #pragma omp parallel for
+    for (size_t colour_ID = 0; colour_ID < nb_colours; colour_ID++)
     {
 
         std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, repeat,
                                                                overlap, max_path_length, is_ref, no_filter,
                                                                stop_codons_for, start_codons_for, min_ORF_length,
-                                                               max_ORF_overlap, write_idx, input_colours.at(colour_ID));
+                                                               max_ORF_overlap);
 
         auto& ORF_vector = ORF_pair.second;
 

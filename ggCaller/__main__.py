@@ -122,19 +122,19 @@ def main():
     # if build graph specified, build graph and then call ORFs
     if (options.graph != None) and (options.colours != None) and (options.refs == None) and (options.reads == None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, True)
+                                 options.threads, options.no_write_idx, True)
     # if refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads == None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, True, options.no_write_graph, "NA")
+                                  options.threads, True, options.no_write_graph, options.no_write_idx, "NA")
     # if reads file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (options.reads != None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, "NA")
+                                  options.threads, False, options.no_write_graph, options.no_write_idx, "NA")
     # if both reads and refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads != None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, options.reads)
+                                  options.threads, False, options.no_write_graph, options.no_write_idx, options.reads)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
@@ -183,8 +183,7 @@ def main():
                             max_path_length=options.path, is_ref=options.not_ref, no_filter=options.no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=options.orf,
                             max_ORF_overlap=options.maxoverlap, minimum_ORF_score=options.min_orf_score,
-                            minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
-                            aa_kmer_set=aa_kmer_set),
+                            minimum_path_score=options.min_path_score, aa_kmer_set=aa_kmer_set),
                     range(0, nb_colours)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:

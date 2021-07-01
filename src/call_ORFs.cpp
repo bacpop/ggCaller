@@ -327,12 +327,13 @@ void generate_ORFs(std::vector<ORFNodeMap>& total_ORF_node_map,
                         }
 
                         // if not already called and present in colour add to map
-                        mtx4.lock();
-                        if (total_ORF_node_map.at(colour_ID).find(ORF_path_ID) == total_ORF_node_map.at(colour_ID).end())
                         {
-                            total_ORF_node_map.at(colour_ID).emplace(std::move(ORF_path_ID), std::move(ORF_node_vector));
+                            const std::lock_guard<std::mutex> lock(mtx4);
+                            if (total_ORF_node_map.at(colour_ID).find(ORF_path_ID) == total_ORF_node_map.at(colour_ID).end())
+                            {
+                                total_ORF_node_map.at(colour_ID).emplace(std::move(ORF_path_ID), std::move(ORF_node_vector));
+                            }
                         }
-                        mtx4.unlock();
 
                         // once known that ORF is correct, add stop to set
                         prev_stops.at(colour_ID).insert(codon_pair.second);
@@ -362,12 +363,13 @@ void generate_ORFs(std::vector<ORFNodeMap>& total_ORF_node_map,
                                 }
 
                                 // if not already called and present in colour add to map
-                                mtx4.lock();
-                                if (total_ORF_node_map.at(i).find(ORF_path_ID) == total_ORF_node_map.at(i).end())
                                 {
-                                    total_ORF_node_map.at(i).emplace(ORF_path_ID, ORF_node_vector);
+                                    const std::lock_guard<std::mutex> lock(mtx4);
+                                    if (total_ORF_node_map.at(i).find(ORF_path_ID) == total_ORF_node_map.at(i).end())
+                                    {
+                                        total_ORF_node_map.at(i).emplace(ORF_path_ID, ORF_node_vector);
+                                    }
                                 }
-                                mtx4.unlock();
 
                                 // once known that ORF is correct, add stop to set
                                 prev_stops.at(i).insert(codon_pair.second);

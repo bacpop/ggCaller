@@ -54,6 +54,7 @@ GraphPair Graph::build (const std::string& infile1,
         _ColourGraphPaths.resize(nb_colours);
         _NodeColourVectorTraversed.resize(nb_colours);
         _ColourComplete.resize(nb_colours, false);
+        _TotalORFNodeMap.resize(nb_colours);
 
         // generate FM-indexes
         if (is_ref)
@@ -120,6 +121,7 @@ GraphPair Graph::read (const std::string& graphfile,
         _ColourGraphPaths.resize(nb_colours);
         _NodeColourVectorTraversed.resize(nb_colours);
         _ColourComplete.resize(nb_colours);
+        _TotalORFNodeMap.resize(nb_colours);
 
         // generate FM-indexes
         if (is_ref)
@@ -154,15 +156,11 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     // get reference to _node_ids for specific colour
     auto & node_ids = _NodeColourVector.at(colour_ID);
 
-    // traverse graph, set scope for all_paths and fm_idx
-    {
-        // recursive traversal
-        //cout << "Traversing graph: " << to_string(colour_ID) << endl;
-        _traverse_graph(colour_ID, repeat, max_path_length);
+    //cout << "Traversing graph: " << to_string(colour_ID) << endl;
+    _traverse_graph(colour_ID, repeat, max_path_length);
 
-        //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_pair = _call_ORFs(colour_ID, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref);
-    }
+    //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
+    ORF_pair = _call_ORFs(colour_ID, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref);
 
     // if no filtering required, do not calculate overlaps
     ORFOverlapMap ORF_overlap_map;
@@ -316,13 +314,13 @@ void Graph::_traverse_graph(const size_t& colour_ID,
     for (const auto& head_id : node_ids)
     {
         // check if head has already been traversed by another thread
-        mtx3.lock();
-        if (traversed_node_ids.find(head_id) != traversed_node_ids.end())
         {
-            mtx3.unlock();
-            continue;
+            const std::lock_guard<std::mutex> lock(mtx3);
+            if (traversed_node_ids.find(head_id) != traversed_node_ids.end())
+            {
+                continue;
+            }
         }
-        mtx3.unlock();
 
         // parse unitig_id. Zero based, so get as positive and then zero base
         int unitig_id;
@@ -381,9 +379,10 @@ std::pair<ORFVector, NodeStrandMap> Graph::_call_ORFs(const size_t& colour_ID,
         }
     }
 
-    mtx3.lock();
-    _ColourComplete[colour_ID] = true;
-    mtx3.unlock();
+    {
+        const std::lock_guard<std::mutex> lock(mtx3);
+        _ColourComplete[colour_ID] = true;
+    }
 
     // generate pos_strand_map to determine relative strands of each node for each colour
     auto pos_strand_map = std::move(calculate_pos_strand(_TotalORFNodeMap.at(colour_ID)));

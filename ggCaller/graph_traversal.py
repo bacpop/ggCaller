@@ -184,7 +184,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 #@profile
 def run_calculate_ORFs(colour_ID, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, aa_kmer_set):
+                       minimum_path_score, aa_kmer_set):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -193,7 +193,7 @@ def run_calculate_ORFs(colour_ID, shd_arr_tup, repeat, overlap, max_path_length,
     ORF_overlap_dict, ORF_vector = shd_arr[0].findORFs(colour_ID, repeat,
                                                        overlap, max_path_length, is_ref, no_filter,
                                                        stop_codons_for, start_codons, min_ORF_length,
-                                                       max_ORF_overlap, write_idx)
+                                                       max_ORF_overlap)
 
     # if no filter specified, just copy ORF_vector to true_genes
     if no_filter:

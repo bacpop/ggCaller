@@ -106,7 +106,7 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_v1.2.4.fasta"
+    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_v1.2.5.fasta"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -128,12 +128,12 @@ def main():
 
     graph = ggCaller_cpp.Graph()
 
-    graph_tuple = graph.build(
+    graph_pair = graph.build(
         "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.txt",
-        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
+        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, write_idx, "NA")
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    input_colours, nb_colours, overlap = graph_tuple
+    nb_colours, overlap = graph_pair
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
@@ -189,8 +189,7 @@ def main():
                             stop_codons_for=stop_codons_for, start_codons=start_codons,
                             min_ORF_length=min_ORF_length, max_ORF_overlap=max_ORF_overlap,
                             minimum_ORF_score=minimum_ORF_score, minimum_path_score=minimum_path_score,
-                            write_idx=write_idx,
-                            input_colours=input_colours, aa_kmer_set=aa_kmer_set),
+                            aa_kmer_set=aa_kmer_set),
                     range(0, nb_colours)):
                 # iterate over entries in col_true_genes to generate the sequences
                 for ORFNodeVector in col_true_genes:
