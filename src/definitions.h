@@ -80,7 +80,7 @@ typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length
-typedef std::tuple<size_t, int, uint8_t, std::vector<bool>, size_t> NodeTuple;
+typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
 // stack for holding nodes during traversal
 typedef std::stack<NodeTuple> NodeStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)

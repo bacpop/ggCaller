@@ -40,12 +40,12 @@ class unitigDict {
     std::string seq() const {return _unitig_seq;};
 
     // add and return unitig colours
-    void add_head_colour(std::vector<bool> colours) {_unitig_head_colour = colours;};
-    std::vector<bool> head_colour() const {return _unitig_head_colour;};
-    void add_full_colour(std::vector<bool> colours) {_unitig_full_colour = colours;};
-    std::vector<bool> full_colour() const {return _unitig_full_colour;};
-    void add_tail_colour(std::vector<bool> colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
-    std::vector<bool> tail_colour() const {return _unitig_tail_colour;};
+    void add_head_colour(sdsl::bit_vector colours) {_unitig_head_colour = colours;};
+    sdsl::bit_vector head_colour() const {return _unitig_head_colour;};
+    void add_full_colour(sdsl::bit_vector colours) {_unitig_full_colour = colours;};
+    sdsl::bit_vector full_colour() const {return _unitig_full_colour;};
+    void add_tail_colour(sdsl::bit_vector colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
+    sdsl::bit_vector tail_colour() const {return _unitig_tail_colour;};
     bool head_tail_colours_equal() const {return _head_tail_colours_equal;};
 
     // access end_contig
@@ -74,9 +74,9 @@ class unitigDict {
     std::pair<std::size_t, std::size_t> _unitig_size;
 
     // unitig colours
-    std::vector<bool> _unitig_full_colour;
-    std::vector<bool> _unitig_head_colour;
-    std::vector<bool> _unitig_tail_colour;
+    sdsl::bit_vector _unitig_full_colour;
+    sdsl::bit_vector _unitig_head_colour;
+    sdsl::bit_vector _unitig_tail_colour;
     bool _head_tail_colours_equal;
 
     // check head and tail colours equal

@@ -51,7 +51,8 @@ void unitigDict::_check_head_tail_equal() {
     {
         _head_tail_colours_equal = false;
         _end_contig = true;
-        _unitig_full_colour = bool_or(_unitig_head_colour, _unitig_tail_colour);
+        _unitig_full_colour = _unitig_head_colour;
+        _unitig_full_colour |= _unitig_tail_colour;
     }
 }
 

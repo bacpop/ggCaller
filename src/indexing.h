@@ -25,7 +25,7 @@ ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& output_prefix);
 
 template <class T, class U, bool is_const>
-std::vector<bool> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
+sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
                                    const size_t& nb_colours,
                                    const size_t position);
 

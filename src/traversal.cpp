@@ -31,7 +31,7 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
         const size_t & pos_idx = std::get<0>(node_tuple);
         const int & node_id = std::get<1>(node_tuple);
         const uint8_t & codon_arr = std::get<2>(node_tuple);
-        const std::vector<bool> & colour_arr = std::get<3>(node_tuple);
+        const sdsl::bit_vector & colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
         // slice path, unless at first node
@@ -72,10 +72,11 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
 
 
             // calculate colours array
-            const auto updated_colours_arr = bool_and(colour_arr, neighbour_dict.full_colour());
+            auto updated_colours_arr = colour_arr;
+            updated_colours_arr &= neighbour_dict.full_colour();
 
             // determine if neighbour is in same colour as iteration, if not pass
-            if (!updated_colours_arr.at(current_colour))
+            if (!updated_colours_arr[current_colour])
             {
                 continue;
             }
@@ -159,7 +160,7 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
         // gather unitig information from graph_vector
         const uint8_t codon_arr = unitig_dict.get_codon_arr(true, true, 0);
         const size_t unitig_len = unitig_dict.size().first;
-        const std::vector<bool> colour_arr = unitig_dict.full_colour();
+        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
 
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
@@ -194,7 +195,7 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
         // gather unitig information from graph_vector
         const uint8_t codon_arr = unitig_dict.get_codon_arr(true, false, 0);
         const size_t unitig_len = unitig_dict.size().first;
-        const std::vector<bool> colour_arr = unitig_dict.full_colour();
+        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
 
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
