@@ -29,12 +29,6 @@ sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U
                                    const size_t& nb_colours,
                                    const size_t position);
 
-std::vector<bool> bool_and(const std::vector<bool>& array1, const std::vector<bool>& array2);
-
-std::vector<bool> bool_subtract(const std::vector<bool>& array1, const std::vector<bool>& array2);
-
-std::vector<bool> bool_or(const std::vector<bool>& array1, const std::vector<bool>& array2);
-
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);
 

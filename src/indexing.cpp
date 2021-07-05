@@ -159,45 +159,6 @@ sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U
     return colours_arr;
 }
 
-std::vector<bool> bool_and(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < array1.size(); i++)
-    {
-        if (array1[i] == 1 && array2[i] == 0)
-        {
-            output_array[i] = 0;
-        }
-    }
-    return output_array;
-}
-
-std::vector<bool> bool_subtract(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < array1.size(); i++)
-    {
-        if (array1[i] == 1 && array2[i] == 1)
-        {
-            output_array[i] = 0;
-        }
-    }
-    return output_array;
-}
-
-std::vector<bool> bool_or(const std::vector<bool>& array1, const std::vector<bool>& array2)
-{
-    std::vector<bool> output_array = array1;
-    for (size_t i = 0; i < array1.size(); i++)
-    {
-        if (array1[i] == 0 && array2[i] == 1)
-        {
-            output_array[i] = 1;
-        }
-    }
-    return output_array;
-}
-
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator)
 {
