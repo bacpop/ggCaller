@@ -1,5 +1,5 @@
-#ifndef BIFROST_API_GGCALLER_H
-#define BIFROST_API_GGCALLER_H
+#ifndef CALL_ORFS_H
+#define CALL_ORFS_H
 
 #include "unitigDict.h"
 #include "concurrent_hash_map.h"
@@ -38,4 +38,4 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map);
 
 NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map);
 
-#endif //BIFROST_API_GGCALLER_H
+#endif //CALL_ORFS_H

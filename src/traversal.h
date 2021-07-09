@@ -8,7 +8,7 @@
 // traversal.cpp
 void iter_nodes_binary (const GraphVector& graph_vector,
                       NodeColourMap& node_colour_vector_traversed,
-                      std::vector<AllPaths>& colour_graph_paths,
+                      ColourGraphPaths& colour_graph_paths,
                       const NodeTuple& head_node_tuple,
                       const size_t& current_colour,
                       const size_t& length_max,

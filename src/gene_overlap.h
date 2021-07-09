@@ -9,4 +9,4 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap);
 
-#endif //BIFROST_API_GGCALLER_H
+#endif //GENE_OVERLAP_H
