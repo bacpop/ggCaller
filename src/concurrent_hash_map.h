@@ -4,13 +4,10 @@
 #include "definitions.h"
 
 // Intel tbb headers
-#include <tbb/tbb.h>
 #include <tbb/concurrent_hash_map.h>
-#include <tbb/blocked_range.h>
 
 // global variable declaration
 using namespace tbb;
-
 
 // A concurrent hash table that maps strings to ORFNodeVector.
 typedef concurrent_hash_map<std::string, ORFNodeVector> ORFNodeMap;

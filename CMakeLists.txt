@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native -ltbb")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fconcepts -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -50,7 +50,7 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads)
+target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} tbb Threads::Threads)
 
 #find OpenMP library
 find_package(OpenMP)
