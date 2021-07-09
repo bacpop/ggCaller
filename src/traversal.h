@@ -2,11 +2,12 @@
 #define TRAVERSAL_H
 
 #include "unitigDict.h"
+#include "concurrent_hash_map.h"
 #include "indexing.h"
 
 // traversal.cpp
 void iter_nodes_binary (const GraphVector& graph_vector,
-                      NodeColourVector& node_colour_vector_traversed,
+                      NodeColourMap& node_colour_vector_traversed,
                       std::vector<AllPaths>& colour_graph_paths,
                       const NodeTuple& head_node_tuple,
                       const size_t& current_colour,

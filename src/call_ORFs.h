@@ -2,6 +2,7 @@
 #define BIFROST_API_GGCALLER_H
 
 #include "unitigDict.h"
+#include "concurrent_hash_map.h"
 #include "match_string.h"
 #include "indexing.h"
 

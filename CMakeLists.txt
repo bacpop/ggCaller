@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native -ltbb")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fconcepts -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -32,16 +32,19 @@ FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/includ
 # Find libraries for z and bifrost
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
+#FIND_LIBRARY(tbb_LIBRARY NAMES tbb HINTS ${CONDA_DIR}/lib REQUIRED)
 
 # Set package found as true
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(z DEFAULT_MSG z_INCLUDE_DIR z_LIBRARY)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifrost_LIBRARY)
+#FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_LIBRARY)
 
 # Set dirs if multiple include/libraries found
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
 SET( bifrost_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
+#SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
 # find Seqan3 package
 find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)

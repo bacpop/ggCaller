@@ -328,11 +328,9 @@ void generate_ORFs(std::vector<ORFNodeMap>& total_ORF_node_map,
 
                         // if not already called and present in colour add to map
                         {
-                            const std::lock_guard<std::mutex> lock(mtx4);
-                            if (total_ORF_node_map.at(colour_ID).find(ORF_path_ID) == total_ORF_node_map.at(colour_ID).end())
-                            {
-                                total_ORF_node_map.at(colour_ID).emplace(std::move(ORF_path_ID), std::move(ORF_node_vector));
-                            }
+                            //const std::lock_guard<std::mutex> lock(mtx4);
+                            ORFNodeMap::accessor a;
+                            total_ORF_node_map.at(colour_ID).insert(a, std::make_pair(ORF_path_ID, ORF_node_vector));
                         }
 
                         // once known that ORF is correct, add stop to set
@@ -364,11 +362,9 @@ void generate_ORFs(std::vector<ORFNodeMap>& total_ORF_node_map,
 
                                 // if not already called and present in colour add to map
                                 {
-                                    const std::lock_guard<std::mutex> lock(mtx4);
-                                    if (total_ORF_node_map.at(i).find(ORF_path_ID) == total_ORF_node_map.at(i).end())
-                                    {
-                                        total_ORF_node_map.at(i).emplace(ORF_path_ID, ORF_node_vector);
-                                    }
+                                    //const std::lock_guard<std::mutex> lock(mtx4);
+                                    ORFNodeMap::accessor a;
+                                    total_ORF_node_map.at(i).insert(a, std::pair<std::string, ORFNodeVector>(ORF_path_ID, ORF_node_vector));
                                 }
 
                                 // once known that ORF is correct, add stop to set
@@ -441,9 +437,9 @@ std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coor
             // add to ORF_path_ID with node ID and strand. If the ORF_path_ID is empty, add the start position to make the ORF unique
             if (ORF_path_ID.empty())
             {
-                ORF_path_ID += std::to_string(std::get<0>(node_coords));
+                ORF_path_ID += std::to_string(std::get<0>(node_coords)) + ",";
             }
-            ORF_path_ID += std::to_string(nodelist[i]);
+            ORF_path_ID += std::to_string(nodelist[i]) + ",";
         }
     }
 

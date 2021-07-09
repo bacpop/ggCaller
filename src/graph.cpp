@@ -262,11 +262,11 @@ void Graph::_index_graph (const ColoredCDBG<>& ccdbg,
                     // check if forward and reverse stops present
                     if (unitig_dict.forward_stop())
                     {
-                        node_colour_vector_private[i].insert(((int) unitig_dict.id));
+                        node_colour_vector_private[i].push_back(((int) unitig_dict.id));
                     }
                     if (unitig_dict.reverse_stop())
                     {
-                        node_colour_vector_private[i].insert((((int) unitig_dict.id)) * -1);
+                        node_colour_vector_private[i].push_back((((int) unitig_dict.id)) * -1);
                     }
                 }
             }
@@ -284,7 +284,8 @@ void Graph::_index_graph (const ColoredCDBG<>& ccdbg,
             // update node_colour_vector with calculated colours
             for (int i = 0; i < node_colour_vector_private.size(); i++)
             {
-                node_colour_vector[i].merge(node_colour_vector_private[i]);
+                node_colour_vector[i].insert(node_colour_vector[i].end(), make_move_iterator(node_colour_vector_private[i].begin()),
+                                             make_move_iterator(node_colour_vector_private[i].end()));
             }
         }
     }
@@ -315,8 +316,10 @@ void Graph::_traverse_graph(const size_t& colour_ID,
     {
         // check if head has already been traversed by another thread
         {
-            const std::lock_guard<std::mutex> lock(mtx3);
-            if (traversed_node_ids.find(head_id) != traversed_node_ids.end())
+            //const std::lock_guard<std::mutex> lock(mtx3);
+            std::string head_id_str = std::to_string(head_id);
+            NodeMap::accessor a;
+            if (traversed_node_ids.find(a, head_id_str))
             {
                 continue;
             }

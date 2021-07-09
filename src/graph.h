@@ -2,6 +2,7 @@
 #define GRAPH_H
 
 #include "unitigDict.h"
+#include "concurrent_hash_map.h"
 #include "indexing.h"
 #include "traversal.h"
 #include "call_ORFs.h"
@@ -98,7 +99,7 @@ class Graph {
     NodeColourVector _NodeColourVector;
 
     // stored head nodes that have been traversed
-    NodeColourVector _NodeColourVectorTraversed;
+    NodeColourMap _NodeColourVectorTraversed;
 
     // stored paths for ORF calling per colour
     ColourGraphPaths _ColourGraphPaths;
