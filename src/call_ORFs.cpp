@@ -313,7 +313,7 @@ ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
                     auto& TIS_node_coords = std::get<2>(TIS_coords);
 
                     // add TIS_path_id to ORF_path_ID to ensure ORFs with same sequence but different TIS are not merged
-                    ORF_path_ID += TIS_path_id;
+                    ORF_path_ID += "," + TIS_path_id;
 
                     // create ORF_node_vector, populate with results from node traversal
                     ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords);
@@ -394,9 +394,9 @@ std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coor
             // add to ORF_path_ID with node ID and strand. If the ORF_path_ID is empty, add the start position to make the ORF unique
             if (ORF_path_ID.empty())
             {
-                ORF_path_ID += std::to_string(std::get<0>(node_coords));
+                ORF_path_ID += std::to_string(std::get<0>(node_coords)) + ",";
             }
-            ORF_path_ID += std::to_string(nodelist[i]);
+            ORF_path_ID += std::to_string(nodelist[i]) + ",";
         }
     }
 
