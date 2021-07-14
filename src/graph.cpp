@@ -165,6 +165,47 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     return return_pair;
 }
 
+void Graph::add_ORF_info (const size_t& colour_ID,
+                          const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                          const ORFVector& ORF_vector)
+{
+    for (const auto & ID_pair : ORF_IDs)
+    {
+        // unpack pair for source and sink nodes
+        const auto & source = ID_pair.first;
+        const auto & sink = ID_pair.second;
+
+        {
+            // get graph information for source node
+            const auto & ORF_info = ORF_vector.at(source);
+
+            // get start and end node IDs (-1 as graph is zero-based)
+            const auto& source_node_id = std::get<0>(ORF_info).at(0).abs() - 1;
+            const auto& sink_node_id = std::get<0>(ORF_info).back().abs() - 1;
+
+            // add ORF information to graph
+            _GraphVector.at(source_node_id).set_ORFs(colour_ID, source_node_id);
+            _GraphVector.at(source_node_id).set_ORFs(colour_ID, sink_node_id);
+        }
+
+        // check if source and sink ORFs are the same, if not continue
+
+        if (source != sink)
+        {
+            // get graph information for source node
+            const auto & ORF_info = ORF_vector.at(sink);
+
+            // get start and end node IDs (-1 as graph is zero-based)
+            const auto& source_node_id = std::get<0>(ORF_info).at(0).abs() - 1;
+            const auto& sink_node_id = std::get<0>(ORF_info).back().abs() - 1;
+
+            // add ORF information to graph
+            _GraphVector.at(source_node_id).set_ORFs(colour_ID, source_node_id);
+            _GraphVector.at(source_node_id).set_ORFs(colour_ID, sink_node_id);
+        }
+    }
+}
+
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,
                                      const std::vector<indexPair>& node_coords,
                                      const size_t& overlap)

@@ -43,6 +43,15 @@ class Graph {
                                                   const bool write_idx,
                                                   const std::string& FM_fasta_file);
 
+    // add ORF information to graph
+    void add_ORF_info (const size_t& colour_ID,
+                       const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                       const ORFVector& ORF_vector)
+
+    // get next ORFs along from current ORF
+
+
+   // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);

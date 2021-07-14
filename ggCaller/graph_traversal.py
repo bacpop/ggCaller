@@ -6,7 +6,7 @@ from ggCaller.shared_memory import *
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
-    high_scoring_ORFs = set()
+    high_scoring_ORFs = []
 
     # generate subgraph view
     u = gt.GraphView(tc, vfilt=component_list == component)
@@ -57,8 +57,8 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
     # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
     if high_score_temp >= minimum_path_score:
-        for node in high_scoring_ORFs_temp:
-            high_scoring_ORFs.add(u.vertex_properties["ID"][node])
+        ORF_ID_list = [u.vertex_properties["ID"][node] for node in high_scoring_ORFs_temp]
+        high_scoring_ORFs.append(ORF_ID_list)
 
     return high_scoring_ORFs
 
@@ -176,7 +176,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
     for component in set(components):
         high_scoring_ORFs = traverse_components(component, tc, components, edge_weights, minimum_path_score)
-        high_scoring_ORFs_all.update(high_scoring_ORFs)
+        high_scoring_ORFs_all.extend(high_scoring_ORFs)
 
     return high_scoring_ORFs_all
 
@@ -206,8 +206,14 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2],
                                      aa_kmer_set)
 
-        # determine highest scoring genes
+        # determine highest scoring genes, stored in list of lists
         high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+
+        # pull out pairs of source and sink nodes for graph traversal
+        end_nodes = [(i[0], i[-1]) for i in high_scoring_ORFs]
+
+        # add ORF information to graph for specific colour
+        shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
         # initiate true genes list
         true_genes = [None] * len(high_scoring_ORFs)
