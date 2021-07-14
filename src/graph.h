@@ -46,10 +46,12 @@ class Graph {
     // add ORF information to graph
     void add_ORF_info (const size_t& colour_ID,
                        const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
-                       const ORFVector& ORF_vector)
+                       const ORFVector& ORF_vector);
 
     // get next ORFs along from current ORF
-
+    std::vector<std::pair<size_t, size_t> get_neighbouring_ORFs (const size_t& colour_ID,
+                                                                 const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                                                                 const ORFVector& ORF_vector);
 
    // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,

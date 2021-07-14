@@ -215,6 +215,9 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # add ORF information to graph for specific colour
         shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
+        # get neighbouring ORFs for source and sink nodes in high scoring paths
+        high_scoring_ORFs.extend(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
+
         # initiate true genes list
         true_genes = [None] * len(high_scoring_ORFs)
 
