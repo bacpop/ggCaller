@@ -206,9 +206,9 @@ void Graph::add_ORF_info (const size_t& colour_ID,
     }
 }
 
-std::vector<std::pair<size_t, size_t> get_neighbouring_ORFs (const size_t& colour_ID,
-                                                             const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
-                                                             const ORFVector& ORF_vector)
+std::vector<std::pair<size_t, size_t> Graph::get_neighbouring_ORFs (const size_t& colour_ID,
+                                                                     const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                                                                     const ORFVector& ORF_vector)
 {
     std::vector<std::pair<size_t, size_t> ORF_pair_vector;
 
@@ -225,18 +225,20 @@ std::vector<std::pair<size_t, size_t> get_neighbouring_ORFs (const size_t& colou
             // get source node IDs (as we are at source, want to look upstream)
             const auto& id = std::get<0>(ORF_info).at(0);
             // get real node id (-1 as zero indexed)
-            const auto source_node_id = abs(id) - 1;
-
-            // get strand of start node
-            //bool strand = (id >= 0) ? true : false;
+            const auto node_id = abs(id) - 1;
 
             // check if another ORF overlaps same node
-            const auto & node_ORFs = _GraphVector.at(source_node_id).get_ORFs(colour_ID);
+            const auto & node_ORFs = _GraphVector.at(node_id).get_ORFs(colour_ID);
 
             // if there is only one ORF, then need to traverse upstream
             if (node_ORFs.size() == 1)
             {
-                continue
+                const auto node_vector = check_upstream_ORFs(_GraphVector, id, colour_ID);
+
+                // order the ORFs in the node_vector, then place last and current head node together
+                const auto ordered_ORFs = order_node_ends(_GraphVector, node_vector, id);
+
+                ORF_pair_vector.push_back(std::pair<size_t, size_t>(ordered_ORFs.back().second, source));
             }
             // if there is only two ORFs, set this ORF as upstream
             else if (node_ORFs.size() == 2)
@@ -254,66 +256,7 @@ std::vector<std::pair<size_t, size_t> get_neighbouring_ORFs (const size_t& colou
             // if there is more than one ORF, then need to check which is directly upstream
             else if (node_ORFs.size() > 2)
             {
-                std::vector<size_t> overlapping_ORF_IDs;
-                std::vector<std::pair<bool, indexPair>> overlapping_ORF_coords;
-                // iterate over ORFs in node_ORFs
-                for (const auto& ORF_ID : node_ORFs)
-                {
-                    // add to return vector overlapping ORF vector
-                    overlapping_ORFs.push_back(ORF_ID);
-
-                    // get reference to ORF_vector entry
-                    ORF_info = ORF_vector.at(ORF_ID);
-
-                    // get the index of the node in ORFNodeVector for that ORF
-                    auto it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), id);
-
-                    // if not present, search for reversed node
-                    if (it == std::get<0>(ORF_info).end())
-                    {
-                        it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), (id * -1));
-                    }
-
-                    // get strand from sign of node id (true if positive, false if negative)
-                    bool strand = (*it > 0) ? true : false;
-
-                    // get index of node in ORF coords
-                    size_t index = it - std::get<0>(ORF_info).begin();
-
-                    // add coords for node traversal to overlapping_ORF_coords
-                    overlapping_ORF_coords.push_back(std::pair<bool, indexPair>(strand, std::get<1>(ORF_info).at(index))
-                }
-
-                // ensure all coordinates are in the same strand, set as first entry in vector
-                bool overall_strand = overlapping_ORF_coords.at(0).first;
-
-                // get length of node if reversal is needed
-                size_t node_end = _GraphVector.at(source_node_id).size().first - 1;
-
-                // work out order of nodes
-                std::vector<std::pair<size_t,size_t>> ordered_ORFs;
-                // push first entry and the first coordinate
-                ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(0).second.first, overlapping_ORFs.at(0)));
-
-                // iterate over entries and flip coords if needed (ignore first as this is the reference)
-                for (int i = 1; i < overlapping_ORF_coords.size(); i++)
-                {
-                    if (overlapping_ORF_coords.at(i).first != overall_strand)
-                    {
-                        // get difference from original end to absolute last node index
-                        size_t reversed_end = node_end - overlapping_ORF_coords.at(i).second.first;
-                        // get difference from original end to absolute last node index
-                        size_t reversed_start = node_end - overlapping_ORF_coords.at(i).second.second;
-                        // reassigned the entry in-place in ORF2_nodes.second
-                        overlapping_ORF_coords[i] = std::make_pair(reversed_start, reversed_end);
-                    }
-
-                    // add to ordered_ORFs
-                    ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(i).second.first, overlapping_ORFs.at(i)));
-                }
-
-                // sort based on first entry in ordered_ORFs
-                sort(ordered_ORFs.begin(), ordered_ORFs.end());
+                const auto& ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, id);
 
                 // parse the sorted vector and append to return vector (pairing this and next item, so don't traverse full vector)
                 for (int i = 0; i < ordered_ORFs.size() - 1; i++)
@@ -323,7 +266,55 @@ std::vector<std::pair<size_t, size_t> get_neighbouring_ORFs (const size_t& colou
             }
         }
         // do the same for the sink node
+        {
+            // get graph information for source node
+            const auto & ORF_info = ORF_vector.at(sink);
+
+            // get source node IDs (as we are at source, want to look upstream)
+            const auto& id = std::get<0>(ORF_info).at(0);
+            // get real node id (-1 as zero indexed)
+            const auto node_id = abs(id) - 1;
+
+            // check if another ORF overlaps same node
+            const auto & node_ORFs = _GraphVector.at(node_id).get_ORFs(colour_ID);
+
+            // if there is only one ORF, then need to traverse upstream
+            if (node_ORFs.size() == 1)
+            {
+                const auto node_vector = check_upstream_ORFs(_GraphVector, id, colour_ID);
+
+                // order the ORFs in the node_vector, then place last and current head node together
+                const auto ordered_ORFs = order_node_ends(_GraphVector, node_vector, id);
+
+                ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, ordered_ORFs.at(0).second));
+            }
+            // if there is only two ORFs, set this ORF as upstream
+            else if (node_ORFs.size() == 2)
+            {
+                // iterate over the ORFs in the node_ORFs
+                for (const auto& ORF_ID : node_ORFs)
+                {
+                    if (ORF_ID != sink)
+                    {
+                        // add to return vector (first upstream node, then source node)
+                        ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, ORF_ID));
+                    }
+                }
+            }
+            // if there is more than one ORF, then need to check which is directly upstream
+            else if (node_ORFs.size() > 2)
+            {
+                const auto& ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, id);
+
+                // parse the sorted vector and append to return vector (pairing this and next item, so don't traverse full vector)
+                for (int i = 0; i < ordered_ORFs.size() - 1; i++)
+                {
+                    ORF_pair_vector.push_back(std::pair<size_t, size_t>(ordered_ORFs.at(i).second, ordered_ORFs.at(i + 1).second));
+                }
+            }
+        }
     }
+    return ORF_pair_vector;
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

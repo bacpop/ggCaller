@@ -79,10 +79,12 @@ typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
-// tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length
+// tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
 typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
-// stack for holding nodes during traversal
+// stack for holding nodes during DFS traversal
 typedef std::stack<NodeTuple> NodeStack;
+// queue for holding node ids during BFS traversal
+typedef std::queue<int> NodeQueue;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
