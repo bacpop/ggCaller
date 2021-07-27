@@ -6,7 +6,7 @@ from ggCaller.shared_memory import *
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
-    high_scoring_ORFs = []
+    high_scoring_ORFs = set()
 
     # generate subgraph view
     u = gt.GraphView(tc, vfilt=component_list == component)
@@ -57,8 +57,8 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
     # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
     if high_score_temp >= minimum_path_score:
-        ORF_ID_list = [u.vertex_properties["ID"][node] for node in high_scoring_ORFs_temp]
-        high_scoring_ORFs.append(ORF_ID_list)
+        ORF_ID_list = tuple([u.vertex_properties["ID"][node] for node in high_scoring_ORFs_temp])
+        high_scoring_ORFs.add(ORF_ID_list)
 
     return high_scoring_ORFs
 
@@ -176,7 +176,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     # iterate over components, find highest scoring path within component with multiprocessing to determine geniest path through components
     for component in set(components):
         high_scoring_ORFs = traverse_components(component, tc, components, edge_weights, minimum_path_score)
-        high_scoring_ORFs_all.extend(high_scoring_ORFs)
+        high_scoring_ORFs_all.update(high_scoring_ORFs)
 
     return high_scoring_ORFs_all
 
@@ -215,14 +215,15 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # add ORF information to graph for specific colour
         shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
+        to_add = shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector)
         # get neighbouring ORFs for source and sink nodes in high scoring paths
-        high_scoring_ORFs.extend(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
+        high_scoring_ORFs.update(to_add)
 
         # initiate true genes list
-        true_genes = [None] * len(high_scoring_ORFs)
+        # true_genes = [None] * len(high_scoring_ORFs)
 
-        for index, ORF_id in enumerate(high_scoring_ORFs):
-            # add only high scoring ORFs to true_genes
-            true_genes[index] = ORF_vector[ORF_id]
+        # for index, ORF_id in enumerate(high_scoring_ORFs):
+        #     # add only high scoring ORFs to true_genes
+        #     true_genes[index] = ORF_vector[ORF_id]
 
-    return colour_ID, true_genes
+    return colour_ID  # , true_genes

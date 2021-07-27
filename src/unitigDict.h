@@ -107,7 +107,7 @@ class unitigDict {
     std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 
     // traversing ORFs
-    robin_hood::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
+    std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 };
 
 // unitigDict typedefs

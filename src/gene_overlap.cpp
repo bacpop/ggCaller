@@ -558,7 +558,7 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 }
 
 std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
-                                                      std::unordered_set<size_t>& node_ORFs,
+                                                      const std::unordered_set<size_t>& node_ORFs,
                                                       const int& source_node_id,
                                                       const ORFVector& ORF_vector)
 {
@@ -592,36 +592,41 @@ std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
         overlapping_ORF_coords.push_back(std::pair<bool, indexPair>(strand, std::get<1>(ORF_info).at(index)));
     }
 
-    // ensure all coordinates are in the same strand, set as first entry in vector
-    bool overall_strand = overlapping_ORF_coords.at(0).first;
-
-    // get length of node if reversal is needed
-    size_t node_end = graph_vector.at(source_node_id).size().first - 1;
-
-    // work out order of nodes
+    // initialse vector to work out order of nodes
     std::vector<std::pair<size_t,size_t>> ordered_ORFs;
-    // push first entry and the first coordinate
-    ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(0).second.first, overlapping_ORF_IDs.at(0)));
 
-    // iterate over entries and flip coords if needed (ignore first as this is the reference)
-    for (int i = 1; i < overlapping_ORF_coords.size(); i++)
+    // may not be upstream ORFs called, so check if overlapping_ORF_coords is empty
+    if (!overlapping_ORF_coords.empty())
     {
-        if (overlapping_ORF_coords.at(i).first != overall_strand)
+        // ensure all coordinates are in the same strand, set as first entry in vector
+        bool overall_strand = overlapping_ORF_coords.at(0).first;
+
+        // get length of node if reversal is needed
+        size_t node_end = graph_vector.at(abs(source_node_id)).size().first - 1;
+
+        // push first entry and the first coordinate
+        ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(0).second.first, overlapping_ORF_IDs.at(0)));
+
+        // iterate over entries and flip coords if needed (ignore first as this is the reference)
+        for (int i = 1; i < overlapping_ORF_coords.size(); i++)
         {
-            // get difference from original end to absolute last node index
-            size_t reversed_end = node_end - overlapping_ORF_coords.at(i).second.first;
-            // get difference from original end to absolute last node index
-            size_t reversed_start = node_end - overlapping_ORF_coords.at(i).second.second;
-            // reassigned the entry in-place in ORF2_nodes.second
-            overlapping_ORF_coords[i].second = std::make_pair(reversed_start, reversed_end);
+            if (overlapping_ORF_coords.at(i).first != overall_strand)
+            {
+                // get difference from original end to absolute last node index
+                size_t reversed_end = node_end - overlapping_ORF_coords.at(i).second.first;
+                // get difference from original end to absolute last node index
+                size_t reversed_start = node_end - overlapping_ORF_coords.at(i).second.second;
+                // reassigned the entry in-place in ORF2_nodes.second
+                overlapping_ORF_coords[i].second = std::make_pair(reversed_start, reversed_end);
+            }
+
+            // add to ordered_ORFs
+            ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(i).second.first, overlapping_ORF_IDs.at(i)));
         }
 
-        // add to ordered_ORFs
-        ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(i).second.first, overlapping_ORF_IDs.at(i)));
+        // sort based on first entry in ordered_ORFs
+        sort(ordered_ORFs.begin(), ordered_ORFs.end());
     }
-
-    // sort based on first entry in ordered_ORFs
-    sort(ordered_ORFs.begin(), ordered_ORFs.end());
 
     return ordered_ORFs;
 }
