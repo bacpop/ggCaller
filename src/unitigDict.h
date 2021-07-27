@@ -65,9 +65,9 @@ class unitigDict {
     const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
 
     // assign traversing ORFs
-    void set_ORFs (const & size_t colour_ID, const & size_t ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
-    bool ORFs_empty (const & size_t colour_ID) {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());})
-    const std::unordered_set<size_t> & get_ORFs(const & size_t colour_ID) {return _traversing_ORFs.at(colour_ID);};
+    void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
+    bool ORFs_empty (const size_t& colour_ID) const {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());};
+    const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
 
     private:
     std::string _head_kmer;

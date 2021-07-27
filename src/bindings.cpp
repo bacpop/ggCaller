@@ -11,6 +11,6 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def("build", &Graph::build)
             .def("findORFs", &Graph::findORFs)
             .def("generate_sequence", &Graph::generate_sequence)
-            .def("add_ORF_info"), &Graph::add_ORF_info)
-            .def("get_neighbouring_ORFs"), &Graph::get_neighbouring_ORFs);
+            .def("add_ORF_info", &Graph::add_ORF_info)
+            .def("get_neighbouring_ORFs", &Graph::get_neighbouring_ORFs);
 }

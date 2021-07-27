@@ -235,7 +235,7 @@ std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
     while(!node_queue.empty())
     {
         // pop node in stack
-        auto node_id = node_queue.top();
+        auto node_id = node_queue.front();
         node_queue.pop();
 
         // get unitig_dict entry in graph_vector
@@ -274,7 +274,7 @@ std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
             }
 
             // check if node is traversed by end of an ORF
-            if (!neighbour_dict.ORFs_empty())
+            if (!neighbour_dict.ORFs_empty(current_colour))
             {
                 upstream_ORFs = neighbour_dict.get_ORFs(current_colour);
 
@@ -326,7 +326,7 @@ std::unordered_set<size_t> check_downstream_ORFs (const GraphVector& graph_vecto
     while(!node_queue.empty())
     {
         // pop node in stack
-        auto node_id = node_queue.top();
+        auto node_id = node_queue.front();
         node_queue.pop();
 
         // get unitig_dict entry in graph_vector
@@ -365,7 +365,7 @@ std::unordered_set<size_t> check_downstream_ORFs (const GraphVector& graph_vecto
             }
 
             // check if node is traversed by end of an ORF
-            if (!neighbour_dict.ORFs_empty())
+            if (!neighbour_dict.ORFs_empty(current_colour))
             {
                 downstream_ORFs = neighbour_dict.get_ORFs(current_colour);
 

@@ -206,11 +206,11 @@ void Graph::add_ORF_info (const size_t& colour_ID,
     }
 }
 
-std::vector<std::pair<size_t, size_t> Graph::get_neighbouring_ORFs (const size_t& colour_ID,
-                                                                     const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
-                                                                     const ORFVector& ORF_vector)
+std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_t& colour_ID,
+                                                                    const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                                                                    const ORFVector& ORF_vector)
 {
-    std::vector<std::pair<size_t, size_t> ORF_pair_vector;
+    std::vector<std::pair<size_t, size_t>> ORF_pair_vector;
 
     for (const auto & ID_pair : ORF_IDs)
     {
