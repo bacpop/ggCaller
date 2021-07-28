@@ -212,12 +212,13 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
     return all_paths;
 }
 
-std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
-                                                const int& head_node,
-                                                const size_t& current_colour)
+int check_next_ORFs (const GraphVector& graph_vector,
+                    const int& head_node,
+                    const size_t& current_colour,
+                    const int& stream)
 {
     // initialise return set of upstream ORFs
-    std::unordered_set<size_t> upstream_ORFs;
+    int next_node;
 
     // generate path list, vector for path and the stack
     NodeQueue node_queue;
@@ -247,8 +248,8 @@ std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
 
-        // iterate over upstream neighbours (need to reverse strand!)
-        for (const auto& neighbour : node_dict.get_neighbours(!strand))
+        // iterate over upstream (stream = -1) or downstream (stream = 1)
+        for (const auto& neighbour : node_dict.get_neighbours(strand * stream))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
@@ -276,7 +277,7 @@ std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
             // check if node is traversed by end of an ORF
             if (!neighbour_dict.ORFs_empty(current_colour))
             {
-                upstream_ORFs = neighbour_dict.get_ORFs(current_colour);
+                next_node = neighbour_id;
 
                 // set break_true as true
                 break_true = true;
@@ -300,96 +301,5 @@ std::unordered_set<size_t> check_upstream_ORFs (const GraphVector& graph_vector,
             break;
         }
     }
-    return upstream_ORFs;
-}
-
-std::unordered_set<size_t> check_downstream_ORFs (const GraphVector& graph_vector,
-                                                    const int& head_node,
-                                                    const size_t& current_colour)
-{
-    // initialise return set of upstream ORFs
-    std::unordered_set<size_t> downstream_ORFs;
-
-    // generate path list, vector for path and the stack
-    NodeQueue node_queue;
-
-    // create node set for identification of repeats
-    std::unordered_set<int> node_set;
-    node_set.insert(head_node);
-
-    // create first item in stack
-    node_queue.push(head_node);
-
-    // create variable to all breaking of all loops
-    bool break_true = false;
-
-    while(!node_queue.empty())
-    {
-        // pop node in stack
-        auto node_id = node_queue.front();
-        node_queue.pop();
-
-        // get unitig_dict entry in graph_vector
-        const auto& node_dict = graph_vector.at(abs(node_id) - 1);
-
-        // get colour
-        const sdsl::bit_vector & colour_arr = node_dict.full_colour();
-
-        // determine strand of unitig
-        const bool strand = (node_id >= 0) ? true : false;
-
-        // iterate over downsteam ORFs (don't need to reverse strand)
-        for (const auto& neighbour : node_dict.get_neighbours(strand))
-        {
-            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = neighbour.first;
-
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (is_in)
-            {
-                continue;
-            }
-
-            // get reference to unitig_dict object for neighbour
-            const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
-
-            // calculate colours array
-            auto updated_colours_arr = colour_arr;
-            updated_colours_arr &= neighbour_dict.full_colour();
-
-            // determine if neighbour is in same colour as iteration, if not pass
-            if (!updated_colours_arr[current_colour])
-            {
-                continue;
-            }
-
-            // check if node is traversed by end of an ORF
-            if (!neighbour_dict.ORFs_empty(current_colour))
-            {
-                downstream_ORFs = neighbour_dict.get_ORFs(current_colour);
-
-                // set break_true as true
-                break_true = true;
-            }
-
-            // break out of for loop
-            if (break_true)
-            {
-                break;
-            }
-
-            // add to queue
-            node_queue.push(neighbour_id);
-
-            // add node to node_set
-            node_set.insert(neighbour_id);
-        }
-        // break out of while loop
-        if (break_true)
-        {
-            break;
-        }
-    }
-    return downstream_ORFs;
+    return next_node;
 }

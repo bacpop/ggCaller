@@ -240,10 +240,12 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // if there is only one ORF, then need to traverse upstream
             if (node_ORFs.size() == 1)
             {
-                const auto node_vector = check_upstream_ORFs(_GraphVector, id, colour_ID);
+                const auto next_node = check_next_ORFs(_GraphVector, id, colour_ID, -1);
+
+                const auto node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
 
                 // order the ORFs in the node_vector, then place last and current head node together
-                const auto ordered_ORFs = order_node_ends(_GraphVector, node_vector, id, ORF_vector);
+                const auto ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, next_node, ORF_vector);
 
                 // check if ordered_ORFs is empty
                 if (!ordered_ORFs.empty())
@@ -292,10 +294,14 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // if there is only one ORF, then need to traverse upstream
             if (node_ORFs.size() == 1)
             {
-                const auto node_vector = check_upstream_ORFs(_GraphVector, id, colour_ID);
+                // find next downstream node
+                const auto next_node = check_next_ORFs(_GraphVector, id, colour_ID, 1);
+
+                // pull out associated ORFs
+                const auto node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
 
                 // order the ORFs in the node_vector, then place last and current head node together
-                const auto ordered_ORFs = order_node_ends(_GraphVector, node_vector, id, ORF_vector);
+                const auto ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, next_node, ORF_vector);
 
                 if (!ordered_ORFs.empty())
                 {
@@ -310,7 +316,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
                 {
                     if (ORF_ID != sink)
                     {
-                        // add to return vector (first upstream node, then source node)
+                        // add to return vector (first sink node, then downstream node)
                         ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, ORF_ID));
                     }
                 }

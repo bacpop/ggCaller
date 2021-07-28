@@ -586,7 +586,8 @@ std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
         bool strand = (*it > 0) ? true : false;
 
         // get index of node in ORF coords
-        size_t index = it - std::get<0>(ORF_info).begin();
+        size_t index = std::distance(std::get<0>(ORF_info).begin(), it);
+        //size_t index = it - std::get<0>(ORF_info).begin();
 
         // add coords for node traversal to overlapping_ORF_coords
         overlapping_ORF_coords.push_back(std::pair<bool, indexPair>(strand, std::get<1>(ORF_info).at(index)));

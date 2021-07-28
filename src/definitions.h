@@ -36,8 +36,8 @@
 #include <seqan3/std/ranges>
 
 // pybind11 headers
-//#include <pybind11/pybind11.h>
-//#include <pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -46,7 +46,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-//namespace py = pybind11;
+namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
