@@ -188,6 +188,8 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
+    print("started: " + str(colour_ID))
+
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -215,9 +217,8 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # add ORF information to graph for specific colour
         shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
-        to_add = shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector)
         # get neighbouring ORFs for source and sink nodes in high scoring paths
-        high_scoring_ORFs.update(to_add)
+        high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
 
         # initiate true genes list
         # true_genes = [None] * len(high_scoring_ORFs)
@@ -225,5 +226,5 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # for index, ORF_id in enumerate(high_scoring_ORFs):
         #     # add only high scoring ORFs to true_genes
         #     true_genes[index] = ORF_vector[ORF_id]
-
+        print("finished: " + str(colour_ID))
     return colour_ID  # , true_genes

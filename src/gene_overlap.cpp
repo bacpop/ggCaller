@@ -559,7 +559,7 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
 std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
                                                       const std::unordered_set<size_t>& node_ORFs,
-                                                      const int& source_node_id,
+                                                      const int& node_id,
                                                       const ORFVector& ORF_vector)
 {
     std::vector<size_t> overlapping_ORF_IDs;
@@ -574,12 +574,12 @@ std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
         const auto & ORF_info = ORF_vector.at(ORF_ID);
 
         // get the index of the node in ORFNodeVector for that ORF
-        auto it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), source_node_id);
+        auto it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), node_id);
 
         // if not present, search for reversed node
         if (it == std::get<0>(ORF_info).end())
         {
-            it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), (source_node_id * -1));
+            it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), (node_id * -1));
         }
 
         // get strand from sign of node id (true if positive, false if negative)
@@ -599,17 +599,14 @@ std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
     // may not be upstream ORFs called, so check if overlapping_ORF_coords is empty
     if (!overlapping_ORF_coords.empty())
     {
-        // ensure all coordinates are in the same strand, set as first entry in vector
-        bool overall_strand = overlapping_ORF_coords.at(0).first;
+        // ensure all coordinates are in the same strand, set the strand of the target node
+        bool overall_strand = (node_id > 0) ? true : false;
 
         // get length of node if reversal is needed
-        size_t node_end = graph_vector.at(abs(source_node_id)).size().first - 1;
-
-        // push first entry and the first coordinate
-        ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(0).second.first, overlapping_ORF_IDs.at(0)));
+        size_t node_end = graph_vector.at(abs(node_id) - 1).size().first - 1;
 
         // iterate over entries and flip coords if needed (ignore first as this is the reference)
-        for (int i = 1; i < overlapping_ORF_coords.size(); i++)
+        for (int i = 0; i < overlapping_ORF_coords.size(); i++)
         {
             if (overlapping_ORF_coords.at(i).first != overall_strand)
             {

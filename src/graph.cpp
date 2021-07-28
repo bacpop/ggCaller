@@ -240,17 +240,27 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // if there is only one ORF, then need to traverse upstream
             if (node_ORFs.size() == 1)
             {
+                // use BFS to find next upstream node
                 const auto next_node = check_next_ORFs(_GraphVector, id, colour_ID, -1);
 
-                const auto node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
-
-                // order the ORFs in the node_vector, then place last and current head node together
-                const auto ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, next_node, ORF_vector);
-
-                // check if ordered_ORFs is empty
-                if (!ordered_ORFs.empty())
+                // node might not have downstream node, so check
+                if (next_node)
                 {
-                    ORF_pair_vector.push_back(std::pair<size_t, size_t>(ordered_ORFs.back().second, source));
+                    // pull out associated ORFs
+                    const auto next_node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
+
+                    // check if more than one ORF spanning node
+                    if (next_node_ORFs.size() == 1)
+                    {
+                        ORF_pair_vector.push_back(std::pair<size_t, size_t>(*next_node_ORFs.begin(), source));
+                    } else
+                    {
+                        // order the ORFs in the node_vector, then place last and current head node together
+                        const auto ordered_ORFs = order_node_ends(_GraphVector, next_node_ORFs, next_node, ORF_vector);
+
+                        // get first ORF in ordered_ORFs, place it upstream of sourcew
+                        ORF_pair_vector.push_back(std::pair<size_t, size_t>(ordered_ORFs.at(0).second, source));
+                    }
                 }
             }
             // if there is only two ORFs, set this ORF as upstream
@@ -297,15 +307,24 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
                 // find next downstream node
                 const auto next_node = check_next_ORFs(_GraphVector, id, colour_ID, 1);
 
-                // pull out associated ORFs
-                const auto node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
-
-                // order the ORFs in the node_vector, then place last and current head node together
-                const auto ordered_ORFs = order_node_ends(_GraphVector, node_ORFs, next_node, ORF_vector);
-
-                if (!ordered_ORFs.empty())
+                // node might not have downstream node, so check
+                if (next_node)
                 {
-                    ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, ordered_ORFs.at(0).second));
+                    // pull out associated ORFs
+                    const auto next_node_ORFs = _GraphVector.at(abs(next_node) - 1).get_ORFs(colour_ID);
+
+                    // check if more than one ORF spanning node
+                    if (next_node_ORFs.size() == 1)
+                    {
+                        ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, *next_node_ORFs.begin()));
+                    } else
+                    {
+                        // order the ORFs in the node_vector, then place last and current head node together
+                        const auto ordered_ORFs = order_node_ends(_GraphVector, next_node_ORFs, next_node, ORF_vector);
+
+                        // get first ORF in ordered_ORFs, place it downstream of sink
+                        ORF_pair_vector.push_back(std::pair<size_t, size_t>(sink, ordered_ORFs.at(0).second));
+                    }
                 }
             }
             // if there is only two ORFs, set this ORF as upstream

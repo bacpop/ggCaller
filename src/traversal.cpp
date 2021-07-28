@@ -218,17 +218,17 @@ int check_next_ORFs (const GraphVector& graph_vector,
                     const int& stream)
 {
     // initialise return set of upstream ORFs
-    int next_node;
+    int next_node = 0;
 
     // generate path list, vector for path and the stack
     NodeQueue node_queue;
 
     // create node set for identification of repeats
     std::unordered_set<int> node_set;
-    node_set.insert(head_node);
+    node_set.insert(head_node * stream);
 
-    // create first item in stack
-    node_queue.push(head_node);
+    // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1)
+    node_queue.push(head_node * stream);
 
     // create variable to all breaking of all loops
     bool break_true = false;
@@ -248,8 +248,8 @@ int check_next_ORFs (const GraphVector& graph_vector,
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
 
-        // iterate over upstream (stream = -1) or downstream (stream = 1)
-        for (const auto& neighbour : node_dict.get_neighbours(strand * stream))
+        // iterate over neighbours
+        for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
