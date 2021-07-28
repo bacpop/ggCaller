@@ -220,6 +220,15 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # get neighbouring ORFs for source and sink nodes in high scoring paths
         high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
 
+        # print("Generating fasta file of gene calls...")
+        # # print output to file
+        # ORF_count = 1
+        with open("test_ORFs.fasta", "w") as f:
+            for entry in high_scoring_ORFs:
+                for sub_entry in entry:
+                    gene = shd_arr[0].generate_sequence(ORF_vector[sub_entry][0], ORF_vector[sub_entry][1], overlap)
+                    f.write(">" + str(sub_entry) + "\n" + gene + "\n")
+
         # initiate true genes list
         # true_genes = [None] * len(high_scoring_ORFs)
 

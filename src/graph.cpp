@@ -225,6 +225,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
         const auto & source = ID_pair.first;
         const auto & sink = ID_pair.second;
 
+        // scope for source information
         {
             // get graph information for source node
             const auto & ORF_info = ORF_vector.at(source);
@@ -293,8 +294,8 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // get graph information for source node
             const auto & ORF_info = ORF_vector.at(sink);
 
-            // get source node IDs (as we are at source, want to look upstream)
-            const auto& id = std::get<0>(ORF_info).at(0);
+            // get sink node ID at back (as we are at sink, want to look downstream)
+            const auto& id = std::get<0>(ORF_info).back();
             // get real node id (-1 as zero indexed)
             const auto node_id = abs(id) - 1;
 

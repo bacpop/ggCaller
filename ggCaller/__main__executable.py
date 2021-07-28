@@ -114,7 +114,7 @@ def main():
     write_idx = True
     write_graph = True
 
-    num_threads = 4
+    num_threads = 1
 
     # graph_tuple = ggCaller_cpp.index_existing(
     #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.gfa",
@@ -194,6 +194,17 @@ def main():
                     enumerate(node_colour_vector)):
                 # iterate over entries in col_true_genes to generate the sequences
                 true_genes[colour_ID] = "done"
+
+        # for colour_tuple in enumerate(node_colour_vector):
+        #     colour_ID = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
+        #                 max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
+        #                 stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
+        #                 max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
+        #                 minimum_path_score=minimum_path_score, write_idx=write_idx,
+        #                 input_colours=input_colours,
+        #                 aa_kmer_set=aa_kmer_set)
+        #     # iterate over entries in col_true_genes to generate the sequences
+        #     true_genes[colour_ID] = "done"
 
     # print("Generating fasta file of gene calls...")
     # # print output to file
