@@ -73,18 +73,18 @@ using seqan3::operator""_dna5;
 typedef std::vector<std::vector<size_t>> NodeColourVector;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF and TIS coordinate information
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>> ORFNodeVector;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information and relative strand
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
 // maps an ORF node sequence to its path through graph
 typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
 typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
-// stack for holding nodes during DFS traversal
+// stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
-// queue for holding node ids during BFS traversal
-typedef std::queue<int> NodeQueue;
+// stack for holding node ids, previous ORF ID, the previously travesed nodes and the fully traversed ORFs during DFS traversal for ORF ordering
+typedef std::stack<std::tuple<int, size_t, std::unordered_set<int>, std::unordered_set<size_t>>> ORFStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal

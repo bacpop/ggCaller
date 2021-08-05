@@ -123,9 +123,14 @@ def main():
 
     graph = ggCaller_cpp.Graph()
 
-    graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.txt",
-        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
+    # graph_tuple = graph.build(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group1_capsular_fa_list.txt",
+    #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
+
+    graph_tuple = graph.read(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple

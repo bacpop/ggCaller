@@ -215,15 +215,16 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         end_nodes = [(i[0], i[-1]) for i in high_scoring_ORFs]
 
         # add ORF information to graph for specific colour
-        shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
+        uninode_ORFs = shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
         # get neighbouring ORFs for source and sink nodes in high scoring paths
-        high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
+        next_nodes = shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes[0][0], ORF_vector, uninode_ORFs, end_nodes)
+        # high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
 
         # print("Generating fasta file of gene calls...")
         # # print output to file
         # ORF_count = 1
-        with open("test_ORFs.fasta", "w") as f:
+        with open("test_ORFs_group1.fasta", "w") as f:
             for entry in high_scoring_ORFs:
                 for sub_entry in entry:
                     gene = shd_arr[0].generate_sequence(ORF_vector[sub_entry][0], ORF_vector[sub_entry][1], overlap)

@@ -13,7 +13,7 @@ class unitigDict {
 
     // add and return untig kmers and ids
     void add_head(const std::string& head) {_head_kmer = head;};
-    std::string head_kmer() {return _head_kmer;};
+    const std::string& head_kmer() const {return _head_kmer;};
     size_t id;
 //    void set_id (size_t id) {_unitig_id = id};
 //    size_t id () {return _unitig_id};
@@ -106,7 +106,7 @@ class unitigDict {
     std::vector<std::pair<std::string, bool>> _pred_heads;
     std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 
-    // traversing ORFs
+    // traversing ORFs (key is colour_ID, entry is traversing ORF)
     std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 };
 

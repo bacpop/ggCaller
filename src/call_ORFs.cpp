@@ -315,8 +315,8 @@ ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
                     // add TIS_path_id to ORF_path_ID to ensure ORFs with same sequence but different TIS are not merged
                     ORF_path_ID += "," + TIS_path_id;
 
-                    // create ORF_node_vector, populate with results from node traversal
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords);
+                    // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand, to be worked out later).
+                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true);
 
                     ORF_node_map.emplace(std::move(ORF_path_ID), std::move(ORF_node_vector));
 
@@ -404,15 +404,24 @@ std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coor
     return return_tuple;
 }
 
-// converts ORF entries into a vector
-ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map)
+// converts ORF entries into a vector and assigns relative strand
+ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+                           const NodeStrandMap& pos_strand_map)
 {
     ORFVector ORF_vector(ORF_node_map.size());
 
-    // generate string for colours and IDs for each ORF
+    // generate ID for each ORF and assign strand
     size_t ORF_ID = 0;
-    for (const auto& ORF : ORF_node_map)
+    for (auto& ORF : ORF_node_map)
     {
+        // assign strand to ORF
+        const bool ORF_5p_strand = (std::get<0>(ORF.second)[0] >= 0) ? true : false;
+        if (ORF_5p_strand != pos_strand_map.at(abs(std::get<0>(ORF.second)[0])))
+        {
+            std::get<5>(ORF.second) = false;
+        }
+
+        // move entry from map to vector
         ORF_vector[ORF_ID] = std::move(ORF.second);
 
         // iterate ORF_ID
@@ -560,14 +569,14 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
 }
 
 
-std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
-                                             const GraphVector& graph_vector,
-                                             const std::vector<std::string>& stop_codons_for,
-                                             const std::vector<std::string>& start_codons_for,
-                                             const int overlap,
-                                             const size_t min_ORF_length,
-                                             const bool is_ref,
-                                             const fm_index_coll& fm_idx)
+ORFVector call_ORFs(const AllPaths& all_paths,
+                     const GraphVector& graph_vector,
+                     const std::vector<std::string>& stop_codons_for,
+                     const std::vector<std::string>& start_codons_for,
+                     const int overlap,
+                     const size_t min_ORF_length,
+                     const bool is_ref,
+                     const fm_index_coll& fm_idx)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -592,8 +601,7 @@ std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
     auto pos_strand_map = std::move(calculate_pos_strand(ORF_node_map));
 
     // group colours of ORFs together
-    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map));
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map));
 
-    const auto ORF_pair = std::make_pair(ORF_vector, pos_strand_map);
-    return ORF_pair;
+    return ORF_vector;
 }

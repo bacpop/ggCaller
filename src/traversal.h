@@ -18,9 +18,12 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
                          const bool repeat,
                          const size_t max_path_length);
 
-int check_next_ORFs (const GraphVector& graph_vector,
-                     const int& head_node,
-                     const size_t& current_colour,
-                     const int& stream);
+std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph_vector,
+                                                const int& head_node,
+                                                size_t stream_source,
+                                                const size_t& current_colour,
+                                                const int& stream,
+                                                const ORFVector& ORF_vector,
+                                                const std::unordered_set<size_t>& uninode_ORFs);
 
 #endif //TRAVERSAL_H

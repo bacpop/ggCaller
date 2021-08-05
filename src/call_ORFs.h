@@ -20,16 +20,17 @@ std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coor
                                                                                     const std::vector<std::vector<size_t>>& node_ranges,
                                                                                     const int& overlap);
 
-std::pair<ORFVector, NodeStrandMap> call_ORFs(const AllPaths& all_paths,
-                                             const GraphVector& graph_vector,
-                                             const std::vector<std::string>& stop_codons_for,
-                                             const std::vector<std::string>& start_codons_for,
-                                             const int overlap,
-                                             const size_t min_ORF_length,
-                                             const bool is_ref,
-                                             const fm_index_coll& fm_idx);
+ORFVector call_ORFs(const AllPaths& all_paths,
+                    const GraphVector& graph_vector,
+                    const std::vector<std::string>& stop_codons_for,
+                    const std::vector<std::string>& start_codons_for,
+                    const int overlap,
+                    const size_t min_ORF_length,
+                    const bool is_ref,
+                    const fm_index_coll& fm_idx);
 
-ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map);
+ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+                           const NodeStrandMap& pos_strand_map);
 
 NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map);
 

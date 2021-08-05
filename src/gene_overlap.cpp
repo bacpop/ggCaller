@@ -1,16 +1,12 @@
 #include "unitigDict.h"
 
 ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
-                                 const std::pair<ORFVector, NodeStrandMap>& ORF_pair,
+                                 const ORFVector& ORF_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap)
 {
     // initialise overlap map for each ORF per colour (each first ORF is the first ORF on positive strand etc.)
     ORFOverlapMap ORF_overlap_map;
-
-    // unpack ORF_pair
-    const auto& ORF_vector = ORF_pair.first;
-    const auto& pos_strand_map = ORF_pair.second;
 
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
@@ -61,10 +57,12 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
             // get reference to ORF1_node information
             const auto& ORF1_nodes = ORF_vector.at(ORF1_ID);
+            const auto& ORF1_strand = std::get<5>(ORF1_nodes);
 
             // as copying ORF2, only unpack what is needed from tuple, and then make new tuple
             auto ORF2_node_ids = std::get<0>(ORF_vector.at(ORF2_ID));
             auto ORF2_node_coords = std::get<1>(ORF_vector.at(ORF2_ID));
+            const auto& ORF2_strand = std::get<5>(ORF_vector.at(ORF2_ID));
 
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
 
@@ -110,19 +108,14 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             int ORF2_start_node = ORF2_nodes.first[0];
             int ORF2_end_node = ORF2_nodes.first.back();
 
-            // work out if node 1 is negative by checking first node in pos_strand_map. If it doesn't match, it is negatively stranded.
-            bool negative = false;
-            if (ORF1_5p_strand != pos_strand_map.at(abs(ORF1_start_node)))
-            {
-                negative = true;
-            }
+            // work out if node 1 is negative by checking strand
+            bool negative = ORF1_strand;
 
             // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
-            if ((ORF2_5p_strand != pos_strand_map.at(abs(ORF2_start_node)) && !negative) || (ORF2_5p_strand == pos_strand_map.at(abs(ORF2_start_node)) && negative))
+            if (ORF1_strand != ORF2_strand)
             {
                 reversed = true;
             }
-
 
             // if reversed is true, iterate through ORF2 coordinates and reverse
             // check if both strands are the same. If not, reverse the nodes of ORF2 and their within-node coordinates
@@ -557,10 +550,10 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
     return ORF_overlap_map;
 }
 
-std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
-                                                      const std::unordered_set<size_t>& node_ORFs,
-                                                      const int& node_id,
-                                                      const ORFVector& ORF_vector)
+std::vector<size_t> order_ORFs(const GraphVector& graph_vector,
+                              const std::unordered_set<size_t>& node_ORFs,
+                              const int& node_id,
+                              const ORFVector& ORF_vector)
 {
     std::vector<size_t> overlapping_ORF_IDs;
     std::vector<std::pair<bool, indexPair>> overlapping_ORF_coords;
@@ -624,7 +617,12 @@ std::vector<std::pair<size_t,size_t>> order_node_ends(GraphVector& graph_vector,
 
         // sort based on first entry in ordered_ORFs
         sort(ordered_ORFs.begin(), ordered_ORFs.end());
+
+        // return ordered_ORFs with ORF_IDs only
+        overlapping_ORF_IDs.clear();
+        std::transform(ordered_ORFs.begin(), ordered_ORFs.end(), std::back_inserter(overlapping_ORF_IDs),
+                [] (auto const& pair) {return pair.second; });
     }
 
-    return ordered_ORFs;
+    return overlapping_ORF_IDs;
 }

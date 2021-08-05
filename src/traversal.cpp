@@ -212,32 +212,45 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
     return all_paths;
 }
 
-int check_next_ORFs (const GraphVector& graph_vector,
-                    const int& head_node,
-                    const size_t& current_colour,
-                    const int& stream)
+std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph_vector,
+                                                const int& head_node,
+                                                size_t stream_source,
+                                                const size_t& current_colour,
+                                                const int& stream,
+                                                const ORFVector& ORF_vector,
+                                                const std::unordered_set<size_t>& uninode_ORFs)
 {
-    // initialise return set of upstream ORFs
-    int next_node = 0;
+    // initialise return vector of upstream ORFs (vectors will break at branches in graph)
+    std::vector<std::pair<size_t, size_t>> connected_ORFs;
+
+    // make set of correctly traversed ORFs (i.e. 5' and 3' traversed)
+    std::unordered_set<size_t> fully_traversed;
+
+    // check if start ORF is uninode, and therefore should be added to fully_traversed
+    if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
+    {
+        fully_traversed.insert(stream_source);
+    }
 
     // generate path list, vector for path and the stack
-    NodeQueue node_queue;
+    ORFStack ORF_stack;
 
     // create node set for identification of repeats
     std::unordered_set<int> node_set;
     node_set.insert(head_node * stream);
 
-    // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1)
-    node_queue.push(head_node * stream);
+    // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
+    ORF_stack.push(std::make_tuple(head_node * stream, stream_source, node_set, fully_traversed));
 
-    // create variable to all breaking of all loops
-    bool break_true = false;
-
-    while(!node_queue.empty())
+    while(!ORF_stack.empty())
     {
         // pop node in stack
-        auto node_id = node_queue.front();
-        node_queue.pop();
+        auto path_tuple = ORF_stack.top();
+        const auto& node_id = std::get<0>(path_tuple);
+        stream_source = std::get<1>(path_tuple);
+        node_set = std::get<2>(path_tuple);
+        fully_traversed = std::get<3>(path_tuple);
+        ORF_stack.pop();
 
         // get unitig_dict entry in graph_vector
         const auto& node_dict = graph_vector.at(abs(node_id) - 1);
@@ -251,11 +264,15 @@ int check_next_ORFs (const GraphVector& graph_vector,
         // iterate over neighbours
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
+            // make copies of node_set and fully_traversed
+            auto temp_node_set = node_set;
+            auto temp_fully_traversed = fully_traversed;
+
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
 
             // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
+            const bool is_in = temp_node_set.find(neighbour_id) != temp_node_set.end();
             if (is_in)
             {
                 continue;
@@ -274,32 +291,90 @@ int check_next_ORFs (const GraphVector& graph_vector,
                 continue;
             }
 
+            // add node to temp_node_set
+            temp_node_set.insert(neighbour_id);
+
             // check if node is traversed by end of an ORF
             if (!neighbour_dict.ORFs_empty(current_colour))
             {
-                next_node = neighbour_id;
+                // pull out next ORFs and order them
+                const auto& next_ORFs = neighbour_dict.get_ORFs(current_colour);
+                const auto ordered_ORFs = order_ORFs(graph_vector, next_ORFs, neighbour_id, ORF_vector);
 
-                // set break_true as true
-                break_true = true;
-            }
+                // bool for determining if paired ORFs are the same, and if they are already connected as end_ORFs
+                bool skip_pair = false;
 
-            // break out of for loop
-            if (break_true)
+                // make sure that 5' and 3' of ORF is traversed if it is not uninode
+                if (std::find(ordered_ORFs.begin(), ordered_ORFs.end(), stream_source) != ordered_ORFs.end())
+                {
+                    temp_fully_traversed.insert(stream_source);
+                    // check if both entries same, don't need to add to vector as are connected 5' and 3'
+                    if (stream_source == ordered_ORFs.at(0))
+                    {
+                        skip_pair = true;
+                    }
+                }
+                // otherwise check that ORFs are uninode
+                else if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
+                {
+                    temp_fully_traversed.insert(stream_source);
+                }
+                if (uninode_ORFs.find(ordered_ORFs.at(0)) != uninode_ORFs.end())
+                {
+                    temp_fully_traversed.insert(ordered_ORFs.at(0));
+                }
+
+                // if the node is not fully traversed, do not add the edge
+                // connecting this and the next, but do add for remaining in ordered_ORFs.
+                if (temp_fully_traversed.find(stream_source) != temp_fully_traversed.end() && !skip_pair)
+                {
+                    // add stream_source and first entry
+                    connected_ORFs.push_back({stream_source, ordered_ORFs.at(0)});
+                }
+
+                // add remaining ordered ORFs to connected_nodes vector
+                for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
+                {
+                    // if ORFs are overlapping, don't want to add connections between an ORF and end of stream source
+                    if (ordered_ORFs.at(i + 1) != stream_source)
+                    {
+                        connected_ORFs.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
+                        // check if ORFs are uninode and add to temp_fully traversed if necessary
+                        if (uninode_ORFs.find(ordered_ORFs.at(i)) != uninode_ORFs.end())
+                        {
+                            temp_fully_traversed.insert(ordered_ORFs.at(i));
+                        }
+                        if (uninode_ORFs.find(ordered_ORFs.at(i + 1)) != uninode_ORFs.end())
+                        {
+                            temp_fully_traversed.insert(ordered_ORFs.at(i + 1));
+                        }
+                    }
+                }
+                // add to stack last entry with last entry from ordered_ORFs
+                // if ORFs are overlapping, need to go back through from end and find first non-uninode ORF
+                if (ordered_ORFs.size() == 1 || ordered_ORFs.back() != stream_source)
+                {
+                    ORF_stack.push({neighbour_id, ordered_ORFs.back(), temp_node_set, temp_fully_traversed});
+                } else
+                {
+                    // move backward through ordered_ORFs to find first overlapping ORF that is not uninode starting
+                    // at second to last entry, as last entry is stream_source
+                    for (size_t i = ordered_ORFs.size() - 2; i > -1; i--)
+                    {
+                        // if found, then use this as the next traversed ORF and break loop.
+                        if (uninode_ORFs.find(ordered_ORFs.at(i)) == uninode_ORFs.end())
+                        {
+                            ORF_stack.push({neighbour_id, ordered_ORFs.at(i), temp_node_set, temp_fully_traversed});
+                            break;
+                        }
+                    }
+                }
+            } else
             {
-                break;
+                // add to stack
+                ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed});
             }
-
-            // add to queue
-            node_queue.push(neighbour_id);
-
-            // add node to node_set
-            node_set.insert(neighbour_id);
-        }
-        // break out of while loop
-        if (break_true)
-        {
-            break;
         }
     }
-    return next_node;
+    return connected_ORFs;
 }
