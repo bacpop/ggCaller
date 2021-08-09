@@ -211,24 +211,36 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # determine highest scoring genes, stored in list of lists
         high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
+        # print("Generating fasta file of gene calls...")
+        # # print output to file
+        # ORF_count = 1
+        # with open("test_ORFs_plasmid_clique_119_230_372.fasta", "w") as f:
+        #     for entry in high_scoring_ORFs:
+        #         for sub_entry in entry:
+        #             gene = shd_arr[0].generate_sequence(ORF_vector[sub_entry][0], ORF_vector[sub_entry][1], overlap)
+        #             f.write(">" + str(sub_entry) + "\n" + gene + "\n")
+
+        print("Pre-traversal:")
+        print(high_scoring_ORFs)
+
         # pull out pairs of source and sink nodes for graph traversal
         end_nodes = [(i[0], i[-1]) for i in high_scoring_ORFs]
+
+        print("End-nodes:")
+        print(end_nodes)
 
         # add ORF information to graph for specific colour
         uninode_ORFs = shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
+        print("uninode_ORFs:")
+        print(uninode_ORFs)
+
         # get neighbouring ORFs for source and sink nodes in high scoring paths
-        next_nodes = shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes[0][0], ORF_vector, uninode_ORFs, end_nodes)
+        next_nodes = shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes[0][0], ORF_vector, uninode_ORFs)
         # high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
 
-        # print("Generating fasta file of gene calls...")
-        # # print output to file
-        # ORF_count = 1
-        with open("test_ORFs_group1.fasta", "w") as f:
-            for entry in high_scoring_ORFs:
-                for sub_entry in entry:
-                    gene = shd_arr[0].generate_sequence(ORF_vector[sub_entry][0], ORF_vector[sub_entry][1], overlap)
-                    f.write(">" + str(sub_entry) + "\n" + gene + "\n")
+        print("Post-traversal")
+        print(next_nodes)
 
         # initiate true genes list
         # true_genes = [None] * len(high_scoring_ORFs)

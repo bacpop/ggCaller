@@ -314,10 +314,10 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
         pred = predict_tis(model_tis, TIS_stacked)
 
         TIS_prob_list.extend(pred)
-    y_pred_TIS = np.asarray(TIS_prob_list, dtype=float)
+    TIS_prob_list = [x.item() for x in TIS_prob_list]
 
     # reindex batched scores
-    for i, prob in enumerate(y_pred_TIS):
+    for i, prob in enumerate(TIS_prob_list):
         idx = ORF_TIS_seq_idx[i]
         ORF_TIS_prob[idx] = float(prob)
 

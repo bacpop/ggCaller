@@ -128,8 +128,8 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -187,29 +187,30 @@ def main():
         #             true_genes[gene][0][colour_ID] = "1"
 
         # run run_calculate_ORFs with multithreading
-        with Pool(processes=num_threads) as pool:
-            for colour_ID in pool.map(
-                    partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
-                            max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
-                            stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
-                            max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-                            minimum_path_score=minimum_path_score, write_idx=write_idx,
-                            input_colours=input_colours,
-                            aa_kmer_set=aa_kmer_set),
-                    enumerate(node_colour_vector)):
-                # iterate over entries in col_true_genes to generate the sequences
-                true_genes[colour_ID] = "done"
+        # with Pool(processes=num_threads) as pool:
+        #     for colour_ID in pool.map(
+        #             partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
+        #                     max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
+        #                     stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
+        #                     max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
+        #                     minimum_path_score=minimum_path_score, write_idx=write_idx,
+        #                     input_colours=input_colours,
+        #                     aa_kmer_set=aa_kmer_set),
+        #             enumerate(node_colour_vector)):
+        #         # iterate over entries in col_true_genes to generate the sequences
+        #         true_genes[colour_ID] = "done"
 
-        # for colour_tuple in enumerate(node_colour_vector):
-        #     colour_ID = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
-        #                 max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
-        #                 stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
-        #                 max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-        #                 minimum_path_score=minimum_path_score, write_idx=write_idx,
-        #                 input_colours=input_colours,
-        #                 aa_kmer_set=aa_kmer_set)
-        #     # iterate over entries in col_true_genes to generate the sequences
-        #     true_genes[colour_ID] = "done"
+        for colour_tuple in enumerate(node_colour_vector):
+            colour_ID = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
+                                           max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
+                                           stop_codons_for=stop_codons_for, start_codons=start_codons,
+                                           min_ORF_length=min_ORF_length,
+                                           max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
+                                           minimum_path_score=minimum_path_score, write_idx=write_idx,
+                                           input_colours=input_colours,
+                                           aa_kmer_set=aa_kmer_set)
+            # iterate over entries in col_true_genes to generate the sequences
+            true_genes[colour_ID] = "done"
 
     # print("Generating fasta file of gene calls...")
     # # print output to file
