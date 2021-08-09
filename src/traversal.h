@@ -26,4 +26,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                                                 const ORFVector& ORF_vector,
                                                 const std::unordered_set<size_t>& uninode_ORFs);
 
+template <class T>
+void clear_stack(std::stack<T>& to_clear);
+
 #endif //TRAVERSAL_H

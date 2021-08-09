@@ -368,6 +368,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 // if ORFs are overlapping, need to go back through from end and find first non-uninode ORF
                 if (ordered_ORFs.size() == 1 || ordered_ORFs.back() != stream_source)
                 {
+                    clear_stack(ORF_stack);
                     ORF_stack.push({neighbour_id, ordered_ORFs.back(), temp_node_set, temp_fully_traversed, updated_colours_arr});
                 } else
                 {
@@ -379,6 +380,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                         // if found, then use this as the next traversed ORF and break loop.
                         if (uninode_ORFs.find(ordered_ORFs.at(i)) == uninode_ORFs.end())
                         {
+                            clear_stack(ORF_stack);
                             ORF_stack.push({neighbour_id, ordered_ORFs.at(i), temp_node_set, temp_fully_traversed, updated_colours_arr});
                             end_found = true;
                             break;
@@ -387,6 +389,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                     // in case where end of stream source is last point in node, add stream source to stack again
                     if (!end_found)
                     {
+                        clear_stack(ORF_stack);
                         ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
                     }
                 }
@@ -398,4 +401,13 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
         }
     }
     return connected_ORFs;
+}
+
+template <class T>
+void clear_stack(std::stack<T>& to_clear)
+{
+    while (!to_clear.empty())
+    {
+        to_clear.pop();
+    }
 }
