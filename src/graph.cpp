@@ -273,17 +273,11 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
                 auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
-            else {
-                int test = 1;
-            }
             // traverse downstream. Check that sink node hasn't been traversed in reverse, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(sink_node_id * -1) == prev_node_set.end())
             {
                 auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
-            }
-            else {
-                int test = 1;
             }
         }
         // scope for second item in end_ORF pair
@@ -334,17 +328,11 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
                 auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
-            else {
-                int test = 1;
-            }
             // traverse downstream. Check that sink node hasn't been traversed in reverse, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(sink_node_id * -1) == prev_node_set.end())
             {
                 auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
-            }
-            else {
-                int test = 1;
             }
         }
     }

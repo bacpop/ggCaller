@@ -235,15 +235,15 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
     node_set.insert(head_node * stream);
 
     // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
-    ORF_stack.push(std::make_tuple(head_node * stream, node_set, colour_arr));
+    ORF_stack.push(std::make_pair(head_node * stream, colour_arr));
 
     while(!ORF_stack.empty())
     {
         // pop node in stack
         auto path_tuple = ORF_stack.top();
         const auto& node_id = std::get<0>(path_tuple);
-        node_set = std::get<1>(path_tuple);
-        colour_arr = std::get<2>(path_tuple);
+        //node_set = std::get<1>(path_tuple);
+        colour_arr = std::get<1>(path_tuple);
         ORF_stack.pop();
 
         // get unitig_dict entry in graph_vector
@@ -256,13 +256,13 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
             // make copy of node_set
-            auto temp_node_set = node_set;
+            //auto temp_node_set = node_set;
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
 
             // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = temp_node_set.find(neighbour_id) != temp_node_set.end();
+            const bool is_in = node_set.find(neighbour_id) != node_set.end();
             if (is_in)
             {
                 continue;
@@ -293,7 +293,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             }
 
             // add node to temp_node_set
-            temp_node_set.insert(neighbour_id);
+            node_set.insert(neighbour_id);
 
             // check if node is traversed by end of an ORF
             if (!neighbour_dict.ORFs_empty(current_colour))
@@ -322,12 +322,9 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 {
                     // add stream_source and first entry
                     connected_ORFs.push_back({stream_source, ordered_ORFs.at(0)});
-
-                    // update previous nodes encountered
-                    prev_node_set.insert(std::make_move_iterator(temp_node_set.begin()), std::make_move_iterator(temp_node_set.end()));
                 } else
                 {
-                    ORF_stack.push({neighbour_id, temp_node_set, updated_colours_arr});
+                    ORF_stack.push({neighbour_id, updated_colours_arr});
                 }
 
                 // add remaining ordered ORFs to connected_nodes vector
@@ -342,10 +339,12 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             } else
             {
                 // add to stack
-                ORF_stack.push({neighbour_id, temp_node_set, updated_colours_arr});
+                ORF_stack.push({neighbour_id, updated_colours_arr});
             }
         }
     }
+    // update previous nodes encountered
+    prev_node_set.insert(std::make_move_iterator(node_set.begin()), std::make_move_iterator(node_set.end()));
     return connected_ORFs;
 }
 
