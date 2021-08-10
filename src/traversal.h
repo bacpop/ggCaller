@@ -5,7 +5,6 @@
 #include "indexing.h"
 #include "gene_overlap.h"
 
-// traversal.cpp
 PathVector iter_nodes_binary (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                               const size_t& current_colour,
@@ -24,7 +23,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                                                         const size_t& current_colour,
                                                         const int& stream,
                                                         const ORFVector& ORF_vector,
-                                                        const std::unordered_set<size_t>& uninode_ORFs,
                                                         std::unordered_set<int>& prev_node_set);
 
 template <class T>

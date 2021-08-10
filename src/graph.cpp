@@ -165,13 +165,10 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     return return_pair;
 }
 
-std::unordered_set<size_t> Graph::add_ORF_info (const size_t& colour_ID,
-                                                const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
-                                                const ORFVector& ORF_vector)
+void Graph::add_ORF_info (const size_t& colour_ID,
+                        const std::vector<std::pair<size_t,size_t>>& ORF_IDs,
+                        const ORFVector& ORF_vector)
 {
-    // generate lists of single-node ORFs for correction of edges
-    std::unordered_set<size_t> uninode_ORFs;
-
     for (const auto & ID_pair : ORF_IDs)
     {
         // unpack pair for source and sink nodes
@@ -192,10 +189,6 @@ std::unordered_set<size_t> Graph::add_ORF_info (const size_t& colour_ID,
             if (source_node_id != sink_node_id)
             {
                 _GraphVector.at(sink_node_id).set_ORFs(colour_ID, source);
-            } else
-            {
-                // ORF must be uninode as source and sink nodes match
-                uninode_ORFs.insert(source);
             }
         }
 
@@ -215,20 +208,14 @@ std::unordered_set<size_t> Graph::add_ORF_info (const size_t& colour_ID,
             if (source_node_id != sink_node_id)
             {
                 _GraphVector.at(sink_node_id).set_ORFs(colour_ID, sink);
-            } else
-            {
-                // ORF must be uninode as source and sink nodes match
-                uninode_ORFs.insert(sink);
             }
         }
     }
-    return uninode_ORFs;
 }
 
 std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_t& colour_ID,
                                                                      const std::vector<std::pair<size_t,size_t>>& end_ORFs,
-                                                                     const ORFVector& ORF_vector,
-                                                                     const std::unordered_set<size_t>& uninode_ORFs)
+                                                                     const ORFVector& ORF_vector)
 {
     // initialise pair of vectors (first = upstream of start_ORF, second = downstream of start_ORF)
     std::vector<std::pair<size_t, size_t>> ORF_edges;
@@ -283,7 +270,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // traverse upstream. Check that source node hasn't been traversed forward, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(source_node_id) == prev_node_set.end())
             {
-                auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, uninode_ORFs, prev_node_set);
+                auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
             else {
@@ -292,7 +279,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // traverse downstream. Check that sink node hasn't been traversed in reverse, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(sink_node_id * -1) == prev_node_set.end())
             {
-                auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, uninode_ORFs, prev_node_set);
+                auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
             else {
@@ -344,7 +331,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // traverse upstream. Check that source node hasn't been traversed forward, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(source_node_id) == prev_node_set.end())
             {
-                auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, uninode_ORFs, prev_node_set);
+                auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, start_ORF, colour_ID, -1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
             else {
@@ -353,7 +340,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
             // traverse downstream. Check that sink node hasn't been traversed in reverse, otherwise ORF has been paired downstream already.
             if (prev_node_set.find(sink_node_id * -1) == prev_node_set.end())
             {
-                auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, uninode_ORFs, prev_node_set);
+                auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, start_ORF, colour_ID, 1, ORF_vector, prev_node_set);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
             else {

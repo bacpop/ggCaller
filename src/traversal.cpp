@@ -216,7 +216,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                                                         const size_t& current_colour,
                                                         const int& stream,
                                                         const ORFVector& ORF_vector,
-                                                        const std::unordered_set<size_t>& uninode_ORFs,
                                                         std::unordered_set<int>& prev_node_set)
 {
     // initialise return vector of upstream ORFs (vectors will break at branches in graph)
@@ -227,12 +226,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
 
     // get the colour array of the head node
     auto colour_arr = graph_vector.at(abs(head_node) - 1).full_colour();
-
-    // check if start ORF is uninode, and therefore should be added to fully_traversed
-//    if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
-//    {
-//        fully_traversed = true;
-//    }
 
     // generate path list, vector for path and the stack
     ORFStack ORF_stack;
