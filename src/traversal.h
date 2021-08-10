@@ -19,12 +19,13 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
                          const size_t max_path_length);
 
 std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph_vector,
-                                                const int& head_node,
-                                                size_t stream_source,
-                                                const size_t& current_colour,
-                                                const int& stream,
-                                                const ORFVector& ORF_vector,
-                                                const std::unordered_set<size_t>& uninode_ORFs);
+                                                        const int& head_node,
+                                                        const size_t& stream_source,
+                                                        const size_t& current_colour,
+                                                        const int& stream,
+                                                        const ORFVector& ORF_vector,
+                                                        const std::unordered_set<size_t>& uninode_ORFs,
+                                                        std::unordered_set<int>& prev_node_set);
 
 template <class T>
 void clear_stack(std::stack<T>& to_clear);

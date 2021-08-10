@@ -211,27 +211,28 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
 }
 
 std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph_vector,
-                                                const int& head_node,
-                                                size_t stream_source,
-                                                const size_t& current_colour,
-                                                const int& stream,
-                                                const ORFVector& ORF_vector,
-                                                const std::unordered_set<size_t>& uninode_ORFs)
+                                                        const int& head_node,
+                                                        const size_t& stream_source,
+                                                        const size_t& current_colour,
+                                                        const int& stream,
+                                                        const ORFVector& ORF_vector,
+                                                        const std::unordered_set<size_t>& uninode_ORFs,
+                                                        std::unordered_set<int>& prev_node_set)
 {
     // initialise return vector of upstream ORFs (vectors will break at branches in graph)
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
 
-    // make set of correctly traversed ORFs (i.e. 5' and 3' traversed)
-    std::unordered_set<size_t> fully_traversed;
+    // set fully_traversed to false
+    //bool fully_traversed = false;
 
     // get the colour array of the head node
     auto colour_arr = graph_vector.at(abs(head_node) - 1).full_colour();
 
     // check if start ORF is uninode, and therefore should be added to fully_traversed
-    if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
-    {
-        fully_traversed.insert(stream_source);
-    }
+//    if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
+//    {
+//        fully_traversed = true;
+//    }
 
     // generate path list, vector for path and the stack
     ORFStack ORF_stack;
@@ -241,17 +242,15 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
     node_set.insert(head_node * stream);
 
     // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
-    ORF_stack.push(std::make_tuple(head_node * stream, stream_source, node_set, fully_traversed, colour_arr));
+    ORF_stack.push(std::make_tuple(head_node * stream, node_set, colour_arr));
 
     while(!ORF_stack.empty())
     {
         // pop node in stack
         auto path_tuple = ORF_stack.top();
         const auto& node_id = std::get<0>(path_tuple);
-        stream_source = std::get<1>(path_tuple);
-        node_set = std::get<2>(path_tuple);
-        fully_traversed = std::get<3>(path_tuple);
-        colour_arr = std::get<4>(path_tuple);
+        node_set = std::get<1>(path_tuple);
+        colour_arr = std::get<2>(path_tuple);
         ORF_stack.pop();
 
         // get unitig_dict entry in graph_vector
@@ -263,9 +262,8 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
         // iterate over neighbours
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
-            // make copies of node_set and fully_traversed
+            // make copy of node_set
             auto temp_node_set = node_set;
-            auto temp_fully_traversed = fully_traversed;
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
@@ -284,16 +282,16 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             auto updated_colours_arr = colour_arr;
             updated_colours_arr &= neighbour_dict.full_colour();
 
-            // test for colour vector
-            std::vector<bool> updated_colours_arr_real(updated_colours_arr.size());
-            std::vector<bool> colours_arr_real(updated_colours_arr.size());
-            std::vector<bool> neighbour_dict_colours_arr_real(updated_colours_arr.size());
-            for (int i = 0; i < updated_colours_arr.size(); i++)
-            {
-                updated_colours_arr_real[i] = (updated_colours_arr[i]) ? true : false;
-                colours_arr_real[i] = (colour_arr[i]) ? true : false;
-                neighbour_dict_colours_arr_real[i] = ((neighbour_dict.full_colour())[i]) ? true : false;
-            }
+//            // test for colour vector
+//            std::vector<bool> updated_colours_arr_real(updated_colours_arr.size());
+//            std::vector<bool> colours_arr_real(updated_colours_arr.size());
+//            std::vector<bool> neighbour_dict_colours_arr_real(updated_colours_arr.size());
+//            for (int i = 0; i < updated_colours_arr.size(); i++)
+//            {
+//                updated_colours_arr_real[i] = (updated_colours_arr[i]) ? true : false;
+//                colours_arr_real[i] = (colour_arr[i]) ? true : false;
+//                neighbour_dict_colours_arr_real[i] = ((neighbour_dict.full_colour())[i]) ? true : false;
+//            }
 
             // determine if neighbour is in same colour as iteration, if not pass
             if (!updated_colours_arr[current_colour])
@@ -317,29 +315,26 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 // make sure that 5' and 3' of ORF is traversed if it is not uninode
                 if (std::find(ordered_ORFs.begin(), ordered_ORFs.end(), stream_source) != ordered_ORFs.end())
                 {
-                    temp_fully_traversed.insert(stream_source);
-                    // check if both entries same, don't need to add to vector as are connected 5' and 3'
-                    if (ordered_ORFs.size() == 1)
+                    //fully_traversed = true;
+                    // check if stream source is at the back of the vector, if so, then need to continue traversing
+                    if (ordered_ORFs.back() == stream_source)
                     {
                         skip_pair = true;
                     }
                 }
-                // otherwise check that ORFs are uninode
-                else if (uninode_ORFs.find(stream_source) != uninode_ORFs.end())
-                {
-                    temp_fully_traversed.insert(stream_source);
-                }
-                if (uninode_ORFs.find(ordered_ORFs.at(0)) != uninode_ORFs.end())
-                {
-                    temp_fully_traversed.insert(ordered_ORFs.at(0));
-                }
 
                 // if the node is not fully traversed, do not add the edge
                 // connecting this and the next, but do add for remaining in ordered_ORFs.
-                if (temp_fully_traversed.find(stream_source) != temp_fully_traversed.end() && !skip_pair)
+                if (!skip_pair)
                 {
                     // add stream_source and first entry
                     connected_ORFs.push_back({stream_source, ordered_ORFs.at(0)});
+
+                    // update previous nodes encountered
+                    prev_node_set.insert(std::make_move_iterator(temp_node_set.begin()), std::make_move_iterator(temp_node_set.end()));
+                } else
+                {
+                    ORF_stack.push({neighbour_id, temp_node_set, updated_colours_arr});
                 }
 
                 // add remaining ordered ORFs to connected_nodes vector
@@ -349,59 +344,12 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                     if (ordered_ORFs.at(i + 1) != stream_source)
                     {
                         connected_ORFs.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
-                        // check if ORFs are uninode and add to temp_fully traversed if necessary
-                        if (uninode_ORFs.find(ordered_ORFs.at(i)) != uninode_ORFs.end())
-                        {
-                            temp_fully_traversed.insert(ordered_ORFs.at(i));
-                        }
-                        // check if at end, then add i+1 to uninode ORFs, otherwise checking twice
-                        if ((i + 1) == ordered_ORFs.size() - 1)
-                        {
-                            if (uninode_ORFs.find(ordered_ORFs.at(i + 1)) != uninode_ORFs.end())
-                            {
-                                temp_fully_traversed.insert(ordered_ORFs.at(i + 1));
-                            }
-                        }
                     }
                 }
-
-                if (skip_pair)
-                {
-                    ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
-                }
-//                // add to stack last entry with last entry from ordered_ORFs
-//                // if ORFs are overlapping, need to go back through from end and find first non-uninode ORF
-//                if (ordered_ORFs.size() == 1 || ordered_ORFs.back() != stream_source)
-//                {
-////                    clear_stack(ORF_stack);
-//                    ORF_stack.push({neighbour_id, ordered_ORFs.back(), temp_node_set, temp_fully_traversed, updated_colours_arr});
-//                } else
-//                {
-//                    // move backward through ordered_ORFs to find first overlapping ORF that is not uninode starting
-//                    // at second to last entry, as last entry is stream_source
-//                    bool end_found = false;
-//                    for (size_t i = ordered_ORFs.size() - 2; i != -1; i--)
-//                    {
-//                        // if found, then use this as the next traversed ORF and break loop.
-//                        if (uninode_ORFs.find(ordered_ORFs.at(i)) == uninode_ORFs.end())
-//                        {
-////                            clear_stack(ORF_stack);
-//                            ORF_stack.push({neighbour_id, ordered_ORFs.at(i), temp_node_set, temp_fully_traversed, updated_colours_arr});
-//                            end_found = true;
-//                            break;
-//                        }
-//                    }
-//                    // in case where end of stream source is last point in node, add stream source to stack again
-//                    if (!end_found)
-//                    {
-////                        clear_stack(ORF_stack);
-//                        ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
-//                    }
-//                }
             } else
             {
                 // add to stack
-                ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
+                ORF_stack.push({neighbour_id, temp_node_set, updated_colours_arr});
             }
         }
     }
