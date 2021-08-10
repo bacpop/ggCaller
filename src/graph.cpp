@@ -289,7 +289,7 @@ std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_
         // scope for second item in end_ORF pair
         if (end_ORF_pair.first != end_ORF_pair.second)
         {
-            const auto& start_ORF = end_ORF_pair.first;
+            const auto& start_ORF = end_ORF_pair.second;
 
             // get ORF info
             const auto& start_ORF_info = ORF_vector.at(start_ORF);
