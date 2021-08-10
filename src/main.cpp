@@ -218,10 +218,10 @@ int main(int argc, char *argv[]) {
 //        unitig_graph.add_ORF_info(colour_ID, random_ORFs, ORF_vector);
         const auto uninode_ORFs = unitig_graph.add_ORF_info(colour_ID, ORF_IDs, ORF_vector);
 
-        const size_t start_ORF = ORF_IDs.at(0).first;
+        //const size_t start_ORF = ORF_IDs.at(0).first;
 
         //auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, random_ORFs, ORF_vector);
-        auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, start_ORF, ORF_vector, uninode_ORFs);
+        auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, ORF_IDs, ORF_vector, uninode_ORFs);
 
         // add to ORF_print_map for writing to file
         std::vector<bool> empty_colours_vector(nb_colours, 0);

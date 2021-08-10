@@ -50,9 +50,9 @@ class Graph {
 
     // get next ORFs along from current ORF
     std::vector<std::pair<size_t, size_t>> get_neighbouring_ORFs (const size_t& colour_ID,
-                                                                const size_t start_ORF,
-                                                                const ORFVector& ORF_vector,
-                                                                const std::unordered_set<size_t>& uninode_ORFs);
+                                                                  const std::vector<std::pair<size_t,size_t>>& end_ORFs,
+                                                                  const ORFVector& ORF_vector,
+                                                                  const std::unordered_set<size_t>& uninode_ORFs);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,

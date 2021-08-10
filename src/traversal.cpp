@@ -284,16 +284,16 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             auto updated_colours_arr = colour_arr;
             updated_colours_arr &= neighbour_dict.full_colour();
 
-//            // test for colour vector
-//            std::vector<bool> updated_colours_arr_real(updated_colours_arr.size());
-//            std::vector<bool> colours_arr_real(updated_colours_arr.size());
-//            std::vector<bool> neighbour_dict_colours_arr_real(updated_colours_arr.size());
-//            for (int i = 0; i < updated_colours_arr.size(); i++)
-//            {
-//                updated_colours_arr_real[i] = (updated_colours_arr[i]) ? true : false;
-//                colours_arr_real[i] = (colour_arr[i]) ? true : false;
-//                neighbour_dict_colours_arr_real[i] = ((neighbour_dict.full_colour())[i]) ? true : false;
-//            }
+            // test for colour vector
+            std::vector<bool> updated_colours_arr_real(updated_colours_arr.size());
+            std::vector<bool> colours_arr_real(updated_colours_arr.size());
+            std::vector<bool> neighbour_dict_colours_arr_real(updated_colours_arr.size());
+            for (int i = 0; i < updated_colours_arr.size(); i++)
+            {
+                updated_colours_arr_real[i] = (updated_colours_arr[i]) ? true : false;
+                colours_arr_real[i] = (colour_arr[i]) ? true : false;
+                neighbour_dict_colours_arr_real[i] = ((neighbour_dict.full_colour())[i]) ? true : false;
+            }
 
             // determine if neighbour is in same colour as iteration, if not pass
             if (!updated_colours_arr[current_colour])
@@ -319,7 +319,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 {
                     temp_fully_traversed.insert(stream_source);
                     // check if both entries same, don't need to add to vector as are connected 5' and 3'
-                    if (stream_source == ordered_ORFs.at(0))
+                    if (ordered_ORFs.size() == 1)
                     {
                         skip_pair = true;
                     }
@@ -364,35 +364,40 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                         }
                     }
                 }
-                // add to stack last entry with last entry from ordered_ORFs
-                // if ORFs are overlapping, need to go back through from end and find first non-uninode ORF
-                if (ordered_ORFs.size() == 1 || ordered_ORFs.back() != stream_source)
+
+                if (skip_pair)
                 {
-                    clear_stack(ORF_stack);
-                    ORF_stack.push({neighbour_id, ordered_ORFs.back(), temp_node_set, temp_fully_traversed, updated_colours_arr});
-                } else
-                {
-                    // move backward through ordered_ORFs to find first overlapping ORF that is not uninode starting
-                    // at second to last entry, as last entry is stream_source
-                    bool end_found = false;
-                    for (size_t i = ordered_ORFs.size() - 2; i != -1; i--)
-                    {
-                        // if found, then use this as the next traversed ORF and break loop.
-                        if (uninode_ORFs.find(ordered_ORFs.at(i)) == uninode_ORFs.end())
-                        {
-                            clear_stack(ORF_stack);
-                            ORF_stack.push({neighbour_id, ordered_ORFs.at(i), temp_node_set, temp_fully_traversed, updated_colours_arr});
-                            end_found = true;
-                            break;
-                        }
-                    }
-                    // in case where end of stream source is last point in node, add stream source to stack again
-                    if (!end_found)
-                    {
-                        clear_stack(ORF_stack);
-                        ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
-                    }
+                    ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
                 }
+//                // add to stack last entry with last entry from ordered_ORFs
+//                // if ORFs are overlapping, need to go back through from end and find first non-uninode ORF
+//                if (ordered_ORFs.size() == 1 || ordered_ORFs.back() != stream_source)
+//                {
+////                    clear_stack(ORF_stack);
+//                    ORF_stack.push({neighbour_id, ordered_ORFs.back(), temp_node_set, temp_fully_traversed, updated_colours_arr});
+//                } else
+//                {
+//                    // move backward through ordered_ORFs to find first overlapping ORF that is not uninode starting
+//                    // at second to last entry, as last entry is stream_source
+//                    bool end_found = false;
+//                    for (size_t i = ordered_ORFs.size() - 2; i != -1; i--)
+//                    {
+//                        // if found, then use this as the next traversed ORF and break loop.
+//                        if (uninode_ORFs.find(ordered_ORFs.at(i)) == uninode_ORFs.end())
+//                        {
+////                            clear_stack(ORF_stack);
+//                            ORF_stack.push({neighbour_id, ordered_ORFs.at(i), temp_node_set, temp_fully_traversed, updated_colours_arr});
+//                            end_found = true;
+//                            break;
+//                        }
+//                    }
+//                    // in case where end of stream source is last point in node, add stream source to stack again
+//                    if (!end_found)
+//                    {
+////                        clear_stack(ORF_stack);
+//                        ORF_stack.push({neighbour_id, stream_source, temp_node_set, temp_fully_traversed, updated_colours_arr});
+//                    }
+//                }
             } else
             {
                 // add to stack

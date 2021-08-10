@@ -226,76 +226,153 @@ std::unordered_set<size_t> Graph::add_ORF_info (const size_t& colour_ID,
 }
 
 std::vector<std::pair<size_t, size_t>> Graph::get_neighbouring_ORFs (const size_t& colour_ID,
-                                                                    const size_t start_ORF,
-                                                                    const ORFVector& ORF_vector,
-                                                                    const std::unordered_set<size_t>& uninode_ORFs)
+                                                                     const std::vector<std::pair<size_t,size_t>>& end_ORFs,
+                                                                     const ORFVector& ORF_vector,
+                                                                     const std::unordered_set<size_t>& uninode_ORFs)
 {
     // initialise pair of vectors (first = upstream of start_ORF, second = downstream of start_ORF)
     std::vector<std::pair<size_t, size_t>> ORF_edges;
 
-    // get ORF info
-    const auto & start_ORF_info = ORF_vector.at(start_ORF);
-
-    // get id for source_node and sink node for ORF
-    auto source_node_id = std::get<0>(start_ORF_info).at(0);
-    auto sink_node_id = std::get<0>(start_ORF_info).back();
-
-    // get source_node strand and node info
-    const auto& source_node_info = _GraphVector.at(abs(source_node_id) - 1);
-
-    // check if there are any overlapping ORFs on current node and order...
-    const auto& source_node_ORFs = source_node_info.get_ORFs(colour_ID);
-
-    // get start and end nodes of the path for upstream and downstream traversal, assign to start ORF
-    size_t upstream_source = start_ORF;
-    size_t downstream_source = start_ORF;
-
-    // check if there are overlapping ORFs on the start node and order
-    if (source_node_ORFs.size() >= 2)
+    // iterate over each entry in end_ORFs
+    for (const auto& end_ORF_pair : end_ORFs)
     {
-        // get strand of start_ORF
-        const auto& start_ORF_strand = std::get<5>(start_ORF_info);
-
-        // if 2 or more ORFs overlapping, order and then add each connecting edge
-        const auto ordered_ORFs = order_ORFs(_GraphVector, source_node_ORFs, source_node_id, ORF_vector);
-        for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
+        // scope for first item in end_ORF_pair
         {
-            ORF_edges.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
-        }
+            const auto& start_ORF = end_ORF_pair.first;
 
-        // assign upstream_source and downstream_source, as well as the new sink and source nodes for upstream/downstream traversal
-        upstream_source = ORF_edges.at(0).first;
-        const auto& upstream_ORF_info = ORF_vector.at(upstream_source);
-        const auto& upstream_ORF_strand = std::get<5>(upstream_ORF_info);
-        sink_node_id = std::get<0>(upstream_ORF_info).back();
-        downstream_source = ORF_edges.back().second;
-        const auto & downstream_ORF_info = ORF_vector.at(downstream_source);
-        const auto& downstream_ORF_strand = std::get<5>(upstream_ORF_info);
-        source_node_id = std::get<0>(upstream_ORF_info).at(0);
+            // get ORF info
+            const auto & start_ORF_info = ORF_vector.at(start_ORF);
 
-        // need to reverse sink node and source IDs if the upstream and downstream ORFs are reversed compared to original start ORF
-        if (start_ORF_strand != upstream_ORF_strand)
-        {
-            sink_node_id *= -1;
-        }
-        if (start_ORF_strand != downstream_ORF_strand)
-        {
-            source_node_id *= -1;
+            // get id for source_node and sink node for ORF
+            auto source_node_id = std::get<0>(start_ORF_info).at(0);
+            auto sink_node_id = std::get<0>(start_ORF_info).back();
+
+            // get source_node strand and node info
+            const auto& source_node_info = _GraphVector.at(abs(source_node_id) - 1);
+
+            // check if there are any overlapping ORFs on current node and order...
+            const auto& source_node_ORFs = source_node_info.get_ORFs(colour_ID);
+
+            // get start and end nodes of the path for upstream and downstream traversal, assign to start ORF
+            size_t upstream_source = start_ORF;
+            size_t downstream_source = start_ORF;
+
+            // check if there are overlapping ORFs on the start node and order
+            if (source_node_ORFs.size() >= 2)
+            {
+                // get strand of start_ORF
+                const auto& start_ORF_strand = std::get<5>(start_ORF_info);
+
+                // if 2 or more ORFs overlapping, order and then add each connecting edge
+                const auto ordered_ORFs = order_ORFs(_GraphVector, source_node_ORFs, source_node_id, ORF_vector);
+                for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
+                {
+                    ORF_edges.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
+                }
+
+                // assign upstream_source and downstream_source, as well as the new sink and source nodes for upstream/downstream traversal
+                upstream_source = ORF_edges.at(0).first;
+                const auto& upstream_ORF_info = ORF_vector.at(upstream_source);
+                const auto& upstream_ORF_strand = std::get<5>(upstream_ORF_info);
+                sink_node_id = std::get<0>(upstream_ORF_info).back();
+                downstream_source = ORF_edges.back().second;
+                const auto & downstream_ORF_info = ORF_vector.at(downstream_source);
+                const auto& downstream_ORF_strand = std::get<5>(upstream_ORF_info);
+                source_node_id = std::get<0>(upstream_ORF_info).at(0);
+
+                // need to reverse sink node and source IDs if the upstream and downstream ORFs are reversed compared to original start ORF
+                if (start_ORF_strand != upstream_ORF_strand)
+                {
+                    sink_node_id *= -1;
+                }
+                if (start_ORF_strand != downstream_ORF_strand)
+                {
+                    source_node_id *= -1;
+                }
+            }
+
+            // now traverse graph using DFS, finding next ORFs upstream and downstream of sink and source node respectively
+            // traverse upstream
+            {
+                auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, upstream_source, colour_ID, -1, ORF_vector, uninode_ORFs);
+                ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
+            }
+            // traverse downstream
+            {
+                auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, downstream_source, colour_ID, 1, ORF_vector, uninode_ORFs);
+                ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
+            }
+
+            // scope for second item in end_ORF_pair
+            if (end_ORF_pair.first != end_ORF_pair.second)
+            {
+                const auto& start_ORF = end_ORF_pair.second;
+
+                // get ORF info
+                const auto & start_ORF_info = ORF_vector.at(start_ORF);
+
+                // get id for source_node and sink node for ORF
+                auto source_node_id = std::get<0>(start_ORF_info).at(0);
+                auto sink_node_id = std::get<0>(start_ORF_info).back();
+
+                // get source_node strand and node info
+                const auto& source_node_info = _GraphVector.at(abs(source_node_id) - 1);
+
+                // check if there are any overlapping ORFs on current node and order...
+                const auto& source_node_ORFs = source_node_info.get_ORFs(colour_ID);
+
+                // get start and end nodes of the path for upstream and downstream traversal, assign to start ORF
+                size_t upstream_source = start_ORF;
+                size_t downstream_source = start_ORF;
+
+                // check if there are overlapping ORFs on the start node and order
+                if (source_node_ORFs.size() >= 2)
+                {
+                    // get strand of start_ORF
+                    const auto& start_ORF_strand = std::get<5>(start_ORF_info);
+
+                    // if 2 or more ORFs overlapping, order and then add each connecting edge
+                    const auto ordered_ORFs = order_ORFs(_GraphVector, source_node_ORFs, source_node_id, ORF_vector);
+                    for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
+                    {
+                        ORF_edges.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
+                    }
+
+                    // assign upstream_source and downstream_source, as well as the new sink and source nodes for upstream/downstream traversal
+                    upstream_source = ORF_edges.at(0).first;
+                    const auto& upstream_ORF_info = ORF_vector.at(upstream_source);
+                    const auto& upstream_ORF_strand = std::get<5>(upstream_ORF_info);
+                    sink_node_id = std::get<0>(upstream_ORF_info).back();
+                    downstream_source = ORF_edges.back().second;
+                    const auto & downstream_ORF_info = ORF_vector.at(downstream_source);
+                    const auto& downstream_ORF_strand = std::get<5>(upstream_ORF_info);
+                    source_node_id = std::get<0>(upstream_ORF_info).at(0);
+
+                    // need to reverse sink node and source IDs if the upstream and downstream ORFs are reversed compared to original start ORF
+                    if (start_ORF_strand != upstream_ORF_strand)
+                    {
+                        sink_node_id *= -1;
+                    }
+                    if (start_ORF_strand != downstream_ORF_strand)
+                    {
+                        source_node_id *= -1;
+                    }
+                }
+
+                // now traverse graph using DFS, finding next ORFs upstream and downstream of sink and source node respectively
+                // traverse upstream
+                {
+                    auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, upstream_source, colour_ID, -1, ORF_vector, uninode_ORFs);
+                    ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
+                }
+                // traverse downstream
+                {
+                    auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, downstream_source, colour_ID, 1, ORF_vector, uninode_ORFs);
+                    ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
+                }
+            }
         }
     }
-
-    // now traverse graph using DFS, finding next ORFs upstream and downstream of sink and source node respectively
-    // traverse upstream
-    {
-        auto next_ORFs = check_next_ORFs(_GraphVector, sink_node_id, upstream_source, colour_ID, -1, ORF_vector, uninode_ORFs);
-        ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
-    }
-    // traverse downstream
-    {
-        auto next_ORFs = check_next_ORFs(_GraphVector, source_node_id, downstream_source, colour_ID, 1, ORF_vector, uninode_ORFs);
-        ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
-    }
-
     return ORF_edges;
 }
 
