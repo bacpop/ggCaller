@@ -84,7 +84,7 @@ typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
 // stack for holding node ids, previous ORF ID, the previously traversed nodes, fully traversed ORFs and the path colours during DFS traversal for ORF ordering
-typedef std::stack<std::tuple<int, sdsl::bit_vector>> ORFStack;
+typedef std::stack<std::tuple<int, size_t, sdsl::bit_vector>> ORFStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
