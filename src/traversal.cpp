@@ -224,6 +224,9 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
     // set last traversed ORF
     size_t last_ORF = stream_source;
 
+    // set expected next node to 0 (as 0 cannot be used as node descriptor as 1 indexed
+    std::tuple<int, size_t, bool> expected_node = {0, 0, true};
+
     // get the colour array of the head node
     auto colour_arr = graph_vector.at(abs(head_node) - 1).full_colour();
 
@@ -235,7 +238,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
     node_set.insert(head_node * stream);
 
     // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
-    ORF_stack.push(std::make_tuple(head_node * stream, last_ORF, colour_arr));
+    ORF_stack.push(std::make_tuple(head_node * stream, last_ORF, expected_node, colour_arr));
 
     while(!ORF_stack.empty())
     {
@@ -243,7 +246,8 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
         auto path_tuple = ORF_stack.top();
         const auto& node_id = std::get<0>(path_tuple);
         last_ORF = std::get<1>(path_tuple);
-        colour_arr = std::get<2>(path_tuple);
+        expected_node = std::get<2>(path_tuple);
+        colour_arr = std::get<3>(path_tuple);
         ORF_stack.pop();
 
         // get unitig_dict entry in graph_vector
@@ -255,18 +259,19 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
         // iterate over neighbours
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
-            // make copy of last_ORF
+            // make copy of last_ORF and expected_node
             auto temp_last_ORF = last_ORF;
+            auto temp_expected_node = expected_node;
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const auto& neighbour_id = neighbour.first;
 
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (is_in)
-            {
-                continue;
-            }
+//            // check if unitig has already been traversed, and pass if repeat not specified
+//            const bool is_in = node_set.find(neighbour_id) != node_set.end();
+//            if (is_in)
+//            {
+//                continue;
+//            }
 
             // get reference to unitig_dict object for neighbour
             const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
@@ -275,21 +280,17 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             auto updated_colours_arr = colour_arr;
             updated_colours_arr &= neighbour_dict.full_colour();
 
-//            // test for colour vector
-//            std::vector<bool> updated_colours_arr_real(updated_colours_arr.size());
-//            std::vector<bool> colours_arr_real(updated_colours_arr.size());
-//            std::vector<bool> neighbour_dict_colours_arr_real(updated_colours_arr.size());
-//            for (int i = 0; i < updated_colours_arr.size(); i++)
-//            {
-//                updated_colours_arr_real[i] = (updated_colours_arr[i]) ? true : false;
-//                colours_arr_real[i] = (colour_arr[i]) ? true : false;
-//                neighbour_dict_colours_arr_real[i] = ((neighbour_dict.full_colour())[i]) ? true : false;
-//            }
-
             // determine if neighbour is in same colour as iteration, if not pass
             if (!updated_colours_arr[current_colour])
             {
                 continue;
+            }
+
+            // expected node not met, reset the temp_last_ORF to the stream_source
+            if (std::get<0>(temp_expected_node) != 0 && std::get<0>(temp_expected_node) != neighbour_id)
+            {
+                temp_last_ORF = stream_source;
+                temp_expected_node = {0, 0, true};
             }
 
             // add node to temp_node_set
@@ -332,46 +333,66 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 // if end not found, then need to continue to find the next completely traversed ORF
                 if (!end_found)
                 {
-                    ORF_stack.push({neighbour_id, ordered_ORFs.back(), updated_colours_arr});
-                }
+                    // need to assign next expected ORF
+                    bool forward = true;
+                    const auto& next_ORF_info = ORF_vector.at(ordered_ORFs.back());
+                    const auto& node_order = std::get<0>(next_ORF_info);
+                    auto it = std::find(node_order.begin(), node_order.end(), neighbour_id);
 
-//                // if the node is not fully traversed, do not add the edge
-//                // connecting this and the next, but do add for remaining in ordered_ORFs.
-//                if (!skip_pair)
-//                {
-//                    // add stream_source and first entry
-//                    connected_ORFs.push_back({last_ORF, ordered_ORFs.at(0)});
-//                } else
-//                {
-//                    ORF_stack.push({neighbour_id, updated_colours_arr});
-//                }
-//
-//                // add remaining ordered ORFs to connected_nodes vector
-//                for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
-//                {
-//                    // if ORFs are overlapping, don't want to add connections between an ORF and end of stream source
-//                    if (ordered_ORFs.at(i + 1) != stream_source)
-//                    {
-//                        connected_ORFs.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
-//                    }
-//                }
+                    if (it == node_order.end())
+                    {
+                        it = std::find(node_order.begin(), node_order.end(), neighbour_id * -1);
+                        forward = false;
+                    }
+
+                    auto index = std::distance(node_order.begin(), it);
+
+                    int next_node;
+
+                    // may be case that last entry is next_node but node is positive. If the node isn't start or end as expected, need to ignore.
+                    // (if end, should be negative, if front should be positive, else assume stream_source is next upstream ORF)
+                    if (forward && index == 0)
+                    {
+                        next_node = node_order.at(++index);
+                        ORF_stack.push({neighbour_id, ordered_ORFs.back(), {next_node, index, forward}, updated_colours_arr});
+                    } else if (!forward && index == node_order.size() - 1)
+                    {
+                        next_node = node_order.at(--index) * -1;
+                        ORF_stack.push({neighbour_id, ordered_ORFs.back(), {next_node, index, forward}, updated_colours_arr});
+                    } else
+                    {
+                        ORF_stack.push({neighbour_id, stream_source, {0, 0, true}, updated_colours_arr});
+                    }
+                }
             } else
             {
+                if (temp_last_ORF != stream_source)
+                {
+                    // calculate next expected node
+                    const auto& next_ORF_info = ORF_vector.at(temp_last_ORF);
+                    const auto& node_order = std::get<0>(next_ORF_info);
+
+                    auto index = std::get<1>(temp_expected_node);
+                    auto forward = std::get<2>(temp_expected_node);
+
+                    int next_node;
+
+                    if (forward)
+                    {
+                        next_node = node_order.at(++index);
+                    } else
+                    {
+                        next_node = node_order.at(--index) * -1;
+                    }
+
+                    temp_expected_node = {next_node, index, forward};
+                }
                 // add to stack
-                ORF_stack.push({neighbour_id, temp_last_ORF, updated_colours_arr});
+                ORF_stack.push({neighbour_id, temp_last_ORF, temp_expected_node, updated_colours_arr});
             }
         }
     }
     // update previous nodes encountered
     prev_node_set.insert(std::make_move_iterator(node_set.begin()), std::make_move_iterator(node_set.end()));
     return connected_ORFs;
-}
-
-template <class T>
-void clear_stack(std::stack<T>& to_clear)
-{
-    while (!to_clear.empty())
-    {
-        to_clear.pop();
-    }
 }
