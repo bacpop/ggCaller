@@ -18,13 +18,4 @@ PathVector traverse_graph(const GraphVector& graph_vector,
                           const bool repeat,
                           const size_t max_path_length);
 
-std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph_vector,
-                                                        const int& head_node,
-                                                        const size_t& stream_source,
-                                                        const size_t& current_colour,
-                                                        const int& stream,
-                                                        const ORFVector& ORF_vector,
-                                                        const size_t& max_ORF_path_length,
-                                                        std::unordered_set<int>& prev_node_set);
-
 #endif //TRAVERSAL_H

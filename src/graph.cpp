@@ -136,7 +136,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
         PathVector all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
 
         // get overlapping paths for ORF connectivity determination
-        _PathOverlapMap = std::move(overlapping_paths(_GraphVector, all_paths));
+        //_PathOverlapMap = std::move(overlapping_paths(_GraphVector, all_paths));
 
         // if no FM_fasta_file specified, cannot generate FM Index
         if (FM_fasta_file == "NA")
@@ -170,45 +170,51 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 }
 
 std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_ID,
-                                                           const std::unordered_map<size_t, std::vector<size_t>>& ORF_path_map,
                                                            const ORFVector& ORF_vector,
-                                                           const std::unordered_set<size_t>& target_ORFs)
+                                                           const std::vector<size_t>& target_ORFs_upstream,
+                                                           const std::vector<size_t>& target_ORFs_downstream)
 {
     // temporary
     size_t max_ORF_path_length = 10000;
     
-    // create sets to store ORFs that have not been paired upstream or downstream
-    std::unordered_set<size_t> unpaired_downstream = target_ORFs;
-    std::unordered_set<size_t> unpaired_upstream = target_ORFs;
+    // merge vectors into single set to add information
+    std::unordered_set<size_t> target_ORFs;
+    std::merge(target_ORFs_upstream.begin(), target_ORFs_upstream.end(),
+                target_ORFs_downstream.begin(), target_ORFs_downstream.end(),
+                std::inserter(target_ORFs, target_ORFs.begin()));
+
+
+    std::vector<std::pair<size_t, size_t>> connected_ORFs;
 
     // first traverse the path to determine connected ORFs
-    std::vector<std::pair<size_t, size_t>> connected_ORFs = std::move(pair_ORF_paths(_PathOverlapMap, ORF_path_map,
-                                                                      ORF_vector, target_ORFs, unpaired_downstream,
-                                                                      unpaired_upstream));
+//    std::vector<std::pair<size_t, size_t>> connected_ORFs = std::move(pair_ORF_paths(_PathOverlapMap, ORF_path_map,
+//                                                                      ORF_vector, target_ORFs, unpaired_downstream,
+//                                                                      unpaired_upstream));
 
     // merge unpaired_downstream and unpaired_upstream into new target ORFs for further traversal
-    std::unordered_set<size_t> updated_target_ORFs;
-    std::merge(unpaired_downstream.begin(), unpaired_downstream.end(),
-               unpaired_upstream.begin(), unpaired_upstream.end(),
-               std::inserter(updated_target_ORFs, updated_target_ORFs.begin()));
+//    std::unordered_set<size_t> updated_target_ORFs;
+//    std::merge(unpaired_downstream.begin(), unpaired_downstream.end(),
+//               unpaired_upstream.begin(), unpaired_upstream.end(),
+//               std::inserter(updated_target_ORFs, updated_target_ORFs.begin()));
 
     // check if all ORFs have been paired
-    if (!updated_target_ORFs.empty())
-    {
-        add_ORF_info (_GraphVector, colour_ID, updated_target_ORFs, ORF_vector);
-    }
+//    if (!updated_target_ORFs.empty())
+//    {
+//        add_ORF_info (_GraphVector, colour_ID, updated_target_ORFs, ORF_vector);
+//    }
 
-    // conduct DBG traversal for upstream and downstream
-    if (!unpaired_upstream.empty())
-    {
-        auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, unpaired_upstream, ORF_vector, max_ORF_path_length, -1);
-        connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
-    }
-    if (!unpaired_downstream.empty())
-    {
-        auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, unpaired_downstream, ORF_vector, max_ORF_path_length, 1);
-        connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
-    }
+    add_ORF_info(_GraphVector, colour_ID, target_ORFs, ORF_vector);
+
+    // initialise prev_node_set to avoid same ORFs being traversed from again
+    std::unordered_set<int> prev_node_set;
+
+    // conduct DBG traversal for upstream...
+    auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs_upstream, ORF_vector, max_ORF_path_length, -1, prev_node_set);
+    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
+
+    // ... and downstream
+    new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs_downstream, ORF_vector, max_ORF_path_length, 1, prev_node_set);
+    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
     
     return connected_ORFs;
 }
