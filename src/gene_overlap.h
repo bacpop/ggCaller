@@ -9,10 +9,10 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap);
 
-// checks how ORF ends are ordered if they share a common node
-std::vector<size_t> order_ORFs(const GraphVector& graph_vector,
-                               const std::unordered_set<size_t>& node_ORFs,
-                               const int& node_id,
-                               const ORFVector& ORF_vector);
+//testing
+std::string generate_sequence2(const std::vector<int>& nodelist,
+                               const std::vector<indexPair>& node_coords,
+                               const size_t& overlap,
+                               const GraphVector& _GraphVector);
 
 #endif //BIFROST_API_GGCALLER_H

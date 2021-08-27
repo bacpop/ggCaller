@@ -233,7 +233,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)
 
         # get neighbouring ORFs for source and sink nodes in high scoring paths
-        next_nodes = set(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
+        next_nodes = set(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector, 5000))
         # high_scoring_ORFs.update(shd_arr[0].get_neighbouring_ORFs(colour_ID, end_nodes, ORF_vector))
 
         print("Post-traversal")

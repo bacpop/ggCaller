@@ -6,21 +6,23 @@
 #include "indexing.h"
 
 // call_ORFs
-ORFNodeMap generate_ORFs(const GraphVector& graph_vector,
-                         const std::vector<std::string>& stop_codons,
-                         const std::vector<std::string>& start_codons,
-                         const std::vector<int>& unitig_path,
-                         const int& overlap,
-                         const size_t min_len,
-                         const bool is_ref,
-                         const fm_index_coll& fm_idx);
+void generate_ORFs(ORFNodeMap& ORF_node_map,
+                   const GraphVector& graph_vector,
+                   const std::vector<std::string>& stop_codons,
+                   const std::vector<std::string>& start_codons,
+                   const std::vector<int>& unitig_path,
+                   const size_t& path_ID,
+                   const int& overlap,
+                   const size_t min_len,
+                   const bool is_ref,
+                   const fm_index_coll& fm_idx);
 
-std::tuple<std::string, std::vector<int>, std::vector<indexPair>> calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
-                                                                                    const std::vector<int>& nodelist,
-                                                                                    const std::vector<std::vector<size_t>>& node_ranges,
-                                                                                    const int& overlap);
+ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
+                           const std::vector<int>& nodelist,
+                           const std::vector<std::vector<size_t>>& node_ranges,
+                           const int& overlap);
 
-ORFVector call_ORFs(const AllPaths& all_paths,
+ORFVector call_ORFs(const PathVector& all_paths,
                     const GraphVector& graph_vector,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& start_codons_for,
@@ -33,5 +35,9 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map);
 
 NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map);
+
+void update_ORF_node_map (const size_t& ORF_hash,
+                          ORFNodeVector& ORF_node_vector,
+                          ORFNodeMap& ORF_node_map);
 
 #endif //BIFROST_API_GGCALLER_H

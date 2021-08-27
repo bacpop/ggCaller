@@ -73,18 +73,20 @@ using seqan3::operator""_dna5;
 typedef std::vector<std::vector<size_t>> NodeColourVector;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information and relative strand
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
+// tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, indexPair> ORFCoords;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand, vector of paths originated from and coordinates, and 5p and 3p coordinates
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, size_t, indexPair> ORFNodeVector;
 // maps an ORF node sequence to its path through graph
-typedef robin_hood::unordered_map<std::string, ORFNodeVector> ORFNodeMap;
+typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
 typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
-// stack for holding node ids, previous ORF ID, the previously traversed nodes, fully traversed ORFs and the path colours during DFS traversal for ORF ordering
-typedef std::stack<std::tuple<int, size_t, std::tuple<int, size_t, bool>, sdsl::bit_vector>> ORFStack;
+// stack for holding node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
+typedef std::stack<std::tuple<int, size_t, std::tuple<int, size_t, bool>, sdsl::bit_vector, size_t>> ORFStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // A vector of all paths generated from recursive traversal
@@ -93,5 +95,9 @@ typedef std::vector<PathVector> AllPaths;
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
+// mapping for each path with overlapping path id and how overlapping path is orientated relative to current path
+typedef std::unordered_map<size_t, std::vector<std::vector<std::tuple<int, size_t, size_t>>>> PathOverlapMap;
+// stack for holding next paths to be traversed
+
 
 #endif //DEFINITIONS_H

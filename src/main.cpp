@@ -195,6 +195,21 @@ int main(int argc, char *argv[]) {
             ORF_count++;
         }
 
+        // generate a map to hold path IDs and associated ORFs
+        std::unordered_map<size_t, std::vector<size_t>> ORF_path_map;
+        std::unordered_set<size_t> target_ORFs;
+        for (const auto ID : known_gene_ids)
+        {
+            const auto& ORF_info = ORF_vector.at(ID);
+            ORF_path_map[std::get<6>(ORF_info)].push_back(ID);
+            target_ORFs.insert(ID);
+//            for (const auto& path : std::get<6>(ORF_info))
+//            {
+//                ORF_path_map[path].push_back(ID);
+//            }
+        }
+
+
         // get paired references
         std::vector<std::pair<size_t,size_t>> paired_IDs;
         for (size_t i = 0; i < fasta_order.size(); i++)
@@ -215,14 +230,17 @@ int main(int argc, char *argv[]) {
             ORF_IDs.push_back(new_pair);
         }
 
-        // iterate over random numbers, inserting and then finding nearest ORFs
-//        unitig_graph.add_ORF_info(colour_ID, random_ORFs, ORF_vector);
-        unitig_graph.add_ORF_info(colour_ID, ORF_IDs, ORF_vector);
 
-        //const size_t start_ORF = ORF_IDs.at(0).first;
+        auto neighbours = unitig_graph.connect_ORFs(colour_ID, ORF_path_map, ORF_vector, target_ORFs);
 
-        //auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, random_ORFs, ORF_vector);
-        auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, ORF_IDs, ORF_vector);
+////        // iterate over random numbers, inserting and then finding nearest ORFs
+//////        unitig_graph.add_ORF_info(colour_ID, random_ORFs, ORF_vector);
+////        unitig_graph.add_ORF_info(colour_ID, ORF_IDs, ORF_vector);
+////
+////        //const size_t start_ORF = ORF_IDs.at(0).first;
+//
+//        //auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, random_ORFs, ORF_vector);
+//        auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, ORF_IDs, ORF_vector, 2500);
 
         // add to ORF_print_map for writing to file
         std::vector<bool> empty_colours_vector(nb_colours, 0);
