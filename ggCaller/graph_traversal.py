@@ -223,33 +223,34 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         print("Pre-traversal:")
         print(high_scoring_ORFs)
 
+        # generate list of target ORFs, removing duplicates
+        target_ORFs = list(set([x for f in high_scoring_ORFs for x in (f[0], f[-1])]))
+
         # pull out pairs of source and sink nodes for graph traversal
-        target_ORFs_upstream = []
-        target_ORFs_downstream = []
-        for ORF_path in high_scoring_ORFs:
-            # if length is one, add to both lists
-            if len(ORF_path) == 1:
-                target_ORFs_upstream.append(ORF_path[0])
-                target_ORFs_downstream.append(ORF_path[0])
-            else:
-                # look at first entry strand
-                if ORF_vector[ORF_path[0]][5]:
-                    target_ORFs_upstream.append(ORF_path[0])
-                else:
-                    target_ORFs_downstream.append(ORF_path[0])
+        # target_ORFs_upstream = []
+        # target_ORFs_downstream = []
+        # for ORF_path in high_scoring_ORFs:
+        #     # if length is one, add to both lists
+        #     if len(ORF_path) == 1:
+        #         target_ORFs_upstream.append(ORF_path[0])
+        #         target_ORFs_downstream.append(ORF_path[0])
+        #     else:
+        #         # look at first entry strand
+        #         if ORF_vector[ORF_path[0]][5]:
+        #             target_ORFs_upstream.append(ORF_path[0])
+        #         else:
+        #             target_ORFs_downstream.append(ORF_path[0])
+        #
+        #         # look at last entry strand
+        #         if ORF_vector[ORF_path[-1]][5]:
+        #             target_ORFs_downstream.append(ORF_path[-1])
+        #         else:
+        #             target_ORFs_upstream.append(ORF_path[-1])
 
-                # look at last entry strand
-                if ORF_vector[ORF_path[-1]][5]:
-                    target_ORFs_downstream.append(ORF_path[-1])
-                else:
-                    target_ORFs_upstream.append(ORF_path[-1])
+        print("target_ORFs:")
+        print(target_ORFs)
 
-        print("target_ORFs_upstream:")
-        print(target_ORFs_upstream)
-        print("target_ORFs_downstream:")
-        print(target_ORFs_downstream)
-
-        next_nodes = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs_upstream, target_ORFs_downstream))
+        next_nodes = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs))
 
         # add ORF information to graph for specific colour
         # shd_arr[0].add_ORF_info(colour_ID, end_nodes, ORF_vector)

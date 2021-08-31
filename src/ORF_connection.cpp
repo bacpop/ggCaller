@@ -528,7 +528,7 @@
 
 void add_ORF_info (GraphVector& graph_vector,
                   const size_t& colour_ID,
-                  const std::unordered_set<size_t>& target_ORFs,
+                  const std::vector<size_t>& target_ORFs,
                   const ORFVector& ORF_vector)
 {
     for (const auto & source : target_ORFs)
@@ -672,6 +672,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const GraphVector& graph_
         // decide whether to traverse from source (upstream) or sink (downstream)
         int start_node = (stream > 0) ? sink_node_id : source_node_id;
 
+        // check if node has been traversed previously in opposite direction i.e. ORF has already been paired up/downstream
         if (prev_node_set.find(start_node * stream * -1) == prev_node_set.end())
         {
             // get source_node and sink_node info
@@ -714,6 +715,9 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const GraphVector& graph_
             }
 
             prev_node_set.insert(start_node);
+        } else
+        {
+            int test = 1;
         }
 
 //            // traverse downstream. Check that sink node hasn't been traversed in reverse, otherwise ORF has been paired downstream already.
@@ -879,14 +883,20 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                 const auto ordered_ORFs = order_ORFs_in_node(graph_vector, next_ORFs, neighbour_id, ORF_vector);
 
                 // add first entry and stream_source
-                connected_ORFs.push_back({stream_source, ordered_ORFs.at(0)});
+                // add ORFs so that lowest ORF_ID is added first (to remove redundant edges)
+                std::pair<size_t, size_t> ORF_pair;
+                ORF_pair.first = (stream_source < ordered_ORFs.at(0)) ? stream_source : ordered_ORFs.at(0);
+                ORF_pair.second = (stream_source < ordered_ORFs.at(0)) ? ordered_ORFs.at(0) : stream_source;
+                connected_ORFs.push_back(std::move(ORF_pair));
 
                 // pair all entries
                 if (ordered_ORFs.size() > 1)
                 {
                     for (int i = 0; i < ordered_ORFs.size() - 1; i++)
                     {
-                        connected_ORFs.push_back({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
+                        ORF_pair.first = (ordered_ORFs.at(i) < ordered_ORFs.at(i + 1)) ? ordered_ORFs.at(i) : ordered_ORFs.at(i + 1);
+                        ORF_pair.second = (ordered_ORFs.at(i) < ordered_ORFs.at(i + 1)) ? ordered_ORFs.at(i + 1) : ordered_ORFs.at(i);
+                        connected_ORFs.push_back(std::move(ORF_pair));;
                     }
                 }
             }

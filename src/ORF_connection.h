@@ -24,9 +24,9 @@
 //                                     const int& stream);
 
 void add_ORF_info (GraphVector& graph_vector,
-                   const size_t& colour_ID,
-                   const std::unordered_set<size_t>& target_ORFs,
-                   const ORFVector& ORF_vector);
+                  const size_t& colour_ID,
+                  const std::vector<size_t>& target_ORFs,
+                  const ORFVector& ORF_vector);
 
 std::vector<size_t> order_ORFs_in_node(const GraphVector& graph_vector,
                                        const std::unordered_set<size_t>& node_ORFs,

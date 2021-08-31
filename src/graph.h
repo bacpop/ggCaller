@@ -47,8 +47,7 @@ class Graph {
     // search orientated paths and DBG to connect ORFs
     std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t& colour_ID,
                                                        const ORFVector& ORF_vector,
-                                                       const std::vector<size_t>& target_ORFs_upstream,
-                                                       const std::vector<size_t>& target_ORFs_downstream);
+                                                       const std::vector<size_t>& target_ORFs);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
