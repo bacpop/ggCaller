@@ -161,6 +161,7 @@ def main():
 
     # intiialise true_genes dictionary
     true_genes = {}
+    high_scoring_ORF_edges = {}
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls...")
@@ -178,7 +179,7 @@ def main():
 
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:
-            for colour_ID, col_true_genes in pool.map(
+            for colour_ID, gene_dict, ORF_edges in pool.map(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.path, is_ref=options.not_ref, no_filter=options.no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=options.orf,
@@ -187,24 +188,26 @@ def main():
                             input_colours=input_colours,
                             aa_kmer_set=aa_kmer_set),
                     enumerate(node_colour_vector)):
+                true_genes[colour_ID] = gene_dict
+                high_scoring_ORF_edges[colour_ID] = ORF_edges
                 # iterate over entries in col_true_genes to generate the sequences
-                for ORFNodeVector in col_true_genes:
-                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    if gene not in true_genes:
-                        # create tuple to hold ORF sequence, colours and graph traversal information
-                        empty_colours_list = ["0"] * nb_colours
-                        true_genes[gene] = (empty_colours_list, ORFNodeVector)
-                    # update colours with current colour_ID
-                    true_genes[gene][0][colour_ID] = "1"
+                # for ORFNodeVector in col_true_genes:
+                #     gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                #     if gene not in true_genes:
+                #         # create tuple to hold ORF sequence, colours and graph traversal information
+                #         empty_colours_list = ["0"] * nb_colours
+                #         true_genes[gene] = (empty_colours_list, ORFNodeVector)
+                #     # update colours with current colour_ID
+                #     true_genes[gene][0][colour_ID] = "1"
 
-    print("Generating fasta file of gene calls...")
-    # print output to file
-    ORF_count = 1
-    with open(options.out, "w") as f:
-        for gene, info_pair in true_genes.items():
-            colour_str = "".join(info_pair[0])
-            f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
-            ORF_count += 1
+    # print("Generating fasta file of gene calls...")
+    # # print output to file
+    # ORF_count = 1
+    # with open(options.out, "w") as f:
+    #     for gene, info_pair in true_genes.items():
+    #         colour_str = "".join(info_pair[0])
+    #         f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
+    #         ORF_count += 1
 
     print("Finished.")
 

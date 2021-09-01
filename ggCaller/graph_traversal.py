@@ -188,8 +188,6 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
-    print("started: " + str(colour_ID))
-
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -200,45 +198,41 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                                                        stop_codons_for, start_codons, min_ORF_length,
                                                        max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-    # if no filter specified, just copy ORF_vector to true_genes
+    # initialise return dictionaries
+    gene_dict = {}
+    high_scoring_ORF_edges = []
+
+    # if no filter specified, just copy ORF_vector to gene_dict with dictionary comprehension
     if no_filter:
-        true_genes = ORF_vector
+        gene_dict = {i: ORF_vector[i] for i in range(0, len(ORF_vector))}
     else:
         # calculate scores for genes
         ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2],
                                      aa_kmer_set)
 
         # determine highest scoring genes, stored in list of lists
-        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+        high_scoring_ORF_edges = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
-        # print("Generating fasta file of gene calls...")
-        # # print output to file
-        # ORF_count = 1
-        # with open("test_ORFs_plasmid_clique_119_230_372.fasta", "w") as f:
-        #     for entry in high_scoring_ORFs:
-        #         for sub_entry in entry:
-        #             gene = shd_arr[0].generate_sequence(ORF_vector[sub_entry][0], ORF_vector[sub_entry][1], overlap)
-        #             f.write(">" + str(sub_entry) + "\n" + gene + "\n")
-
-        print("Pre-traversal:")
-        print(high_scoring_ORFs)
+        # generate a dictionary of all true gene info
+        for entry in high_scoring_ORF_edges:
+            for sub_entry in entry:
+                gene_dict[sub_entry] = ORF_vector[sub_entry]
 
         # generate list of target ORFs, removing duplicates
-        target_ORFs = list(set([x for f in high_scoring_ORFs for x in (f[0], f[-1])]))
+        target_ORFs = list(set([x for f in high_scoring_ORF_edges for x in (f[0], f[-1])]))
 
-        print("target_ORFs:")
-        print(target_ORFs)
+        # determine next ORFs for each terminal ORF in high_scoring_ORF_edges
+        next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs))
 
-        next_nodes = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs))
+        # determine redundant edges in high_scoring_ORFs
+        redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in high_scoring_ORF_edges if len(i) > 1])
 
-        print("Post-traversal")
-        print(next_nodes)
+        # remove any ORFs with no connections in high_scoring_ORFs
+        high_scoring_ORF_edges = [i for i in high_scoring_ORF_edges if len(i) > 1]
 
-        # initiate true genes list
-        # true_genes = [None] * len(high_scoring_ORFs)
+        # remove redundant edges between high_scoring_ORFs and next_nodes
+        for edge in next_ORFs:
+            if edge not in redundant_edges:
+                high_scoring_ORF_edges.append(edge)
 
-        # for index, ORF_id in enumerate(high_scoring_ORFs):
-        #     # add only high scoring ORFs to true_genes
-        #     true_genes[index] = ORF_vector[ORF_id]
-        print("finished: " + str(colour_ID))
-    return colour_ID  # , true_genes
+    return colour_ID, gene_dict, high_scoring_ORF_edges
