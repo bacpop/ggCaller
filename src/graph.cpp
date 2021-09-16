@@ -190,22 +190,26 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_
     return connected_ORFs;
 }
 
-void Graph::generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
-                              const size_t& overlap,
-                              const double& id_cutoff,
-                              const double& len_diff_cutoff)
+std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+                                                                  const size_t& overlap,
+                                                                  const double& id_cutoff,
+                                                                  const double& len_diff_cutoff)
 {
-    // determine identity between ORFs
-    const auto ORF_group_tuple = group_ORFs(colour_ORF_map, _GraphVector);
+    // group ORFs together based on single shared k-mer
+    auto ORF_group_tuple = group_ORFs(colour_ORF_map, _GraphVector);
 
     //unpack ORF_group_tuple
-    const auto& ORF_mat_vector = std::get<0>(ORF_group_tuple);
-    const auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
-    const auto& centroid_vector = std::get<2>(ORF_group_tuple);
+    auto& ORF_mat_vector = std::get<0>(ORF_group_tuple);
+    auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
+    auto& centroid_vector = std::get<2>(ORF_group_tuple);
 
     // generate clusters for ORFs based on identity
-    const auto cluster_vector = produce_clusters(colour_ORF_map, _GraphVector, overlap, ORF_mat_vector,
+    auto cluster_map = produce_clusters(colour_ORF_map, _GraphVector, overlap, ORF_mat_vector,
                                                    ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
+
+    // generate return pair of mappings of ORF IDs and clusters
+    const auto return_pair = std::make_pair(ORF_mat_vector, cluster_map);
+    return return_pair;
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

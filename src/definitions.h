@@ -40,8 +40,8 @@
 #include <seqan3/alphabet/aminoacid/aa27.hpp>
 
 // pybind11 headers
-//#include <pybind11/pybind11.h>
-//#include <pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -53,7 +53,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-//namespace py = pybind11;
+namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -107,11 +107,10 @@ typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, si
 // mapping for each path with overlapping path id and how overlapping path is orientated relative to current path
 typedef std::unordered_map<size_t, std::vector<std::vector<std::tuple<int, size_t, size_t>>>> PathOverlapMap;
 // vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
-//typedef std::vector<std::pair<std::pair<size_t, size_t>, std::unordered_map<size_t, std::pair<double, double>>>> ORFMatrixVector;
 typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
-// vector for holding identity measure between ORFs (first entry is longer ORF (colour_ID, ORF_ID), second is shorter ORF, final is pair of %identity and % length of shorter ORF compared to longer ORF)
-typedef std::vector<std::tuple<std::pair<size_t, size_t>, std::pair<size_t, size_t>, std::pair<double, double>>> IndentityVector;
-// vector holding tuple of each cluster
-typedef std::vector<std::pair<std::pair<size_t, size_t>, std::vector<std::pair<size_t, size_t>>>> ClusterVector;
+// tuple containing grouping information for ORFs filtered by Balrog
+typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
+// map of ORFs to clusters, with centroid as key
+typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 
 #endif //DEFINITIONS_H
