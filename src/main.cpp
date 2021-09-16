@@ -8,6 +8,7 @@
 #include "match_string.h"
 #include "gene_overlap.h"
 #include "graph.h"
+#include "ORF_clustering.h"
 
 // parse a fasta and return sequences
 std::vector<std::string> parse_fasta (const std::string& fasta)
@@ -106,8 +107,8 @@ int main(int argc, char *argv[]) {
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
 
     GraphTuple graph_tuple = unitig_graph.read(
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
             stop_codons_for, stop_codons_rev, num_threads, is_ref);
 
     const auto& node_colour_vector = std::get<0>(graph_tuple);
@@ -117,6 +118,10 @@ int main(int argc, char *argv[]) {
 
     // initialise print map
     robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
+
+    // initialise colour_ORF_map
+    std::unordered_map<size_t, ORFNodeMap> colour_ORF_map;
+
 
     //#pragma omp parallel for
     for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
@@ -140,45 +145,10 @@ int main(int argc, char *argv[]) {
 //        }
 
         // parse ORFs known to be genes
-        auto known_genes = parse_fasta("/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_119_230_372_test_ORFs_for_panaroo.fasta");
-        // for group 3
-//        const std::vector<int> fasta_order = {91,50,67,88,5,101,98,78,17,78,66,101,98,50,37,67,5,101,88,33,20,89,5,17,78,80,98,66,7,82,100,91,89,67,17,5};
-//        const std::vector<std::pair<size_t,size_t>> original_pairings = {{17, 17}, {89, 88}, {91, 66}, {67, 50}, {5, 5}, {101, 101}, {98, 78}};
-        //const std::vector<std::pair<size_t,size_t>> fasta_pairings = {{8, 8}, {10, 0}, {3, 21}, {4, 4}, {7, 6}, {1, 2}, {5, 5}};
-        //for group 2
-        //const std::vector<int> fasta_order = {118,68,59,107,46,121,15,140,194,117,148,62,177,72,168,152,60,3,91,7,119,2,187,111,94,169,84,115,162,160};
-        //const std::vector<std::pair<size_t,size_t>> fasta_pairings = {{0, 0}, {1, 2}, {3, 4}, {5, 5}, {6, 6}, {7, 7}, {11, 12}, {13, 13}, {14, 14}, {15, 15}, {16, 18}, {19, 19}, {20, 25}, {26, 26}, {27, 28}, {29, 29}};
-        // for clique 119_230_372
-        const std::vector<size_t> fasta_order = {51,957,716,780,336,506,487,862,981,20,926,1009,216,1061,1109,877,636,822,285,776,895,640,746,248,965,733,382,992,31,937,705,943,833,732,337,482,305,499,410,250,378,921,477,757,88,634,1000,344,170,768,527,475,954,10,577,57,874,433,358,61,1033,498,251,859,865,810,569,218,697,1002,346,892,1066,715,834,59,68,1099,1108,260,641,330,876,403,226,946,75,574,849,861,308,134,1015,872,982,860,323,454,1025,678,188,324,573,451,942,405,109,588,347,173};
-        const std::vector<std::pair<size_t,size_t>> original_pairings = {{51, 51}, {957, 957}, {716, 716}, {780, 780}, {336, 487}, {862, 862}, {981, 981}, {20, 20}, {926, 926}, {1009, 1061}, {1109, 1109}, {877, 877}, {636, 636}, {822, 822}, {285, 285}, {776, 776}, {895, 895}, {640, 746}, {248, 248}, {965, 965}, {733, 733}, {382, 382}, {992, 992}, {31, 31}, {937, 937}, {705, 705}, {943, 943}, {833, 833}, {732, 337}, {482, 305}, {499, 410}, {250, 250}, {378, 378}, {921, 921}, {477, 757}, {88, 88}, {634, 634}, {1000, 1000}, {344, 344}, {170, 170}, {768, 768}, {527, 527}, {475, 475}, {954, 954}, {10, 577}, {57, 433}, {358, 61}, {1033, 1033}, {498, 251}, {859, 859}, {865, 865}, {810, 810}, {569, 569}, {218, 218}, {697, 697}, {1002, 1002}, {346, 346}, {892, 892}, {1066, 1066}, {715, 715}, {834, 834}, {59, 59}, {68, 68}, {1099, 1099}, {1108, 1108}, {260, 641}, {330, 330}, {876, 876}, {403, 403}, {226, 226}, {946, 946}, {75, 574}, {849, 861}, {308, 308}, {134, 134}, {1015, 872}, {982, 982}, {860, 860}, {323, 323}, {454, 454}, {1025, 324}, {573, 573}, {451, 451}, {942, 942}, {405, 405}, {109, 109}, {588, 588}, {347, 347}, {173, 173}};
-        std::vector<std::pair<size_t,size_t>> fasta_pairings;
+        auto known_genes = parse_fasta("/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_119_230_372_test_ORFs_for_panaroo_new.fasta");
+        const std::vector<size_t> fasta_order = {1176, 327, 1219, 826, 233, 990, 222, 606, 871, 1127, 713, 563, 1146, 484, 490, 493, 752, 665, 496, 981, 852, 618, 345, 598, 836, 792, 115, 476, 471, 474, 1113, 136, 520, 99, 932, 697, 923, 1215, 744, 971, 846, 938, 1057, 1118, 571, 867, 687, 953, 975, 645, 117, 1061, 53, 65, 605, 1145, 556, 373, 652, 1088, 384, 276, 30, 928, 1233, 992, 1175, 1209, 219, 1207, 439, 1104, 551, 104, 899, 946, 1016, 180, 845, 302, 1208, 607, 770, 107, 336, 632, 121, 514, 38, 466, 39, 91, 375, 221, 1144, 339, 492, 644, 74, 468, 1131, 379, 828, 743, 802, 945, 1070, 1106, 661, 21, 358, 879};
+        const std::vector<size_t> original_targets = {514, 520, 21, 30, 1057, 1061, 38, 551, 39, 556, 1070, 563, 53, 571, 1088, 65, 1106, 91, 605, 606, 1118, 607, 99, 1127, 104, 618, 107, 115, 117, 1144, 121, 1145, 1146, 645, 136, 652, 1175, 1176, 665, 687, 180, 1207, 1208, 697, 1209, 1215, 1233, 219, 221, 222, 744, 752, 770, 276, 792, 802, 302, 836, 845, 846, 336, 339, 852, 345, 358, 871, 879, 373, 375, 384, 899, 923, 928, 932, 938, 945, 946, 953, 975, 466, 981, 471, 474, 476, 992, 484, 490, 492, 493, 496, 1016};
 
-        // create fasta_pairings from known indices
-        for (const auto& original_pair : original_pairings)
-        {
-            std::pair<size_t,size_t> new_pairing;
-            auto it = std::find(fasta_order.begin(), fasta_order.end(), original_pair.first);
-
-            if (it == fasta_order.end())
-            {
-                cout << "Error, index " << original_pair.first << " not found" << endl;
-                break;
-            }
-
-            new_pairing.first = std::distance(fasta_order.begin(), it);
-
-            it = std::find(fasta_order.begin(), fasta_order.end(), original_pair.second);
-
-            if (it == fasta_order.end())
-            {
-                cout << "Error, index" << original_pair.second << "not found" << endl;
-                break;
-            }
-
-            new_pairing.second = std::distance(fasta_order.begin(), it);
-
-            fasta_pairings.push_back(new_pairing);
-        }
 
         // sequence vector for testing
         std::vector<size_t> known_gene_ids(fasta_order.size());
@@ -196,77 +166,68 @@ int main(int argc, char *argv[]) {
         }
 
         // generate a map to hold path IDs and associated ORFs
-        std::unordered_map<size_t, std::vector<size_t>> ORF_path_map;
-        std::unordered_set<size_t> target_ORFs;
-        for (const auto ID : known_gene_ids)
+        std::vector<std::pair<size_t, size_t>> original_to_new_IDs;
+        std::vector<size_t> target_ORFs(original_targets.size());
+        for (int i = 0; i < known_gene_ids.size(); i++)
         {
-            const auto& ORF_info = ORF_vector.at(ID);
-            ORF_path_map[std::get<6>(ORF_info)].push_back(ID);
-            target_ORFs.insert(ID);
-//            for (const auto& path : std::get<6>(ORF_info))
-//            {
-//                ORF_path_map[path].push_back(ID);
-//            }
-        }
+            const auto& ORF_info = ORF_vector.at(known_gene_ids.at(i));
+            auto it =  std::find(original_targets.begin(), original_targets.end(), fasta_order.at(i));
 
-
-        // get paired references
-        std::vector<std::pair<size_t,size_t>> paired_IDs;
-        for (size_t i = 0; i < fasta_order.size(); i++)
-        {
-            if (known_gene_ids[i])
+            if (it != original_targets.end())
             {
-                std::pair<size_t,size_t> new_pair (fasta_order[i], known_gene_ids[i]);
-                paired_IDs.push_back(new_pair);
+                size_t index = it - original_targets.begin();
+                target_ORFs[index] = known_gene_ids.at(i);
             }
+
+            std::pair<size_t, size_t> new_pair;
+            new_pair.first = fasta_order.at(i);
+            new_pair.second = known_gene_ids.at(i);
+
+            original_to_new_IDs.push_back(new_pair);
         }
 
-        //pair up new ORF_IDs
-        std::vector<std::pair<size_t,size_t>> ORF_IDs;
-
-        for (const auto& ID_pair : fasta_pairings)
+        // generate a map that holds only high scoring ORFs
+        ORFNodeMap ORF_node_map;
+        for (size_t i = 0; i < ORF_vector.size(); i++)
         {
-            std::pair<size_t,size_t> new_pair (known_gene_ids[ID_pair.first], known_gene_ids[ID_pair.second]);
-            ORF_IDs.push_back(new_pair);
+            ORF_node_map[i] = ORF_vector.at(i);
         }
 
+        // move to colour_ORF_map
+        colour_ORF_map[colour_ID] = std::move(ORF_node_map);
 
-        auto neighbours = unitig_graph.connect_ORFs(colour_ID, ORF_path_map, ORF_vector, target_ORFs);
+        //auto neighbours = unitig_graph.connect_ORFs(colour_ID, ORF_vector, target_ORFs, 10000);
 
-////        // iterate over random numbers, inserting and then finding nearest ORFs
-//////        unitig_graph.add_ORF_info(colour_ID, random_ORFs, ORF_vector);
-////        unitig_graph.add_ORF_info(colour_ID, ORF_IDs, ORF_vector);
-////
-////        //const size_t start_ORF = ORF_IDs.at(0).first;
+
+//        // add to ORF_print_map for writing to file
+//        std::vector<bool> empty_colours_vector(nb_colours, 0);
+//        for (const auto ORF : ORF_vector)
+//        {
+//            // generate ORF seq
+//            const auto ORF_sequence = std::move(unitig_graph.generate_sequence(std::get<0>(ORF), std::get<1>(ORF), overlap));
+//            const auto TIS_sequence = std::move(unitig_graph.generate_sequence(std::get<3>(ORF), std::get<4>(ORF), overlap));
 //
-//        //auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, random_ORFs, ORF_vector);
-//        auto neighbours = unitig_graph.get_neighbouring_ORFs(colour_ID, ORF_IDs, ORF_vector, 2500);
-
-        // add to ORF_print_map for writing to file
-        std::vector<bool> empty_colours_vector(nb_colours, 0);
-        for (const auto ORF : ORF_vector)
-        {
-            // generate ORF seq
-            const auto ORF_sequence = std::move(unitig_graph.generate_sequence(std::get<0>(ORF), std::get<1>(ORF), overlap));
-            const auto TIS_sequence = std::move(unitig_graph.generate_sequence(std::get<3>(ORF), std::get<4>(ORF), overlap));
-
-            std::string total_seq;
-
-            total_seq += TIS_sequence;
-            total_seq += ORF_sequence;
-
-            // add colour index to the colours vector
-            if (ORF_print_map.find(total_seq) == ORF_print_map.end())
-            {
-                ORF_print_map[total_seq] = empty_colours_vector;
-            }
-
-            ORF_print_map[total_seq][colour_ID] = 1;
-        }
+//            std::string total_seq;
+//
+//            total_seq += TIS_sequence;
+//            total_seq += ORF_sequence;
+//
+//            // add colour index to the colours vector
+//            if (ORF_print_map.find(total_seq) == ORF_print_map.end())
+//            {
+//                ORF_print_map[total_seq] = empty_colours_vector;
+//            }
+//
+//            ORF_print_map[total_seq][colour_ID] = 1;
+//        }
     }
 
+    // calculate identity between ORFs in colour_ORF_map
+    unitig_graph.generate_clusters(colour_ORF_map, overlap, 0.7, 0.98);
+
+
     // print to file
-    write_to_file(ORF_print_map, outfile);
+    //write_to_file(ORF_print_map, outfile);
 
     return 0;
 }

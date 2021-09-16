@@ -2,7 +2,6 @@
 #define ORF_CONNECTION_H
 
 #include "unitigDict.h"
-#include "traversal.h"
 
 void add_ORF_info (GraphVector& graph_vector,
                   const size_t& colour_ID,

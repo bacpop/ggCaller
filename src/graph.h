@@ -8,6 +8,7 @@
 #include "match_string.h"
 #include "gene_overlap.h"
 #include "ORF_connection.h"
+#include "ORF_clustering.h"
 
 class Graph {
     public:
@@ -46,8 +47,14 @@ class Graph {
 
     // search orientated paths and DBG to connect ORFs
     std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t& colour_ID,
-                                                       const ORFVector& ORF_vector,
-                                                       const std::vector<size_t>& target_ORFs);
+                                                        const ORFVector& ORF_vector,
+                                                        const std::vector<size_t>& target_ORFs,
+                                                        const size_t& max_ORF_path_length);
+
+    void generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+                           const size_t& overlap,
+                           const double& id_cutoff,
+                           const double& len_diff_cutoff);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,

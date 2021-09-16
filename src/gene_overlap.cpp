@@ -70,17 +70,6 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             // make pair for ORF2_nodes
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
 
-//            //testing
-            const auto ORF1_sequence = generate_sequence2(std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap, graph_vector);
-            const auto ORF2_sequence = generate_sequence2(ORF2_node_ids, ORF2_node_coords, DBG_overlap, graph_vector);
-
-            int test = 0;
-            if (ORF1_sequence == ORF2_sequence)
-            {
-                test = 1;
-            }
-
-            // get 5p and 3p for ORF1 and ORF2
 
             // initialise overlap type
             // n = no overlap
@@ -563,51 +552,4 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
     }
 
     return ORF_overlap_map;
-}
-
-std::string generate_sequence2(const std::vector<int>& nodelist,
-                             const std::vector<indexPair>& node_coords,
-                             const size_t& overlap,
-                               const GraphVector& _GraphVector)
-{
-    std::string sequence;
-    for (size_t i = 0; i < nodelist.size(); i++)
-    {
-        // initialise sequence items
-        std::string unitig_seq;
-        std::string substring;
-
-        // parse information
-        const auto& id = nodelist[i];
-        const auto& coords = node_coords[i];
-        bool strand = (id >= 0) ? true : false;
-
-        if (strand)
-        {
-            unitig_seq = _GraphVector.at(abs(id) - 1).seq();
-        } else {
-            unitig_seq = reverse_complement(_GraphVector.at(abs(id) - 1).seq());
-        }
-
-        if (sequence.empty())
-        {
-            // get node_seq_len, add one as zero indexed
-            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
-            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
-        } else
-        {
-            // get node_seq_len, add one as zero indexed
-            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
-            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
-            if (node_seq_len > 0)
-            {
-                substring = unitig_seq.substr(overlap, node_seq_len);
-            } else
-            {
-                break;
-            }
-        }
-        sequence += substring;
-    }
-    return sequence;
 }

@@ -17,6 +17,7 @@
 #include <cassert>
 #include <experimental/filesystem>
 #include <mutex>
+#include <math.h>
 
 // openMP headers
 #include <omp.h>
@@ -33,20 +34,26 @@
 #include <seqan3/range/views/all.hpp>
 #include <seqan3/search/search.hpp>
 #include <seqan3/std/filesystem>
-#include <seqan3/std/ranges>
+#include <seqan3/range/views/translate.hpp>
+#include <seqan3/alignment/pairwise/all.hpp>
+#include <seqan3/alignment/scoring/all.hpp>
+#include <seqan3/alphabet/aminoacid/aa27.hpp>
 
 // pybind11 headers
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
+
+// edlib header
+#include "edlib/edlib.h"
 
 // bifrost header
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-namespace py = pybind11;
+//namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -67,6 +74,7 @@ using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
         sdsl::plain_byte_alphabet>;
 typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
 using seqan3::operator""_dna5;
+using seqan3::operator""_aa27;
 
 // general typedefs
 // mapping of each colour to component nodes in graph
@@ -75,10 +83,10 @@ typedef std::vector<std::vector<size_t>> NodeColourVector;
 typedef std::pair<size_t, size_t> indexPair;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand, vector of paths originated from and coordinates, and 5p and 3p coordinates
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand
 typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
-// maps an ORF node sequence to its path through graph
-typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
+// maps an ORFNodeVector sequence to its ID
+typedef std::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
@@ -98,7 +106,12 @@ typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
 // mapping for each path with overlapping path id and how overlapping path is orientated relative to current path
 typedef std::unordered_map<size_t, std::vector<std::vector<std::tuple<int, size_t, size_t>>>> PathOverlapMap;
-// stack for holding next paths to be traversed
-
+// vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
+//typedef std::vector<std::pair<std::pair<size_t, size_t>, std::unordered_map<size_t, std::pair<double, double>>>> ORFMatrixVector;
+typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
+// vector for holding identity measure between ORFs (first entry is longer ORF (colour_ID, ORF_ID), second is shorter ORF, final is pair of %identity and % length of shorter ORF compared to longer ORF)
+typedef std::vector<std::tuple<std::pair<size_t, size_t>, std::pair<size_t, size_t>, std::pair<double, double>>> IndentityVector;
+// vector holding tuple of each cluster
+typedef std::vector<std::pair<std::pair<size_t, size_t>, std::vector<std::pair<size_t, size_t>>>> ClusterVector;
 
 #endif //DEFINITIONS_H

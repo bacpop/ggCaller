@@ -168,11 +168,9 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 
 std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_ID,
                                                            const ORFVector& ORF_vector,
-                                                           const std::vector<size_t>& target_ORFs)
+                                                           const std::vector<size_t>& target_ORFs,
+                                                           const size_t& max_ORF_path_length)
 {
-    // temporary
-    size_t max_ORF_path_length = 10000;
-
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
 
     // add ORF info for colour to graph
@@ -190,6 +188,24 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
     
     return connected_ORFs;
+}
+
+void Graph::generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+                              const size_t& overlap,
+                              const double& id_cutoff,
+                              const double& len_diff_cutoff)
+{
+    // determine identity between ORFs
+    const auto ORF_group_tuple = group_ORFs(colour_ORF_map, _GraphVector);
+
+    //unpack ORF_group_tuple
+    const auto& ORF_mat_vector = std::get<0>(ORF_group_tuple);
+    const auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
+    const auto& centroid_vector = std::get<2>(ORF_group_tuple);
+
+    // generate clusters for ORFs based on identity
+    const auto cluster_vector = produce_clusters(colour_ORF_map, _GraphVector, overlap, ORF_mat_vector,
+                                                   ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,
