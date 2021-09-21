@@ -4,6 +4,7 @@ import json
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 from functools import partial
+import copy
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
@@ -113,6 +114,10 @@ def main():
     max_ORF_overlap = 60
     write_idx = True
     write_graph = True
+    cluster_id_cutoff = 0.98
+    cluster_len_diff_cutoff = 0.98
+    max_orf_orf_distance = 10000
+    cluster_ORFs = True
 
     num_threads = 1
 
@@ -128,8 +133,8 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -148,9 +153,11 @@ def main():
     else:
         model, model_tis, aa_kmer_set = None, None, None
 
-    # intiialise true_genes and high_scoring_ORF_edges dictionary
+    # intiialise results dictionaries and lists
     true_genes = {}
     high_scoring_ORF_edges = {}
+    cluster_id_list = None
+    cluster_dict = None
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls...")
@@ -214,10 +221,18 @@ def main():
                                                                  minimum_path_score=minimum_path_score,
                                                                  write_idx=write_idx,
                                                                  input_colours=input_colours,
+                                                                 max_orf_orf_distance=max_orf_orf_distance,
                                                                  aa_kmer_set=aa_kmer_set)
             # iterate over entries in col_true_genes to generate the sequences
+            # true_genes[colour_ID] = {}
             true_genes[colour_ID] = gene_dict
+            # high_scoring_ORF_edges[colour_ID] = {}
             high_scoring_ORF_edges[colour_ID] = ORF_edges
+
+        # cluster ORFs
+        if cluster_ORFs is True:
+            cluster_id_list, cluster_dict = graph.generate_clusters(true_genes, overlap, cluster_id_cutoff,
+                                                                    cluster_len_diff_cutoff)
 
     # print("Generating fasta file of gene calls...")
     # # print output to file

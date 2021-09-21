@@ -184,7 +184,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 #@profile
 def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, input_colours, aa_kmer_set):
+                       minimum_path_score, write_idx, input_colours, max_orf_orf_distance, aa_kmer_set):
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
@@ -222,7 +222,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         target_ORFs = list(set([x for f in high_scoring_ORF_edges for x in (f[0], f[-1])]))
 
         # determine next ORFs for each terminal ORF in high_scoring_ORF_edges
-        next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs))
+        next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance))
 
         # determine redundant edges in high_scoring_ORFs
         redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in high_scoring_ORF_edges if len(i) > 1])
