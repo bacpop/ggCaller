@@ -174,12 +174,10 @@ def main():
     # load balrog models if required
     if not options.no_filter:
         print("Loading gene models...")
-        # aa_kmer_set = load_kmer_model()
-        aa_kmer_set = None
         model, model_tis = load_gene_models()
 
     else:
-        model, model_tis, aa_kmer_set = None, None, None
+        model, model_tis = None, None, None
 
     # intiialise results dictionaries and lists
     true_genes = {}
@@ -211,8 +209,7 @@ def main():
                             min_ORF_length=options.min_orf_length,
                             max_ORF_overlap=options.max_ORF_overlap, minimum_ORF_score=options.min_orf_score,
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
-                            input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance,
-                            aa_kmer_set=aa_kmer_set),
+                            input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance),
                     enumerate(node_colour_vector)):
                 true_genes[colour_ID] = gene_dict
                 high_scoring_ORF_edges[colour_ID] = ORF_edges

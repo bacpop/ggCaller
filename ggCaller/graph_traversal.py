@@ -184,7 +184,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 #@profile
 def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, input_colours, max_orf_orf_distance, aa_kmer_set):
+                       minimum_path_score, write_idx, input_colours, max_orf_orf_distance):
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
@@ -207,8 +207,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         gene_dict = {i: ORF_vector[i] for i in range(0, len(ORF_vector))}
     else:
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2],
-                                     aa_kmer_set)
+        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
         # determine highest scoring genes, stored in list of lists
         high_scoring_ORF_edges = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
