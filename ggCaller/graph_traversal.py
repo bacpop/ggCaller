@@ -238,7 +238,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         for entry in edge_list:
             # work out last index of entry
             last_index = len(entry) - 1
-            for i, ORF in entry:
+            for i, ORF in enumerate(entry):
                 # create new entry for current ORF
                 if ORF not in high_scoring_ORF_edges:
                     high_scoring_ORF_edges[ORF] = set()

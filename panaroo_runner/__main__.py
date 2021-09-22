@@ -10,12 +10,12 @@ import ast
 from panaroo.isvalid import *
 from panaroo.set_default_args import set_default_args
 from panaroo.prokka import process_prokka_input
-from panaroo.generate_network import generate_network
+from .generate_network import generate_network
 from panaroo.generate_output import *
 from panaroo.clean_network import *
 from panaroo.find_missing import find_missing
 from panaroo.generate_alignments import check_aligner_install
-# from intbitset import intbitset
+from intbitset import intbitset
 
 from panaroo.__init__ import __version__
 
@@ -38,7 +38,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
                 verbose, all_seq_in_graph=True):
     # args = get_options(sys.argv[1:])
     # Check cd-hit is installed
-    check_cdhit_version()
+    # check_cdhit_version()
     # Make sure aligner is installed if alignment requested
     # if args.aln != None:
     #     check_aligner_install(args.alr)
@@ -81,29 +81,30 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
 
     # generate network from clusters and adjacency information
     G, centroid_contexts, seqid_to_centroid = generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
-                                                               cluster_id_list, cluster_dict, overlap,
-                                                               all_dna=all_seq_in_graph)
+                                                               cluster_id_list, cluster_dict, overlap, all_dna=False)
+
+    test = 1
 
     ### commented from here
-    # # merge paralogs
-    # if verbose:
-    #     print("Processing paralogs...")
-    # G = collapse_paralogs(G, centroid_contexts, quiet=(not verbose))
-    #
-    # # write out pre-filter graph in GML format
-    # for node in G.nodes():
-    #     G.nodes[node]['size'] = len(G.nodes[node]['members'])
-    #     G.nodes[node]['genomeIDs'] = ";".join(
-    #         [str(m) for m in G.nodes[node]['members']])
-    #     G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
-    #     G.nodes[node]['degrees'] = G.degree[node]
-    # for edge in G.edges():
-    #     G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
-    #         [str(m) for m in G.edges[edge[0], edge[1]]['members']])
-    # nx.write_gml(G,
-    #              output_dir + "pre_filt_graph.gml",
-    #              stringizer=custom_stringizer)
-    #
+    # merge paralogs
+    if verbose:
+        print("Processing paralogs...")
+    G = collapse_paralogs(G, centroid_contexts, quiet=(not verbose))
+
+    # write out pre-filter graph in GML format
+    for node in G.nodes():
+        G.nodes[node]['size'] = len(G.nodes[node]['members'])
+        G.nodes[node]['genomeIDs'] = ";".join(
+            [str(m) for m in G.nodes[node]['members']])
+        G.nodes[node]['geneIDs'] = ";".join(str(G.nodes[node]['seqIDs']))
+        G.nodes[node]['degrees'] = G.degree[node]
+    for edge in G.edges():
+        G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
+            [str(m) for m in G.edges[edge[0], edge[1]]['members']])
+    nx.write_gml(G,
+                 output_dir + "pre_filt_graph.gml",
+                 stringizer=custom_stringizer)
+
     # if verbose:
     #     print("collapse mistranslations...")
     #

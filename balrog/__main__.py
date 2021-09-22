@@ -85,31 +85,6 @@ aa_table = {"L": 1,
 
 
 # generate ORF sequences from coordinates
-# @profile
-def generate_sequence(graph_vector, nodelist, node_coords, overlap):
-    sequence = ""
-    for i in range(0, len(nodelist)):
-        id = nodelist[i]
-        coords = node_coords[i]
-
-        # calculate strand based on value of node (if negative, strand is false)
-        strand = True if id >= 0 else False
-
-        if strand:
-            unitig_seq = graph_vector[abs(id) - 1].seq
-        else:
-            unitig_seq = str(Seq(graph_vector[abs(id) - 1].seq).reverse_complement())
-
-        if len(sequence) == 0:
-            substring = unitig_seq[coords[0]:(coords[1] + 1)]
-        else:
-            if coords[1] >= overlap:
-                substring = unitig_seq[overlap:(coords[1] + 1)]
-
-        sequence += substring
-
-    return sequence
-
 
 #@profile
 def tokenize_aa_seq(aa_seq):

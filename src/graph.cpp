@@ -190,7 +190,7 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_
     return connected_ORFs;
 }
 
-std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
                                                                   const size_t& overlap,
                                                                   const double& id_cutoff,
                                                                   const double& len_diff_cutoff)

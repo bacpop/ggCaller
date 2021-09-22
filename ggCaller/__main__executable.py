@@ -7,7 +7,7 @@ from functools import partial
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
-from panaroo_runner import *
+from panaroo_runner.__main__ import run_panaroo
 
 
 def get_options():
@@ -102,7 +102,7 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/group3_capsular_v1.2.5.fasta"
+    output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -152,7 +152,7 @@ def main():
         model, model_tis = None, None, None
 
     # intiialise results dictionaries and lists
-    true_genes = {}
+    high_scoring_ORFs = {}
     high_scoring_ORF_edges = {}
     cluster_id_list = None
     cluster_dict = None
@@ -222,14 +222,17 @@ def main():
                                                                  max_orf_orf_distance=max_orf_orf_distance)
             # iterate over entries in col_true_genes to generate the sequences
             # true_genes[colour_ID] = {}
-            true_genes[colour_ID] = gene_dict
+            high_scoring_ORFs[colour_ID] = gene_dict
             # high_scoring_ORF_edges[colour_ID] = {}
             high_scoring_ORF_edges[colour_ID] = ORF_edges
 
         # cluster ORFs
         if cluster_ORFs is True:
-            cluster_id_list, cluster_dict = graph.generate_clusters(true_genes, overlap, cluster_id_cutoff,
+            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, cluster_id_cutoff,
                                                                     cluster_len_diff_cutoff)
+
+            run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
+                        output_dir, verbose)
 
     # print("Generating fasta file of gene calls...")
     # # print output to file

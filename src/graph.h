@@ -51,7 +51,7 @@ class Graph {
                                                         const std::vector<size_t>& target_ORFs,
                                                         const size_t& max_ORF_path_length);
 
-    std::pair<ORFMatrixVector, ORFClusterMap> generate_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+    std::pair<ORFMatrixVector, ORFClusterMap> generate_clusters(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
                                                                 const size_t& overlap,
                                                                 const double& id_cutoff,
                                                                 const double& len_diff_cutoff);

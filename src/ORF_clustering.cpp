@@ -4,7 +4,7 @@
 
 #include "ORF_clustering.h"
 
-ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+ORFGroupTuple group_ORFs(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
                          const GraphVector& graph_vector)
 {
     // intialise Eigen Triplet
@@ -15,13 +15,16 @@ ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_OR
 
     // iterate over each ORF sequence with specific colours combination
     size_t ORF_ID = 0;
-    for (const auto& colour : colour_ORF_map)
+    for (auto& colour : colour_ORF_map)
     {
         ORF_mat_vector.reserve(ORF_mat_vector.size() + colour.second.size());
-        for (const auto& ORF_map : colour.second)
+        for (auto& ORF_map : colour.second)
         {
             // add to ORF_mat_map, initialising empty vector
             ORF_mat_vector.push_back({colour.first, ORF_map.first});
+
+            // append the population ID to colour_ORF_map
+            std::get<6>(ORF_map.second) = ORF_ID;
 
             // iterate over nodes traversed by ORF
             const auto& ORF_nodes = std::get<0>(ORF_map.second);
@@ -108,8 +111,6 @@ ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& col
     // create set to keep track of assigned ORFs to avoid ORFs being added to other groups
     std::unordered_set<size_t> encountered_set;
 
-    int number_alignments = 0;
-
     // iterate through group_map
     for (size_t ORF_ID = 0; ORF_ID < ORF_group_vector.size(); ORF_ID++)
     {
@@ -161,7 +162,6 @@ ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& col
 
                 // calculate the perc_id between the current centroid and the ORF
                 double current_perc_id = align_seqs(ORF1_info, ORF2_info, graph_vector, DBG_overlap);
-                number_alignments++;
 
                 if (current_perc_id > assigned_perc_id)
                 {
