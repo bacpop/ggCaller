@@ -4,10 +4,10 @@ import json
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 from functools import partial
-import copy
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
+from panaroo_runner import *
 
 
 def get_options():
@@ -146,12 +146,10 @@ def main():
     # load balrog models if required
     if not no_filter:
         print("Loading gene models...")
-        # aa_kmer_set = load_kmer_model()
-        aa_kmer_set = None
         model, model_tis = load_gene_models()
 
     else:
-        model, model_tis, aa_kmer_set = None, None, None
+        model, model_tis = None, None, None
 
     # intiialise results dictionaries and lists
     true_genes = {}
@@ -221,8 +219,7 @@ def main():
                                                                  minimum_path_score=minimum_path_score,
                                                                  write_idx=write_idx,
                                                                  input_colours=input_colours,
-                                                                 max_orf_orf_distance=max_orf_orf_distance,
-                                                                 aa_kmer_set=aa_kmer_set)
+                                                                 max_orf_orf_distance=max_orf_orf_distance)
             # iterate over entries in col_true_genes to generate the sequences
             # true_genes[colour_ID] = {}
             true_genes[colour_ID] = gene_dict

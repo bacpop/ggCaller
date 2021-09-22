@@ -7,6 +7,7 @@ from functools import partial
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
+from panaroo_runner import *
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -180,7 +181,7 @@ def main():
         model, model_tis = None, None, None
 
     # intiialise results dictionaries and lists
-    true_genes = {}
+    high_scoring_ORFs = {}
     high_scoring_ORF_edges = {}
     cluster_id_list = None
     cluster_dict = None
@@ -211,17 +212,19 @@ def main():
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
                             input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance),
                     enumerate(node_colour_vector)):
-                true_genes[colour_ID] = gene_dict
+                high_scoring_ORFs[colour_ID] = gene_dict
                 high_scoring_ORF_edges[colour_ID] = ORF_edges
+
+            # generate ORF clusters
             if not options.no_clustering:
                 print("Generating clusters of high-scoring ORFs...")
-                cluster_id_list, cluster_dict = graph.generate_clusters(true_genes,
+                cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs,
                                                                         overlap,
                                                                         options.identity_cutoff,
                                                                         options.len_diff_cutoff)
 
     # for testing
-    print("true_genes: " + str(len(true_genes)))
+    print("high_scoring_ORFs: " + str(len(high_scoring_ORFs)))
     print("high_scoring_ORF_edges: " + str(len(high_scoring_ORF_edges)))
     print("cluster_id_list: " + str(len(cluster_id_list)))
     print("cluster_dict: " + str(len(cluster_dict)))

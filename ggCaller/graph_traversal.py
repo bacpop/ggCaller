@@ -2,7 +2,6 @@ import graph_tool.all as gt
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 
-
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
@@ -200,7 +199,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
 
     # initialise return dictionaries
     gene_dict = {}
-    high_scoring_ORF_edges = []
+    edge_list = []
 
     # if no filter specified, just copy ORF_vector to gene_dict with dictionary comprehension
     if no_filter:
@@ -210,28 +209,44 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
         # determine highest scoring genes, stored in list of lists
-        high_scoring_ORF_edges = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+        edge_list = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
         # generate a dictionary of all true gene info
-        for entry in high_scoring_ORF_edges:
-            for sub_entry in entry:
-                gene_dict[sub_entry] = ORF_vector[sub_entry]
+        for entry in edge_list:
+            for ORF in entry:
+                gene_dict[ORF] = ORF_vector[ORF]
 
         # generate list of target ORFs, removing duplicates
-        target_ORFs = list(set([x for f in high_scoring_ORF_edges for x in (f[0], f[-1])]))
+        target_ORFs = list(set([x for f in edge_list for x in (f[0], f[-1])]))
 
-        # determine next ORFs for each terminal ORF in high_scoring_ORF_edges
+        # determine next ORFs for each terminal ORF in edge_list
         next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance))
 
         # determine redundant edges in high_scoring_ORFs
-        redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in high_scoring_ORF_edges if len(i) > 1])
+        redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in edge_list if len(i) > 1])
 
         # remove any ORFs with no connections in high_scoring_ORFs
-        high_scoring_ORF_edges = [i for i in high_scoring_ORF_edges if len(i) > 1]
+        edge_list = [i for i in edge_list if len(i) > 1]
 
         # remove redundant edges between high_scoring_ORFs and next_nodes
         for edge in next_ORFs:
             if edge not in redundant_edges:
-                high_scoring_ORF_edges.append(edge)
+                edge_list.append(edge)
+
+        # iterate over edge_list and append to a dictionary of high_scoring_ORF_edges for each ORF
+        high_scoring_ORF_edges = {}
+        for entry in edge_list:
+            # work out last index of entry
+            last_index = len(entry) - 1
+            for i, ORF in entry:
+                # create new entry for current ORF
+                if ORF not in high_scoring_ORF_edges:
+                    high_scoring_ORF_edges[ORF] = set()
+                # if ORF not first in list, add previous entry to set
+                if (i != 0):
+                    high_scoring_ORF_edges[ORF].add(entry[i - 1])
+                # if ORF not last in list, add next entry to set
+                if (i != last_index):
+                    high_scoring_ORF_edges[ORF].add(entry[i + 1])
 
     return colour_ID, gene_dict, high_scoring_ORF_edges

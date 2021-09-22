@@ -1,273 +1,503 @@
-import os, sys
-import tempfile
 from Bio import SeqIO
-import shutil
+from Bio.Seq import Seq
+from collections import Counter, defaultdict
 import networkx as nx
-import argparse
-import textwrap
-import ast
-
-from panaroo.isvalid import *
-from panaroo.set_default_args import set_default_args
-from panaroo.prokka import process_prokka_input
-from panaroo.generate_network import generate_network
-from panaroo.generate_output import *
-from panaroo.clean_network import *
-from panaroo.find_missing import find_missing
-from panaroo.generate_alignments import check_aligner_install
+from panaroo.clean_network import collapse_paralogs
+import numpy as np
+from scipy.sparse import csc_matrix, lil_matrix
 from intbitset import intbitset
 
-from panaroo.__init__ import __version__
+
+def add_neighbour(G, edge_set, cluster_id_list, seq_to_cluster, high_scoring_ORF_edges, paralogs, cluster_centroids,
+                  cluster_centroid_data, n_nodes, centroid_context):
+    for neighbour in edge_set:
+        # parse neighbour information
+        neighbour_genome_id = cluster_id_list[neighbour][0]
+        neighbour_local_id = cluster_id_list[neighbour][1]
+        neighbour_cluster = seq_to_cluster[neighbour]
+
+        # check that neighbour exists, if not add to graph
+        add_neighbour = True if not G.has_node(neighbour_cluster) else False
+
+        # check if current cluster contains paralogs
+        neighbour_has_paralogs = True if neighbour_cluster in paralogs else False
+
+        # parse neighbour information for current ORF
+        neighbour_edge_set = high_scoring_ORF_edges[neighbour_genome_id][neighbour_local_id]
+
+        # check if current ORF is end of contig
+        neighbour_has_end = True if len(neighbour_edge_set) < 2 else False
+
+        if add_neighbour:
+            G.add_node(
+                neighbour_cluster,
+                size=1,
+                centroid=[cluster_centroids[neighbour_cluster]],
+                maxLenId=0,
+                members=intbitset([neighbour_genome_id]),
+                seqIDs=set([neighbour]),
+                hasEnd=neighbour_has_end,
+                protein=[
+                    cluster_centroid_data[neighbour_cluster]
+                    ['prot_sequence']
+                ],
+                dna=[
+                    cluster_centroid_data[neighbour_cluster]
+                    ['dna_sequence']
+                ],
+                annotation=cluster_centroid_data[neighbour_cluster]
+                ['annotation'],
+                description=cluster_centroid_data[neighbour_cluster]
+                ['description'],
+                lengths=[
+                    len(cluster_centroid_data[neighbour_cluster]
+                        ['dna_sequence'])
+                ],
+                longCentroidID=(len(
+                    cluster_centroid_data[neighbour_cluster]
+                    ['dna_sequence']),
+                                cluster_centroids[neighbour_cluster]),
+                paralog=neighbour_has_paralogs,
+                mergedDNA=False)
+
+            # check if paralog exists, if so add paralog node
+            if neighbour_has_paralogs:
+                # create a new paralog
+                n_nodes += 1
+                paralog_node = n_nodes
+                centroid_context[
+                    cluster_centroids[neighbour_cluster]].append(
+                    [paralog_node, neighbour_genome_id])
+                G.add_node(
+                    paralog_node,
+                    size=1,
+                    centroid=[cluster_centroids[neighbour_cluster]],
+                    maxLenId=0,
+                    members=intbitset([neighbour_genome_id]),
+                    seqIDs=set([neighbour]),
+                    hasEnd=neighbour_has_end,
+                    protein=[
+                        cluster_centroid_data[neighbour_cluster]['prot_sequence']
+                    ],
+                    dna=[
+                        cluster_centroid_data[neighbour_cluster]['dna_sequence']
+                    ],
+                    annotation=cluster_centroid_data[neighbour_cluster]
+                    ['annotation'],
+                    description=cluster_centroid_data[neighbour_cluster]
+                    ['description'],
+                    lengths=[
+                        len(cluster_centroid_data[neighbour_cluster]
+                            ['dna_sequence'])
+                    ],
+                    longCentroidID=(len(cluster_centroid_data[neighbour_cluster]
+                                        ['dna_sequence']),
+                                    cluster_centroids[neighbour_cluster]),
+                    paralog=neighbour_has_paralogs,
+                    mergedDNA=False)
 
 
-class SmartFormatter(argparse.HelpFormatter):
-    def _split_lines(self, text, width):
-        if text.startswith('R|'):
-            lines = []
-            for l in text[2:].splitlines():
-                if l == "":
-                    lines += [""]
+def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
+                     cluster_id_list, cluster_dict, overlap, all_dna=False):
+    # associate sequences with their clusters
+    seq_to_cluster = {}
+    seqid_to_centroid = {}
+    cluster_centroids = {}
+    cluster_members = defaultdict(list)
+    # iterate over cluster_dict, parsing all sequences to clusters
+    cluster_id = 0
+    for cluster, ORF_list in cluster_dict.items():
+        # append centroid to cluster
+        cluster_centroids[cluster_id] = cluster
+        # for each ORF, add ORF_id and cluster_id to respective dictionaries
+        for ORF_id in ORF_list:
+            seq_to_cluster[ORF_id] = cluster_id
+            cluster_members[cluster_id].append(ORF_id)
+        cluster_id += 1
+
+    # determine paralogs if required
+    paralogs = set()
+    for clust in cluster_members:
+        # determine if paralogs present by checking colours for each entry in cluster_id_list
+        genomes = [cluster_id_list[s][0] for s in cluster_members[clust]]
+        if len(genomes) != len(set(genomes)):
+            paralogs.add(clust)
+
+    # Load meta data such as sequence and annotation
+    cluster_centroid_data = {}
+    for cluster_id, centroid_id in cluster_centroids.items():
+        # parse genome id and local ORF id
+        genome_id = cluster_id_list[centroid_id][0]
+        local_id = cluster_id_list[centroid_id][1]
+
+        # access ORF information for centroid from high_scoring_ORFs
+        ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+        ORF_nodelist = ORFNodeVector[0]
+        ORF_node_coords = ORFNodeVector[1]
+
+        # generate dna sequence and protein sequence
+        dna_sequence = DBG.generate_sequence(ORF_nodelist, ORF_node_coords, overlap)
+        prot_sequence = str(Seq(dna_sequence).translate())
+
+        # add information to cluster_centroid_data
+        cluster_centroid_data[cluster_id] = {
+            'prot_sequence': prot_sequence,
+            'dna_sequence': dna_sequence,
+            'annotation': '',
+            'description': '',
+        }
+
+    # create a dictionary of indexes for paralog context
+    centroid_index = {}
+    for i, centroid in enumerate(cluster_centroids.values()):
+        centroid_index[centroid] = i
+    n_centroids = len(centroid_index.keys())
+
+    # build graph using adjacency information and optionally split paralogs
+    G = nx.Graph()
+    centroid_context = defaultdict(list)
+    n_nodes = len(cluster_members)
+    # temp_nodes = []
+    # prev = None
+
+    # iterating over each cluster, adding edges between clusters that each have a connection
+    for current_cluster, ORF_members in cluster_members.items():
+        # check if cluster is currently in graph
+        add_node = True if not G.has_node(current_cluster) else False
+
+        # check if current cluster contains paralogs
+        has_paralogs = True if current_cluster in paralogs else False
+
+        for ORF_id in ORF_members:
+            # parse genome id and local ORF id
+            genome_id = cluster_id_list[ORF_id][0]
+            local_id = cluster_id_list[ORF_id][1]
+
+            # map ORF ID to centroid ID
+            seqid_to_centroid[ORF_id] = cluster_centroids[current_cluster]
+
+            # parse neighbour information for current ORF
+            edge_set = high_scoring_ORF_edges[genome_id][local_id]
+
+            # check if current ORF is end of contig
+            has_end = True if len(edge_set) < 2 else False
+
+            # initialise paralog node
+            paralog_node = None
+
+            if add_node:
+                G.add_node(
+                    current_cluster,
+                    size=1,
+                    centroid=[cluster_centroids[current_cluster]],
+                    maxLenId=0,
+                    members=intbitset([genome_id]),
+                    seqIDs=set([ORF_id]),
+                    hasEnd=has_end,
+                    protein=[
+                        cluster_centroid_data[current_cluster]
+                        ['prot_sequence']
+                    ],
+                    dna=[
+                        cluster_centroid_data[current_cluster]
+                        ['dna_sequence']
+                    ],
+                    annotation=cluster_centroid_data[current_cluster]
+                    ['annotation'],
+                    description=cluster_centroid_data[current_cluster]
+                    ['description'],
+                    lengths=[
+                        len(cluster_centroid_data[current_cluster]
+                            ['dna_sequence'])
+                    ],
+                    longCentroidID=(len(
+                        cluster_centroid_data[current_cluster]
+                        ['dna_sequence']),
+                                    cluster_centroids[current_cluster]),
+                    paralog=has_paralogs,
+                    mergedDNA=False)
+                add_node = False
+
+                # check if paralog exists, if so add paralog node
+                if has_paralogs:
+                    # create a new paralog
+                    n_nodes += 1
+                    paralog_node = n_nodes
+                    centroid_context[
+                        cluster_centroids[current_cluster]].append(
+                        [paralog_node, genome_id])
+                    G.add_node(
+                        paralog_node,
+                        size=1,
+                        centroid=[cluster_centroids[current_cluster]],
+                        maxLenId=0,
+                        members=intbitset([genome_id]),
+                        seqIDs=set([ORF_id]),
+                        hasEnd=has_end,
+                        protein=[
+                            cluster_centroid_data[current_cluster]['prot_sequence']
+                        ],
+                        dna=[
+                            cluster_centroid_data[current_cluster]['dna_sequence']
+                        ],
+                        annotation=cluster_centroid_data[current_cluster]
+                        ['annotation'],
+                        description=cluster_centroid_data[current_cluster]
+                        ['description'],
+                        lengths=[
+                            len(cluster_centroid_data[current_cluster]
+                                ['dna_sequence'])
+                        ],
+                        longCentroidID=(len(cluster_centroid_data[current_cluster]
+                                            ['dna_sequence']),
+                                        cluster_centroids[current_cluster]),
+                        paralog=has_paralogs,
+                        mergedDNA=False)
+
+            # add edges between node and all neighbours in neighbour set
+            for neighbour in edge_set:
+                # iterate through edge_set, adding nodes and then adding edges if required
+                for neighbour in edge_set:
+                    # parse neighbour information
+                    neighbour_genome_id = cluster_id_list[neighbour][0]
+                    neighbour_local_id = cluster_id_list[neighbour][1]
+                    neighbour_cluster = seq_to_cluster[neighbour]
+
+                    # check that neighbour exists, if not add to graph
+                    add_neighbour = True if not G.has_node(neighbour_cluster) else False
+
+                    # check if current cluster contains paralogs
+                    neighbour_has_paralogs = True if neighbour_cluster in paralogs else False
+
+                    # parse neighbour information for current ORF
+                    neighbour_edge_set = high_scoring_ORF_edges[neighbour_genome_id][neighbour_local_id]
+
+                    # check if current ORF is end of contig
+                    neighbour_has_end = True if len(neighbour_edge_set) < 2 else False
+
+                    if add_neighbour:
+                        G.add_node(
+                            neighbour_cluster,
+                            size=1,
+                            centroid=[cluster_centroids[neighbour_cluster]],
+                            maxLenId=0,
+                            members=intbitset([neighbour_genome_id]),
+                            seqIDs=set([neighbour]),
+                            hasEnd=neighbour_has_end,
+                            protein=[
+                                cluster_centroid_data[neighbour_cluster]
+                                ['prot_sequence']
+                            ],
+                            dna=[
+                                cluster_centroid_data[neighbour_cluster]
+                                ['dna_sequence']
+                            ],
+                            annotation=cluster_centroid_data[neighbour_cluster]
+                            ['annotation'],
+                            description=cluster_centroid_data[neighbour_cluster]
+                            ['description'],
+                            lengths=[
+                                len(cluster_centroid_data[neighbour_cluster]
+                                    ['dna_sequence'])
+                            ],
+                            longCentroidID=(len(
+                                cluster_centroid_data[neighbour_cluster]
+                                ['dna_sequence']),
+                                            cluster_centroids[neighbour_cluster]),
+                            paralog=neighbour_has_paralogs,
+                            mergedDNA=False)
+
+                        # check if paralog exists, if so add paralog node
+                        if neighbour_has_paralogs:
+                            # create a new paralog
+                            n_nodes += 1
+                            paralog_node = n_nodes
+                            centroid_context[
+                                cluster_centroids[neighbour_cluster]].append(
+                                [paralog_node, neighbour_genome_id])
+                            G.add_node(
+                                paralog_node,
+                                size=1,
+                                centroid=[cluster_centroids[neighbour_cluster]],
+                                maxLenId=0,
+                                members=intbitset([neighbour_genome_id]),
+                                seqIDs=set([neighbour]),
+                                hasEnd=neighbour_has_end,
+                                protein=[
+                                    cluster_centroid_data[neighbour_cluster]['prot_sequence']
+                                ],
+                                dna=[
+                                    cluster_centroid_data[neighbour_cluster]['dna_sequence']
+                                ],
+                                annotation=cluster_centroid_data[neighbour_cluster]
+                                ['annotation'],
+                                description=cluster_centroid_data[neighbour_cluster]
+                                ['description'],
+                                lengths=[
+                                    len(cluster_centroid_data[neighbour_cluster]
+                                        ['dna_sequence'])
+                                ],
+                                longCentroidID=(len(cluster_centroid_data[neighbour_cluster]
+                                                    ['dna_sequence']),
+                                                cluster_centroids[neighbour_cluster]),
+                                paralog=neighbour_has_paralogs,
+                                mergedDNA=False)
+
+            # need to think about connecting each current node and paralog with each neighbour node and paralog.
+            # also need to add a paralog for every genome a paralog is found, not just one per cluster!
+
+            # check if ORF has more than 2 neighbours. If not, at end of contig
+            if len(neighbour_set) < 2:
+                # we're at the start of a contig
+                if G.has_node(current_cluster) and (current_cluster not in paralogs):
+                    G.nodes[current_cluster]['size'] += 1
+                    G.nodes[current_cluster]['members'].add(genome_id)
+                    G.nodes[current_cluster]['seqIDs'].add(ORF_id)
+                    G.nodes[current_cluster]['hasEnd'] = True
+                    G.nodes[current_cluster]['lengths'].append(
+                        len(cluster_centroid_data[current_cluster]['dna_sequence']))
+                    if all_dna:
+                        G.nodes[current_cluster]['dna'] += [
+                            cluster_centroid_data[current_cluster]['dna_sequence']
+                        ]
+                # need to iterate over neightbour_set, adding all connections that have not already been added to graph
                 else:
-                    lines += textwrap.wrap(l, width=55)
-            return lines
-        # this is the RawTextHelpFormatter._split_lines
-        return argparse.HelpFormatter._split_lines(self, text, width)
+                    if current_cluster in paralogs:
+                        # create a new paralog
+                        n_nodes += 1
+                        paralog_node = n_nodes
+                        temp_nodes.append(paralog_node)
+                        centroid_context[
+                            cluster_centroids[current_cluster]].append(
+                            [paralog_node, genome_id])
+                    # add non paralog node
+                    G.add_node(
+                        paralog_node,
+                        size=1,
+                        centroid=[cluster_centroids[current_cluster]],
+                        maxLenId=0,
+                        members=intbitset([genome_id]),
+                        seqIDs=set([ORF_id]),
+                        hasEnd=True,
+                        protein=[
+                            cluster_centroid_data[current_cluster]['prot_sequence']
+                        ],
+                        dna=[
+                            cluster_centroid_data[current_cluster]['dna_sequence']
+                        ],
+                        annotation=cluster_centroid_data[current_cluster]
+                        ['annotation'],
+                        description=cluster_centroid_data[current_cluster]
+                        ['description'],
+                        lengths=[
+                            len(cluster_centroid_data[current_cluster]
+                                ['dna_sequence'])
+                        ],
+                        longCentroidID=(len(cluster_centroid_data[current_cluster]
+                                            ['dna_sequence']),
+                                        cluster_centroids[current_cluster]),
+                        paralog=(current_cluster in paralogs),
+                        mergedDNA=False)
+            else:
+                is_paralog = current_cluster in paralogs
+                if is_paralog:
+                    # create a new paralog
+                    n_nodes += 1
+                    paralog_node = n_nodes
+                    temp_nodes.append(paralog_node)
+                    centroid_context[cluster_centroids[current_cluster]].append(
+                        [paralog_node, genome_id])
+                    G.add_node(
+                        paralog_node,
+                        size=1,
+                        centroid=[cluster_centroids[current_cluster]],
+                        maxLenId=0,
+                        members=intbitset([genome_id]),
+                        seqIDs=set([ORF_id]),
+                        hasEnd=False,
+                        protein=[
+                            cluster_centroid_data[current_cluster]['prot_sequence']
+                        ],
+                        dna=[
+                            cluster_centroid_data[current_cluster]['dna_sequence']
+                        ],
+                        annotation=cluster_centroid_data[current_cluster]
+                        ['annotation'],
+                        description=cluster_centroid_data[current_cluster]
+                        ['description'],
+                        lengths=[
+                            len(cluster_centroid_data[current_cluster]
+                                ['dna_sequence'])
+                        ],
+                        longCentroidID=(len(cluster_centroid_data[current_cluster]
+                                            ['dna_sequence']),
+                                        cluster_centroids[current_cluster]),
+                        paralog=True,
+                        mergedDNA=False)
+                    # add edge between nodes
 
+                    G.add_edge(prev,
+                               neighbour,
+                               size=1,
+                               members=intbitset([genome_id]))
+                else:
+                    if not G.has_node(current_cluster):
+                        # we need to add the gene in
+                        G.add_node(
+                            current_cluster,
+                            size=1,
+                            centroid=[cluster_centroids[current_cluster]],
+                            maxLenId=0,
+                            members=intbitset([genome_id]),
+                            seqIDs=set([ORF_id]),
+                            hasEnd=False,
+                            protein=[
+                                cluster_centroid_data[current_cluster]
+                                ['prot_sequence']
+                            ],
+                            dna=[
+                                cluster_centroid_data[current_cluster]
+                                ['dna_sequence']
+                            ],
+                            annotation=cluster_centroid_data[current_cluster]
+                            ['annotation'],
+                            description=cluster_centroid_data[current_cluster]
+                            ['description'],
+                            lengths=[
+                                len(cluster_centroid_data[current_cluster]
+                                    ['dna_sequence'])
+                            ],
+                            longCentroidID=(len(
+                                cluster_centroid_data[current_cluster]
+                                ['dna_sequence']),
+                                            cluster_centroids[current_cluster]),
+                            paralog=is_paralog,
+                            mergedDNA=False)
+                        # add edge between nodes
+                        G.add_edge(prev,
+                                   current_cluster,
+                                   size=1,
+                                   members=intbitset([genome_id]))
+                    else:
+                        G.nodes[current_cluster]['size'] += 1
+                        G.nodes[current_cluster]['members'].add(genome_id)
+                        G.nodes[current_cluster]['seqIDs'].add(id)
+                        G.nodes[current_cluster]['lengths'].append(
+                            len(cluster_centroid_data[current_cluster]
+                                ['dna_sequence']))
+                        if all_dna:
+                            G.nodes[current_cluster]['dna'] += [
+                                cluster_centroid_data[current_cluster]
+                                ['dna_sequence']
+                            ]
+                        if G.has_edge(prev, current_cluster):
+                            G[prev][current_cluster]['size'] += 1
+                            G[prev][current_cluster]['members'].add(genome_id)
+                        else:
+                            G.add_edge(prev,
+                                       current_cluster,
+                                       size=1,
+                                       members=intbitset([genome_id]))
+                    prev = current_cluster
 
-def run_panaroo():
-    args = get_options(sys.argv[1:])
-    # Check cd-hit is installed
-    check_cdhit_version()
-    # Make sure aligner is installed if alignment requested
-    if args.aln != None:
-        check_aligner_install(args.alr)
-
-    # create directory if it isn't present already
-    if not os.path.exists(args.output_dir):
-        os.mkdir(args.output_dir)
-    # make sure trailing forward slash is present
-    args.output_dir = os.path.join(args.output_dir, "")
-    # Create temporary directory
-    temp_dir = os.path.join(tempfile.mkdtemp(dir=args.output_dir), "")
-
-    # check if input is a file containing filenames
-    if len(args.input_files) == 1:
-        files = []
-        with open(args.input_files[0], 'r') as infile:
-            for line in infile:
-                files.append(line.strip())
-        args.input_files = files
-
-    if args.verbose:
-        print("pre-processing gff3 files...")
-
-    # convert input GFF3 files into summary files
-    process_prokka_input(args.input_files, args.output_dir,
-                         args.filter_invalid, (not args.verbose),
-                         args.n_cpu, args.table)
-
-    # Cluster protein sequences using cdhit
-    cd_hit_out = args.output_dir + "combined_protein_cdhit_out.txt"
-    run_cdhit(input_file=args.output_dir + "combined_protein_CDS.fasta",
-              output_file=cd_hit_out,
-              id=args.id,
-              s=args.len_dif_percent,
-              quiet=(not args.verbose),
-              n_cpu=args.n_cpu)
-
-    if args.verbose:
-        print("generating initial network...")
-
-    # generate network from clusters and adjacency information
-    G, centroid_contexts, seqid_to_centroid = generate_network(
-        cluster_file=cd_hit_out + ".clstr",
-        data_file=args.output_dir + "gene_data.csv",
-        prot_seq_file=args.output_dir + "combined_protein_CDS.fasta",
-        all_dna=args.all_seq_in_graph)
-
-    # merge paralogs
-    if args.verbose:
-        print("Processing paralogs...")
-    G = collapse_paralogs(G, centroid_contexts, quiet=(not args.verbose))
-
-    # write out pre-filter graph in GML format
-    for node in G.nodes():
-        G.nodes[node]['size'] = len(G.nodes[node]['members'])
-        G.nodes[node]['genomeIDs'] = ";".join(
-            [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
-        G.nodes[node]['degrees'] = G.degree[node]
-    for edge in G.edges():
-        G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
-            [str(m) for m in G.edges[edge[0], edge[1]]['members']])
-    nx.write_gml(G,
-                 args.output_dir + "pre_filt_graph.gml",
-                 stringizer=custom_stringizer)
-
-    if args.verbose:
-        print("collapse mistranslations...")
-
-    # clean up translation errors
-    G = collapse_families(G,
-                          seqid_to_centroid=seqid_to_centroid,
-                          outdir=temp_dir,
-                          dna_error_threshold=0.98,
-                          correct_mistranslations=True,
-                          length_outlier_support_proportion=args.
-                          length_outlier_support_proportion,
-                          n_cpu=args.n_cpu,
-                          quiet=(not args.verbose))[0]
-
-    if args.verbose:
-        print("collapse gene families...")
-
-    # collapse gene families
-    G, distances_bwtn_centroids, centroid_to_index = collapse_families(
-        G,
-        seqid_to_centroid=seqid_to_centroid,
-        outdir=temp_dir,
-        family_threshold=args.family_threshold,
-        correct_mistranslations=False,
-        length_outlier_support_proportion=args.
-            length_outlier_support_proportion,
-        n_cpu=args.n_cpu,
-        quiet=(not args.verbose))
-
-    if args.verbose:
-        print("trimming contig ends...")
-
-    # re-trim low support trailing ends
-    G = trim_low_support_trailing_ends(G,
-                                       min_support=args.min_trailing_support,
-                                       max_recursive=args.trailing_recursive)
-
-    if args.verbose:
-        print("refinding genes...")
-
-    # find genes that Prokka has missed
-    G = find_missing(G,
-                     args.input_files,
-                     dna_seq_file=args.output_dir + "combined_DNA_CDS.fasta",
-                     prot_seq_file=args.output_dir +
-                                   "combined_protein_CDS.fasta",
-                     gene_data_file=args.output_dir + "gene_data.csv",
-                     remove_by_consensus=args.remove_by_consensus,
-                     search_radius=args.search_radius,
-                     prop_match=args.refind_prop_match,
-                     pairwise_id_thresh=args.id,
-                     merge_id_thresh=max(0.8, args.family_threshold),
-                     n_cpu=args.n_cpu,
-                     verbose=args.verbose)
-
-    # remove edges that are likely due to misassemblies (by consensus)
-
-    # merge again in case refinding has resolved issues
-    if args.verbose:
-        print("collapse gene families with refound genes...")
-    G = collapse_families(G,
-                          seqid_to_centroid=seqid_to_centroid,
-                          outdir=temp_dir,
-                          family_threshold=args.family_threshold,
-                          correct_mistranslations=False,
-                          length_outlier_support_proportion=args.
-                          length_outlier_support_proportion,
-                          n_cpu=args.n_cpu,
-                          quiet=(not args.verbose),
-                          distances_bwtn_centroids=distances_bwtn_centroids,
-                          centroid_to_index=centroid_to_index)[0]
-
-    if args.clean_edges:
-        G = clean_misassembly_edges(
-            G, edge_support_threshold=args.edge_support_threshold)
-
-    # if requested merge paralogs
-    if args.merge_paralogs:
-        G = merge_paralogs(G)
-
-    isolate_names = [
-        os.path.splitext(os.path.basename(x))[0] for x in args.input_files
-    ]
-    G.graph['isolateNames'] = isolate_names
-    mems_to_isolates = {}
-    for i, iso in enumerate(isolate_names):
-        mems_to_isolates[i] = iso
-
-    if args.verbose:
-        print("writing output...")
-
-    # write out roary like gene_presence_absence.csv
-    # get original annotaiton IDs, lengts and whether or
-    # not an internal stop codon is present
-    orig_ids = {}
-    ids_len_stop = {}
-    with open(args.output_dir + "gene_data.csv", 'r') as infile:
-        next(infile)
-        for line in infile:
-            line = line.split(",")
-            orig_ids[line[2]] = line[3]
-            ids_len_stop[line[2]] = (len(line[4]), "*" in line[4][1:-3])
-
-    G = generate_roary_gene_presence_absence(G,
-                                             mems_to_isolates=mems_to_isolates,
-                                             orig_ids=orig_ids,
-                                             ids_len_stop=ids_len_stop,
-                                             output_dir=args.output_dir)
-    # Write out presence_absence summary
-    generate_summary_stats(output_dir=args.output_dir)
-
-    # write pan genome reference fasta file
-    generate_pan_genome_reference(G,
-                                  output_dir=args.output_dir,
-                                  split_paralogs=False)
-
-    # write out common structural differences in a matrix format
-    generate_common_struct_presence_absence(
-        G,
-        output_dir=args.output_dir,
-        mems_to_isolates=mems_to_isolates,
-        min_variant_support=args.min_edge_support_sv)
-
-    # add helpful attributes and write out graph in GML format
-    for node in G.nodes():
-        G.nodes[node]['size'] = len(G.nodes[node]['members'])
-        G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
-        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        G.nodes[node]['protein'] = ";".join(conv_list(
-            G.nodes[node]['protein']))
-        G.nodes[node]['genomeIDs'] = ";".join(
-            [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
-        G.nodes[node]['degrees'] = G.degree[node]
-        G.nodes[node]['members'] = list(G.nodes[node]['members'])
-        G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
-
-    for edge in G.edges():
-        G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
-            [str(m) for m in G.edges[edge[0], edge[1]]['members']])
-        G.edges[edge[0],
-                edge[1]]['members'] = list(G.edges[edge[0],
-                                                   edge[1]]['members'])
-
-    nx.write_gml(G, args.output_dir + "final_graph.gml")
-
-    # Write out core/pan-genome alignments
-    if args.aln == "pan":
-        if args.verbose: print("generating pan genome MSAs...")
-        generate_pan_genome_alignment(G, temp_dir, args.output_dir, args.n_cpu,
-                                      args.alr, isolate_names)
-        core_nodes = get_core_gene_nodes(G, args.core, len(args.input_files))
-        concatenate_core_genome_alignments(core_nodes, args.output_dir)
-    elif args.aln == "core":
-        if args.verbose: print("generating core genome MSAs...")
-        generate_core_genome_alignment(G, temp_dir, args.output_dir,
-                                       args.n_cpu, args.alr, isolate_names,
-                                       args.core, len(args.input_files))
-
-    # remove temporary directory
-    shutil.rmtree(temp_dir)
-
-    return
-
-
-if __name__ == '__main__':
-    main()
+    return G, centroid_context, seqid_to_centroid
