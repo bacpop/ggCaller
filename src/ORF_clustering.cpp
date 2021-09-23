@@ -4,7 +4,7 @@
 
 #include "ORF_clustering.h"
 
-ORFGroupTuple group_ORFs(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
                          const GraphVector& graph_vector)
 {
     // intialise Eigen Triplet
@@ -15,16 +15,16 @@ ORFGroupTuple group_ORFs(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
 
     // iterate over each ORF sequence with specific colours combination
     size_t ORF_ID = 0;
-    for (auto& colour : colour_ORF_map)
+    for (const auto& colour : colour_ORF_map)
     {
         ORF_mat_vector.reserve(ORF_mat_vector.size() + colour.second.size());
-        for (auto& ORF_map : colour.second)
+        for (const auto& ORF_map : colour.second)
         {
             // add to ORF_mat_map, initialising empty vector
             ORF_mat_vector.push_back({colour.first, ORF_map.first});
 
-            // append the population ID to colour_ORF_map
-            std::get<6>(ORF_map.second) = ORF_ID;
+//            // append the population ID to colour_ORF_map
+//            std::get<6>(ORF_map.second) = ORF_ID;
 
             // iterate over nodes traversed by ORF
             const auto& ORF_nodes = std::get<0>(ORF_map.second);

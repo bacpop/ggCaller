@@ -24,6 +24,14 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
         for ORF_id in ORF_list:
             seq_to_cluster[ORF_id] = cluster_id
             cluster_members[cluster_id].append(ORF_id)
+
+            # also add population ID to high_scoring_ORFs for later reference
+            genome_id = cluster_id_list[ORF_id][0]
+            local_id = cluster_id_list[ORF_id][1]
+            ORF_tuple = high_scoring_ORFs[genome_id][local_id]
+            ORF_tuple = list(ORF_tuple)
+            ORF_tuple[6] = ORF_id
+            high_scoring_ORFs[genome_id][local_id] = ORF_tuple
         cluster_id += 1
 
     # determine paralogs if required
@@ -84,7 +92,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             edge_set = high_scoring_ORF_edges[genome_id][local_id]
 
             # check if current ORF is end of contig
-            has_end = True if len(edge_set) < 2 else False
+            has_end = True if len(edge_set) == 0 else False
 
             # initialise cluster to add
             cluster_to_add = current_cluster
@@ -206,7 +214,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                 neighbour_edge_set = high_scoring_ORF_edges[genome_id][neighbour]
 
                 # check if current ORF is end of contig
-                neighbour_has_end = True if len(neighbour_edge_set) < 2 else False
+                neighbour_has_end = True if len(neighbour_edge_set) == 0 else False
 
                 # add all neighbours if not present in graph already
                 if add_neighbour:

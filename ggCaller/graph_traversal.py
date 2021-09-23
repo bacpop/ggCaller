@@ -243,8 +243,8 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                 if ORF not in high_scoring_ORF_edges:
                     high_scoring_ORF_edges[ORF] = set()
                 # if ORF not first in list, add previous entry to set
-                if (i != 0):
-                    high_scoring_ORF_edges[ORF].add(entry[i - 1])
+                # if (i != 0):
+                #     high_scoring_ORF_edges[ORF].add(entry[i - 1])
                 # if ORF not last in list, add next entry to set
                 if (i != last_index):
                     high_scoring_ORF_edges[ORF].add(entry[i + 1])

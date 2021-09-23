@@ -8,7 +8,7 @@
 #include "unitigDict.h"
 #include "gene_overlap.h"
 
-ORFGroupTuple group_ORFs(std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
                          const GraphVector& graph_vector);
 
 ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
