@@ -8,6 +8,7 @@ from functools import partial
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 from panaroo_runner import *
+from panaroo import set_default_args
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -115,13 +116,184 @@ def get_options():
                            default=False,
                            help='Do not cluster ORFs. '
                                 '[Default = False] ')
+    Panaroo_mode_opts = parser.add_argument_group('Mode')
+
+    Panaroo_mode_opts.add_argument(
+        "--clean-mode",
+        dest="mode",
+        help=
+        ('''R|The stringency mode at which to run panaroo. Must be one of 'strict',\
+    'moderate' or 'sensitive'. Each of these modes can be fine tuned using the\
+     additional parameters in the 'Graph correction' section.
+
+    strict: 
+    Requires fairly strong evidence (present in  at least 5%% of genomes)\
+     to keep likely contaminant genes. Will remove genes that are refound more often than\
+     they were called originally.
+
+    moderate: 
+    Requires moderate evidence (present in  at least 1%% of genomes)\
+     to keep likely contaminant genes. Keeps genes that are refound more often than\
+     they were called originally.
+
+    sensitive: 
+    Does not delete any genes and only performes merge and refinding\
+     operations. Useful if rare plasmids are of interest as these are often hard to\
+     disguish from contamination. Results will likely include  higher number of\
+     spurious annotations.'''),
+        choices=['strict', 'moderate', 'sensitive'],
+        required=False)
+
+    Panaroo_mode_opts.add_argument(
+        "--remove-invalid-genes",
+        dest="filter_invalid",
+        action='store_true',
+        default=False,
+        help=(
+                "removes annotations that do not conform to the expected Prokka" +
+                " format such as those including premature stop codons."))
+
+    Panaroo_matching = parser.add_argument_group('Matching')
+    Panaroo_matching.add_argument(
+        "--family_threshold",
+        dest="family_threshold",
+        help="protein family sequence identity threshold (default=0.7)",
+        type=float)
+    Panaroo_matching.add_argument("--len_dif_percent",
+                                  dest="len_dif_percent",
+                                  help="length difference cutoff (default=0.98)",
+                                  type=float)
+    Panaroo_matching.add_argument("--merge_paralogs",
+                                  dest="merge_paralogs",
+                                  help="don't split paralogs",
+                                  action='store_true',
+                                  default=False)
+
+    Panaroo_refind = parser.add_argument_group('Refind')
+    Panaroo_refind.add_argument(
+        "--search_radius",
+        dest="search_radius",
+        help=("the distance in nucleotides surronding the " +
+              "neighbour of an accessory gene in which to search for it"),
+        default=5000,
+        type=int)
+    Panaroo_refind.add_argument(
+        "--refind_prop_match",
+        dest="refind_prop_match",
+        help=("the proportion of an accessory gene that must " +
+              "be found in order to consider it a match"),
+        default=0.2,
+        type=float)
+
+    Panaroo_graph = parser.add_argument_group('Graph correction')
+
+    Panaroo_graph.add_argument(
+        "--min_trailing_support",
+        dest="min_trailing_support",
+        help=("minimum cluster size to keep a gene called at the " +
+              "end of a contig"),
+        type=int)
+    Panaroo_graph.add_argument(
+        "--trailing_recursive",
+        dest="trailing_recursive",
+        help=("number of times to perform recursive trimming of low support " +
+              "nodes near the end of contigs"),
+        type=int)
+    Panaroo_graph.add_argument(
+        "--edge_support_threshold",
+        dest="edge_support_threshold",
+        help=(
+                "minimum support required to keep an edge that has been flagged" +
+                " as a possible mis-assembly"),
+        type=float)
+    Panaroo_graph.add_argument(
+        "--length_outlier_support_proportion",
+        dest="length_outlier_support_proportion",
+        help=
+        ("proportion of genomes supporting a gene with a length more " +
+         "than 1.5x outside the interquatile range for genes in the same cluster"
+         +
+         " (default=0.01). Genes failing this test will be re-annotated at the "
+         + "shorter length"),
+        type=float,
+        default=0.1)
+    Panaroo_graph.add_argument(
+        "--remove_by_consensus",
+        dest="remove_by_consensus",
+        type=ast.literal_eval,
+        choices=[True, False],
+        help=
+        ("if a gene is called in the same region with similar sequence a minority "
+         + "of the time, remove it. One of 'True' or 'False'"),
+        default=None)
+    Panaroo_graph.add_argument(
+        "--high_var_flag",
+        dest="cycle_threshold_min",
+        help=(
+                "minimum number of nested cycles to call a highly variable gene " +
+                "region (default = 5)."),
+        type=int,
+        default=5)
+    Panaroo_graph.add_argument(
+        "--min_edge_support_sv",
+        dest="min_edge_support_sv",
+        help=("minimum edge support required to call structural variants" +
+              " in the presence/absence sv file"),
+        type=int)
+    Panaroo_graph.add_argument(
+        "--all_seq_in_graph",
+        dest="all_seq_in_graph",
+        help=("Retains all DNA sequence for each gene cluster in the graph " +
+              "output. Off by default as it uses a large amount of space."),
+        action='store_true',
+        default=False)
+    Panaroo_graph.add_argument(
+        "--no_clean_edges",
+        dest="clean_edges",
+        help=("Turn off edge filtering in the final output graph."),
+        action='store_false',
+        default=True)
+
+    Panaroo_core = parser.add_argument_group('Gene alignment')
+    Panaroo_core.add_argument(
+        "--alignment",
+        dest="aln",
+        help=("Output alignments of core genes or all genes. Options are" +
+              " 'core' and 'pan'. Default: 'None'"),
+        type=str,
+        choices=['core', 'pan'],
+        default=None)
+    Panaroo_core.add_argument(
+        "--aligner",
+        dest="alr",
+        help=
+        "Specify an aligner. Options:'prank', 'clustal', and default: 'mafft'",
+        type=str,
+        choices=['prank', 'clustal', 'mafft'],
+        default="mafft")
+    Panaroo_core.add_argument("--core_threshold",
+                              dest="core",
+                              help="Core-genome sample threshold (default=0.95)",
+                              type=float,
+                              default=0.95)
+
+    # Other options
+    parser.add_argument("--codon-table",
+                        dest="table",
+                        help="the codon table to use for translation (default=11)",
+                        type=int,
+                        default=11)
+    parser.add_argument("--quiet",
+                        dest="verbose",
+                        help="suppress additional output",
+                        action='store_false',
+                        default=True)
+
     return parser.parse_args()
 
 def main():
+    # parse command line arguments for ggCaller
     options = get_options()
-
-    # parse command line arguments
-    options.out = options.out
 
     # define start/stop codons
     if options.codons != None:
@@ -168,6 +340,9 @@ def main():
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+
+    # set rest of panaroo arguments
+    options = set_default_args(options, nb_colours)
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
