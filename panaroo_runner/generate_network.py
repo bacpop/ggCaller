@@ -74,7 +74,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
     # iterating over each cluster, adding edges between clusters that each have a connection
     for current_cluster, ORF_members in cluster_members.items():
         # check if cluster is currently in graph
-        add_node = True if not G.has_node(current_cluster) else False
+        add_cluster = True if not G.has_node(current_cluster) else False
 
         # check if current cluster contains paralogs
         has_paralogs = True if current_cluster in paralogs else False
@@ -100,7 +100,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             # # initialise paralog node
             # paralog_node = None
 
-            if add_node:
+            if add_cluster:
                 if has_paralogs:
                     # create a new paralog
                     n_nodes += 1
@@ -138,21 +138,23 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                                     cluster_centroids[current_cluster]),
                     paralog=has_paralogs,
                     mergedDNA=False)
-                add_node = False
+                add_cluster = False
 
             else:
-                G.nodes[current_cluster]['size'] += 1
-                G.nodes[current_cluster]['members'].add(genome_id)
-                G.nodes[current_cluster]['seqIDs'].add(ORF_id)
-                if G.nodes[current_cluster]['hasEnd'] == False: G.nodes[current_cluster]['hasEnd'] = has_end
-                G.nodes[current_cluster]['lengths'].append(
-                    len(cluster_centroid_data[current_cluster]
-                        ['dna_sequence']))
-                if all_dna:
-                    G.nodes[current_cluster]['dna'] += [
-                        cluster_centroid_data[current_cluster]
-                        ['dna_sequence']
-                    ]
+                # check if ORF_id already added to the cluster
+                if ORF_id not in G.nodes[current_cluster]['seqIDs']:
+                    G.nodes[current_cluster]['size'] += 1
+                    G.nodes[current_cluster]['members'].add(genome_id)
+                    G.nodes[current_cluster]['seqIDs'].add(ORF_id)
+                    if G.nodes[current_cluster]['hasEnd'] == False: G.nodes[current_cluster]['hasEnd'] = has_end
+                    G.nodes[current_cluster]['lengths'].append(
+                        len(cluster_centroid_data[current_cluster]
+                            ['dna_sequence']))
+                    if all_dna:
+                        G.nodes[current_cluster]['dna'] += [
+                            cluster_centroid_data[current_cluster]
+                            ['dna_sequence']
+                        ]
 
             # # check if paralog exists, if so add paralog node
             # if has_paralogs:
@@ -216,7 +218,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                 # check if current ORF is end of contig
                 neighbour_has_end = True if len(neighbour_edge_set) == 0 else False
 
-                # add all neighbours if not present in graph already
+                # add neighbour if not present in graph already
                 if add_neighbour:
                     if neighbour_has_paralogs:
                         # create a new paralog
@@ -256,19 +258,21 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         paralog=neighbour_has_paralogs,
                         mergedDNA=False)
                 else:
-                    G.nodes[neighbour_cluster]['size'] += 1
-                    G.nodes[neighbour_cluster]['members'].add(genome_id)
-                    G.nodes[neighbour_cluster]['seqIDs'].add(neighbour_id)
-                    if G.nodes[neighbour_cluster]['hasEnd'] == False:
-                        G.nodes[neighbour_cluster]['hasEnd'] = neighbour_has_end
-                    G.nodes[neighbour_cluster]['lengths'].append(
-                        len(cluster_centroid_data[neighbour_cluster]
-                            ['dna_sequence']))
-                    if all_dna:
-                        G.nodes[neighbour_cluster]['dna'] += [
-                            cluster_centroid_data[neighbour_cluster]
-                            ['dna_sequence']
-                        ]
+                    # check if neighbour_id already added to the cluster
+                    if neighbour_id not in G.nodes[neighbour_cluster]['seqIDs']:
+                        G.nodes[neighbour_cluster]['size'] += 1
+                        G.nodes[neighbour_cluster]['members'].add(genome_id)
+                        G.nodes[neighbour_cluster]['seqIDs'].add(neighbour_id)
+                        if G.nodes[neighbour_cluster]['hasEnd'] == False:
+                            G.nodes[neighbour_cluster]['hasEnd'] = neighbour_has_end
+                        G.nodes[neighbour_cluster]['lengths'].append(
+                            len(cluster_centroid_data[neighbour_cluster]
+                                ['dna_sequence']))
+                        if all_dna:
+                            G.nodes[neighbour_cluster]['dna'] += [
+                                cluster_centroid_data[neighbour_cluster]
+                                ['dna_sequence']
+                            ]
 
                 # # check if paralog exists, if so add paralog node
                 # if neighbour_has_paralogs:

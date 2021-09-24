@@ -96,7 +96,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
         G.nodes[node]['genomeIDs'] = ";".join(
             [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join(str(G.nodes[node]['seqIDs']))
+        G.nodes[node]['geneIDs'] = ";".join([str(m) for m in G.nodes[node]['seqIDs']])
         G.nodes[node]['degrees'] = G.degree[node]
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
