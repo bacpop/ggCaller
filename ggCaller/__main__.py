@@ -7,8 +7,10 @@ from functools import partial
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
-from panaroo_runner import *
-from panaroo import set_default_args
+from panaroo_runner.set_default_args import *
+from panaroo_runner.__main__ import run_panaroo
+import ast
+
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -49,6 +51,9 @@ def get_options():
     IO.add_argument('--out',
                     default='calls.fasta',
                     help='Output FASTA file containing ORF sequences. ')
+    IO.add_argument('--out_dir',
+                    default='panaroo_output',
+                    help='Panaroo output directory ')
     Settings = parser.add_argument_group('Cut-off settings')
     Settings.add_argument('--max-path-length',
                           type=int,
@@ -159,10 +164,6 @@ def get_options():
         dest="family_threshold",
         help="protein family sequence identity threshold (default=0.7)",
         type=float)
-    Panaroo_matching.add_argument("--len_dif_percent",
-                                  dest="len_dif_percent",
-                                  help="length difference cutoff (default=0.98)",
-                                  type=float)
     Panaroo_matching.add_argument("--merge_paralogs",
                                   dest="merge_paralogs",
                                   help="don't split paralogs",
@@ -397,6 +398,13 @@ def main():
                                                                         overlap,
                                                                         options.identity_cutoff,
                                                                         options.len_diff_cutoff)
+
+                run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
+                            input_colours, options.out_dir, options.verbose, options.threads,
+                            options.length_outlier_support_proportion, options.identity_cutoff, options.len_diff_cutoff,
+                            options.family_threshold, options.min_trailing_support, options.trailing_recursive,
+                            options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
+                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph)
 
     # for testing
     print("high_scoring_ORFs: " + str(len(high_scoring_ORFs)))

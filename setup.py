@@ -82,9 +82,11 @@ setup(
     name='ggCaller',
     version=find_version('ggCaller/__init__.py'),
     packages=['ggCaller',
-              'balrog'],
+              'balrog',
+              'panaroo_runner'],
     package_dir={'ggCaller': 'ggCaller',
-                 'balrog': 'balrog'},
+                 'balrog': 'balrog',
+                 'panaroo_runner': 'panaroo_runner'},
     package_data={'balrog': ['balrog_models.tar.gz']},
     url='https://github.com/samhorsfield96/ggCaller',
     license='MIT License',
@@ -92,7 +94,7 @@ setup(
     author_email='s.horsfield19@imperial.ac.uk',
     description='A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).',
     entry_points={'console_scripts': ['ggcaller = ggCaller.__main__:main']},
-        ext_modules=[CMakeExtension('ggCaller_cpp')],
-        cmdclass=dict(build_ext=CMakeBuild),
-        zip_safe=False
+    ext_modules=[CMakeExtension('ggCaller_cpp')],
+    cmdclass=dict(build_ext=CMakeBuild),
+    zip_safe=False
 )

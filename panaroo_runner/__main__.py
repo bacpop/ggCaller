@@ -17,7 +17,6 @@ from panaroo.find_missing import find_missing
 from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
 
-from panaroo.__init__ import __version__
 
 
 class SmartFormatter(argparse.HelpFormatter):
@@ -35,9 +34,9 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap, input_colours,
-                output_dir, verbose, n_cpu, length_outlier_support_proportion, family_threshold, min_trailing_support,
-                trailing_recursive, clean_edges, edge_support_threshold, merge_paralogs, aln, alr, core,
-                all_dna, all_seq_in_graph=True):
+                output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
+                family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
+                merge_paralogs, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
     # Check cd-hit is installed
     check_cdhit_version()
     # Make sure aligner is installed if alignment requested
@@ -57,7 +56,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
 
     # generate network from clusters and adjacency information
     G, centroid_contexts, seqid_to_centroid = generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
-                                                               cluster_id_list, cluster_dict, overlap, all_dna=False)
+                                                               cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
 
     test = 1
 
@@ -200,7 +199,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
         G,
         output_dir=output_dir,
         mems_to_isolates=mems_to_isolates,
-        min_variant_support=args.min_edge_support_sv)
+        min_variant_support=min_edge_support_sv)
 
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():

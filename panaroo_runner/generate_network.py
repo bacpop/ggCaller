@@ -79,14 +79,13 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
         # check if current cluster contains paralogs
         has_paralogs = True if current_cluster in paralogs else False
 
-
         for ORF_id in ORF_members:
             # parse genome id and local ORF id
             genome_id = cluster_id_list[ORF_id][0]
             local_id = cluster_id_list[ORF_id][1]
 
             # map ORF ID to centroid ID
-            seqid_to_centroid[ORF_id] = cluster_centroids[current_cluster]
+            seqid_to_centroid[str(ORF_id)] = cluster_centroids[current_cluster]
 
             # parse neighbour information for current ORF
             edge_set = high_scoring_ORF_edges[genome_id][local_id]
@@ -114,7 +113,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     centroid=[cluster_centroids[current_cluster]],
                     maxLenId=0,
                     members=intbitset([genome_id]),
-                    seqIDs=set([ORF_id]),
+                    seqIDs=set([str(ORF_id)]),
                     hasEnd=has_end,
                     protein=[
                         cluster_centroid_data[current_cluster]
@@ -142,10 +141,10 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
 
             else:
                 # check if ORF_id already added to the cluster
-                if ORF_id not in G.nodes[current_cluster]['seqIDs']:
+                if str(ORF_id) not in G.nodes[current_cluster]['seqIDs']:
                     G.nodes[current_cluster]['size'] += 1
                     G.nodes[current_cluster]['members'].add(genome_id)
-                    G.nodes[current_cluster]['seqIDs'].add(ORF_id)
+                    G.nodes[current_cluster]['seqIDs'].add(str(ORF_id))
                     if G.nodes[current_cluster]['hasEnd'] == False: G.nodes[current_cluster]['hasEnd'] = has_end
                     G.nodes[current_cluster]['lengths'].append(
                         len(cluster_centroid_data[current_cluster]
@@ -233,7 +232,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         centroid=[cluster_centroids[neighbour_cluster]],
                         maxLenId=0,
                         members=intbitset([genome_id]),
-                        seqIDs=set([neighbour_id]),
+                        seqIDs=set([str(neighbour_id)]),
                         hasEnd=neighbour_has_end,
                         protein=[
                             cluster_centroid_data[neighbour_cluster]
@@ -259,10 +258,10 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         mergedDNA=False)
                 else:
                     # check if neighbour_id already added to the cluster
-                    if neighbour_id not in G.nodes[neighbour_cluster]['seqIDs']:
+                    if str(neighbour_id) not in G.nodes[neighbour_cluster]['seqIDs']:
                         G.nodes[neighbour_cluster]['size'] += 1
                         G.nodes[neighbour_cluster]['members'].add(genome_id)
-                        G.nodes[neighbour_cluster]['seqIDs'].add(neighbour_id)
+                        G.nodes[neighbour_cluster]['seqIDs'].add(str(neighbour_id))
                         if G.nodes[neighbour_cluster]['hasEnd'] == False:
                             G.nodes[neighbour_cluster]['hasEnd'] = neighbour_has_end
                         G.nodes[neighbour_cluster]['lengths'].append(
