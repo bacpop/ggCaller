@@ -302,7 +302,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                     auto& TIS_node_coords = std::get<1>(TIS_coords);
 
                     // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand and population ID, to be worked out later).
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, 0);
+                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true);
 
                     // think about if there is no TIS, then can ignore ORF?
                     update_ORF_node_map(ORF_hash, ORF_node_vector, ORF_node_map);

@@ -8,6 +8,7 @@ from functools import partial
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 from panaroo_runner.__main__ import run_panaroo
+import math
 
 
 def get_options():
@@ -102,7 +103,6 @@ def main():
     stop_codons_for = ["TAA", "TGA", "TAG"]
     stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 100
@@ -114,8 +114,8 @@ def main():
     max_ORF_overlap = 60
     write_idx = True
     write_graph = True
-    cluster_id_cutoff = 0.98
-    cluster_len_diff_cutoff = 0.98
+    identity_cutoff = 0.98
+    len_diff_cutoff = 0.98
     max_orf_orf_distance = 10000
     cluster_ORFs = True
 
@@ -139,6 +139,22 @@ def main():
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+
+    # panaroo options
+    out_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
+    verbose = True
+    length_outlier_support_proportion = 0.1
+    family_threshold = 0.7
+    min_trailing_support = max(2, math.ceil(0.05 * nb_colours))
+    trailing_recursive = 99999999
+    clean_edges = True
+    edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
+    merge_paralogs = True
+    aln = "core"
+    alr = "mafft"
+    core = 0.95
+    min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
+    all_seq_in_graph = False
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
@@ -228,11 +244,15 @@ def main():
 
         # cluster ORFs
         if cluster_ORFs is True:
-            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, cluster_id_cutoff,
-                                                                    cluster_len_diff_cutoff)
+            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, identity_cutoff,
+                                                                    len_diff_cutoff)
 
             run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
-                        output_dir, verbose)
+                        input_colours, out_dir, verbose, num_threads,
+                        length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
+                        family_threshold, min_trailing_support, trailing_recursive,
+                        clean_edges, edge_support_threshold, merge_paralogs, aln,
+                        alr, core, min_edge_support_sv, all_seq_in_graph)
 
     # print("Generating fasta file of gene calls...")
     # # print output to file

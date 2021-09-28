@@ -84,7 +84,7 @@ typedef std::pair<size_t, size_t> indexPair;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand and population ID
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, size_t> ORFNodeVector;
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID
 typedef std::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
 // vector of ORF paths through graphs

@@ -8,15 +8,19 @@ import textwrap
 import ast
 
 from panaroo.isvalid import *
-from panaroo.set_default_args import set_default_args
 from panaroo.prokka import process_prokka_input
-from .generate_network import generate_network
+from .generate_network import *
+# from panaroo.cdhit import check_cdhit_version
+# from panaroo.cdhit import run_cdhit
 from panaroo.generate_output import *
-from panaroo.clean_network import *
+# from panaroo.clean_network import *
 from panaroo.find_missing import find_missing
-from panaroo.generate_alignments import check_aligner_install
+# from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
 
+# debugging scripts
+from .cdhit_align import *
+from .clean_network import *
 
 
 class SmartFormatter(argparse.HelpFormatter):

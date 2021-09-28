@@ -17,9 +17,9 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
     cluster_members = defaultdict(list)
     # iterate over cluster_dict, parsing all sequences to clusters
     cluster_id = 0
-    for cluster, ORF_list in cluster_dict.items():
+    for centroid, ORF_list in cluster_dict.items():
         # append centroid to cluster
-        cluster_centroids[cluster_id] = cluster
+        cluster_centroids[cluster_id] = centroid
         # for each ORF, add ORF_id and cluster_id to respective dictionaries
         for ORF_id in ORF_list:
             seq_to_cluster[ORF_id] = cluster_id
@@ -30,7 +30,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             local_id = cluster_id_list[ORF_id][1]
             ORF_tuple = high_scoring_ORFs[genome_id][local_id]
             ORF_tuple = list(ORF_tuple)
-            ORF_tuple[6] = ORF_id
+            ORF_tuple.append(ORF_id)
             high_scoring_ORFs[genome_id][local_id] = ORF_tuple
         cluster_id += 1
 
@@ -85,7 +85,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             local_id = cluster_id_list[ORF_id][1]
 
             # map ORF ID to centroid ID
-            seqid_to_centroid[str(ORF_id)] = cluster_centroids[current_cluster]
+            seqid_to_centroid[str(ORF_id)] = str(cluster_centroids[current_cluster])
 
             # parse neighbour information for current ORF
             edge_set = high_scoring_ORF_edges[genome_id][local_id]
@@ -105,12 +105,12 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     n_nodes += 1
                     cluster_to_add = n_nodes
                     centroid_context[
-                        cluster_centroids[current_cluster]].append(
+                        str(cluster_centroids[current_cluster])].append(
                         [cluster_to_add, genome_id])
                 G.add_node(
                     cluster_to_add,
                     size=1,
-                    centroid=[cluster_centroids[current_cluster]],
+                    centroid=[str(cluster_centroids[current_cluster])],
                     maxLenId=0,
                     members=intbitset([genome_id]),
                     seqIDs=set([str(ORF_id)]),
@@ -134,7 +134,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     longCentroidID=(len(
                         cluster_centroid_data[current_cluster]
                         ['dna_sequence']),
-                                    cluster_centroids[current_cluster]),
+                                    str(cluster_centroids[current_cluster])),
                     paralog=has_paralogs,
                     mergedDNA=False)
                 add_cluster = False
@@ -224,12 +224,12 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         n_nodes += 1
                         neighbour_cluster_to_add = n_nodes
                         centroid_context[
-                            cluster_centroids[neighbour_cluster]].append(
+                            str(cluster_centroids[neighbour_cluster])].append(
                             [neighbour_cluster_to_add, genome_id])
                     G.add_node(
                         neighbour_cluster_to_add,
                         size=1,
-                        centroid=[cluster_centroids[neighbour_cluster]],
+                        centroid=[str(cluster_centroids[neighbour_cluster])],
                         maxLenId=0,
                         members=intbitset([genome_id]),
                         seqIDs=set([str(neighbour_id)]),
@@ -253,7 +253,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         longCentroidID=(len(
                             cluster_centroid_data[neighbour_cluster]
                             ['dna_sequence']),
-                                        cluster_centroids[neighbour_cluster]),
+                                        str(cluster_centroids[neighbour_cluster])),
                         paralog=neighbour_has_paralogs,
                         mergedDNA=False)
                 else:
