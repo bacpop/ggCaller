@@ -62,9 +62,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
     G, centroid_contexts, seqid_to_centroid = generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                                                                cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
 
-    test = 1
 
-    ### commented from here
     # merge paralogs
     if verbose:
         print("Processing paralogs...")
@@ -75,7 +73,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
         G.nodes[node]['genomeIDs'] = ";".join(
             [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join([str(m) for m in G.nodes[node]['seqIDs']])
+        G.nodes[node]['geneIDs'] = ";".join([m for m in G.nodes[node]['seqIDs']])
         G.nodes[node]['degrees'] = G.degree[node]
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(

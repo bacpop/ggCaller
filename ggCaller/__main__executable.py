@@ -142,6 +142,7 @@ def main():
 
     # panaroo options
     out_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
+    out = "test_ORFs.fasta"
     verbose = True
     length_outlier_support_proportion = 0.1
     family_threshold = 0.7
@@ -242,6 +243,16 @@ def main():
             # high_scoring_ORF_edges[colour_ID] = {}
             high_scoring_ORF_edges[colour_ID] = ORF_edges
 
+        print("Generating fasta file of gene calls...")
+        # print output to file
+        ORF_count = 1
+        with open(out, "w") as f:
+            for colour, gene_dict in high_scoring_ORFs.items():
+                for gene_id, ORFNodeVector in gene_dict.items():
+                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    f.write(">" + str(ORF_count) + "\n" + gene + "\n")
+                    ORF_count += 1
+
         # cluster ORFs
         if cluster_ORFs is True:
             cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, identity_cutoff,
@@ -253,15 +264,6 @@ def main():
                         family_threshold, min_trailing_support, trailing_recursive,
                         clean_edges, edge_support_threshold, merge_paralogs, aln,
                         alr, core, min_edge_support_sv, all_seq_in_graph)
-
-    # print("Generating fasta file of gene calls...")
-    # # print output to file
-    # ORF_count = 1
-    # with open(output, "w") as f:
-    #     for gene, info_pair in true_genes.items():
-    #         colour_str = "".join(info_pair[0])
-    #         f.write(">" + str(ORF_count) + "_" + str(colour_str) + "\n" + gene + "\n")
-    #         ORF_count += 1
 
     print("Finished.")
 
