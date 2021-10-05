@@ -151,7 +151,7 @@ def main():
     clean_edges = True
     edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
     merge_paralogs = True
-    aln = "core"
+    aln = "pan"
     alr = "mafft"
     core = 0.95
     min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
@@ -245,13 +245,11 @@ def main():
 
         print("Generating fasta file of gene calls...")
         # print output to file
-        ORF_count = 1
         with open(out, "w") as f:
             for colour, gene_dict in high_scoring_ORFs.items():
                 for gene_id, ORFNodeVector in gene_dict.items():
                     gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    f.write(">" + str(ORF_count) + "\n" + gene + "\n")
-                    ORF_count += 1
+                    f.write(">" + str(colour) + "_" + str(gene_id) + "\n" + gene + "\n")
 
         # cluster ORFs
         if cluster_ORFs is True:

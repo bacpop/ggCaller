@@ -1,10 +1,8 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from collections import Counter, defaultdict
 import networkx as nx
-from panaroo.clean_network import collapse_paralogs
-import numpy as np
-from scipy.sparse import csc_matrix, lil_matrix
 from intbitset import intbitset
 
 
@@ -37,11 +35,6 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             seq_to_cluster[pan_ORF_id] = cluster_id
             cluster_members[cluster_id].append(pan_ORF_id)
 
-            # # also add population ID to high_scoring_ORFs for later reference
-            # ORF_tuple = high_scoring_ORFs[genome_id][local_id]
-            # ORF_tuple = list(ORF_tuple)
-            # ORF_tuple.append(ORF_id)
-            # high_scoring_ORFs[genome_id][local_id] = ORF_tuple
         cluster_id += 1
 
     # determine paralogs if required
@@ -245,42 +238,6 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                                 ['dna_sequence']
                             ]
 
-                # # check if paralog exists, if so add paralog node
-                # if neighbour_has_paralogs:
-                #     # create a new paralog
-                #     n_nodes += 1
-                #     neighbour_paralog_node = n_nodes
-                #     centroid_context[
-                #         cluster_centroids[neighbour_cluster]].append(
-                #         [paralog_node, neighbour_genome_id])
-                #     G.add_node(
-                #         neighbour_paralog_node,
-                #         size=1,
-                #         centroid=[cluster_centroids[neighbour_cluster]],
-                #         maxLenId=0,
-                #         members=intbitset([neighbour_genome_id]),
-                #         seqIDs=set([neighbour]),
-                #         hasEnd=neighbour_has_end,
-                #         protein=[
-                #             cluster_centroid_data[neighbour_cluster]['prot_sequence']
-                #         ],
-                #         dna=[
-                #             cluster_centroid_data[neighbour_cluster]['dna_sequence']
-                #         ],
-                #         annotation=cluster_centroid_data[neighbour_cluster]
-                #         ['annotation'],
-                #         description=cluster_centroid_data[neighbour_cluster]
-                #         ['description'],
-                #         lengths=[
-                #             len(cluster_centroid_data[neighbour_cluster]
-                #                 ['dna_sequence'])
-                #         ],
-                #         longCentroidID=(len(cluster_centroid_data[neighbour_cluster]
-                #                             ['dna_sequence']),
-                #                         cluster_centroids[neighbour_cluster]),
-                #         paralog=neighbour_has_paralogs,
-                #         mergedDNA=False)
-
                 # add edge between current ORF and neighbour
                 if G.has_edge(cluster_to_add, neighbour_cluster_to_add):
                     G[cluster_to_add][neighbour_cluster_to_add]['size'] += 1
@@ -290,28 +247,6 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                                neighbour_cluster_to_add,
                                size=1,
                                members=intbitset([genome_id]))
-
-                # # add edge between current ORF paralog and neighbour
-                # if paralog_node is not None:
-                #     if G.has_edge(paralog_node, neighbour):
-                #         G[paralog_node][neighbour]['size'] += 1
-                #         G[paralog_node][neighbour]['members'].add(genome_id)
-                #     else:
-                #         G.add_edge(paralog_node,
-                #                    neighbour,
-                #                    size=1,
-                #                    members=intbitset([genome_id]))
-                #
-                # # add edge between current ORF and neighbour paralog
-                # if neighbour_paralog_node is not None:
-                #     if G.has_edge(current_cluster, neighbour):
-                #         G[current_cluster][neighbour_paralog_node]['size'] += 1
-                #         G[current_cluster][neighbour_paralog_node]['members'].add(genome_id)
-                #     else:
-                #         G.add_edge(current_cluster,
-                #                    neighbour_paralog_node,
-                #                    size=1,
-                #                    members=intbitset([genome_id]))
 
                 # currently don't add edge between current cluster paralog and neighbour paralog.
 

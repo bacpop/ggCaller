@@ -8,11 +8,10 @@ import textwrap
 import ast
 
 from panaroo.isvalid import *
-from panaroo.prokka import process_prokka_input
 from .generate_network import *
 # from panaroo.cdhit import check_cdhit_version
 # from panaroo.cdhit import run_cdhit
-from panaroo.generate_output import *
+from .generate_output import *
 # from panaroo.clean_network import *
 from panaroo.find_missing import find_missing
 # from panaroo.generate_alignments import check_aligner_install
@@ -40,7 +39,7 @@ class SmartFormatter(argparse.HelpFormatter):
 def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap, input_colours,
                 output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
-                merge_paralogs, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
+                merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
     # Check cd-hit is installed
     check_cdhit_version()
     # Make sure aligner is installed if alignment requested
@@ -157,7 +156,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
             G, edge_support_threshold=edge_support_threshold)
 
     # if requested merge paralogs
-    if merge_paralogs:
+    if merge_para:
         G = merge_paralogs(G)
 
     isolate_names = [
@@ -176,12 +175,11 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
     # not an internal stop codon is present
     orig_ids = {}
     ids_len_stop = {}
-    with open(output_dir + "gene_data.csv", 'r') as infile:
-        next(infile)
-        for line in infile:
-            line = line.split(",")
-            orig_ids[line[2]] = line[3]
-            ids_len_stop[line[2]] = (len(line[4]), "*" in line[4][1:-3])
+    for genome_id, gene_dict in high_scoring_ORFs.items():
+        for gene_id, ORFNodeVector in gene_dict.items():
+            pan_centroid_ID = str(genome_id) + "_0_" + str(gene_id)
+            orig_ids[pan_centroid_ID] = pan_centroid_ID
+            ids_len_stop[pan_centroid_ID] = (ORFNodeVector[2] / 3, False)
 
     G = generate_roary_gene_presence_absence(G,
                                              mems_to_isolates=mems_to_isolates,
@@ -230,14 +228,16 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names)
+                                      alr, isolate_names, DBG,
+                                      high_scoring_ORFs, overlap)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, alr, isolate_names,
-                                       core, len(input_colours))
+                                       core, len(input_colours), DBG,
+                                       high_scoring_ORFs, overlap)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
