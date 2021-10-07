@@ -109,7 +109,7 @@ typedef std::unordered_map<size_t, std::vector<std::vector<std::tuple<int, size_
 // vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
 typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
 // tuple containing grouping information for ORFs filtered by Balrog
-typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
+typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<std::vector<std::pair<size_t, size_t>>>> ORFGroupTuple;
 // map of ORFs to clusters, with centroid as key
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 

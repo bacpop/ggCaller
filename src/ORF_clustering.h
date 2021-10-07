@@ -16,7 +16,7 @@ ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& col
                                const size_t& DBG_overlap,
                                const ORFMatrixVector& ORF_mat_vector,
                                const std::vector<std::unordered_set<size_t>>& ORF_group_vector,
-                               const std::vector<std::pair<size_t, size_t>>& centroid_vector,
+                               std::vector<std::vector<std::pair<size_t, size_t>>>& centroid_vector,
                                const double& id_cutoff,
                                const double& len_diff_cutoff);
 
