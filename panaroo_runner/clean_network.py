@@ -13,6 +13,111 @@ from tqdm import tqdm
 from intbitset import intbitset
 import sys
 
+def merge_node_cluster(G,
+                       nodes,
+                       newNode,
+                       seqid_to_centroid,
+                       multi_centroid=True,
+                       check_merge_mems=True):
+    if check_merge_mems:
+        mem_count = Counter(
+            itertools.chain.from_iterable(
+                gen_node_iterables(G, nodes, 'members')))
+        if max(mem_count.values()) > 1:
+            raise ValueError("merging nodes with the same genome IDs!")
+
+    # take node with most support as the 'consensus'
+    nodes = sorted(nodes, key=lambda x: G.nodes[x]['size'])
+
+    # First create a new node and combine the attributes
+    # check if seq_IDs are duplicated before removing duplicated DNA
+    centroid_IDs = [item for sublist in gen_node_iterables(G, nodes, 'centroid') for item in sublist]
+    to_remove = set()
+    for ID in centroid_IDs:
+        indices = [index for index, element in enumerate(centroid_IDs) if element == ID]
+        if len(indices) > 1:
+            for i in range(1, len(indices)):
+                to_remove.add(indices)
+
+    # flatten nested lists and then generate list of dna/protein entries that are not repeated centroid_IDs
+    dna = [item for sublist in gen_node_iterables(G, nodes, 'dna') for item in sublist]
+    protein = [item for sublist in gen_node_iterables(G, nodes, 'protein') for item in sublist]
+    dna = [element[0] for index, element in enumerate(dna) if index not in to_remove]
+    protein = [element[0] for index, element in enumerate(protein) if index not in to_remove]
+
+    # generate iterables of centroids and seqIDs
+    centroid = iter_del_dups(gen_node_iterables(G, nodes, 'centroid'))
+    seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
+
+    # update seqid_to_centroid
+    for seqID in seqIDs:
+        seqid_to_centroid[seqID] = centroid[0]
+
+    # First create a new node and combine the attributes
+    # dna = iter_del_dups(gen_node_iterables(G, nodes, 'dna'))
+    maxLenId = 0
+    max_l = 0
+    for i, s in enumerate(dna):
+        if len(s) >= max_l:
+            max_l = len(s)
+            maxLenId = i
+
+    members = G.nodes[nodes[0]]['members'].copy()
+    for n in nodes[1:]:
+        members |= G.nodes[n]['members']
+
+    if multi_centroid:
+        mergedDNA = any(gen_node_iterables(G, nodes, 'mergedDNA'))
+    else:
+        mergedDNA = True
+
+    G.add_node(
+        newNode,
+        size=len(members),
+        centroid=centroid,
+        maxLenId=maxLenId,
+        members=members,
+        seqIDs=seqIDs,
+        hasEnd=any(gen_node_iterables(G, nodes, 'hasEnd')),
+        protein=protein,
+        dna=dna,
+        annotation=";".join(
+            iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
+                                             split=";"))),
+        description=";".join(
+            iter_del_dups(
+                gen_node_iterables(G, nodes, 'description', split=";"))),
+        lengths=list(
+            itertools.chain.from_iterable(
+                gen_node_iterables(G, nodes, 'lengths'))),
+        longCentroidID=max(gen_node_iterables(G, nodes, 'longCentroidID')),
+        paralog=any(gen_node_iterables(G, nodes, 'paralog')),
+        mergedDNA=mergedDNA)
+    if "prevCentroids" in G.nodes[nodes[0]]:
+        G.nodes[newNode]['prevCentroids'] = ";".join(
+            set(
+                iter_del_dups(
+                    gen_node_iterables(G, nodes, 'prevCentroids', split=";"))))
+
+    # Now iterate through neighbours of each node and add them to the new node
+    merge_nodes = set(nodes)
+    for node in nodes:
+        for neighbour in G.neighbors(node):
+            if neighbour in merge_nodes: continue
+            if G.has_edge(newNode, neighbour):
+                G[newNode][neighbour]['members'] |= G[node][neighbour][
+                    'members']
+                G[newNode][neighbour]['size'] = len(G[newNode][neighbour]['members'])
+            else:
+                G.add_edge(newNode,
+                           neighbour,
+                           size=G[node][neighbour]['size'],
+                           members=G[node][neighbour]['members'])
+
+    # remove old nodes from Graph
+    G.remove_nodes_from(nodes)
+
+    return G
 
 # Genes at the end of contigs are more likely to be false positives thus
 # we can remove those with low support
@@ -209,6 +314,7 @@ def collapse_families(G,
                             G,
                             cluster,
                             node_count,
+                            seqid_to_centroid,
                             multi_centroid=(not correct_mistranslations))
 
                         node_mem_index[node_count] = node_mem_index[cluster[0]]
@@ -306,6 +412,7 @@ def collapse_families(G,
                                         G,
                                         clust,
                                         node_count,
+                                        seqid_to_centroid,
                                         multi_centroid=(
                                             not correct_mistranslations),
                                         check_merge_mems=False)
@@ -331,7 +438,7 @@ def collapse_families(G,
     return G, distances_bwtn_centroids, centroid_to_index
 
 
-def collapse_paralogs(G, centroid_contexts, max_context=5, quiet=False):
+def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, quiet=False):
     node_count = max(list(G.nodes())) + 10
 
     # first sort by context length, context dist to ensure ties
@@ -422,12 +529,12 @@ def collapse_paralogs(G, centroid_contexts, max_context=5, quiet=False):
             if len(cluster_dict[cluster]) < 2: continue
             node_count += 1
 
-            G = merge_node_cluster(G, list(cluster_dict[cluster]), node_count)
+            G = merge_node_cluster(G, list(cluster_dict[cluster]), node_count, seqid_to_centroid)
 
     return (G)
 
 
-def merge_paralogs(G):
+def merge_paralogs(G, seqid_to_centroid):
     node_count = max(list(G.nodes())) + 10
 
     # group paralog nodes by centroid
@@ -463,6 +570,7 @@ def merge_paralogs(G):
             G = merge_node_cluster(G,
                                    temp_c,
                                    node_count,
+                                   seqid_to_centroid,
                                    check_merge_mems=False)
 
     return (G)

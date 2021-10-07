@@ -132,7 +132,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     // traverse graph, set scope for all_paths and fm_idx
     {
         // recursive traversal
-        //cout << "Traversing graph: " << to_string(colour_ID) << endl;
+        cout << "Traversing graph: " << to_string(colour_ID) << endl;
         PathVector all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
 
         // if no FM_fasta_file specified, cannot generate FM Index
@@ -149,7 +149,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
         }
 
         // generate ORF calls
-        //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
+        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
         ORF_vector = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
 
@@ -157,7 +157,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     ORFOverlapMap ORF_overlap_map;
     if (!no_filter)
     {
-        // << "Determining overlaps: " << to_string(colour_ID) << endl;
+        cout << "Determining overlaps: " << to_string(colour_ID) << endl;
         ORF_overlap_map = std::move(calculate_overlaps(_GraphVector, ORF_vector, overlap, max_overlap));
     }
 

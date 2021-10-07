@@ -112,9 +112,6 @@ ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& col
     // initialise mapping from group_id to potential singleton ORFs
     std::unordered_map<size_t, std::unordered_set<size_t>> group_singleton_map;
 
-    // initialise map for singleton centroids
-    std::unordered_map<size_t, size_t> singleton_centroid_map;
-
     // create set to keep track of assigned ORFs to avoid ORFs being added to other groups
     std::unordered_set<size_t> encountered_set;
 
@@ -201,135 +198,163 @@ ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& col
         }
     }
 
-    // create set of singletons to remove from cluster_map
-    std::unordered_set<size_t> singleton_set;
+    // keep track of previous number of prev_singleton_set_size
+    size_t prev_singleton_set_size = 0;
 
-    // iterate over singleton_group, check each entry to see if still belongs to singleton.
-    // If so, determine the centroid for the whole group and calculate edit distance to see if better cluster can be found
-    for (const auto& singleton : group_singleton_map)
+    // iterate over singleton until optimal clustering found
+    while (true)
     {
-        // if group only contains single entry, then skip
-        if (singleton.second.size() < 2)
+        // initialise map for singleton centroids
+        std::unordered_map<size_t, size_t> singleton_centroid_map;
+
+        // reset encountered_set
+        encountered_set.clear();
+
+        // create set of singletons to remove from cluster_map
+        std::unordered_set<size_t> singleton_set;
+
+        // iterate over singleton_group, check each entry to see if still belongs to singleton.
+        // If so, determine the centroid for the whole group and calculate edit distance to see if better cluster can be found
+        for (const auto& singleton : group_singleton_map)
         {
-            continue;
+            // if group only contains single entry, then skip
+            if (singleton.second.size() < 2)
+            {
+                continue;
+            }
+
+            size_t assigned_centroid = 0;
+            size_t centroid_len = 0;
+
+            // for each ORF_ID in the singleton group, check if it makes up a singleton cluster
+            for (const auto& ORF_ID : singleton.second)
+            {
+                if (cluster_map.find(ORF_ID) != cluster_map.end())
+                {
+                    if (cluster_map.at(ORF_ID).size() == 1)
+                    {
+                        // get reference to entry in ORF_mat_vector
+                        const auto& ORF_entry = ORF_mat_vector.at(ORF_ID);
+
+                        // get length of ORF entry
+                        const size_t& ORF_length = std::get<2>(colour_ORF_map.at(ORF_entry.first).at(ORF_entry.second));
+
+                        // update assigned_centroid
+                        if (ORF_length > centroid_len || (ORF_length == centroid_len && ORF_ID < assigned_centroid))
+                        {
+                            assigned_centroid = ORF_ID;
+                            centroid_len = ORF_length;
+                        }
+
+                        // update singleton_set
+                        singleton_set.insert(ORF_ID);
+                    }
+                }
+            }
+            // update new centroid for each group only if singletons found
+            if (centroid_len > 0)
+            {
+                singleton_centroid_map[singleton.first] = assigned_centroid;
+            }
         }
 
-        size_t assigned_centroid = 0;
-        size_t centroid_len = 0;
+        // reset group_singleton_map
+        group_singleton_map.clear();
 
-        // for each ORF_ID in the singleton group, check if it makes up a singleton cluster
-        for (const auto& ORF_ID : singleton.second)
+        // check if singleton_set size has changed since last iteration, if not break
+        if (singleton_set.size() == prev_singleton_set_size)
         {
-            if (cluster_map.find(ORF_ID) != cluster_map.end())
+            break;
+        } else
+        {
+            prev_singleton_set_size = singleton_set.size();
+        }
+
+        // iterate over singleton_set to reassign clusters as done previously
+        for (const size_t& ORF_ID : singleton_set)
+        {
+            // check if ORF encountered previously
+            if (encountered_set.find(ORF_ID) != encountered_set.end())
             {
-                if (cluster_map.at(ORF_ID).size() == 1)
+                continue;
+            }
+
+            // erase the current singleton from cluster_map
+            auto it = cluster_map.find(ORF_ID);
+            cluster_map.erase(it);
+
+            // get entry information for the current ORF
+            const auto& ORF2_entry = ORF_mat_vector.at(ORF_ID);
+            const auto& ORF2_info = colour_ORF_map.at(ORF2_entry.first).at(ORF2_entry.second);
+            const auto& ORF2_len = std::get<2>(ORF2_info);
+
+            // create a set for all the centroids for the groups the ORF belongs to
+            std::unordered_set<size_t> centroid_set;
+
+            // go through the group_IDs
+            for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
+            {
+                // if group contains a singleton, add the centroids to centroid set
+                if (singleton_centroid_map.find(group_ID) != singleton_centroid_map.end())
                 {
-                    // get reference to entry in ORF_mat_vector
-                    const auto& ORF_entry = ORF_mat_vector.at(ORF_ID);
+                    centroid_set.insert(singleton_centroid_map.at(group_ID));
+                }
+            }
 
-                    // get length of ORF entry
-                    const size_t& ORF_length = std::get<2>(colour_ORF_map.at(ORF_entry.first).at(ORF_entry.second));
+            // go through and align to each centroid, determine what is the highest scoring assignment
+            size_t assigned_centroid = ORF_ID;
+            double assigned_perc_id = 0;
+            for (const auto& centroid : centroid_set)
+            {
+                if (centroid != ORF_ID)
+                {
+                    const auto& ORF1_entry = ORF_mat_vector.at(centroid);
+                    const auto& ORF1_info = colour_ORF_map.at(ORF1_entry.first).at(ORF1_entry.second);
+                    const auto& ORF1_len = std::get<2>(ORF1_info);
 
-                    // update assigned_centroid
-                    if (ORF_length > centroid_len || (ORF_length == centroid_len && ORF_ID < assigned_centroid))
+                    // check that perc_len_diff is greater than cut-off, otherwise pass
+                    double perc_len_diff = (double)ORF2_len / (double)ORF1_len;
+
+                    if (perc_len_diff < len_diff_cutoff)
                     {
-                        assigned_centroid = ORF_ID;
-                        centroid_len = ORF_length;
+                        continue;
                     }
 
-                    // update singleton_set
-                    singleton_set.insert(ORF_ID);
+                    // calculate the perc_id between the current centroid and the ORF
+                    double current_perc_id = align_seqs(ORF1_info, ORF2_info, graph_vector, DBG_overlap);
+
+                    if (current_perc_id > assigned_perc_id)
+                    {
+                        assigned_perc_id = current_perc_id;
+                        assigned_centroid = centroid;
+                    }
+                        // when current_perc_id == assigned_perc_id, assign assigned_centroid to lowest index
+                    else if (current_perc_id == assigned_perc_id)
+                    {
+                        assigned_centroid = std::min(centroid, assigned_centroid);
+                    }
                 }
             }
-        }
-        // update new centroid for each group only if singletons found
-        if (centroid_len > 0)
-        {
-            singleton_centroid_map[singleton.first] = assigned_centroid;
-        }
-    }
 
-    // reset encountered_set
-    encountered_set.clear();
-
-    // iterate over singleton_set to reassign clusters as done previously
-    for (const size_t& ORF_ID : singleton_set)
-    {
-        // check if ORF encountered previously
-        if (encountered_set.find(ORF_ID) != encountered_set.end())
-        {
-            continue;
-        }
-
-        // erase the current singleton from cluster_map
-        auto it = cluster_map.find(ORF_ID);
-        cluster_map.erase(it);
-
-        // get entry information for the current ORF
-        const auto& ORF2_entry = ORF_mat_vector.at(ORF_ID);
-        const auto& ORF2_info = colour_ORF_map.at(ORF2_entry.first).at(ORF2_entry.second);
-        const auto& ORF2_len = std::get<2>(ORF2_info);
-
-        // create a set for all the centroids for the groups the ORF belongs to
-        std::unordered_set<size_t> centroid_set;
-
-        // go through the group_IDs
-        for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
-        {
-            // if group contains a singleton, add the centroids to centroid set
-            if (singleton_centroid_map.find(group_ID) != singleton_centroid_map.end())
+            // check if centroid perc_id is greater than cut-off, if not then assign the cluster to it's own centroid
+            if (assigned_perc_id >= id_cutoff)
             {
-                centroid_set.insert(singleton_centroid_map.at(group_ID));
+                cluster_map[assigned_centroid].insert(ORF_ID);
+                cluster_map[assigned_centroid].insert(assigned_centroid);
+                encountered_set.insert(ORF_ID);
+                encountered_set.insert(assigned_centroid);
             }
-        }
-
-        // go through and align to each centroid, determine what is the highest scoring assignment
-        size_t assigned_centroid = ORF_ID;
-        double assigned_perc_id = 0;
-        for (const auto& centroid : centroid_set)
-        {
-            if (centroid != ORF_ID)
+            else
             {
-                const auto& ORF1_entry = ORF_mat_vector.at(centroid);
-                const auto& ORF1_info = colour_ORF_map.at(ORF1_entry.first).at(ORF1_entry.second);
-                const auto& ORF1_len = std::get<2>(ORF1_info);
+                cluster_map[ORF_ID].insert(ORF_ID);
+                encountered_set.insert(ORF_ID);
 
-                // check that perc_len_diff is greater than cut-off, otherwise pass
-                double perc_len_diff = (double)ORF2_len / (double)ORF1_len;
-
-                if (perc_len_diff < len_diff_cutoff)
+                // for each k-mer groups add current singleton
+                for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
                 {
-                    continue;
-                }
-
-                // calculate the perc_id between the current centroid and the ORF
-                double current_perc_id = align_seqs(ORF1_info, ORF2_info, graph_vector, DBG_overlap);
-
-                if (current_perc_id > assigned_perc_id)
-                {
-                    assigned_perc_id = current_perc_id;
-                    assigned_centroid = centroid;
-                }
-                    // when current_perc_id == assigned_perc_id, assign assigned_centroid to lowest index
-                else if (current_perc_id == assigned_perc_id)
-                {
-                    assigned_centroid = std::min(centroid, assigned_centroid);
+                    group_singleton_map[group_ID].insert(ORF_ID);
                 }
             }
-        }
-
-        // check if centroid perc_id is greater than cut-off, if not then assign the cluster to it's own centroid
-        if (assigned_perc_id >= id_cutoff)
-        {
-            cluster_map[assigned_centroid].insert(ORF_ID);
-            cluster_map[assigned_centroid].insert(assigned_centroid);
-            encountered_set.insert(ORF_ID);
-            encountered_set.insert(assigned_centroid);
-        }
-        else
-        {
-            cluster_map[ORF_ID].insert(ORF_ID);
-            encountered_set.insert(ORF_ID);
         }
     }
 

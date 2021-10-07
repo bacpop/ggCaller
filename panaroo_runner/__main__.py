@@ -65,7 +65,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
     # merge paralogs
     if verbose:
         print("Processing paralogs...")
-    G = collapse_paralogs(G, centroid_contexts, quiet=(not verbose))
+    G = collapse_paralogs(G, centroid_contexts, seqid_to_centroid, quiet=(not verbose))
 
     # write out pre-filter graph in GML format
     for node in G.nodes():
@@ -157,7 +157,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
 
     # if requested merge paralogs
     if merge_para:
-        G = merge_paralogs(G)
+        G = merge_paralogs(G, seqid_to_centroid)
 
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours

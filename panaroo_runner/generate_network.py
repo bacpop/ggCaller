@@ -139,7 +139,10 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                                     cluster_centroids[current_cluster]),
                     paralog=has_paralogs,
                     mergedDNA=False)
-                add_cluster = False
+                # if has_paralogs == true, then need to add new node for each sequence
+                # otherwise can stop adding clusters
+                if not has_paralogs:
+                    add_cluster = False
 
             else:
                 # check if ORF_id already added to the cluster
