@@ -74,10 +74,21 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     # create a dictionaries assign each ORF an index in the graph to vertices
     ORF_index = {}
 
+    # generate a list of ORFs and scores to sort by score
+    ORF_score_list = []
+
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in ORF_score_dict.keys():
+    # vertex_ID = g.new_vertex_property("int")
+    # vertex_score = g.new_vertex_property("double")
+    for ORF_ID in ORF_score_dict.keys():
         v = g.add_vertex()
-        ORF_index[ORF] = g.vertex_index[v]
+        ORF_index[ORF_ID] = int(v)
+        # vertex_ID[g.vertex_index[v]] = ORF_ID
+        # vertex_score[g.vertex_index[v]] = ORF_score_dict[ORF_ID]
+        ORF_score_list.append((ORF_ID, ORF_score_dict[ORF_ID]))
+
+    # generate a sorted list of ORFs based on score
+    sorted(ORF_score_list, key=lambda x: x[1])
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     for ORF1, overlap_dict in ORF_overlap_dict.items():
@@ -89,22 +100,45 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
                     # add new edge between the two ORFs, where ORF2 is the source and ORF1 is the sink
                     e = g.add_edge(g.vertex(ORF_index[ORF2]), g.vertex(ORF_index[ORF1]))
 
-    # determine if cycles present. If so, break them by removing edge before repeated node and re-test
+    # check if a cycle is present in the graph
     cycle = True
     try:
-        circuit = next(gt.all_circuits(g))
+        next(gt.all_circuits(g))
     except StopIteration:
         cycle = False
 
+    # if cycle detected, iterate over ORF_score_list, finding cycles and removing them
     while cycle:
-        end_cycle = circuit[-1]
-        start_cycle = circuit[0]
-        e = g.edge(end_cycle, start_cycle)
-        g.remove_edge(e)
-        try:
-            circuit = next(gt.all_circuits(g))
-        except StopIteration:
-            break
+        # start from highest scoring ORF, using dfs search to determine if cycles present
+        for ORF_ID, ORF_score in ORF_score_list:
+            for e in gt.dfs_iterator(g, g.vertex(ORF_index[ORF_ID])):
+                if int(e.target()) == ORF_index[ORF_ID]:
+                    g.remove_edge(e)
+                    # if edge removed and no cycle detected, break the loop
+                    try:
+                        next(gt.all_circuits(g))
+                    except StopIteration:
+                        cycle = False
+                        break
+            if cycle == False:
+                break
+
+    # # determine if cycles present. If so, break them by removing edge before repeated node and re-test
+    # cycle = True
+    # try:
+    #     circuit = next(gt.all_circuits(g))
+    # except StopIteration:
+    #     cycle = False
+    #
+    # while cycle:
+    #     end_cycle = circuit[-1]
+    #     start_cycle = circuit[0]
+    #     e = g.edge(end_cycle, start_cycle)
+    #     g.remove_edge(e)
+    #     try:
+    #         circuit = next(gt.all_circuits(g))
+    #     except StopIteration:
+    #         break
 
     # generate a transative closure of the graph to add all directed edges and add vertex properties
     tc = gt.transitive_closure(g)
