@@ -16,6 +16,7 @@ from .generate_output import *
 from panaroo.find_missing import find_missing
 # from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
+from ggCaller.shared_memory import *
 
 # debugging scripts
 from .cdhit_align import *
@@ -36,10 +37,15 @@ class SmartFormatter(argparse.HelpFormatter):
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 
-def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap, input_colours,
+def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
+                input_colours,
                 output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
+    # load shared memory items
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
+
     # Check cd-hit is installed
     check_cdhit_version()
     # Make sure aligner is installed if alignment requested
@@ -58,7 +64,7 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts, seqid_to_centroid = generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
+    G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], high_scoring_ORFs, high_scoring_ORF_edges,
                                                                cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
 
 
@@ -228,16 +234,16 @@ def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names, DBG,
-                                      high_scoring_ORFs, overlap)
+                                      alr, isolate_names, shd_arr_tup,
+                                      high_scoring_ORFs, overlap, pool)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, alr, isolate_names,
-                                       core, len(input_colours), DBG,
-                                       high_scoring_ORFs, overlap)
+                                       core, len(input_colours), shd_arr_tup,
+                                       high_scoring_ORFs, overlap, pool)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

@@ -1,4 +1,6 @@
 from joblib import Parallel, delayed
+from functools import partial
+from ggCaller.shared_memory import *
 import networkx as nx
 from collections import defaultdict
 import numpy as np
@@ -13,7 +15,14 @@ from tqdm import tqdm
 from panaroo.generate_alignments import *
 
 
-def output_sequence(node, isolate_list, temp_directory, outdir, DBG, high_scoring_ORFs, overlap):
+def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap):
+    # load shared memory items
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
+
+    # unpack node_pair
+    node = node_pair[1]
+
     # Get the name of the sequences for the gene of interest
     sequence_ids = node["seqIDs"]
     output_sequences = []
@@ -27,7 +36,7 @@ def output_sequence(node, isolate_list, temp_directory, outdir, DBG, high_scorin
                                                          "") + ";" + seq
         # generate DNA sequence
         ORFNodeVector = high_scoring_ORFs[isolate_num][gene_num]
-        CDS = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        CDS = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
         output_sequences.append(
             SeqRecord(Seq(CDS), id=isolate_name, description=""))
@@ -229,16 +238,18 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
-                                  isolates, DBG, high_scoring_ORFs, overlap):
+                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool):
+    unaligned_sequence_files = []
     # Make a folder for the output alignments
     try:
         os.mkdir(output_dir + "aligned_gene_sequences")
     except FileExistsError:
         None
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    unaligned_sequence_files = Parallel(n_jobs=threads)(
-        delayed(output_sequence)(G.nodes[x], isolates, temp_dir, output_dir, DBG, high_scoring_ORFs, overlap)
-        for x in tqdm(G.nodes()))
+    for outname in pool.map(partial(output_sequence, isolate_list=isolates,
+                                    temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
+                                    high_scoring_ORFs=high_scoring_ORFs, overlap=overlap), G.nodes(data=True)):
+        unaligned_sequence_files.append(outname)
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     # Get Biopython command calls for each output gene sequences
@@ -255,8 +266,8 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
 def get_core_gene_nodes(G, threshold, num_isolates):
     # Get the core genes based on percent threshold
     core_nodes = []
-    for node in G.nodes():
-        if float(G.nodes[node]["size"]) / float(num_isolates) > threshold:
+    for node in G.nodes(data=True):
+        if float(G.nodes[node[0]]["size"]) / float(num_isolates) > threshold:
             core_nodes.append(node)
     return core_nodes
 
@@ -305,7 +316,8 @@ def concatenate_core_genome_alignments(core_names, output_dir):
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
-                                   isolates, threshold, num_isolates, DBG, high_scoring_ORFs, overlap):
+                                   isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool):
+    unaligned_sequence_files = []
     # Make a folder for the output alignments TODO: decide whether or not to keep these
     try:
         os.mkdir(output_dir + "aligned_gene_sequences")
@@ -313,11 +325,15 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
         None
     # Get core nodes
     core_genes = get_core_gene_nodes(G, threshold, num_isolates)
-    core_gene_names = [G.nodes[x]["name"] for x in core_genes]
+    core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
     # Output core node sequences
-    unaligned_sequence_files = Parallel(n_jobs=threads)(
-        delayed(output_sequence)(G.nodes[x], isolates, temp_dir, output_dir, DBG, high_scoring_ORFs, overlap)
-        for x in tqdm(core_genes))
+    for outname in pool.map(partial(output_sequence, isolate_list=isolates,
+                                    temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
+                                    high_scoring_ORFs=high_scoring_ORFs, overlap=overlap), core_genes):
+        unaligned_sequence_files.append(outname)
+    # unaligned_sequence_files = Parallel(n_jobs=threads)(
+    #     delayed(output_sequence)(G.nodes[x], isolates, temp_dir, output_dir, DBG, high_scoring_ORFs, overlap)
+    #     for x in tqdm(core_genes))
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     # Get alignment commands

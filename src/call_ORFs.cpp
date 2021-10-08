@@ -556,7 +556,7 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
 }
 
 
-ORFVector call_ORFs(const PathVector& all_paths,
+ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                      const GraphVector& graph_vector,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& start_codons_for,
@@ -569,12 +569,13 @@ ORFVector call_ORFs(const PathVector& all_paths,
     ORFNodeMap ORF_node_map;
 
     // iterate over all_paths
-    for (size_t i = 0; i < all_paths.size(); i++)
+    for (const auto& path_vector : all_paths)
     {
-        const auto& path = all_paths.at(i);
-        // CALL ORFS
-        // generate all ORFs within the path for start and stop codon pairs
-        generate_ORFs(ORF_node_map, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+        for (const auto& path : path_vector)
+        {
+            // generate all ORFs within the path for start and stop codon pairs
+            generate_ORFs(ORF_node_map, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+        }
     }
 
     // generate pos_strand_map to determine relative strands of each node for each colour

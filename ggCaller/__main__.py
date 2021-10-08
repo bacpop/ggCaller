@@ -7,6 +7,7 @@ from functools import partial
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
+import tqdm
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
 import ast
@@ -363,7 +364,7 @@ def main():
     cluster_dict = None
 
     # use shared memory to generate graph vector
-    print("Generating high scoring ORF calls...")
+    print("Generating high scoring ORF calls per colour...")
 
     # set number of threads for graphtool and pytorch to 1
     if gt.openmp_enabled():
@@ -378,7 +379,7 @@ def main():
 
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:
-            for colour_ID, gene_dict, ORF_edges in pool.map(
+            for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.map(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.max_path_length, is_ref=options.not_ref,
                             no_filter=options.no_filter,
@@ -387,7 +388,7 @@ def main():
                             max_ORF_overlap=options.max_ORF_overlap, minimum_ORF_score=options.min_orf_score,
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
                             input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance),
-                    enumerate(node_colour_vector)):
+                    enumerate(node_colour_vector)), total=nb_colours):
                 high_scoring_ORFs[colour_ID] = gene_dict
                 high_scoring_ORF_edges[colour_ID] = ORF_edges
 
@@ -399,18 +400,13 @@ def main():
                                                                         options.identity_cutoff,
                                                                         options.len_diff_cutoff)
 
-                run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
-                            input_colours, options.out_dir, options.verbose, options.threads,
+                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
+                            cluster_dict,
+                            overlap, input_colours, options.out_dir, options.verbose, options.threads,
                             options.length_outlier_support_proportion, options.identity_cutoff, options.len_diff_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
                             options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph)
-
-    # for testing
-    print("high_scoring_ORFs: " + str(len(high_scoring_ORFs)))
-    print("high_scoring_ORF_edges: " + str(len(high_scoring_ORF_edges)))
-    print("cluster_id_list: " + str(len(cluster_id_list)))
-    print("cluster_dict: " + str(len(cluster_dict)))
 
     print("Finished.")
 

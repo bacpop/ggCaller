@@ -191,7 +191,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
-    print("Finding ORFs: " + str(colour_ID))
+    # print("Finding ORFs: " + str(colour_ID))
 
     # determine all ORFs in Bifrost graph
     ORF_overlap_dict, ORF_vector = shd_arr[0].findORFs(colour_ID, node_set, repeat,
@@ -206,12 +206,12 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     if no_filter:
         gene_dict = {i: ORF_vector[i] for i in range(0, len(ORF_vector))}
     else:
-        print("Scoring ORFs: " + str(colour_ID))
+        # print("Scoring ORFs: " + str(colour_ID))
 
         # calculate scores for genes
         ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
-        print("Finding highest scoring paths: " + str(colour_ID))
+        # print("Finding highest scoring paths: " + str(colour_ID))
 
         # determine highest scoring genes, stored in list of lists
         edge_list = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
@@ -224,7 +224,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # generate list of target ORFs, removing duplicates
         target_ORFs = list(set([x for f in edge_list for x in (f[0], f[-1])]))
 
-        print("Connecting ORFs: " + str(colour_ID))
+        # print("Connecting ORFs: " + str(colour_ID))
 
         # determine next ORFs for each terminal ORF in edge_list
         next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance))
@@ -240,7 +240,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
             if edge not in redundant_edges:
                 edge_list.append(edge)
 
-        print("Arranging highest scoring ORFs: " + str(colour_ID))
+        # print("Arranging highest scoring ORFs: " + str(colour_ID))
 
         # iterate over edge_list and append to a dictionary of high_scoring_ORF_edges for each ORF
         high_scoring_ORF_edges = {}
@@ -251,13 +251,10 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                 # create new entry for current ORF
                 if ORF not in high_scoring_ORF_edges:
                     high_scoring_ORF_edges[ORF] = set()
-                # if ORF not first in list, add previous entry to set
-                # if (i != 0):
-                #     high_scoring_ORF_edges[ORF].add(entry[i - 1])
                 # if ORF not last in list, add next entry to set
                 if (i != last_index):
                     high_scoring_ORF_edges[ORF].add(entry[i + 1])
 
-    print("Finished:  " + str(colour_ID))
+    # print("Finished:  " + str(colour_ID))
 
     return colour_ID, gene_dict, high_scoring_ORF_edges

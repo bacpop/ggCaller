@@ -133,8 +133,8 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -261,7 +261,7 @@ def main():
                         length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
                         family_threshold, min_trailing_support, trailing_recursive,
                         clean_edges, edge_support_threshold, merge_paralogs, aln,
-                        alr, core, min_edge_support_sv, all_seq_in_graph)
+                        alr, core, min_edge_support_sv)
 
     print("Finished.")
 

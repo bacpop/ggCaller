@@ -61,6 +61,9 @@ class Graph {
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
+    // clear graph object
+    void clear() {_GraphVector.clear();};
+
     private:
     // index graph
     NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
@@ -71,7 +74,6 @@ class Graph {
 
     // stored unitigDict objects
     std::vector<unitigDict> _GraphVector;
-    PathOverlapMap _PathOverlapMap;
 };
 
 #endif //GRAPH_H

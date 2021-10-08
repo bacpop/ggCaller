@@ -128,14 +128,14 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
     return path_list;
 }
 
-PathVector traverse_graph(const GraphVector& graph_vector,
-                         const size_t& colour_ID,
-                         const std::vector<size_t>& node_ids,
-                         const bool repeat,
-                         const size_t max_path_length)
+std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
+                                         const size_t& colour_ID,
+                                         const std::vector<size_t>& node_ids,
+                                         const bool repeat,
+                                         const size_t max_path_length)
 {
     // initialise all_paths
-    PathVector all_paths;
+    std::vector<PathVector> all_paths;
 
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
@@ -168,8 +168,9 @@ PathVector traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
-            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
+//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
+//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
+            all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
 
@@ -204,8 +205,9 @@ PathVector traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
-            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
+//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
+//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
+            all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
 
