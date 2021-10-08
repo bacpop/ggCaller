@@ -133,8 +133,8 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -223,45 +223,48 @@ def main():
         #         # iterate over entries in col_true_genes to generate the sequences
         #         true_genes[colour_ID] = "done"
 
-        for colour_tuple in enumerate(node_colour_vector):
-            colour_ID, gene_dict, ORF_edges = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup, repeat=repeat,
-                                                                 overlap=overlap,
-                                                                 max_path_length=max_path_length, is_ref=is_ref,
-                                                                 no_filter=no_filter,
-                                                                 stop_codons_for=stop_codons_for,
-                                                                 start_codons=start_codons,
-                                                                 min_ORF_length=min_ORF_length,
-                                                                 max_ORF_overlap=max_ORF_overlap,
-                                                                 minimum_ORF_score=minimum_ORF_score,
-                                                                 minimum_path_score=minimum_path_score,
-                                                                 write_idx=write_idx,
-                                                                 input_colours=input_colours,
-                                                                 max_orf_orf_distance=max_orf_orf_distance)
-            # iterate over entries in col_true_genes to generate the sequences
-            # true_genes[colour_ID] = {}
-            high_scoring_ORFs[colour_ID] = gene_dict
-            # high_scoring_ORF_edges[colour_ID] = {}
-            high_scoring_ORF_edges[colour_ID] = ORF_edges
+        with Pool(processes=num_threads) as pool:
+            for colour_tuple in enumerate(node_colour_vector):
+                colour_ID, gene_dict, ORF_edges = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup,
+                                                                     repeat=repeat,
+                                                                     overlap=overlap,
+                                                                     max_path_length=max_path_length, is_ref=is_ref,
+                                                                     no_filter=no_filter,
+                                                                     stop_codons_for=stop_codons_for,
+                                                                     start_codons=start_codons,
+                                                                     min_ORF_length=min_ORF_length,
+                                                                     max_ORF_overlap=max_ORF_overlap,
+                                                                     minimum_ORF_score=minimum_ORF_score,
+                                                                     minimum_path_score=minimum_path_score,
+                                                                     write_idx=write_idx,
+                                                                     input_colours=input_colours,
+                                                                     max_orf_orf_distance=max_orf_orf_distance)
+                # iterate over entries in col_true_genes to generate the sequences
+                # true_genes[colour_ID] = {}
+                high_scoring_ORFs[colour_ID] = gene_dict
+                # high_scoring_ORF_edges[colour_ID] = {}
+                high_scoring_ORF_edges[colour_ID] = ORF_edges
 
-        print("Generating fasta file of gene calls...")
-        # print output to file
-        with open(out, "w") as f:
-            for colour, gene_dict in high_scoring_ORFs.items():
-                for gene_id, ORFNodeVector in gene_dict.items():
-                    gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    f.write(">" + str(colour) + "_" + str(gene_id) + "\n" + gene + "\n")
+            print("Generating fasta file of gene calls...")
+            # print output to file
+            with open(out, "w") as f:
+                for colour, gene_dict in high_scoring_ORFs.items():
+                    for gene_id, ORFNodeVector in gene_dict.items():
+                        gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                        f.write(">" + str(colour) + "_" + str(gene_id) + "\n" + gene + "\n")
 
-        # cluster ORFs
-        if cluster_ORFs is True:
-            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, identity_cutoff,
-                                                                    len_diff_cutoff)
+            # cluster ORFs
+            if cluster_ORFs is True:
+                cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs, overlap, identity_cutoff,
+                                                                        len_diff_cutoff)
 
-            run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
-                        input_colours, out_dir, verbose, num_threads,
-                        length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
-                        family_threshold, min_trailing_support, trailing_recursive,
-                        clean_edges, edge_support_threshold, merge_paralogs, aln,
-                        alr, core, min_edge_support_sv)
+                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
+                            cluster_id_list, cluster_dict, overlap,
+                            input_colours, out_dir, verbose, num_threads,
+                            length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
+                            family_threshold, min_trailing_support, trailing_recursive,
+                            clean_edges, edge_support_threshold, merge_paralogs, aln,
+                            alr, core, min_edge_support_sv, all_seq_in_graph)
 
     print("Finished.")
 

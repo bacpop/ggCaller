@@ -38,10 +38,9 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
-                input_colours,
-                output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff, len_diff_cutoff,
-                family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
-                merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
+                input_colours, output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
+                len_diff_cutoff, family_threshold, min_trailing_support, trailing_recursive, clean_edges,
+                edge_support_threshold, merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)

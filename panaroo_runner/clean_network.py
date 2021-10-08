@@ -42,8 +42,8 @@ def merge_node_cluster(G,
     # flatten nested lists and then generate list of dna/protein entries that are not repeated centroid_IDs
     dna = [item for sublist in gen_node_iterables(G, nodes, 'dna') for item in sublist]
     protein = [item for sublist in gen_node_iterables(G, nodes, 'protein') for item in sublist]
-    dna = [element[0] for index, element in enumerate(dna) if index not in to_remove]
-    protein = [element[0] for index, element in enumerate(protein) if index not in to_remove]
+    dna = [element for index, element in enumerate(dna) if index not in to_remove]
+    protein = [element for index, element in enumerate(protein) if index not in to_remove]
 
     # generate iterables of centroids and seqIDs
     centroid = iter_del_dups(gen_node_iterables(G, nodes, 'centroid'))
