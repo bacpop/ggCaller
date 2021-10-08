@@ -1,7 +1,5 @@
-from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-from collections import Counter, defaultdict
+from collections import defaultdict
 import networkx as nx
 from intbitset import intbitset
 

@@ -7,20 +7,22 @@ import argparse
 import textwrap
 import ast
 
+# panaroo scripts
 from panaroo.isvalid import *
 from .generate_network import *
 # from panaroo.cdhit import check_cdhit_version
 # from panaroo.cdhit import run_cdhit
-from .generate_output import *
-# from panaroo.clean_network import *
 from panaroo.find_missing import find_missing
 # from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
 from ggCaller.shared_memory import *
 
+# custom panaroo scripts
+from .clean_network import *
+from .generate_output import *
+
 # debugging scripts
 from .cdhit_align import *
-from .clean_network import *
 
 
 class SmartFormatter(argparse.HelpFormatter):

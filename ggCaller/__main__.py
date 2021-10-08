@@ -379,7 +379,7 @@ def main():
 
         # run run_calculate_ORFs with multithreading
         with Pool(processes=options.threads) as pool:
-            for colour_ID, gene_dict, ORF_edges in pool.map(
+            for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.max_path_length, is_ref=options.not_ref,
                             no_filter=options.no_filter,
@@ -388,7 +388,7 @@ def main():
                             max_ORF_overlap=options.max_ORF_overlap, minimum_ORF_score=options.min_orf_score,
                             minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
                             input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance),
-                    enumerate(node_colour_vector)):
+                    enumerate(node_colour_vector)), total=nb_colours):
                 high_scoring_ORFs[colour_ID] = gene_dict
                 high_scoring_ORF_edges[colour_ID] = ORF_edges
 

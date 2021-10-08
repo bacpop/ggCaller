@@ -1,16 +1,9 @@
-from joblib import Parallel, delayed
 from functools import partial
 from ggCaller.shared_memory import *
 import networkx as nx
-from collections import defaultdict
 import numpy as np
-import os
-from Bio import SeqIO
 from Bio import AlignIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 import itertools as iter
-from tqdm import tqdm
 
 from panaroo.generate_alignments import *
 
@@ -331,10 +324,6 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
                                     temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap), core_genes):
         unaligned_sequence_files.append(outname)
-    # unaligned_sequence_files = Parallel(n_jobs=threads)(
-    #     delayed(output_sequence)(G.nodes[x], isolates, temp_dir, output_dir, DBG, high_scoring_ORFs, overlap)
-    #     for x in tqdm(core_genes))
-    # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     # Get alignment commands
     commands = [
