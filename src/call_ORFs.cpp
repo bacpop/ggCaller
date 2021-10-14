@@ -7,6 +7,7 @@ std::hash<string> hasher;
 
 // generate ORFs from paths
 void generate_ORFs(ORFNodeMap& ORF_node_map,
+                   std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,
@@ -239,8 +240,6 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                 // check ORF is longer than minimum length, if not, break to move to next frame
                 if (ORF_len >= min_len)
                 {
-                    int test1 = 0;
-
                     // initialise TIS_present
                     bool TIS_present = true;
 
@@ -268,8 +267,6 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                             ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
                         }
 
-                        ORF_hash = hasher(ORF_seq);
-
                         // check path sequence is real if is_ref
                         const bool present = check_colours(ORF_seq, fm_idx);
 
@@ -277,6 +274,15 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                         if (!present)
                         {
                             continue;
+                        }
+
+                        ORF_hash = hasher(ORF_seq);
+
+                        // if TIS is present, add the non-TIS hash to to_remove
+                        if (TIS_present)
+                        {
+                            size_t hash_to_remove = hasher(path_sequence.substr((codon_pair.first), (ORF_len)));
+                            hashes_to_remove.insert(hash_to_remove);
                         }
                     }
 
@@ -328,9 +334,6 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
     std::vector<int> ORF_node_id;
     std::vector<indexPair> ORF_node_coords;
-//    std::pair<size_t, size_t> path_indices;
-//    std::pair<int, size_t> ORF_5p = {0,0};
-//    std::pair<int, size_t> ORF_3p = {0,0};
     bool assigned_5p = false;
 
     // generate a unique string for the ORF for storage using nodes traversed (will match across matching ORFs)
@@ -372,17 +375,10 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));
 
-//            if (!assigned_5p)
-//            {
-//                path_indices.first = i;
-//                assigned_5p = true;
-//            }
-
         }
         // gone past last node covering ORF so assign 3p and end index to previous node
         else if (start_assigned && !end_assigned)
         {
-//            path_indices.second = i - 1;
             break;
         }
     }
@@ -567,6 +563,7 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
+    std::unordered_set<size_t> hashes_to_remove;
 
     // iterate over all_paths
     for (const auto& path_vector : all_paths)
@@ -574,7 +571,17 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(ORF_node_map, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+            generate_ORFs(ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+        }
+    }
+
+    // remove hashes to remove from ORF_hash
+    for (const auto& hash : hashes_to_remove)
+    {
+        auto it = ORF_node_map.find(hash);
+        if (it != ORF_node_map.end())
+        {
+            ORF_node_map.erase(it);
         }
     }
 
@@ -600,15 +607,13 @@ void update_ORF_node_map (const size_t& ORF_hash,
         //reference entry in ORF_node_map
         auto& current_entry = ORF_node_map[ORF_hash];
 
-        // if present, check which of the ORFs has the longest path in terms of TIS and ORF,
-        // then update path information
+        // if present, check which of the ORFs has the longest path in terms ORF,
+        // as used for overlap information, then update path information
         size_t current_ORF_size = std::get<0>(current_entry).size();
-        size_t current_TIS_size = std::get<3>(current_entry).size();
         size_t new_ORF_size = std::get<0>(ORF_node_vector).size();
-        size_t new_TIS_size = std::get<3>(ORF_node_vector).size();
 
         // if more information stored in new ORF entry, replace and update with new information
-        if ((new_TIS_size + new_ORF_size) > (current_TIS_size + current_ORF_size))
+        if (new_ORF_size > current_ORF_size)
         {
             ORF_node_map.emplace(ORF_hash, std::move(ORF_node_vector));
         }

@@ -70,7 +70,6 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             // make pair for ORF2_nodes
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
 
-
             // initialise overlap type
             // n = no overlap
             // u = unidirectional overlap (3' of first overlaps with 5' of second ->->)

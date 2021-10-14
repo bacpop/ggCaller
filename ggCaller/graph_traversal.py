@@ -1,6 +1,7 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
+import json
 
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
@@ -107,21 +108,41 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     except StopIteration:
         cycle = False
 
-    # if cycle detected, iterate over ORF_score_list, finding cycles and removing them
+    # test for impact of cycle removing remove edges between highest scoring ORFs until cycle is false
     while cycle:
-        # start from highest scoring ORF, using dfs search to determine if cycles present
-        for ORF_ID, ORF_score in ORF_score_list:
-            for e in gt.dfs_iterator(g, g.vertex(ORF_index[ORF_ID])):
-                if int(e.target()) == ORF_index[ORF_ID]:
-                    g.remove_edge(e)
-                    # if edge removed and no cycle detected, break the loop
-                    try:
-                        next(gt.all_circuits(g))
-                    except StopIteration:
-                        cycle = False
-                        break
-            if cycle == False:
+        for i in range(0, len(ORF_score_list)):
+            for j in range(0, len(ORF_score_list)):
+                if i != j:
+                    e = g.edge(ORF_index[ORF_score_list[i][0]], ORF_index[ORF_score_list[j][0]])
+                    if e is not None:
+                        g.remove_edge(e)
+                        try:
+                            next(gt.all_circuits(g))
+                        except StopIteration:
+                            cycle = False
+                            break
+            if cycle is False:
                 break
+
+    # # if cycle detected, iterate over ORF_score_list, finding cycles and removing them
+    # # not working as enters infinite loop during dfs iterator
+    # # need a way of selecting paths that connect high scoring ORFs
+    # # would it make sense to remove high scoring edges i.e. those with minimal overlap as these won't affect the paths through graph much?
+    # # could also identify any ORFs with > 2 edges, as these violate assumption of linear genome? Could split into two sets of linear paths byt copying the node?
+    # while cycle:
+    #     # start from highest scoring ORF, using dfs search to determine if cycles present
+    #     for ORF_ID, ORF_score in ORF_score_list:
+    #         for e in gt.dfs_iterator(g, g.vertex(ORF_index[ORF_ID])):
+    #             if int(e.target()) == ORF_index[ORF_ID]:
+    #                 g.remove_edge(e)
+    #                 # if edge removed and no cycle detected, break the loop
+    #                 try:
+    #                     next(gt.all_circuits(g))
+    #                 except StopIteration:
+    #                     cycle = False
+    #                     break
+    #         if cycle == False:
+    #             break
 
     # # determine if cycles present. If so, break them by removing edge before repeated node and re-test
     # cycle = True
@@ -232,6 +253,19 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                                                        overlap, max_path_length, is_ref, no_filter,
                                                        stop_codons_for, start_codons, min_ORF_length,
                                                        max_ORF_overlap, write_idx, input_colours[colour_ID])
+
+    # cycle testing
+    # print output to file
+    with open("calls_" + str(colour_ID) + ".fasta", "w") as f:
+        for gene_id, ORFNodeVector in enumerate(ORF_vector):
+            upstream_TIS_seq = shd_arr[0].generate_sequence(ORFNodeVector[3], ORFNodeVector[4], overlap)
+            gene = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            upstream_TIS_seq += gene
+            f.write(">" + str(gene_id) + "\n" + upstream_TIS_seq + "\n")
+
+    # print output to file
+    with open("overlaps_" + str(colour_ID) + ".json", "w") as j:
+        json.dump(ORF_overlap_dict, j)
 
     # initialise return dictionaries
     gene_dict = {}

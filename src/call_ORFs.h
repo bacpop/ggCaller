@@ -7,6 +7,7 @@
 
 // call_ORFs
 void generate_ORFs(ORFNodeMap& ORF_node_map,
+                   std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,

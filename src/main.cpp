@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
 
     GraphTuple graph_tuple = unitig_graph.read(
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
             stop_codons_for, stop_codons_rev, num_threads, is_ref);
 
     const auto& node_colour_vector = std::get<0>(graph_tuple);
