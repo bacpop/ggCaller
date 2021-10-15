@@ -1,4 +1,5 @@
 #include "gene_overlap.h"
+#include "ORF_clustering.h"
 
 ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const ORFVector& ORF_vector,
@@ -69,6 +70,24 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
             // make pair for ORF2_nodes
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
+
+            // testing
+            const auto ORF1_sequence = generate_sequence_private(std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap, graph_vector);
+            const auto ORF2_sequence = generate_sequence_private(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector);
+
+            int test = 0;
+            if (ORF1_sequence == "ATGAAGTATTCACTGGTTGTTGCCGCGAGATTTGCACATTGCGACAGGATATGCCCGGCGCTACGGGATAGACCGGAGTGTGTTACAAAGCAGGCCAATTCATAG"
+            && ORF2_sequence == "TTGGCTATAACCAGTTTCTGCCGCGATCAGGCGGTGAGGCTTGTGAATGAAGTATTCACTGGTTGTTGCCGCGAGATTTGCACATTGCGACAGGATATGCCCGGCGCTACGGGATAG")
+            {
+                test = 1;
+                const auto ORF1_sequence_test = generate_sequence_private(std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap, graph_vector);
+                const auto ORF2_sequence_test = generate_sequence_private(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector);
+            }
+            else if (ORF2_sequence == "ATGAAGTATTCACTGGTTGTTGCCGCGAGATTTGCACATTGCGACAGGATATGCCCGGCGCTACGGGATAGACCGGAGTGTGTTACAAAGCAGGCCAATTCATAG"
+                     && ORF1_sequence == "TTGGCTATAACCAGTTTCTGCCGCGATCAGGCGGTGAGGCTTGTGAATGAAGTATTCACTGGTTGTTGCCGCGAGATTTGCACATTGCGACAGGATATGCCCGGCGCTACGGGATAG")
+            {
+                test = 1;
+            }
 
             // initialise overlap type
             // n = no overlap

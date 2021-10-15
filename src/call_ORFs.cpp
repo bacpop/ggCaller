@@ -397,9 +397,36 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     size_t ORF_ID = 0;
     for (auto& ORF : ORF_node_map)
     {
-        // assign strand to ORF
-        const bool ORF_5p_strand = (std::get<0>(ORF.second)[0] >= 0) ? true : false;
-        if (ORF_5p_strand != pos_strand_map.at(abs(std::get<0>(ORF.second)[0])))
+        // assign strand to ORF by iterating over all nodes, and assigning strand to most supported by nodes
+        int num_pos = 0;
+        int num_neg = 0;
+        // iterate over ORF nodes...
+        for (const auto& node_id : std::get<0>(ORF.second))
+        {
+            const bool strand = (node_id) ? true : false;
+            if (strand != pos_strand_map.at(abs(node_id)))
+            {
+                num_neg++;
+            } else
+            {
+                num_pos++;
+            }
+        }
+        // ...and over TIS nodes if present
+        for (const auto& node_id : std::get<3>(ORF.second))
+        {
+            const bool strand = (node_id) ? true : false;
+            if (strand != pos_strand_map.at(abs(node_id)))
+            {
+                num_neg++;
+            } else
+            {
+                num_pos++;
+            }
+        }
+
+        // if the number of negative strands are greater than positive, assign overall strand as negative
+        if (num_neg > num_pos)
         {
             std::get<5>(ORF.second) = false;
         }
@@ -417,16 +444,18 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     return ORF_vector;
 }
 
-// calculate the relative strand of each node traversed in an ORF, per colour
+// calculate the relative strand of each node traversed in an ORF
 NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
 {
     // initialise map to store orientation of nodes (colour is an ID, not a string
     std::vector<NodeStrandMap> pos_strand_vector;
 
-    for (const auto& ORF_nodes : ORF_node_map)
+    for (const auto& ORF : ORF_node_map)
     {
-        // unpack tuple to get nodes vector
-        const auto& nodes = std::get<0>(ORF_nodes.second);
+        // unpack tuple to get nodes vector containing TIS and ORF nodes
+        std::vector<int> nodes;
+        nodes.insert(nodes.end(), std::get<3>(ORF.second).begin(), std::get<3>(ORF.second).end());
+        nodes.insert(nodes.end(), std::get<0>(ORF.second).begin(), std::get<0>(ORF.second).end());
 
         // create new map to store node info
         NodeStrandMap new_map;
@@ -472,7 +501,7 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
             {
                 pos_strand_vector.push_back(new_map);
             }
-            // else, go through and add the new map entries to the existing maps in pos_strand_vector_private
+            // else, go through and add the new map entries to the existing maps in pos_strand_vector
             else {
                 for (const auto& map_index : maps_to_add)
                 {
@@ -550,7 +579,6 @@ NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
         return pos_strand_vector[0];
     }
 }
-
 
 ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                      const GraphVector& graph_vector,
