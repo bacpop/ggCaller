@@ -646,17 +646,28 @@ void update_ORF_node_map (const size_t& ORF_hash,
             current_entry = std::move(ORF_node_vector);
         } else if (new_ORF_size == current_ORF_size)
         {
-            // if equal in size, need to check if first/last entries are identical across the two entries
-            // to deal with cases where a different node is traversed at beginning/end
-            const auto& current_first = std::get<0>(current_entry).at(0);
-            const auto& current_last = std::get<0>(current_entry).back();
-            const auto& new_first = std::get<0>(ORF_node_vector).at(0);
-            const auto& new_last = std::get<0>(ORF_node_vector).back();
+            // if they are the same length, check the size of the TIS
+            size_t current_TIS_size = std::get<3>(current_entry).size();
+            size_t new_TIS_size = std::get<3>(ORF_node_vector).size();
 
-            // compare first/last entries. Assign the new ORF entry to that with the highest ID
-            if (new_first > current_first || new_last > current_last)
+            if (new_TIS_size > current_TIS_size)
             {
                 current_entry = std::move(ORF_node_vector);
+            } else if (new_TIS_size == current_TIS_size)
+            {
+                // if TIS are also the same length, check if first/last entries are identical across the two entries
+                // to deal with cases where a different node is traversed at beginning/end
+                // for first, check if TIS present, if so take that as first entry, if not take first ORF node
+                const auto& current_first = (current_TIS_size == 0) ? std::get<0>(current_entry).at(0) : std::get<3>(current_entry).at(0);
+                const auto& current_last = std::get<0>(current_entry).back();
+                const auto& new_first = (new_TIS_size == 0) ? std::get<0>(ORF_node_vector).at(0) : std::get<3>(ORF_node_vector).at(0);
+                const auto& new_last = std::get<0>(ORF_node_vector).back();
+
+                // compare first/last entries. Assign the new ORF entry to that with the highest ID
+                if (new_first > current_first || new_last > current_last)
+                {
+                    current_entry = std::move(ORF_node_vector);
+                }
             }
         }
     }
