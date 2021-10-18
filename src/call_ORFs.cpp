@@ -644,6 +644,20 @@ void update_ORF_node_map (const size_t& ORF_hash,
         if (new_ORF_size > current_ORF_size)
         {
             current_entry = std::move(ORF_node_vector);
+        } else if (new_ORF_size == current_ORF_size)
+        {
+            // if equal in size, need to check if first/last entries are identical across the two entries
+            // to deal with cases where a different node is traversed at beginning/end
+            const auto& current_first = std::get<0>(current_entry).at(0);
+            const auto& current_last = std::get<0>(current_entry).back();
+            const auto& new_first = std::get<0>(ORF_node_vector).at(0);
+            const auto& new_last = std::get<0>(ORF_node_vector).back();
+
+            // compare first/last entries. Assign the new ORF entry to that with the highest ID
+            if (new_first > current_first || new_last > current_last)
+            {
+                current_entry = std::move(ORF_node_vector);
+            }
         }
     }
 }
