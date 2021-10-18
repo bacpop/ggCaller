@@ -643,7 +643,7 @@ void update_ORF_node_map (const size_t& ORF_hash,
         // if more information stored in new ORF entry, replace and update with new information
         if (new_ORF_size > current_ORF_size)
         {
-            ORF_node_map.emplace(ORF_hash, std::move(ORF_node_vector));
+            current_entry = std::move(ORF_node_vector);
         }
     }
 }
