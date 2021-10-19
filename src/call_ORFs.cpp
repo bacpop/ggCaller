@@ -472,7 +472,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         // iterate over ORF nodes...
         for (const auto& node_id : std::get<0>(ORF.second))
         {
-            const bool strand = (node_id) ? true : false;
+            const bool strand = (node_id > 0) ? true : false;
             if (strand != pos_strand_map.at(abs(node_id)))
             {
                 num_neg++;
@@ -484,7 +484,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         // ...and over TIS nodes if present
         for (const auto& node_id : std::get<3>(ORF.second))
         {
-            const bool strand = (node_id) ? true : false;
+            const bool strand = (node_id > 0) ? true : false;
             if (strand != pos_strand_map.at(abs(node_id)))
             {
                 num_neg++;

@@ -256,16 +256,21 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
 
     # cycle testing
     # print output to file
+    node_dict = {}
     with open("calls_" + str(colour_ID) + ".fasta", "w") as f:
         for gene_id, ORFNodeVector in enumerate(ORF_vector):
             upstream_TIS_seq = shd_arr[0].generate_sequence(ORFNodeVector[3], ORFNodeVector[4], overlap)
             gene = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
             upstream_TIS_seq += gene
             f.write(">" + str(gene_id) + "\n" + upstream_TIS_seq + "\n")
+            node_dict[upstream_TIS_seq] = ORFNodeVector
 
     # print output to file
     with open("overlaps_" + str(colour_ID) + ".json", "w") as j:
         json.dump(ORF_overlap_dict, j)
+
+    with open("node_list_" + str(colour_ID) + ".txt", "w") as j:
+        json.dump(node_dict, j)
 
     # initialise return dictionaries
     gene_dict = {}
