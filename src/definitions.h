@@ -98,8 +98,6 @@ typedef std::stack<NodeTuple> NodeStack;
 typedef std::stack<std::tuple<int, sdsl::bit_vector, size_t>> ORFStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
-// A vector of all paths generated from recursive traversal
-typedef std::vector<PathVector> AllPaths;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap

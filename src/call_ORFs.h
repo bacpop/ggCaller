@@ -36,7 +36,8 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 
 NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map);
 
-void update_ORF_node_map (const size_t& ORF_hash,
+void update_ORF_node_map (const GraphVector& graph_vector,
+                          const size_t& ORF_hash,
                           ORFNodeVector& ORF_node_vector,
                           ORFNodeMap& ORF_node_map);
 

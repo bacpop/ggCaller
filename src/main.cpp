@@ -134,7 +134,8 @@ int main(int argc, char *argv[]) {
 
 
     //#pragma omp parallel for
-    for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
+//    for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
+    for (size_t colour_ID = 10; colour_ID < 11; colour_ID++)
     {
 
         std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, node_colour_vector[colour_ID], repeat,

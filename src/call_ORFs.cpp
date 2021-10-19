@@ -298,12 +298,8 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                     }
 
                     // unpack tuples
-                    //auto& ORF_path_ID = std::get<0>(ORF_coords);
                     auto& ORF_node_id = std::get<0>(ORF_coords);
                     auto& ORF_node_coords = std::get<1>(ORF_coords);
-//                    auto& path_indices = std::get<2>(ORF_coords);
-
-                    //auto& TIS_path_id = std::get<0>(TIS_coords);
                     auto& TIS_node_id = std::get<0>(TIS_coords);
                     auto& TIS_node_coords = std::get<1>(TIS_coords);
 
@@ -311,7 +307,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                     ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true);
 
                     // think about if there is no TIS, then can ignore ORF?
-                    update_ORF_node_map(ORF_hash, ORF_node_vector, ORF_node_map);
+                    update_ORF_node_map(graph_vector, ORF_hash, ORF_node_vector, ORF_node_map);
 
                     // once known that ORF is correct, add stop to set
                     prev_stops.insert(codon_pair.second);
@@ -385,6 +381,79 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 
     const ORFCoords return_tuple = std::make_tuple(ORF_node_id, ORF_node_coords);
     return return_tuple;
+}
+
+// updates ORF_node_map if identical ORFs with different node sets detected
+void update_ORF_node_map (const GraphVector& graph_vector,
+                          const size_t& ORF_hash,
+                          ORFNodeVector& ORF_node_vector,
+                          ORFNodeMap& ORF_node_map)
+{
+    // if not present, add as is
+    if (ORF_node_map.find(ORF_hash) == ORF_node_map.end())
+    {
+        ORF_node_map.emplace(ORF_hash, std::move(ORF_node_vector));
+    } else
+    {
+        //reference entry in ORF_node_map
+        auto& current_entry = ORF_node_map[ORF_hash];
+
+        // if present, check which of the ORFs has the longest path in terms ORF,
+        // as used for overlap information, then update path information
+        size_t current_ORF_size = std::get<0>(current_entry).size();
+        size_t new_ORF_size = std::get<0>(ORF_node_vector).size();
+
+        // if more information stored in new ORF entry, replace and update with new information
+        if (new_ORF_size > current_ORF_size)
+        {
+            current_entry = std::move(ORF_node_vector);
+        } else if (new_ORF_size == current_ORF_size)
+        {
+            // if they are the same length, check the size of the TIS
+            size_t current_TIS_size = std::get<3>(current_entry).size();
+            size_t new_TIS_size = std::get<3>(ORF_node_vector).size();
+
+            if (new_TIS_size > current_TIS_size)
+            {
+                current_entry = std::move(ORF_node_vector);
+            } else if (new_TIS_size == current_TIS_size)
+            {
+                // if TIS are also the same length, check if first/last entries are identical across the two entries
+                // to deal with cases where a different node is traversed at beginning/end
+                // for first, check if TIS present, if so take that as first entry, if not take first ORF node
+                const auto& current_first = (current_TIS_size == 0) ? std::get<0>(current_entry).at(0) : std::get<3>(current_entry).at(0);
+                const auto& new_first = (new_TIS_size == 0) ? std::get<0>(ORF_node_vector).at(0) : std::get<3>(ORF_node_vector).at(0);
+                const auto& current_last = std::get<0>(current_entry).back();
+                const auto& new_last = std::get<0>(ORF_node_vector).back();
+
+                // check if the nodes are identical, if so pass
+                if (current_first == new_first && current_last == new_last)
+                {
+                    return;
+                }
+
+                // get hashes of first nodes to ensure stable assignment across runs
+                const size_t current_first_hash = hasher(graph_vector.at(abs(current_first) - 1).head_kmer());
+                const size_t new_first_hash = hasher(graph_vector.at(abs(new_first) - 1).head_kmer());
+
+                // compare first/last entries. Assign the new ORF entry to that with the highest ID
+                if (new_first_hash > current_first_hash)
+                {
+                    current_entry = std::move(ORF_node_vector);
+                } else if (new_first_hash == current_first_hash)
+                {
+                    // if no clear winner, check last nodes
+                    const size_t current_last_hash = hasher(graph_vector.at(abs(current_last) - 1).head_kmer());
+                    const size_t new_last_hash = hasher(graph_vector.at(abs(new_last) - 1).head_kmer());
+
+                    if (new_last_hash > current_last_hash)
+                    {
+                        current_entry = std::move(ORF_node_vector);
+                    }
+                }
+            }
+        }
+    }
 }
 
 // converts ORF entries into a vector and assigns relative strand
@@ -620,55 +689,4 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
     ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map));
 
     return ORF_vector;
-}
-
-void update_ORF_node_map (const size_t& ORF_hash,
-                          ORFNodeVector& ORF_node_vector,
-                          ORFNodeMap& ORF_node_map)
-{
-    // if not present, add as is
-    if (ORF_node_map.find(ORF_hash) == ORF_node_map.end())
-    {
-        ORF_node_map.emplace(ORF_hash, std::move(ORF_node_vector));
-    } else
-    {
-        //reference entry in ORF_node_map
-        auto& current_entry = ORF_node_map[ORF_hash];
-
-        // if present, check which of the ORFs has the longest path in terms ORF,
-        // as used for overlap information, then update path information
-        size_t current_ORF_size = std::get<0>(current_entry).size();
-        size_t new_ORF_size = std::get<0>(ORF_node_vector).size();
-
-        // if more information stored in new ORF entry, replace and update with new information
-        if (new_ORF_size > current_ORF_size)
-        {
-            current_entry = std::move(ORF_node_vector);
-        } else if (new_ORF_size == current_ORF_size)
-        {
-            // if they are the same length, check the size of the TIS
-            size_t current_TIS_size = std::get<3>(current_entry).size();
-            size_t new_TIS_size = std::get<3>(ORF_node_vector).size();
-
-            if (new_TIS_size > current_TIS_size)
-            {
-                current_entry = std::move(ORF_node_vector);
-            } else if (new_TIS_size == current_TIS_size)
-            {
-                // if TIS are also the same length, check if first/last entries are identical across the two entries
-                // to deal with cases where a different node is traversed at beginning/end
-                // for first, check if TIS present, if so take that as first entry, if not take first ORF node
-                const auto& current_first = (current_TIS_size == 0) ? std::get<0>(current_entry).at(0) : std::get<3>(current_entry).at(0);
-                const auto& current_last = std::get<0>(current_entry).back();
-                const auto& new_first = (new_TIS_size == 0) ? std::get<0>(ORF_node_vector).at(0) : std::get<3>(ORF_node_vector).at(0);
-                const auto& new_last = std::get<0>(ORF_node_vector).back();
-
-                // compare first/last entries. Assign the new ORF entry to that with the highest ID
-                if (new_first > current_first || new_last > current_last)
-                {
-                    current_entry = std::move(ORF_node_vector);
-                }
-            }
-        }
-    }
 }

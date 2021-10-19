@@ -6,6 +6,10 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap)
 {
+    int test = 0;
+    ORFNodeVector ORF1_test;
+    ORFNodeVector ORF2_test;
+
     // initialise overlap map for each ORF per colour (each first ORF is the first ORF on positive strand etc.)
     ORFOverlapMap ORF_overlap_map;
 
@@ -70,6 +74,32 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
             // make pair for ORF2_nodes
             auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
+
+            // testing
+            auto ORF1_sequence = generate_sequence_private(std::get<3>(ORF1_nodes), std::get<4>(ORF1_nodes), DBG_overlap, graph_vector);
+            auto ORF2_sequence = generate_sequence_private(std::get<3>(ORF2_info), std::get<4>(ORF2_info), DBG_overlap, graph_vector);
+            ORF1_sequence += generate_sequence_private(std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap, graph_vector);
+            ORF2_sequence += generate_sequence_private(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector);
+
+            if (ORF1_sequence == "CGCACAGGTGTAAATTATGCAGCATTTAAAAAATATTAAGTCAGGAAATCCTAAAACGAAAGAACAATATCAGCTAACAAAGAATTTTGATGTTATCTGGTTATGGTCCGAAAACGGTAAAAACTGGTATGAGGAAGTAAATAACTTTCAGGACGACACCATAAAGATTGTATACGACGAAAATAATATTATTGTTGCCATCACCAAAGATGCCTCAACGCTTAACCCTGAAGGTTTTAGCGTCGTTGAGGTTCCCGATATTACAGCCAACCGCCGCGCTGATGATTCAGGAAAGTGGATGTTTAAGGATGGAGCTGTAGTTAAACGGATTTATACGGCAGACGAGCAGCAACAACAGGCCGAATCACAAAAGGCCGCGTTACTTTCCGAAGCGGAAAGCGTTATTCAGCCACTGGAGCGCGCTGTCAGGCTGAATATGGCGACGGATGAGGAGCGTAGCCGACTGGAAGCCTGGGAACGCTACAGTGTTATGGTCAGCCGTGTGGATACGGCAAAGCCCGAATGGCCACAAAAGCCTGAATAA"
+            && ORF2_sequence == "TGCGACGTTATACCATGTGCCATTGATGTATTTTTGTATTGGTCTGAAGATGGCTTCATCATCGCCATCTACTTCACCAATGATTCTTAATCCGGTAATTGCGTGTCCGGCTTTTTCATAA")
+            {
+                test = 1;
+                const auto ORF1_sequence_test = generate_sequence_private(std::get<0>(ORF1_nodes), std::get<1>(ORF1_nodes), DBG_overlap, graph_vector);
+                const auto ORF2_sequence_test = generate_sequence_private(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector);
+            }
+            else if (ORF2_sequence == "CGCACAGGTGTAAATTATGCAGCATTTAAAAAATATTAAGTCAGGAAATCCTAAAACGAAAGAACAATATCAGCTAACAAAGAATTTTGATGTTATCTGGTTATGGTCCGAAAACGGTAAAAACTGGTATGAGGAAGTAAATAACTTTCAGGACGACACCATAAAGATTGTATACGACGAAAATAATATTATTGTTGCCATCACCAAAGATGCCTCAACGCTTAACCCTGAAGGTTTTAGCGTCGTTGAGGTTCCCGATATTACAGCCAACCGCCGCGCTGATGATTCAGGAAAGTGGATGTTTAAGGATGGAGCTGTAGTTAAACGGATTTATACGGCAGACGAGCAGCAACAACAGGCCGAATCACAAAAGGCCGCGTTACTTTCCGAAGCGGAAAGCGTTATTCAGCCACTGGAGCGCGCTGTCAGGCTGAATATGGCGACGGATGAGGAGCGTAGCCGACTGGAAGCCTGGGAACGCTACAGTGTTATGGTCAGCCGTGTGGATACGGCAAAGCCCGAATGGCCACAAAAGCCTGAATAA"
+                     && ORF1_sequence == "TGCGACGTTATACCATGTGCCATTGATGTATTTTTGTATTGGTCTGAAGATGGCTTCATCATCGCCATCTACTTCACCAATGATTCTTAATCCGGTAATTGCGTGTCCGGCTTTTTCATAA")
+            {
+                test = 1;
+            }
+            else if (ORF1_sequence == "CGCACAGGTGTAAATTATGCAGCATTTAAAAAATATTAAGTCAGGAAATCCTAAAACGAAAGAACAATATCAGCTAACAAAGAATTTTGATGTTATCTGGTTATGGTCCGAAAACGGTAAAAACTGGTATGAGGAAGTAAATAACTTTCAGGACGACACCATAAAGATTGTATACGACGAAAATAATATTATTGTTGCCATCACCAAAGATGCCTCAACGCTTAACCCTGAAGGTTTTAGCGTCGTTGAGGTTCCCGATATTACAGCCAACCGCCGCGCTGATGATTCAGGAAAGTGGATGTTTAAGGATGGAGCTGTAGTTAAACGGATTTATACGGCAGACGAGCAGCAACAACAGGCCGAATCACAAAAGGCCGCGTTACTTTCCGAAGCGGAAAGCGTTATTCAGCCACTGGAGCGCGCTGTCAGGCTGAATATGGCGACGGATGAGGAGCGTAGCCGACTGGAAGCCTGGGAACGCTACAGTGTTATGGTCAGCCGTGTGGATACGGCAAAGCCCGAATGGCCACAAAAGCCTGAATAA")
+            {
+                ORF1_test = ORF1_nodes;
+            } else if (ORF2_sequence == "TGCGACGTTATACCATGTGCCATTGATGTATTTTTGTATTGGTCTGAAGATGGCTTCATCATCGCCATCTACTTCACCAATGATTCTTAATCCGGTAATTGCGTGTCCGGCTTTTTCATAA")
+            {
+                ORF2_test = ORF2_info;
+            }
 
             // initialise overlap type
             // n = no overlap
@@ -545,9 +575,27 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                 } else {
                     std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
                     ORF_overlap_map[ORF1_ID][ORF2_ID] = std::move(overlap_tuple);
-
                 }
             }
+        }
+    }
+
+    //testing
+    if (test == 0 && std::get<2>(ORF1_test) != 0 && std::get<2>(ORF2_test) != 0)
+    {
+        cout << "Incorrect overlap: " << endl;
+        cout << "ORF 1 " << endl;
+        for (int i = 0; i < std::get<0>(ORF1_test).size(); i++)
+        {
+            cout << to_string(std::get<0>(ORF1_test).at(i)) << endl;
+            cout << to_string(std::get<1>(ORF1_test).at(i).first) << "-" << to_string(std::get<1>(ORF1_test).at(i).second) << endl;
+        }
+
+        cout << "ORF 2 " << endl;
+        for (int i = 0; i < std::get<0>(ORF2_test).size(); i++)
+        {
+            cout << to_string(std::get<0>(ORF2_test).at(i)) << endl;
+            cout << to_string(std::get<1>(ORF2_test).at(i).first) << "-" << to_string(std::get<1>(ORF2_test).at(i).second) << endl;
         }
     }
 
