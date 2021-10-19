@@ -1,4 +1,193 @@
 #include "gene_overlap.h"
+#include "ORF_clustering.h"
+
+void reverse_ORFNodeVector(const GraphVector& graph_vector,
+                           std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
+                           int& ORF2_start_node,
+                           int& ORF2_end_node,
+                           std::pair<int, size_t>& ORF2_5p,
+                           std::pair<int, size_t>& ORF2_3p)
+{
+    // Reverse ORF2 node vector
+    std::reverse(ORF2_nodes.first.begin(), ORF2_nodes.first.end());
+    // Reverse ORF2 node coordinate vector
+    std::reverse(ORF2_nodes.second.begin(), ORF2_nodes.second.end());
+
+    // reverse sign on each ID in ORF2_nodes
+    for (auto & node_id : ORF2_nodes.first)
+    {
+        node_id = node_id * -1;
+    }
+
+    // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
+    for (int i = 0; i < ORF2_nodes.second.size(); i++)
+    {
+        // get absolute last node index (same as unitig length minus 1 as zero indexed)
+        size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).size().first - 1;
+        // get difference from original start to absolute last node index
+        size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
+        // get difference from original end to absolute last node index
+        size_t reversed_start = node_end - std::get<1>(ORF2_nodes.second.at(i));
+        // reassigned the entry in-place in ORF2_nodes.second
+        ORF2_nodes.second[i] = std::make_pair(reversed_start, reversed_end);
+    }
+
+    // correct ORF2 5p and 3p positions, reversing the coordinates
+    ORF2_5p.second = std::get<1>(ORF2_nodes.second.back());
+    ORF2_3p.second = std::get<0>(ORF2_nodes.second[0]);
+
+    // correct node labels
+    ORF2_start_node = ORF2_nodes.first[0];
+    ORF2_end_node = ORF2_nodes.first.back();
+    ORF2_5p.first *= -1;
+    ORF2_3p.first *= -1;
+}
+
+std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(const ORFNodeVector& ORF1_nodes,
+                                                                               const std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
+                                                                               const int& ORF2_start_node,
+                                                                               const int& ORF2_end_node)
+{
+    bool overlap_complete = false;
+
+    // initialise vectors to capture overlapping node indices for ORFs
+    std::vector<size_t> ORF_1_overlap_node_index;
+    std::vector<size_t> ORF_2_overlap_node_index;
+
+    // initialise start and end index lists for ORF2 within ORF1
+    std::vector<size_t> start_index_list;
+    std::vector<size_t> end_index_list;
+
+    // look for presence of ORF2 start node in ORF1 nodes
+    auto iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
+    while(iter != std::get<0>(ORF1_nodes).end())
+    {
+        size_t index = iter - std::get<0>(ORF1_nodes).begin();
+        start_index_list.push_back(std::move(index));
+        iter = std::find(iter + 1, std::get<0>(ORF1_nodes).end(), ORF2_start_node);
+    }
+
+    // look for presence of ORF2 end node in ORF1 nodes
+    iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
+    while (iter != std::get<0>(ORF1_nodes).end())
+    {
+        size_t index = iter - std::get<0>(ORF1_nodes).begin();
+        end_index_list.push_back(std::move(index));
+        iter = std::find(iter + 1, std::get<0>(ORF1_nodes).end(), ORF2_end_node);
+    }
+
+    // if both start and end indexes are found, check if ORF2 sits within ORF1
+    if (!start_index_list.empty() && !end_index_list.empty())
+    {
+        for (const auto& start_index : start_index_list)
+        {
+            for (const auto& end_index : end_index_list)
+            {
+                // check moving in forward direction
+                std::vector<int> ORF1_nodes_sliced;
+                if (start_index <= end_index)
+                {
+                    // slice ORF1 node vector from first entry to last
+                    ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).begin() + end_index + 1);
+                }
+
+                // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
+                if (ORF1_nodes_sliced == ORF2_nodes.first)
+                {
+                    for (size_t i1 = start_index; i1 < end_index + 1; i1++)
+                    {
+                        ORF_1_overlap_node_index.push_back(i1);
+                    }
+                    for (size_t i2 = 0; i2 < ORF2_nodes.first.size(); i2++)
+                    {
+                        ORF_2_overlap_node_index.push_back(i2);
+                    }
+
+                    overlap_complete = true;
+
+                    break;
+                }
+            }
+            // if chain is complete, don't iterate over any more start codons
+            if (overlap_complete)
+            {
+                break;
+            }
+        }
+    }
+
+    // if overlap not found, check if beginning of ORF2 overlaps with end of ORF1. May be case that start and end nodes are found, but not complete match across ORF1
+    if (!overlap_complete && !start_index_list.empty())
+    {
+        for (const auto& start_index : start_index_list)
+        {
+            // check moving in forward direction
+            std::vector<int> ORF1_nodes_sliced;
+            std::vector<int> ORF2_nodes_sliced;
+
+            // slice ORF1 node vector from first entry to last
+            ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).end());
+            // check if ORF1_slice is too large to slice ORF1 (meaning likely ORF2 is reversed
+            if (ORF1_nodes_sliced.size() <= ORF2_nodes.first.size())
+            {
+                // slice ORF1 node vector from first entry to the equivalent length of ORF2_nodes_sliced
+                ORF2_nodes_sliced = std::vector<int>(ORF2_nodes.first.begin(), ORF2_nodes.first.begin() + ORF1_nodes_sliced.size());
+            }
+
+            // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
+            if (ORF1_nodes_sliced == ORF2_nodes_sliced)
+            {
+                for (size_t i1 = start_index; i1 < std::get<0>(ORF1_nodes).size(); i1++)
+                {
+                    ORF_1_overlap_node_index.push_back(i1);
+                }
+                for (size_t i2 = 0; i2 < ORF2_nodes_sliced.size(); i2++)
+                {
+                    ORF_2_overlap_node_index.push_back(i2);
+                }
+                overlap_complete = true;
+
+                break;
+            }
+        }
+    }
+    // if overlap not found, check if end of ORF2 overlaps with beginning of ORF1.
+    if (!overlap_complete && !end_index_list.empty())
+    {
+        for (const auto& end_index : end_index_list)
+        {
+            // check moving in forward direction
+            std::vector<int> ORF1_nodes_sliced;
+            std::vector<int> ORF2_nodes_sliced;
+
+            // slice ORF1 node vector from first entry to last
+            ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).begin() + end_index + 1);
+            // check that slice is small enough to correctly slice ORF2_nodes
+            if (ORF1_nodes_sliced.size() <= ORF2_nodes.first.size())
+            {
+                // slice ORF2 node vector from last entry - end_index to the equivalent length of ORF2_nodes_sliced
+                ORF2_nodes_sliced = std::vector<int>(ORF2_nodes.first.end() - end_index - 1, ORF2_nodes.first.end());
+            }
+
+            // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
+            if (ORF1_nodes_sliced == ORF2_nodes_sliced)
+            {
+                for (size_t i1 = 0; i1 < ORF1_nodes_sliced.size(); i1++)
+                {
+                    ORF_1_overlap_node_index.push_back(i1);
+                }
+                for (size_t i2 = ORF2_nodes.first.size() - end_index - 1; i2 < ORF2_nodes.first.size(); i2++)
+                {
+                    ORF_2_overlap_node_index.push_back(i2);
+                }
+                overlap_complete = true;
+
+                break;
+            }
+        }
+    }
+    return {overlap_complete, ORF_1_overlap_node_index, ORF_2_overlap_node_index};
+}
 
 ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                                  const ORFVector& ORF_vector,
@@ -79,8 +268,10 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             // i = incompatible overlap (i.e. if overlap is greater than maximum or same stop codon shared in same frame)
             char overlap_type = 'n';
 
-            // set reversed variable to determine if ORFs are in same strand
+            // set reversed variable to determine if ORFs are in same strand,
+            // or bidirectional if both orientations of ORF2 must be checked
             bool reversed = false;
+            bool bidirectional = false;
 
             // set first ORF in relative ordering on strand
             int first_ORF = 1;
@@ -110,52 +301,28 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             // work out if node 1 is negative by checking strand
             bool negative = ORF1_strand;
 
-            // work out if ORF2 is in same strand as ORF1, if so leave reversed as false. If not, set reversed as true
-            if (ORF1_strand != ORF2_strand)
+            // determine if ORF2 should be reversed or not by looking at orientation of component nodes
+            auto start_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
+            auto end_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
+            auto start_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node * -1);
+            auto end_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node * -1);
+
+            // determine if ORFs are reversed, or if ORFs are bidirectional,
+            // meaning both orientations of ORF2 must be investigated
+            if (start_iter_rev != std::get<0>(ORF1_nodes).end() || end_iter_rev != std::get<0>(ORF1_nodes).end())
             {
-                reversed = true;
+                // if forward and reverse nodes present, then need to check both orientations
+                if (start_iter != std::get<0>(ORF1_nodes).end() || end_iter != std::get<0>(ORF1_nodes).end())
+                {
+                    bidirectional = true;
+                } else
+                {
+                    reversed = true;
+                }
             }
 
-            // if reversed is true, iterate through ORF2 coordinates and reverse
-            // check if both strands are the same. If not, reverse the nodes of ORF2 and their within-node coordinates
-            if (reversed)
-            {
-                // Reverse ORF2 node vector
-                std::reverse(ORF2_nodes.first.begin(), ORF2_nodes.first.end());
-                // Reverse ORF2 node coordinate vector
-                std::reverse(ORF2_nodes.second.begin(), ORF2_nodes.second.end());
-
-                // reverse sign on each ID in ORF2_nodes
-                for (auto & node_id : ORF2_nodes.first)
-                {
-                    node_id = node_id * -1;
-                }
-
-                // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
-                for (int i = 0; i < ORF2_nodes.second.size(); i++)
-                {
-                    // get absolute last node index (same as unitig length minus 1 as zero indexed)
-                    size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).size().first - 1;
-                    // get difference from original start to absolute last node index
-                    size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
-                    // get difference from original end to absolute last node index
-                    size_t reversed_start = node_end - std::get<1>(ORF2_nodes.second.at(i));
-                    // reassigned the entry in-place in ORF2_nodes.second
-                    ORF2_nodes.second[i] = std::make_pair(reversed_start, reversed_end);
-                }
-
-                // correct ORF2 5p and 3p positions, reversing the coordinates
-                ORF2_5p.second = std::get<1>(ORF2_nodes.second.back());
-                ORF2_3p.second = std::get<0>(ORF2_nodes.second[0]);
-
-                // correct node labels
-                ORF2_start_node = ORF2_nodes.first[0];
-                ORF2_end_node = ORF2_nodes.first.back();
-                ORF2_5p.first *= -1;
-                ORF2_3p.first *= -1;
-            }
-
-            // check if 3p matches between the two ORFs and node is in the same strand without reversal. If so, set as incompatible, and the overlap as the shorter of the two ORFS
+            // check if 3p matches between the two ORFs and node is in the same strand without reversal.
+            // If so, set as incompatible, and the overlap as the shorter of the two ORFS
             if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand && !reversed)
             {
                 overlap_type = 'i';
@@ -166,142 +333,42 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                 first_ORF = (ORF1_len >= ORF2_len) ? 1 : 2;
             }
 
-            // initialise vectors to capture overlapping node indices for ORFs
+            // initialise overlap node_indices
             std::vector<size_t> ORF_1_overlap_node_index;
             std::vector<size_t> ORF_2_overlap_node_index;
 
-            // initialise start and end index lists for ORF2 within ORF1
-            std::vector<size_t> start_index_list;
-            std::vector<size_t> end_index_list;
-
-            // if 3p ends don't match, look for indices
             if (!overlap_complete)
             {
-                // look for presence of ORF2 start node in ORF1 nodes
-                auto iter = find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
-                while(iter != std::get<0>(ORF1_nodes).end())
+                // if not bidirectional, run as normal
+                if (!bidirectional)
                 {
-                    size_t index = iter - std::get<0>(ORF1_nodes).begin();
-                    start_index_list.push_back(std::move(index));
-                    iter = find(iter + 1, std::get<0>(ORF1_nodes).end(), ORF2_start_node);
-                }
-
-                // look for presence of ORF2 end node in ORF1 nodes
-                iter = find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
-                while (iter != std::get<0>(ORF1_nodes).end())
-                {
-                    size_t index = iter - std::get<0>(ORF1_nodes).begin();
-                    end_index_list.push_back(std::move(index));
-                    iter = find(iter + 1, std::get<0>(ORF1_nodes).end(), ORF2_end_node);
-                }
-
-                // if both start and end indexes are found, check if ORF2 sits within ORF1
-                if (!start_index_list.empty() && !end_index_list.empty())
-                {
-                    for (const auto& start_index : start_index_list)
+                    if (reversed)
                     {
-                        for (const auto& end_index : end_index_list)
-                        {
-                            // check moving in forward direction
-                            std::vector<int> ORF1_nodes_sliced;
-                            if (start_index <= end_index)
-                            {
-                                // slice ORF1 node vector from first entry to last
-                                ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).begin() + end_index + 1);
-                            }
-
-                            // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
-                            if (ORF1_nodes_sliced == ORF2_nodes.first)
-                            {
-                                for (size_t i1 = start_index; i1 < end_index + 1; i1++)
-                                {
-                                    ORF_1_overlap_node_index.push_back(i1);
-                                }
-                                for (size_t i2 = 0; i2 < ORF2_nodes.first.size(); i2++)
-                                {
-                                    ORF_2_overlap_node_index.push_back(i2);
-                                }
-
-                                overlap_complete = true;
-
-                                break;
-                            }
-                        }
-                        // if chain is complete, don't iterate over any more start codons
-                        if (overlap_complete)
-                        {
-                            break;
-                        }
+                        reverse_ORFNodeVector(graph_vector, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
                     }
+                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                    overlap_complete = std::get<0>(return_tuple);
+                    ORF_1_overlap_node_index = std::get<1>(return_tuple);
+                    ORF_2_overlap_node_index = std::get<2>(return_tuple);
                 }
-            }
-            // if overlap not found, check if beginning of ORF2 overlaps with end of ORF1. May be case that start and end nodes are found, but not complete match across ORF1
-            if (!overlap_complete && !start_index_list.empty())
-            {
-                for (const auto& start_index : start_index_list)
+                // else, need to try in both directions, testing if overlap_complete
+                else
                 {
-                    // check moving in forward direction
-                    std::vector<int> ORF1_nodes_sliced;
-                    std::vector<int> ORF2_nodes_sliced;
+                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                    overlap_complete = std::get<0>(return_tuple);
+                    ORF_1_overlap_node_index = std::get<1>(return_tuple);
+                    ORF_2_overlap_node_index = std::get<2>(return_tuple);
 
-                    // slice ORF1 node vector from first entry to last
-                    ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).end());
-                    // check if ORF1_slice is too large to slice ORF1 (meaning likely ORF2 is reversed
-                    if (ORF1_nodes_sliced.size() <= ORF2_nodes.first.size())
+                    if (!overlap_complete)
                     {
-                        // slice ORF1 node vector from first entry to the equivalent length of ORF2_nodes_sliced
-                        ORF2_nodes_sliced = std::vector<int>(ORF2_nodes.first.begin(), ORF2_nodes.first.begin() + ORF1_nodes_sliced.size());
-                    }
+                        reverse_ORFNodeVector(graph_vector, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+                        return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                        overlap_complete = std::get<0>(return_tuple);
+                        ORF_1_overlap_node_index = std::get<1>(return_tuple);
+                        ORF_2_overlap_node_index = std::get<2>(return_tuple);
 
-                    // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
-                    if (ORF1_nodes_sliced == ORF2_nodes_sliced)
-                    {
-                        for (size_t i1 = start_index; i1 < std::get<0>(ORF1_nodes).size(); i1++)
-                        {
-                            ORF_1_overlap_node_index.push_back(i1);
-                        }
-                        for (size_t i2 = 0; i2 < ORF2_nodes_sliced.size(); i2++)
-                        {
-                            ORF_2_overlap_node_index.push_back(i2);
-                        }
-                        overlap_complete = true;
-
-                        break;
-                    }
-                }
-            }
-            // if overlap not found, check if end of ORF2 overlaps with beginning of ORF1.
-            if (!overlap_complete && !end_index_list.empty())
-            {
-                for (const auto& end_index : end_index_list)
-                {
-                    // check moving in forward direction
-                    std::vector<int> ORF1_nodes_sliced;
-                    std::vector<int> ORF2_nodes_sliced;
-
-                    // slice ORF1 node vector from first entry to last
-                    ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).begin() + end_index + 1);
-                    // check that slice is small enough to correctly slice ORF2_nodes
-                    if (ORF1_nodes_sliced.size() <= ORF2_nodes.first.size())
-                    {
-                        // slice ORF2 node vector from last entry - end_index to the equivalent length of ORF2_nodes_sliced
-                        ORF2_nodes_sliced = std::vector<int>(ORF2_nodes.first.end() - end_index - 1, ORF2_nodes.first.end());
-                    }
-
-                    // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
-                    if (ORF1_nodes_sliced == ORF2_nodes_sliced)
-                    {
-                        for (size_t i1 = 0; i1 < ORF1_nodes_sliced.size(); i1++)
-                        {
-                            ORF_1_overlap_node_index.push_back(i1);
-                        }
-                        for (size_t i2 = ORF2_nodes.first.size() - end_index - 1; i2 < ORF2_nodes.first.size(); i2++)
-                        {
-                            ORF_2_overlap_node_index.push_back(i2);
-                        }
-                        overlap_complete = true;
-
-                        break;
+                        // set reversed as true
+                        reversed = true;
                     }
                 }
             }
@@ -424,7 +491,6 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                     // check if any overlap detected.
                     if (abs_overlap > 0)
                     {
-
                         std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
                         int overlap_ID = std::stoi(overlap_ID_str);
 

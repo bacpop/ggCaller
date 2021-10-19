@@ -3,6 +3,14 @@ from balrog.__main__ import *
 from ggCaller.shared_memory import *
 import json
 
+
+class SetEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):
     # initilise high scoring ORF set to return
@@ -269,7 +277,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     with open("overlaps_" + str(colour_ID) + ".json", "w") as j:
         json.dump(ORF_overlap_dict, j)
 
-    with open("node_list_" + str(colour_ID) + ".txt", "w") as j:
+    with open("node_list_" + str(colour_ID) + ".nodes", "w") as j:
         json.dump(node_dict, j)
 
     # initialise return dictionaries
@@ -284,10 +292,16 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # calculate scores for genes
         ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
+        with open("score_dict_" + str(colour_ID) + ".score", "w") as j:
+            json.dump(ORF_score_dict, j)
+
         # print("Finding highest scoring paths: " + str(colour_ID))
 
         # determine highest scoring genes, stored in list of lists
         edge_list = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+
+        with open("edge_list_" + str(colour_ID) + ".pre_edges", "w") as j:
+            j.write(str(edge_list))
 
         # generate a dictionary of all true gene info
         for entry in edge_list:
@@ -327,6 +341,9 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                 # if ORF not last in list, add next entry to set
                 if (i != last_index):
                     high_scoring_ORF_edges[ORF].add(entry[i + 1])
+
+        with open("edge_list_" + str(colour_ID) + ".post_edges", "w") as j:
+            json.dump(high_scoring_ORF_edges, j, cls=SetEncoder)
 
     # print("Finished:  " + str(colour_ID))
 
