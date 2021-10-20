@@ -94,16 +94,13 @@ typedef std::tuple<size_t, int, uint8_t, sdsl::bit_vector, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
 // stack for holding node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
-//typedef std::stack<std::tuple<int, size_t, std::tuple<int, size_t, bool>, sdsl::bit_vector, size_t>> ORFStack;
 typedef std::stack<std::tuple<int, sdsl::bit_vector, size_t>> ORFStack;
 // A vector of paths following a head node, which contain complete stop-stop paths (a vector of nodesID+orientation)
 typedef std::vector<std::vector<int>> PathVector;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
-typedef robin_hood::unordered_map<size_t, bool> NodeStrandMap;
+typedef std::map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
-// mapping for each path with overlapping path id and how overlapping path is orientated relative to current path
-typedef std::unordered_map<size_t, std::vector<std::vector<std::tuple<int, size_t, size_t>>>> PathOverlapMap;
 // vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
 typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
 // tuple containing grouping information for ORFs filtered by Balrog
