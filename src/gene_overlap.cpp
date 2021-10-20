@@ -309,16 +309,16 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
             // determine if ORFs are reversed, or if ORFs are bidirectional,
             // meaning both orientations of ORF2 must be investigated
-            if (start_iter_rev != std::get<0>(ORF1_nodes).end() || end_iter_rev != std::get<0>(ORF1_nodes).end())
+            if ((start_iter != std::get<0>(ORF1_nodes).end() && start_iter_rev != std::get<0>(ORF1_nodes).end()) ||
+                    (end_iter != std::get<0>(ORF1_nodes).end() && end_iter_rev != std::get<0>(ORF1_nodes).end()))
             {
                 // if forward and reverse nodes present, then need to check both orientations
-                if (start_iter != std::get<0>(ORF1_nodes).end() || end_iter != std::get<0>(ORF1_nodes).end())
-                {
-                    bidirectional = true;
-                } else
-                {
-                    reversed = true;
-                }
+                bidirectional = true;
+            }
+            // else if reversed nodes present but forward are not, then reverse
+            else if (start_iter == std::get<0>(ORF1_nodes).end() && end_iter == std::get<0>(ORF1_nodes).end())
+            {
+                reversed = true;
             }
 
             // check if 3p matches between the two ORFs and node is in the same strand without reversal.
