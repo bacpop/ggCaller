@@ -1,6 +1,46 @@
 #include "gene_overlap.h"
 #include "ORF_clustering.h"
 
+inline std::pair<std::vector<int>, std::vector<indexPair>> combine_nodes(const std::vector<int>& ORF_nodes,
+                                                                          const std::vector<indexPair>& ORF_coords,
+                                                                          const std::vector<int>& TIS_nodes,
+                                                                          const std::vector<indexPair>& TIS_coords)
+{
+    // initialise vectors to return
+    std::vector<int> combined_nodes;
+    std::vector<indexPair> combined_coords;
+
+    // iterate over TIS_nodes, checking if they are the first entry in ORF_nodes
+    int i = 0;
+    for (; i < TIS_nodes.size(); i++)
+    {
+        if (TIS_nodes.at(i) != ORF_nodes.at(0))
+        {
+            combined_nodes.push_back(TIS_nodes.at(i));
+            combined_coords.push_back(TIS_coords.at(i));
+        } else
+        {
+            break;
+        }
+    }
+
+    // as now aligned across TIS and ORF nodes, now combine
+    int j = 0;
+    for (; i < TIS_nodes.size(); i++)
+    {
+        combined_nodes.push_back(TIS_nodes.at(i));
+        combined_coords.push_back(TIS_coords.at(i));
+        combined_coords.back().second = ORF_coords.at(j).second;
+        j++;
+    }
+
+    // add the remaining entries for ORF_nodes
+    combined_nodes.insert(combined_nodes.end(), ORF_nodes.begin() + j, ORF_nodes.end());
+    combined_coords.insert(combined_coords.end(), ORF_coords.begin() + j, ORF_coords.end());
+
+    return {combined_nodes, combined_coords};
+}
+
 void reverse_ORFNodeVector(const GraphVector& graph_vector,
                            std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
                            int& ORF2_start_node,
@@ -43,7 +83,7 @@ void reverse_ORFNodeVector(const GraphVector& graph_vector,
     ORF2_3p.first *= -1;
 }
 
-std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(const ORFNodeVector& ORF1_nodes,
+std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(const std::pair<std::vector<int>, std::vector<indexPair>>& ORF1_nodes,
                                                                                const std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
                                                                                const int& ORF2_start_node,
                                                                                const int& ORF2_end_node)
@@ -203,8 +243,11 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
     // iterate over each ORF sequence with specific colours combination
     for (size_t ORF_index = 0; ORF_index < ORF_vector.size(); ORF_index++)
     {
-        // iterate over nodes traversed by ORF
-        const auto& ORF_nodes = std::get<0>(ORF_vector.at(ORF_index));
+        // iterate over nodes traversed by ORF and its TIS
+        const auto& ORF_info = ORF_vector.at(ORF_index);
+        std::unordered_set<int> ORF_nodes;
+        std::copy(std::get<3>(ORF_info).begin(), std::get<3>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
+        std::copy(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
         for (const auto& node_traversed : ORF_nodes)
         {
             // add to triplet list, with temp_ORF_ID (row), node id (column) and set value as 1 (true)
@@ -245,19 +288,28 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             const size_t& ORF2_ID = (temp_ORF1_longer ? temp_ORF2_ID : temp_ORF1_ID);
 
             // get reference to ORF1_info information and unpack
-            const auto& ORF1_nodes = ORF_vector.at(ORF1_ID);
-            const auto& ORF1_strand = std::get<5>(ORF1_nodes);
-            const auto& ORF1_len = std::get<2>(ORF1_nodes);
+            const auto& ORF1_info = ORF_vector.at(ORF1_ID);
+            const auto& ORF1_node_ids = std::get<0>(ORF1_info);
+            const auto& ORF1_node_coords = std::get<1>(ORF1_info);
+            const auto& ORF1_TIS_ids = std::get<3>(ORF1_info);
+            const auto& ORF1_TIS_coords = std::get<4>(ORF1_info);
+            const auto& ORF1_strand = std::get<5>(ORF1_info);
+            const auto& ORF1_len = std::get<2>(ORF1_info);
+            const bool ORF1_TIS = (!ORF1_TIS_ids.empty()) ? true : false;
 
             // unpack ORF2_info
             const auto& ORF2_info = ORF_vector.at(ORF2_ID);
-            auto ORF2_node_ids = std::get<0>(ORF2_info);
-            auto ORF2_node_coords = std::get<1>(ORF2_info);
+            const auto& ORF2_node_ids = std::get<0>(ORF2_info);
+            const auto& ORF2_node_coords = std::get<1>(ORF2_info);
+            const auto& ORF2_TIS_ids = std::get<3>(ORF2_info);
+            const auto& ORF2_TIS_coords = std::get<4>(ORF2_info);
             const auto& ORF2_strand = std::get<5>(ORF2_info);
             const auto& ORF2_len = std::get<2>(ORF2_info);
+            const bool ORF2_TIS = (!ORF2_TIS_ids.empty()) ? true : false;
 
-            // make pair for ORF2_nodes
-            auto ORF2_nodes = std::make_pair(ORF2_node_ids, ORF2_node_coords);
+            // merge ORF and TIS nodes for ORF1 and ORF2
+            const auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
+            auto ORF2_nodes = std::move(combine_nodes(ORF2_node_ids, ORF2_node_coords, ORF2_TIS_ids, ORF2_TIS_coords));
 
             // initialise overlap type
             // n = no overlap
@@ -310,12 +362,12 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             // determine if ORFs are reversed, or if ORFs are bidirectional,
             // meaning both orientations of ORF2 must be investigated
             if ((start_iter != std::get<0>(ORF1_nodes).end() && start_iter_rev != std::get<0>(ORF1_nodes).end()) ||
-                    (end_iter != std::get<0>(ORF1_nodes).end() && end_iter_rev != std::get<0>(ORF1_nodes).end()))
+                (end_iter != std::get<0>(ORF1_nodes).end() && end_iter_rev != std::get<0>(ORF1_nodes).end()))
             {
                 // if forward and reverse nodes present, then need to check both orientations
                 bidirectional = true;
             }
-            // else if reversed nodes present but forward are not, then reverse
+                // else if reversed nodes present but forward are not, then reverse
             else if (start_iter == std::get<0>(ORF1_nodes).end() && end_iter == std::get<0>(ORF1_nodes).end())
             {
                 reversed = true;
@@ -487,115 +539,127 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                         }
                     }
 
+                    // check if TIS present for specific overlaps and negate
+                    if ((overlap_start == 25 && ORF2_TIS) || (overlap_start == 15 && ORF1_TIS))
+                    {
+                        if (abs_overlap < 16)
+                        {
+                            abs_overlap = 0;
+                        } else
+                        {
+                            abs_overlap -= 16;
+                        }
+                    }
+
                     // convert overlap_start and overlap_end to string to enable creation of ID for switch
                     // check if any overlap detected.
-                    if (abs_overlap > 0)
-                    {
-                        std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
-                        int overlap_ID = std::stoi(overlap_ID_str);
+                    std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
+                    int overlap_ID = std::stoi(overlap_ID_str);
 
-                        // go over combinations of overlap start and overlap end to determine type of overlap
-                        switch (overlap_ID)
-                        {
-                            // unidirectional
-                            case 1523:
-                                overlap_type = 'u';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 2513:
-                                overlap_type = 'u';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                                // ORF lies completely within another
-                            case 1513:
-                                overlap_type = 'w';
-                                // ORF1 sits fully in ORF2
+                    // go over combinations of overlap start and overlap end to determine type of overlap
+                    switch (overlap_ID)
+                    {
+                        // unidirectional
+                        case 1523:
+                            overlap_type = 'u';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (!negative)
+                            {
                                 first_ORF = 2;
-                                // think about case where ORF1 and ORF2 are reverse complements of eachother
-                                if (ORF1_5p == ORF2_3p && ORF1_3p == ORF2_5p && !negative)
-                                {
-                                    first_ORF = 1;
-                                }
-                                break;
-                            case 2523:
-                                overlap_type = 'w';
-                                // ORF2 sits fully in ORF1, leave first_ORF = 1
-                                break;
-                            case 1315:
-                                overlap_type = 'w';
-                                // ORF1 sits fully in ORF2
+                            }
+                            break;
+                        case 2513:
+                            overlap_type = 'u';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (negative)
+                            {
                                 first_ORF = 2;
-                                break;
-                            case 2325:
-                                overlap_type = 'w';
-                                // ORF2 sits fully in ORF1, leave first_ORF = 1
-                                break;
-                                // convergent
-                            case 2313:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1323:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1313:
-                                overlap_type = 'c';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                                // divergent
-                            case 2515:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1525:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                // check for case where 5p of ORF1 and 3p of ORF2 match, if they do keep ORF as first ORF
-                                if (ORF1_5p != ORF2_3p && !negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                            case 1515:
-                                overlap_type = 'd';
-                                // adjust for negativity of ORF1 from default (first_ORF = 1)
-                                if (!negative)
-                                {
-                                    first_ORF = 2;
-                                }
-                                break;
-                        }
+                            }
+                            break;
+                            // ORF lies completely within another
+                        case 1513:
+                            overlap_type = 'w';
+                            // ORF1 sits fully in ORF2
+                            first_ORF = 2;
+                            // think about case where ORF1 and ORF2 are reverse complements of eachother
+                            if (ORF1_5p == ORF2_3p && ORF1_3p == ORF2_5p && !negative)
+                            {
+                                first_ORF = 1;
+                            }
+                            break;
+                        case 2523:
+                            overlap_type = 'w';
+                            // ORF2 sits fully in ORF1, leave first_ORF = 1
+                            break;
+                        case 1315:
+                            overlap_type = 'w';
+                            // ORF1 sits fully in ORF2
+                            first_ORF = 2;
+                            break;
+                        case 2325:
+                            overlap_type = 'w';
+                            // ORF2 sits fully in ORF1, leave first_ORF = 1
+                            break;
+                            // convergent
+                        case 2313:
+                            overlap_type = 'c';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
+                        case 1323:
+                            overlap_type = 'c';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (!negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
+                        case 1313:
+                            overlap_type = 'c';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
+                            // divergent
+                        case 2515:
+                            overlap_type = 'd';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
+                        case 1525:
+                            overlap_type = 'd';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            // check for case where 5p of ORF1 and 3p of ORF2 match, if they do keep ORF as first ORF
+                            if (ORF1_5p != ORF2_3p && !negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
+                        case 1515:
+                            overlap_type = 'd';
+                            // adjust for negativity of ORF1 from default (first_ORF = 1)
+                            if (!negative)
+                            {
+                                first_ORF = 2;
+                            }
+                            break;
                     }
                 }
                 // if overlap is greater than max_overlap, set as incompatible
                 if (abs_overlap > max_overlap)
                 {
                     overlap_type = 'i';
+                } else if (abs_overlap == 0)
+                {
+                    overlap_type = 'n';
                 }
 
                 // add overlap type to map, where the first ORF on the positive strand is the second key,
