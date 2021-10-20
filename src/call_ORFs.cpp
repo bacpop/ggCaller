@@ -458,7 +458,8 @@ void update_ORF_node_map (const GraphVector& graph_vector,
 
 // converts ORF entries into a vector and assigns relative strand
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
-                           const NodeStrandMap& pos_strand_map)
+                           const NodeStrandMap& pos_strand_map,
+                           const GraphVector& graph_vector)
 {
     ORFVector ORF_vector(ORF_node_map.size());
 
@@ -473,7 +474,8 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<0>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            if (strand != pos_strand_map.at(abs(node_id)))
+            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
             } else
@@ -485,7 +487,8 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<3>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            if (strand != pos_strand_map.at(abs(node_id)))
+            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
             } else
@@ -514,24 +517,30 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 }
 
 // calculate the relative strand of each node traversed in an ORF
-NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map)
+NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
+                                   const ORFNodeMap& ORF_node_map)
 {
     // initialise map to store orientation of nodes (colour is an ID, not a string
     std::vector<NodeStrandMap> pos_strand_vector;
 
     for (const auto& ORF : ORF_node_map)
     {
-        // unpack tuple to get nodes vector containing TIS and ORF nodes
-        std::vector<int> nodes;
-        nodes.insert(nodes.end(), std::get<3>(ORF.second).begin(), std::get<3>(ORF.second).end());
-        nodes.insert(nodes.end(), std::get<0>(ORF.second).begin(), std::get<0>(ORF.second).end());
-
         // create new map to store node info
         NodeStrandMap new_map;
-        for (const auto& n : nodes)
+
+        // iterate over TIS nodes, getting hash for head_kmer for stable node stranding
+        for (const auto& node_id : std::get<3>(ORF.second))
         {
+            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
-            new_map[abs(n)] = (n >= 0) ? true : false;
+            new_map[node_hash] = (node_id > 0) ? true : false;
+        }
+        // repeat for ORF nodes
+        for (const auto& node_id : std::get<0>(ORF.second))
+        {
+            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
+            new_map[node_hash] = (node_id > 0) ? true : false;
         }
 
         // create vector to keep track of which maps need to be added to, and whether this is in positive (true) or negative (false) orientation
@@ -683,10 +692,10 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
     }
 
     // generate pos_strand_map to determine relative strands of each node for each colour
-    auto pos_strand_map = std::move(calculate_pos_strand(ORF_node_map));
+    auto pos_strand_map = std::move(calculate_pos_strand(graph_vector, ORF_node_map));
 
     // group colours of ORFs together
-    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map));
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, graph_vector));
 
     return ORF_vector;
 }

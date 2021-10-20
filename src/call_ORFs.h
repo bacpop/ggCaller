@@ -32,9 +32,11 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                      const fm_index_coll& fm_idx);
 
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
-                           const NodeStrandMap& pos_strand_map);
+                           const NodeStrandMap& pos_strand_map,
+                           const GraphVector& graph_vector);
 
-NodeStrandMap calculate_pos_strand(const ORFNodeMap& ORF_node_map);
+NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
+                                   const ORFNodeMap& ORF_node_map);
 
 void update_ORF_node_map (const GraphVector& graph_vector,
                           const size_t& ORF_hash,
