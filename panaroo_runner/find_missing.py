@@ -1,68 +1,77 @@
-import networkx as nx
-import io, sys
 from collections import defaultdict, Counter
-import numpy as np
 from Bio.Seq import translate, reverse_complement, Seq
 from Bio import SeqIO
-from panaroo.cdhit import align_dna_cdhit
+from .cdhit_align import align_dna_cdhit
 from panaroo.isvalid import del_dups
 from joblib import Parallel, delayed
 import os
 import gffutils as gff
 from io import StringIO
 import edlib
-from .merge_nodes import delete_node, remove_member_from_node
+from panaroo.merge_nodes import delete_node, remove_member_from_node
 from tqdm import tqdm
 import re
+
+from ggCaller.shared_memory import *
+from functools import partial
 
 
 # @profile
 def find_missing(G,
-                 gff_file_handles,
-                 dna_seq_file,
-                 prot_seq_file,
-                 gene_data_file,
+                 graph_shd_arr_tup,
+                 high_scoring_ORFs,
+                 is_ref,
+                 write_idx,
+                 kmer,
+                 repeat,
+                 isolate_names,
                  merge_id_thresh,
                  search_radius,
                  prop_match,
                  pairwise_id_thresh,
                  n_cpu,
+                 pool,
                  remove_by_consensus=False,
                  verbose=True):
     # Iterate over each genome file checking to see if any missing accessory genes
     #  can be found.
 
-    # generate mapping between internal nodes and gff ids
-    id_to_gff = {}
-    with open(gene_data_file, 'r') as infile:
-        next(infile)
-        for line in infile:
-            line = line.split(",")
-            if line[2] in id_to_gff:
-                raise NameError("Duplicate internal ids!")
-            id_to_gff[line[2]] = line[3]
+    # # generate mapping between internal nodes and gff ids
+    # id_to_gff = {}
+    # with open(gene_data_file, 'r') as infile:
+    #     next(infile)
+    #     for line in infile:
+    #         line = line.split(",")
+    #         if line[2] in id_to_gff:
+    #             raise NameError("Duplicate internal ids!")
+    #         id_to_gff[line[2]] = line[3]
 
     # identify nodes that have been merged at the protein level
-    merged_ids = {}
+    merged_nodes = defaultdict(dict)
     for node in G.nodes():
         if (len(G.nodes[node]['centroid']) >
             1) or (G.nodes[node]['mergedDNA']):
+            # get the DNA sequence of the largest centroid
+            max_len_id = G.nodes[node]['maxLenId']
+            long_centroid_seq = G.nodes[node]['dna'][max_len_id]
             for sid in sorted(G.nodes[node]['seqIDs']):
-                merged_ids[sid] = node
-
-    merged_nodes = defaultdict(dict)
-    with open(gene_data_file, 'r') as infile:
-        next(infile)
-        for line in infile:
-            line = line.split(",")
-            if line[2] in merged_ids:
+                # for each entry, add the merged node and the longest centroid id to merged_nodes
                 mem = int(sid.split("_")[0])
-                if merged_ids[line[2]] in merged_nodes[mem]:
-                    merged_nodes[mem][merged_ids[line[2]]] = G.nodes[
-                        merged_ids[line[2]]]["dna"][G.nodes[merged_ids[
-                        line[2]]]['maxLenId']]
-                else:
-                    merged_nodes[mem][merged_ids[line[2]]] = line[5]
+                merged_nodes[mem][node] = long_centroid_seq
+
+    # merged_nodes = defaultdict(dict)
+    # with open(gene_data_file, 'r') as infile:
+    #     next(infile)
+    #     for line in infile:
+    #         line = line.split(",")
+    #         if line[2] in merged_ids:
+    #             mem = int(sid.split("_")[0])
+    #             if merged_ids[line[2]] in merged_nodes[mem]:
+    #                 merged_nodes[mem][merged_ids[line[2]]] = G.nodes[
+    #                     merged_ids[line[2]]]["dna"][G.nodes[merged_ids[
+    #                     line[2]]]['maxLenId']]
+    #             else:
+    #                 merged_nodes[mem][merged_ids[line[2]]] = line[5]
 
     # iterate through nodes to identify accessory genes for searching
     # these are nodes missing a member with at least one neighbour that has that member
@@ -71,11 +80,10 @@ def find_missing(G,
     conflicts = defaultdict(set)
     for node in G.nodes():
         for neigh in G.neighbors(node):
-            # seen_mems = set()
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
 
-                conflicts[member].add((neigh, id_to_gff[sid]))
+                conflicts[member].add((neigh, member))
                 if member not in G.nodes[node]['members']:
                     if len(G.nodes[node]["dna"][G.nodes[node]
                     ['maxLenId']]) <= 0:
@@ -83,7 +91,7 @@ def find_missing(G,
                         raise NameError("Problem!")
                     search_list[member][node].add(
                         (G.nodes[node]["dna"][G.nodes[node]['maxLenId']],
-                         id_to_gff[sid]))
+                         member))
 
                     n_searches += 1
 
@@ -91,17 +99,38 @@ def find_missing(G,
         print("Number of searches to perform: ", n_searches)
         print("Searching...")
 
-    all_hits, all_node_locs, max_seq_lengths = zip(*Parallel(n_jobs=n_cpu)(
-        delayed(search_gff)(search_list[member],
-                            conflicts[member],
-                            gff_handle,
-                            merged_nodes=merged_nodes[member],
-                            search_radius=search_radius,
-                            prop_match=prop_match,
-                            pairwise_id_thresh=pairwise_id_thresh,
-                            merge_id_thresh=merge_id_thresh)
-        for member, gff_handle in tqdm(enumerate(gff_file_handles),
-                                       disable=(not verbose))))
+    # create numpy arrays for shared memory
+    total_arr = np.array([high_scoring_ORFs, merged_nodes, search_list, conflicts])
+
+    with SharedMemoryManager() as smm:
+        # generate shared numpy arrays
+        ORF_array_shd, ORF_array_shd_tup = generate_shared_mem_array(total_arr, smm)
+
+        all_hits, all_node_locs, max_seq_lengths = zip(pool.map(partial(search_gff,
+                                                                        ORF_array_shd_tup=ORF_array_shd_tup,
+                                                                        graph_shd_arr_tup=graph_shd_arr_tup,
+                                                                        search_radius=search_radius,
+                                                                        prop_match=prop_match,
+                                                                        pairwise_id_thresh=pairwise_id_thresh,
+                                                                        merge_id_thresh=merge_id_thresh,
+                                                                        is_ref=is_ref,
+                                                                        write_idx=write_idx,
+                                                                        kmer=kmer,
+                                                                        repeat=repeat,
+                                                                        isolate_names=isolate_names),
+                                                                range(0, len(isolate_names))))
+
+    # all_hits, all_node_locs, max_seq_lengths = zip(*Parallel(n_jobs=n_cpu)(
+    #     delayed(search_gff)(search_list[member],
+    #                         conflicts[member],
+    #                         member,
+    #                         merged_nodes=merged_nodes[member],
+    #                         search_radius=search_radius,
+    #                         prop_match=prop_match,
+    #                         pairwise_id_thresh=pairwise_id_thresh,
+    #                         merge_id_thresh=merge_id_thresh)
+    #     for member in tqdm(range(0, len(isolate_names)),
+    #                                    disable=(not verbose))))
 
     if verbose:
         print("translating hits...")
@@ -210,61 +239,73 @@ def find_missing(G,
     return (G)
 
 
-def search_gff(node_search_dict,
-               conflicts,
-               gff_handle_name,
-               merged_nodes,
+total_arr = np.array([high_scoring_ORFs, merged_nodes, search_list, conflicts])
+
+
+def search_gff(member,
+               ORF_array_shd_tup,
+               graph_shd_arr_tup,
+               is_ref,
+               write_idx,
+               kmer,
+               repeat,
+               isolate_names,
                search_radius=10000,
                prop_match=0.2,
                pairwise_id_thresh=0.95,
                merge_id_thresh=0.7,
                n_cpu=1):
-    gff_handle = open(gff_handle_name, 'r')
+    # load shared memory items
+    ORF_existing_shm = shared_memory.SharedMemory(name=ORF_array_shd_tup.name)
+    ORF_shd_arr = np.ndarray(ORF_array_shd_tup.shape, dtype=ORF_array_shd_tup.dtype, buffer=ORF_existing_shm.buf)
+    graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
+    graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
+    # unpack from shared memory
+    node_search_dict = ORF_shd_arr[1][member]
     # sort sets to fix order
-    conflicts = sorted(conflicts)
+    conflicts = sorted(ORF_shd_arr[3][member])
+
     for node in node_search_dict:
         node_search_dict[node] = sorted(node_search_dict[node])
 
-    split = gff_handle.read().replace(',', '').split("##FASTA\n")
+    # split = gff_handle.read().replace(',', '').split("##FASTA\n")
     node_locs = {}
+    #
+    # if len(split) != 2:
+    #     raise NameError("File does not appear to be in GFF3 format!")
 
-    if len(split) != 2:
-        raise NameError("File does not appear to be in GFF3 format!")
-
-    # load fasta
-    contigs = {}
-    max_seq_len = 0
-    with StringIO(split[1]) as temp_fasta:
-        for record in SeqIO.parse(temp_fasta, 'fasta'):
-            contigs[record.id] = np.array(list(str(record.seq)))
-            max_seq_len = max(max_seq_len, len(contigs[record.id]))
-
-    # load gff annotation
-    parsed_gff = gff.create_db("\n".join(
-        [l for l in split[0].splitlines() if '##sequence-region' not in l]),
-        dbfn=":memory:",
-        force=True,
-        keep_order=True,
-        from_string=True)
+    # # load fasta
+    # contigs = {}
+    # max_seq_len = 0
+    # with StringIO(split[1]) as temp_fasta:
+    #     for record in SeqIO.parse(temp_fasta, 'fasta'):
+    #         contigs[record.id] = np.array(list(str(record.seq)))
+    #         max_seq_len = max(max_seq_len, len(contigs[record.id]))
+    #
+    # # load gff annotation
+    # parsed_gff = gff.create_db("\n".join(
+    #     [l for l in split[0].splitlines() if '##sequence-region' not in l]),
+    #     dbfn=":memory:",
+    #     force=True,
+    #     keep_order=True,
+    #     from_string=True)
 
     # mask regions that already have genes and convert back to string
     seen = set()
     for node, geneid in conflicts:
-        gene = parsed_gff[geneid]
-        start = min(gene.start, gene.end)
-        end = max(gene.start, gene.end)
+        mem = int(sid.split("_")[0])
+        ORF_ID = int(sid.split("_")[-1])
+        ORF_info = ORF_shd_arr[0][mem][ORF_ID]
 
-        if node in merged_nodes:
-            db_seq = contigs[gene[0]][max(0, (start -
-                                              search_radius)):(end +
-                                                               search_radius)]
-            db_seq = "".join(list(db_seq))
+        if node in ORF_shd_arr[1][member]:
+            db_seq = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref, write_idx, kmer,
+                                                  isolate_names[member], repeat)
 
             hit, loc = search_dna(db_seq,
-                                  merged_nodes[node],
-                                  prop_match=(end - start) /
-                                             float(len(merged_nodes[node])),
+                                  ORF_shd_arr[1][member][node],
+                                  prop_match=(len(db_seq)) /
+                                             float(len(ORF_shd_arr[1][member][node])),
                                   pairwise_id_thresh=merge_id_thresh,
                                   refind=False)
 
@@ -290,10 +331,10 @@ def search_gff(node_search_dict,
 
     # search for matches
     hits = []
-    for node in node_search_dict:
+    for node in ORF_shd_arr[2][member]:
         best_hit = ""
         best_loc = None
-        for search in node_search_dict[node]:
+        for search in ORF_shd_arr[2][member][node]:
             gene = parsed_gff[search[1]]
             start = min(gene.start, gene.end)
             end = max(gene.start, gene.end)

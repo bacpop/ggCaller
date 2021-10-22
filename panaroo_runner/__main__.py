@@ -43,6 +43,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 input_colours, output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 len_diff_cutoff, family_threshold, min_trailing_support, trailing_recursive, clean_edges,
                 edge_support_threshold, merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
+
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -122,42 +123,44 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     G = trim_low_support_trailing_ends(G,
                                        min_support=min_trailing_support,
                                        max_recursive=trailing_recursive)
-    #
-    # if verbose:
-    #     print("refinding genes...")
-    #
-    # # find genes that Prokka has missed
-    # G = find_missing(G,
-    #                  args.input_files,
-    #                  dna_seq_file=output_dir + "combined_DNA_CDS.fasta",
-    #                  prot_seq_file=output_dir +
-    #                                "combined_protein_CDS.fasta",
-    #                  gene_data_file=output_dir + "gene_data.csv",
-    #                  remove_by_consensus=args.remove_by_consensus,
-    #                  search_radius=args.search_radius,
-    #                  prop_match=args.refind_prop_match,
-    #                  pairwise_id_thresh=args.id,
-    #                  merge_id_thresh=max(0.8, args.family_threshold),
-    #                  n_cpu=args.n_cpu,
-    #                  verbose=verbose)
-    #
-    # # remove edges that are likely due to misassemblies (by consensus)
-    #
-    # # merge again in case refinding has resolved issues
-    # if verbose:
-    #     print("collapse gene families with refound genes...")
-    # G = collapse_families(G,
-    #                       seqid_to_centroid=seqid_to_centroid,
-    #                       outdir=temp_dir,
-    #                       family_threshold=args.family_threshold,
-    #                       correct_mistranslations=False,
-    #                       length_outlier_support_proportion=args.
-    #                       length_outlier_support_proportion,
-    #                       n_cpu=args.n_cpu,
-    #                       quiet=(not verbose),
-    #                       distances_bwtn_centroids=distances_bwtn_centroids,
-    #                       centroid_to_index=centroid_to_index)[0]
-    #
+
+    if verbose:
+        print("refinding genes...")
+
+    # find genes that Prokka has missed
+    G = find_missing(G,
+                     shd_arr[0],
+                     high_scoring_ORFs,
+                     is_ref=is_ref,
+                     write_idx=write_idx,
+                     kmer=kmer,
+                     repeat=repeat,
+                     isolate_names=isolate_names,
+                     remove_by_consensus=remove_by_consensus,
+                     search_radius=search_radius,
+                     prop_match=refind_prop_match,
+                     pairwise_id_thresh=identity_cutoff,
+                     merge_id_thresh=max(0.8, family_threshold),
+                     n_cpu=n_cpu,
+                     verbose=verbose)
+
+    # remove edges that are likely due to misassemblies (by consensus)
+
+    # merge again in case refinding has resolved issues
+    if verbose:
+        print("collapse gene families with refound genes...")
+    G = collapse_families(G,
+                          seqid_to_centroid=seqid_to_centroid,
+                          outdir=temp_dir,
+                          family_threshold=args.family_threshold,
+                          correct_mistranslations=False,
+                          length_outlier_support_proportion=args.
+                          length_outlier_support_proportion,
+                          n_cpu=args.n_cpu,
+                          quiet=(not verbose),
+                          distances_bwtn_centroids=distances_bwtn_centroids,
+                          centroid_to_index=centroid_to_index)[0]
+
     if clean_edges:
         G = clean_misassembly_edges(
             G, edge_support_threshold=edge_support_threshold)
