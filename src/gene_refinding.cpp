@@ -5,23 +5,25 @@ void assign_seq(const GraphVector& graph_vector,
                 const int kmer,
                 const bool is_ref,
                 const fm_index_coll& fm_idx,
-                std::string& stream_seq)
+                std::string& stream_seq,
+                const size_t& ORF_end,
+                const std::string& ORF_seq)
 {
     // iterate over all the paths, determine which is the longest and real.
     // If multiple, choose from that with the lowest hash for first kmer
     for (const auto& unitig_path : unitig_complete_paths)
     {
         // initilise path_sequence
-        std::string path_sequence;
+        std::string path_sequence = ORF_seq;
 
         // generate the path sequence
-        for (const auto &node : unitig_path)
+        for (int i = 0; i < unitig_path.size(); i++)
         {
             std::string unitig_seq;
-            std::string new_sequence = path_sequence;
+            const auto& node = unitig_path.at(i);
 
             // parse out information from node integer value
-            bool strand = (node >= 0) ? true : false;
+            const bool strand = (node >= 0) ? true : false;
 
             if (strand) {
                 unitig_seq = graph_vector.at(abs(node) - 1).seq();
@@ -29,29 +31,26 @@ void assign_seq(const GraphVector& graph_vector,
                 unitig_seq = reverse_complement(graph_vector.at(abs(node) - 1).seq());
             }
 
-            if (new_sequence.empty())
+            if (i == 0)
             {
-                new_sequence = unitig_seq;
+                path_sequence.append(unitig_seq.begin() + ORF_end + 1, unitig_seq.end());
             } else
             {
-                new_sequence.append(unitig_seq.begin() + kmer - 1, unitig_seq.end());
+                path_sequence.append(unitig_seq.begin() + kmer - 1, unitig_seq.end());
             }
+        }
 
-            // check against FMindex
-            // check new_sequence is real if is_ref
-            if (is_ref)
+        // check against FMindex
+        // check new_sequence is real if is_ref
+        if (is_ref)
+        {
+            const bool present = check_colours(path_sequence, fm_idx);
+
+            // check if real sequence, if not pass on the ORF, move to next highest
+            if (!present)
             {
-                const bool present = check_colours(new_sequence, fm_idx);
-
-                // check if real sequence, if not pass on the ORF, move to next highest
-                if (!present)
-                {
-                    break;
-                }
+                continue;
             }
-
-            // assign new_sequence to path_sequence
-            path_sequence = new_sequence;
         }
 
         // compare the path_sequence to current stream_seq
@@ -120,6 +119,9 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
 
+        // initialise bool to determine if valid neigbour found
+        bool neighbour_found = false;
+
         // iterate over neighbours, recurring through incomplete paths
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
@@ -145,13 +147,16 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
             if (!updated_colours_arr[current_colour])
             {
                 continue;
+            } else
+            {
+                neighbour_found = true;
             }
 
             // check path length, if too long continue
             const size_t updated_path_length = path_length + neighbour_dict.size().second;
 
             // if adding new node pushes path length over radius or neighbour is end contig, add neighbour and return
-            if (updated_path_length >= radius || neighbour_dict.end_contig())
+            if (updated_path_length >= radius)
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -171,11 +176,18 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
             // add node to node_set
             node_set.insert(neighbour_id);
         }
+
+        // if neighbour not found, push back the node_vector as is
+        if (!neighbour_found)
+        {
+            // update path_list to enable to return all nodes up to point where stop encountered
+            path_list.push_back(node_vector);
+        }
     }
     return path_list;
 }
 
-std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_vector,
+std::string traverse_outward(const GraphVector& graph_vector,
                                                      const size_t& colour_ID,
                                                      const ORFNodeVector& ORF_info,
                                                      const size_t& radius,
@@ -201,6 +213,10 @@ std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_ve
         fm_idx = index_fasta(FM_fasta_file, write_idx);
     }
 
+    // generate a string of the ORF to check against FM-index
+    std::string ORF_seq = generate_sequence_private(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector);
+    ORF_seq += generate_sequence_private(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, graph_vector);
+
     // traverse end node in forward direction
     {
         // get the node id to traverse from
@@ -218,6 +234,7 @@ std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_ve
 
         // calculate where in unitig ORF sits, to determine initial length of path
         size_t path_length = unitig_dict.size().first - std::get<1>(ORF_info).back().second;
+        size_t ORF_end = std::get<1>(ORF_info).back().second;
 
         // check if path_length already exceeds radius
         PathVector unitig_complete_paths;
@@ -235,9 +252,12 @@ std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_ve
 
         if (!unitig_complete_paths.empty())
         {
-            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq);
+            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq);
         }
     }
+
+    // append the downstream_seq to ORF_seq to use for upstream checks
+    ORF_seq += downstream_seq;
 
     // traverse start node in reverse direction
     {
@@ -257,12 +277,26 @@ std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_ve
 
         // calculate where in unitig ORF sits, to determine initial length of path
         size_t path_length;
+        size_t ORF_end;
+
         if (TIS_present)
         {
             path_length = std::get<4>(ORF_info).at(0).first + 16;
+
+            // reverse the ORF end
+            // get absolute last node index (same as unitig length minus 1 as zero indexed)
+            size_t node_end = graph_vector.at(abs(std::get<3>(ORF_info).at(0)) - 1).size().first - 1;
+            // get difference from original start to absolute last node index
+            ORF_end = node_end - std::get<4>(ORF_info).at(0).first;
         } else
         {
             path_length = std::get<1>(ORF_info).at(0).first;
+
+            // reverse the ORF end
+            // get absolute last node index (same as unitig length minus 1 as zero indexed)
+            size_t node_end = graph_vector.at(abs(std::get<0>(ORF_info).at(0)) - 1).size().first - 1;
+            // get difference from original start to absolute last node index
+            ORF_end = node_end - std::get<1>(ORF_info).at(0).first;
         }
 
         // check if path_length already exceeds radius
@@ -281,9 +315,18 @@ std::pair<std::string, std::string> traverse_outward(const GraphVector& graph_ve
 
         if (!unitig_complete_paths.empty())
         {
-            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq);
+            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq));
         }
     }
 
-    return {upstream_seq, downstream_seq};
+    // check if upstream or downstream seq present and append to full gene sequence
+    if (!upstream_seq.empty() || !downstream_seq.empty())
+    {
+        // append upstream seq to ORF_seq
+        ORF_seq += reverse_complement(upstream_seq);
+        return ORF_seq;
+    } else
+    {
+        return {};
+    }
 }

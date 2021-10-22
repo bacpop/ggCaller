@@ -57,14 +57,14 @@ class Graph {
                                                                 const double& id_cutoff,
                                                                 const double& len_diff_cutoff);
 
-    std::pair<std::string, std::string> refind_gene(const size_t& colour_ID,
-                                                     const ORFNodeVector& ORF_info,
-                                                     const size_t& radius,
-                                                     const bool is_ref,
-                                                     const bool write_idx,
-                                                     const int kmer,
-                                                     const std::string& FM_fasta_file,
-                                                     const bool repeat);
+    std::string refind_gene(const size_t& colour_ID,
+                             const ORFNodeVector& ORF_info,
+                             const size_t& radius,
+                             const bool is_ref,
+                             const bool write_idx,
+                             const int kmer,
+                             const std::string& FM_fasta_file,
+                             const bool repeat);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
