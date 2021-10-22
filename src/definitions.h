@@ -40,8 +40,8 @@
 #include <seqan3/alphabet/aminoacid/aa27.hpp>
 
 // pybind11 headers
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -77,6 +77,8 @@ using seqan3::operator""_dna5;
 using seqan3::operator""_aa27;
 
 // general typedefs
+// hasher for strings
+typedef std::hash<std::string> hasher;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
 //a pair of start and end coordinates for an ORF across a node

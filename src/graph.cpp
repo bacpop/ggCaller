@@ -5,13 +5,13 @@
 #include "graph.h"
 
 GraphTuple Graph::build (const std::string& infile1,
-                    const int kmer,
-                    const std::vector<std::string>& stop_codons_for,
-                    const std::vector<std::string>& stop_codons_rev,
-                    size_t num_threads,
-                    bool is_ref,
-                    const bool write_graph,
-                    const std::string& infile2) {
+                        const int kmer,
+                        const std::vector<std::string>& stop_codons_for,
+                        const std::vector<std::string>& stop_codons_rev,
+                        size_t num_threads,
+                        bool is_ref,
+                        const bool write_graph,
+                        const std::string& infile2) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -211,6 +211,18 @@ std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const std::un
     // generate return pair of mappings of ORF IDs and clusters
     const auto return_pair = std::make_pair(ORF_mat_vector, cluster_map);
     return return_pair;
+}
+
+std::pair<std::string, std::string> Graph::refind_gene(const size_t& colour_ID,
+                                                        const ORFNodeVector& ORF_info,
+                                                        const size_t& radius,
+                                                        const bool is_ref,
+                                                        const bool write_idx,
+                                                        const int kmer,
+                                                        const std::string& FM_fasta_file,
+                                                        const bool repeat)
+{
+    return traverse_outward(_GraphVector, colour_ID, ORF_info, radius, is_ref, write_idx, kmer, FM_fasta_file, repeat);
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

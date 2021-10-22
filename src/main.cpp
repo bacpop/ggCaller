@@ -192,6 +192,13 @@ int main(int argc, char *argv[]) {
             ORF_node_map[ORF_ID] = ORF_vector.at(gene.second);
         }
 
+        // testing for ORF upsteam/downstram pulling
+        for (const auto& ORF : ORF_vector)
+        {
+            const auto seq_pair = unitig_graph.refind_gene(colour_ID, ORF, 5000, is_ref, write_idx, overlap + 1, input_colours[colour_ID], repeat);
+            int test_return = 1;
+        }
+
         // move to colour_ORF_map
         colour_ORF_map[colour_ID] = std::move(ORF_node_map);
 

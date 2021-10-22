@@ -11,7 +11,7 @@ find_package(Threads REQUIRED)
 
 # find pybind and create python module
 find_package(pybind11 REQUIRED)
-pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/edlib/edlib.cpp)
+pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/edlib/edlib.cpp)
 
 # check for conda environment
 IF( DEFINED ENV{CONDA_PREFIX} )

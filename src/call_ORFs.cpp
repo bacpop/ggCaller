@@ -1,9 +1,7 @@
 // ggCaller header
 
 #include "call_ORFs.h"
-
-// create hasher for ORF sequences
-std::hash<string> hasher;
+#include "ORF_clustering.h"
 
 // generate ORFs from paths
 void generate_ORFs(ORFNodeMap& ORF_node_map,
@@ -281,7 +279,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                         // if TIS is present, add the non-TIS hash to to_remove
                         if (TIS_present)
                         {
-                            size_t hash_to_remove = hasher(path_sequence.substr((codon_pair.first), (ORF_len)));
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
                     }
@@ -433,8 +431,8 @@ void update_ORF_node_map (const GraphVector& graph_vector,
                 }
 
                 // get hashes of first nodes to ensure stable assignment across runs
-                const size_t current_first_hash = hasher(graph_vector.at(abs(current_first) - 1).head_kmer());
-                const size_t new_first_hash = hasher(graph_vector.at(abs(new_first) - 1).head_kmer());
+                const size_t current_first_hash = hasher{}(graph_vector.at(abs(current_first) - 1).head_kmer());
+                const size_t new_first_hash = hasher{}(graph_vector.at(abs(new_first) - 1).head_kmer());
 
                 // compare first/last entries. Assign the new ORF entry to that with the highest ID
                 if (new_first_hash > current_first_hash)
@@ -443,8 +441,8 @@ void update_ORF_node_map (const GraphVector& graph_vector,
                 } else if (new_first_hash == current_first_hash)
                 {
                     // if no clear winner, check last nodes
-                    const size_t current_last_hash = hasher(graph_vector.at(abs(current_last) - 1).head_kmer());
-                    const size_t new_last_hash = hasher(graph_vector.at(abs(new_last) - 1).head_kmer());
+                    const size_t current_last_hash = hasher{}(graph_vector.at(abs(current_last) - 1).head_kmer());
+                    const size_t new_last_hash = hasher{}(graph_vector.at(abs(new_last) - 1).head_kmer());
 
                     if (new_last_hash > current_last_hash)
                     {
@@ -474,7 +472,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<0>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -487,7 +485,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<3>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -531,14 +529,14 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
         // iterate over TIS nodes, getting hash for head_kmer for stable node stranding
         for (const auto& node_id : std::get<3>(ORF.second))
         {
-            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }
         // repeat for ORF nodes
         for (const auto& node_id : std::get<0>(ORF.second))
         {
-            const size_t node_hash = hasher(graph_vector.at(abs(node_id) - 1).head_kmer());
+            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }
