@@ -274,7 +274,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                             continue;
                         }
 
-                        ORF_hash = hasher(ORF_seq);
+                        ORF_hash = hasher{}(ORF_seq);
 
                         // if TIS is present, add the non-TIS hash to to_remove
                         if (TIS_present)

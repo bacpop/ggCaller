@@ -213,7 +213,7 @@ std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const std::un
     return return_pair;
 }
 
-std::string Graph::refind_gene(const size_t& colour_ID,
+RefindTuple Graph::refind_gene(const size_t& colour_ID,
                                 const ORFNodeVector& ORF_info,
                                 const size_t& radius,
                                 const bool is_ref,

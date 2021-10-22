@@ -5,14 +5,18 @@
 #include "match_string.h"
 #include "ORF_clustering.h"
 
-void assign_seq(const GraphVector& graph_vector,
-                const PathVector& unitig_complete_paths,
-                const int kmer,
-                const bool is_ref,
-                const fm_index_coll& fm_idx,
-                std::string& stream_seq,
-                const size_t& ORF_end,
-                const std::string& ORF_seq);
+std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_vector,
+                                                       const int& overlap,
+                                                       const std::vector<int>& full_nodelist);
+
+std::vector<int> assign_seq(const GraphVector& graph_vector,
+                            const PathVector& unitig_complete_paths,
+                            const int kmer,
+                            const bool is_ref,
+                            const fm_index_coll& fm_idx,
+                            std::string& stream_seq,
+                            const size_t& ORF_end,
+                            const std::string& ORF_seq);
 
 PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
@@ -20,7 +24,7 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const size_t& radius,
                               const bool& repeat);
 
-std::string traverse_outward(const GraphVector& graph_vector,
+RefindTuple traverse_outward(const GraphVector& graph_vector,
                              const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,

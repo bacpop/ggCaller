@@ -57,7 +57,7 @@ class Graph {
                                                                 const double& id_cutoff,
                                                                 const double& len_diff_cutoff);
 
-    std::string refind_gene(const size_t& colour_ID,
+    RefindTuple refind_gene(const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
                              const bool is_ref,

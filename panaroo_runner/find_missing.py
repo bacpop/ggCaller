@@ -293,7 +293,7 @@ def search_gff(member,
 
     # mask regions that already have genes and convert back to string
     seen = set()
-    for node, geneid in conflicts:
+    for node, sid in conflicts:
         mem = int(sid.split("_")[0])
         ORF_ID = int(sid.split("_")[-1])
         ORF_info = ORF_shd_arr[0][mem][ORF_ID]

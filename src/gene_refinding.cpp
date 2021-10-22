@@ -1,14 +1,56 @@
 #include "gene_refinding.h"
 
-void assign_seq(const GraphVector& graph_vector,
-                const PathVector& unitig_complete_paths,
-                const int kmer,
-                const bool is_ref,
-                const fm_index_coll& fm_idx,
-                std::string& stream_seq,
-                const size_t& ORF_end,
-                const std::string& ORF_seq)
+std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_vector,
+                                                       const int& overlap,
+                                                       const std::vector<int>& full_nodelist)
 {
+    // initialise node ranges to return
+    std::vector<std::vector<size_t>> node_ranges;
+    size_t node_start = 0;
+
+    // generate path sequence by merging nodes in sequence
+    for (int i = 0; i < full_nodelist.size(); i++) {
+        // parse out information from node integer value
+        const auto& node = full_nodelist.at(i);
+
+        // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd is node end
+        std::vector<size_t> node_range(2);
+
+        // calculate length of unitig and get end coordinates
+        size_t node_end = graph_vector.at(abs(node) - 1).size().first;
+
+        if (i == 0) {
+            // start index of node in path
+            node_range[0] = node_start;
+            // start index of next node in path (one past the end index)
+            node_range[1] = node_end;
+            node_start = node_end;
+        } else {
+            // start index of node in path
+            node_range[0] = node_start - overlap;
+            node_end += node_start - overlap;
+            // start index of next node in path (one past the end index)
+            node_range[1] = node_end;
+            node_start = node_end;
+        }
+        node_ranges.push_back(std::move(node_range));
+    }
+
+    return node_ranges;
+}
+
+std::vector<int> assign_seq(const GraphVector& graph_vector,
+                            const PathVector& unitig_complete_paths,
+                            const int kmer,
+                            const bool is_ref,
+                            const fm_index_coll& fm_idx,
+                            std::string& stream_seq,
+                            const size_t& ORF_end,
+                            const std::string& ORF_seq)
+{
+    // initialise path of nodes to return
+    std::vector<int> nodelist;
+
     // iterate over all the paths, determine which is the longest and real.
     // If multiple, choose from that with the lowest hash for first kmer
     for (const auto& unitig_path : unitig_complete_paths)
@@ -57,6 +99,7 @@ void assign_seq(const GraphVector& graph_vector,
         if (path_sequence.size() > stream_seq.size())
         {
             stream_seq = path_sequence;
+            nodelist = unitig_path;
         } else if (path_sequence.size() == stream_seq.size() && path_sequence != stream_seq)
         {
             // if equal size, get the hash of the last kmer in each and assign to highest
@@ -66,9 +109,11 @@ void assign_seq(const GraphVector& graph_vector,
             if (path_hash > stream_hash)
             {
                 stream_seq = path_sequence;
+                nodelist = unitig_path;
             }
         }
     }
+    return nodelist;
 }
 
 PathVector iter_nodes_length (const GraphVector& graph_vector,
@@ -187,19 +232,22 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
     return path_list;
 }
 
-std::string traverse_outward(const GraphVector& graph_vector,
-                                                     const size_t& colour_ID,
-                                                     const ORFNodeVector& ORF_info,
-                                                     const size_t& radius,
-                                                     bool is_ref,
-                                                     const bool write_idx,
-                                                     const int kmer,
-                                                     const std::string& FM_fasta_file,
-                                                     const bool repeat)
+RefindTuple traverse_outward(const GraphVector& graph_vector,
+                             const size_t& colour_ID,
+                             const ORFNodeVector& ORF_info,
+                             const size_t& radius,
+                             bool is_ref,
+                             const bool write_idx,
+                             const int kmer,
+                             const std::string& FM_fasta_file,
+                             const bool repeat)
 {
     // initialise upstream and downstream strings
     std::string upstream_seq;
     std::string downstream_seq;
+
+    // initialise path of nodes to use for coordinate generation
+    std::vector<int> full_nodelist;
 
     // if no FM_fasta_file specified, cannot generate FM Index
     if (FM_fasta_file == "NA")
@@ -217,47 +265,7 @@ std::string traverse_outward(const GraphVector& graph_vector,
     std::string ORF_seq = generate_sequence_private(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector);
     ORF_seq += generate_sequence_private(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, graph_vector);
 
-    // traverse end node in forward direction
-    {
-        // get the node id to traverse from
-        const int& head_id = std::get<0>(ORF_info).back();
-
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = abs(head_id) - 1;
-
-        // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
-
-        // gather unitig information from graph_vector
-        const uint8_t codon_arr = 0;
-        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
-
-        // calculate where in unitig ORF sits, to determine initial length of path
-        size_t path_length = unitig_dict.size().first - std::get<1>(ORF_info).back().second;
-        size_t ORF_end = std::get<1>(ORF_info).back().second;
-
-        // check if path_length already exceeds radius
-        PathVector unitig_complete_paths;
-        if (path_length >= radius)
-        {
-            unitig_complete_paths.push_back({head_id});
-        } else
-        {
-            // generate node tuple for iteration
-            NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
-
-            // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat);
-        }
-
-        if (!unitig_complete_paths.empty())
-        {
-            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq);
-        }
-    }
-
-    // append the downstream_seq to ORF_seq to use for upstream checks
-    ORF_seq += downstream_seq;
+    const auto original_ORF = ORF_seq;
 
     // traverse start node in reverse direction
     {
@@ -315,7 +323,98 @@ std::string traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq));
+            auto upstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+
+            // reverse upstream_nodelist
+            if (!upstream_seq.empty())
+            {
+                // Reverse ORF2 node vector
+                std::reverse(upstream_nodelist.begin(), upstream_nodelist.end());
+
+                // reverse sign on each ID in ORF2_nodes
+                for (auto & node_id : upstream_nodelist)
+                {
+                    node_id = node_id * -1;
+                }
+            }
+
+            // assign to full_nodelist
+            full_nodelist = std::move(upstream_nodelist);
+        }
+    }
+
+    // assign the upstream_seq to ORF_seq to use for upstream checks
+    if (!upstream_seq.empty())
+    {
+        ORF_seq = reverse_complement(upstream_seq);
+    }
+
+    // scope for TIS + ORF node_list
+    {
+        // merge TIS and ORF node lists
+        auto temp_nodelist = std::get<3>(ORF_info);
+        if (std::get<0>(ORF_info).size() > 1)
+        {
+            int i = 0;
+            for (; i < std::get<0>(ORF_info).size(); i++)
+            {
+                if (std::find(temp_nodelist.begin(), temp_nodelist.end(), std::get<0>(ORF_info).at(i)) == temp_nodelist.end())
+                {
+                    break;
+                }
+            }
+            temp_nodelist.insert(temp_nodelist.end(), std::get<0>(ORF_info).begin() + i, std::get<0>(ORF_info).end());
+        }
+        if (full_nodelist.empty())
+        {
+            full_nodelist = temp_nodelist;
+        }
+        else if (temp_nodelist.size() > 1)
+        {
+            full_nodelist.insert(full_nodelist.end(), temp_nodelist.begin() + 1, temp_nodelist.end());
+        }
+    }
+
+    // traverse end node in forward direction
+    {
+        // get the node id to traverse from
+        const int& head_id = std::get<0>(ORF_info).back();
+
+        // parse unitig_id. Zero based, so take 1
+        const auto unitig_id = abs(head_id) - 1;
+
+        // get reference to unitig_dict object
+        const auto& unitig_dict = graph_vector.at(unitig_id);
+
+        // gather unitig information from graph_vector
+        const uint8_t codon_arr = 0;
+        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
+
+        // calculate where in unitig ORF sits, to determine initial length of path
+        size_t path_length = unitig_dict.size().first - std::get<1>(ORF_info).back().second;
+        size_t ORF_end = std::get<1>(ORF_info).back().second;
+
+        // check if path_length already exceeds radius
+        PathVector unitig_complete_paths;
+        if (path_length >= radius)
+        {
+            unitig_complete_paths.push_back({head_id});
+        } else
+        {
+            // generate node tuple for iteration
+            NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
+
+            // recur paths
+            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat);
+        }
+
+        if (!unitig_complete_paths.empty())
+        {
+            auto downstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
+            if (downstream_nodelist.size() > 1)
+            {
+                full_nodelist.insert(full_nodelist.end(), downstream_nodelist.begin() + 1, downstream_nodelist.end());
+            }
         }
     }
 
@@ -323,8 +422,12 @@ std::string traverse_outward(const GraphVector& graph_vector,
     if (!upstream_seq.empty() || !downstream_seq.empty())
     {
         // append upstream seq to ORF_seq
-        ORF_seq += reverse_complement(upstream_seq);
-        return ORF_seq;
+        ORF_seq = downstream_seq;
+
+        // calculate the positions of each node within the path
+        const auto full_node_ranges = calculate_node_ranges(graph_vector, kmer - 1, full_nodelist);
+
+        return {ORF_seq, full_nodelist, full_node_ranges};
     } else
     {
         return {};

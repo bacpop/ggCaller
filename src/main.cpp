@@ -134,8 +134,8 @@ int main(int argc, char *argv[]) {
 
 
     //#pragma omp parallel for
-//    for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
-    for (size_t colour_ID = 30; colour_ID < 31; colour_ID++)
+    for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
+//    for (size_t colour_ID = 30; colour_ID < 31; colour_ID++)
     {
 
         std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, node_colour_vector[colour_ID], repeat,
@@ -195,8 +195,7 @@ int main(int argc, char *argv[]) {
         // testing for ORF upsteam/downstram pulling
         for (const auto& ORF : ORF_vector)
         {
-            const auto seq_pair = unitig_graph.refind_gene(colour_ID, ORF, 5000, is_ref, write_idx, overlap + 1, input_colours[colour_ID], repeat);
-            int test_return = 1;
+            const auto seq = unitig_graph.refind_gene(colour_ID, ORF, 5000, is_ref, write_idx, overlap + 1, input_colours[colour_ID], repeat);
         }
 
         // move to colour_ORF_map

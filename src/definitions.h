@@ -40,8 +40,8 @@
 #include <seqan3/alphabet/aminoacid/aa27.hpp>
 
 // pybind11 headers
-//#include <pybind11/pybind11.h>
-//#include <pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 // Eigen header
 #include "Eigen/Sparse"
@@ -109,5 +109,7 @@ typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
 typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<std::vector<std::pair<size_t, size_t>>>> ORFGroupTuple;
 // map of ORFs to clusters, with centroid as key
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
+// tuple of ORF sequence, node list and node coordinates for orientation
+typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>> RefindTuple;
 
 #endif //DEFINITIONS_H
