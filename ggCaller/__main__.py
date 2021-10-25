@@ -297,6 +297,13 @@ def main():
     # parse command line arguments for ggCaller
     options = get_options()
 
+    # determine if references/assemblies present
+    if (options.refs != None and options.reads == None) or (options.graph != None and options.colours != None
+                                                            and options.not_ref):
+        is_ref = True
+    else:
+        is_ref = False
+
     # define start/stop codons
     if options.codons != None:
         with open(options.codons, "r") as json_file:
@@ -319,7 +326,7 @@ def main():
     # if build graph specified, build graph and then call ORFs
     if (options.graph != None) and (options.colours != None) and (options.refs == None) and (options.reads == None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, True)
+                                 options.threads)
     # if refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads == None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
@@ -355,7 +362,7 @@ def main():
         model, model_tis = load_gene_models()
 
     else:
-        model, model_tis = None, None, None
+        model, model_tis = None, None
 
     # intiialise results dictionaries and lists
     high_scoring_ORFs = {}
@@ -381,7 +388,7 @@ def main():
         with Pool(processes=options.threads) as pool:
             for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
-                            max_path_length=options.max_path_length, is_ref=options.not_ref,
+                            max_path_length=options.max_path_length, is_ref=is_ref,
                             no_filter=options.no_filter,
                             stop_codons_for=stop_codons_for, start_codons=start_codons,
                             min_ORF_length=options.min_orf_length,
@@ -401,12 +408,13 @@ def main():
                                                                         options.len_diff_cutoff)
 
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
-                            cluster_dict,
-                            overlap, input_colours, options.out_dir, options.verbose, options.threads,
-                            options.length_outlier_support_proportion, options.identity_cutoff, options.len_diff_cutoff,
+                            cluster_dict, overlap, input_colours, options.out_dir, options.verbose, options.threads,
+                            options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph)
+                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
+                            options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
+                            options.search_radius, options.refind_prop_match)
 
     print("Finished.")
 

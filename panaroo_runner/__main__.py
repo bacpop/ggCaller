@@ -12,7 +12,7 @@ from panaroo.isvalid import *
 from .generate_network import *
 # from panaroo.cdhit import check_cdhit_version
 # from panaroo.cdhit import run_cdhit
-from panaroo.find_missing import find_missing
+from .find_missing import *
 # from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
 from ggCaller.shared_memory import *
@@ -41,9 +41,9 @@ class SmartFormatter(argparse.HelpFormatter):
 
 def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
                 input_colours, output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
-                len_diff_cutoff, family_threshold, min_trailing_support, trailing_recursive, clean_edges,
-                edge_support_threshold, merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph):
-
+                family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
+                merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
+                remove_by_consensus, search_radius, refind_prop_match):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -129,19 +129,19 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # find genes that Prokka has missed
     G = find_missing(G,
-                     shd_arr[0],
+                     shd_arr,
                      high_scoring_ORFs,
                      is_ref=is_ref,
                      write_idx=write_idx,
                      kmer=kmer,
                      repeat=repeat,
-                     isolate_names=isolate_names,
+                     isolate_names=input_colours,
                      remove_by_consensus=remove_by_consensus,
                      search_radius=search_radius,
                      prop_match=refind_prop_match,
                      pairwise_id_thresh=identity_cutoff,
                      merge_id_thresh=max(0.8, family_threshold),
-                     n_cpu=n_cpu,
+                     pool=pool,
                      verbose=verbose)
 
     # remove edges that are likely due to misassemblies (by consensus)
@@ -152,11 +152,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     G = collapse_families(G,
                           seqid_to_centroid=seqid_to_centroid,
                           outdir=temp_dir,
-                          family_threshold=args.family_threshold,
+                          family_threshold=family_threshold,
                           correct_mistranslations=False,
-                          length_outlier_support_proportion=args.
-                          length_outlier_support_proportion,
-                          n_cpu=args.n_cpu,
+                          length_outlier_support_proportion=length_outlier_support_proportion,
+                          n_cpu=n_cpu,
                           quiet=(not verbose),
                           distances_bwtn_centroids=distances_bwtn_centroids,
                           centroid_to_index=centroid_to_index)[0]

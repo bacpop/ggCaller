@@ -14,7 +14,7 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
         const auto& node = full_nodelist.at(i);
 
         // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd is node end
-        std::vector<size_t> node_range(2);
+        std::vector<size_t> node_range(3);
 
         // calculate length of unitig and get end coordinates
         size_t node_end = graph_vector.at(abs(node) - 1).size().first;
@@ -24,10 +24,14 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
             node_range[0] = node_start;
             // start index of next node in path (one past the end index)
             node_range[1] = node_end;
+            // relative end of node i.e. node length, zero indexed
+            node_range[2] = node_end - 1;
             node_start = node_end;
         } else {
             // start index of node in path
             node_range[0] = node_start - overlap;
+            // relative end of node i.e. node length, zero indexed
+            node_range[2] = node_end - 1;
             node_end += node_start - overlap;
             // start index of next node in path (one past the end index)
             node_range[1] = node_end;

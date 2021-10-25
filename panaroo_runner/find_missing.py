@@ -29,7 +29,6 @@ def find_missing(G,
                  search_radius,
                  prop_match,
                  pairwise_id_thresh,
-                 n_cpu,
                  pool,
                  remove_by_consensus=False,
                  verbose=True):
@@ -82,16 +81,17 @@ def find_missing(G,
         for neigh in G.neighbors(node):
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
-
                 conflicts[member].add((neigh, member))
+
                 if member not in G.nodes[node]['members']:
                     if len(G.nodes[node]["dna"][G.nodes[node]
                     ['maxLenId']]) <= 0:
                         print(G.nodes[node]["dna"])
                         raise NameError("Problem!")
+                    # add the representative DNA sequence for missing node and the ID of the colour to search from
                     search_list[member][node].add(
                         (G.nodes[node]["dna"][G.nodes[node]['maxLenId']],
-                         member))
+                         sid))
 
                     n_searches += 1
 
@@ -106,19 +106,19 @@ def find_missing(G,
         # generate shared numpy arrays
         ORF_array_shd, ORF_array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
-        all_hits, all_node_locs, max_seq_lengths = zip(pool.map(partial(search_gff,
-                                                                        ORF_array_shd_tup=ORF_array_shd_tup,
-                                                                        graph_shd_arr_tup=graph_shd_arr_tup,
-                                                                        search_radius=search_radius,
-                                                                        prop_match=prop_match,
-                                                                        pairwise_id_thresh=pairwise_id_thresh,
-                                                                        merge_id_thresh=merge_id_thresh,
-                                                                        is_ref=is_ref,
-                                                                        write_idx=write_idx,
-                                                                        kmer=kmer,
-                                                                        repeat=repeat,
-                                                                        isolate_names=isolate_names),
-                                                                range(0, len(isolate_names))))
+        all_hits, all_node_locs = zip(pool.map(partial(search_graph,
+                                                       ORF_array_shd_tup=ORF_array_shd_tup,
+                                                       graph_shd_arr_tup=graph_shd_arr_tup,
+                                                       search_radius=search_radius,
+                                                       prop_match=prop_match,
+                                                       pairwise_id_thresh=pairwise_id_thresh,
+                                                       merge_id_thresh=merge_id_thresh,
+                                                       is_ref=is_ref,
+                                                       write_idx=write_idx,
+                                                       kmer=kmer,
+                                                       repeat=repeat,
+                                                       isolate_names=isolate_names),
+                                               range(0, len(isolate_names))))
 
     # all_hits, all_node_locs, max_seq_lengths = zip(*Parallel(n_jobs=n_cpu)(
     #     delayed(search_gff)(search_list[member],
@@ -146,29 +146,32 @@ def find_missing(G,
                             for node in G.nodes()],
                            reverse=True)
     nodes_by_size = [n[1] for n in nodes_by_size]
-    member = 0
     bad_node_mem_pairs = set()
     bad_nodes = set()
-    for node_locs, max_seq_length in zip(all_node_locs, max_seq_lengths):
-        seq_coverage = defaultdict(
-            lambda: np.zeros(max_seq_length + 2, dtype=bool))
+    for member, node_locs in enumerate(all_node_locs):
+        seq_coverage = {}
 
+        # iterate over all nodes and add sequence information
         for node in nodes_by_size:
-            if node in bad_nodes: continue
+            # if node in bad_nodes: continue
             if node not in node_locs: continue
-            contig_id = node_locs[node][0]
-            loc = node_locs[node][1]
-
-            if np.sum(seq_coverage[contig_id][loc[0]:loc[1]]) >= (
-                    0.5 * (max(G.nodes[node]['lengths']))):
+            # iterate over all the nodes preesnt for the current ORF
+            node_coverage = 0
+            for DBG_node, loc in node_locs[node].items():
+                if DBG_node not in seq_coverage:
+                    seq_coverage[DBG_node] = np.zeros(loc[1] + 1, dtype=bool)
+                    # seq_coverage[DBG_node][loc[0]:loc[1]] = True
+                    # node_coverage += loc[1] - loc[0]
+                else:
+                    node_coverage += np.sum(seq_coverage[DBG_node][loc[0]:loc[1]])
+            if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
                 if member in G.nodes[node]['members']:
                     remove_member_from_node(G, node, member)
-                # G.nodes[node]['members'].remove(str(member))
-                # G.nodes[node]['size'] -= 1
                 bad_node_mem_pairs.add((node, member))
             else:
-                seq_coverage[contig_id][loc[0]:loc[1]] = True
-        member += 1
+                # if sequence coverage is less than threshold, iterate again and add sequence information
+                for DBG_node, loc in node_locs[node].items():
+                    seq_coverage[DBG_node][loc[0]:loc[1]] = True
 
     for node in G.nodes():
         if len(G.nodes[node]['members']) <= 0:
@@ -199,39 +202,39 @@ def find_missing(G,
         print("Updating output...")
 
     n_found = 0
-    with open(dna_seq_file, 'a') as dna_out:
-        with open(prot_seq_file, 'a') as prot_out:
-            with open(gene_data_file, 'a') as data_out:
-                for member, hits in enumerate(all_hits):
-                    i = -1
-                    for node, dna_hit in hits:
-                        i += 1
-                        if dna_hit == "": continue
-                        if node in bad_nodes: continue
-                        if (node, member) in bad_node_mem_pairs: continue
-                        hit_protein = hits_trans_dict[member][i]
-                        G.nodes[node]['members'].add(member)
-                        G.nodes[node]['size'] += 1
-                        G.nodes[node]['dna'] = del_dups(G.nodes[node]['dna'] +
-                                                        [dna_hit])
-                        dna_out.write(">" + str(member) + "_refound_" +
-                                      str(n_found) + "\n" + dna_hit + "\n")
-                        G.nodes[node]['protein'] = del_dups(
-                            G.nodes[node]['protein'] + [hit_protein])
-                        prot_out.write(">" + str(member) + "_refound_" +
-                                       str(n_found) + "\n" + hit_protein +
-                                       "\n")
-                        data_out.write(",".join([
-                            os.path.splitext(
-                                os.path.basename(
-                                    gff_file_handles[member]))[0], "",
-                            str(member) + "_refound_" + str(n_found),
-                            str(member) + "_refound_" +
-                            str(n_found), hit_protein, dna_hit, "", ""
-                        ]) + "\n")
-                        G.nodes[node]['seqIDs'] |= set(
-                            [str(member) + "_refound_" + str(n_found)])
-                        n_found += 1
+    # with open(dna_seq_file, 'a') as dna_out:
+    #     with open(prot_seq_file, 'a') as prot_out:
+    #         with open(gene_data_file, 'a') as data_out:
+    for member, hits in enumerate(all_hits):
+        i = -1
+        for node, dna_hit in hits:
+            i += 1
+            if dna_hit == "": continue
+            if node in bad_nodes: continue
+            if (node, member) in bad_node_mem_pairs: continue
+            hit_protein = hits_trans_dict[member][i]
+            G.nodes[node]['members'].add(member)
+            G.nodes[node]['size'] += 1
+            G.nodes[node]['dna'] = del_dups(G.nodes[node]['dna'] +
+                                            [dna_hit])
+            # dna_out.write(">" + str(member) + "_refound_" +
+            #               str(n_found) + "\n" + dna_hit + "\n")
+            G.nodes[node]['protein'] = del_dups(
+                G.nodes[node]['protein'] + [hit_protein])
+            # prot_out.write(">" + str(member) + "_refound_" +
+            #                str(n_found) + "\n" + hit_protein +
+            #                "\n")
+            # data_out.write(",".join([
+            #     os.path.splitext(
+            #         os.path.basename(
+            #             gff_file_handles[member]))[0], "",
+            #     str(member) + "_refound_" + str(n_found),
+            #     str(member) + "_refound_" +
+            #     str(n_found), hit_protein, dna_hit, "", ""
+            # ]) + "\n")
+            G.nodes[node]['seqIDs'] |= set(
+                [str(member) + "_refound_" + str(n_found)])
+            n_found += 1
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -239,22 +242,18 @@ def find_missing(G,
     return (G)
 
 
-total_arr = np.array([high_scoring_ORFs, merged_nodes, search_list, conflicts])
-
-
-def search_gff(member,
-               ORF_array_shd_tup,
-               graph_shd_arr_tup,
-               is_ref,
-               write_idx,
-               kmer,
-               repeat,
-               isolate_names,
-               search_radius=10000,
-               prop_match=0.2,
-               pairwise_id_thresh=0.95,
-               merge_id_thresh=0.7,
-               n_cpu=1):
+def search_graph(member,
+                 ORF_array_shd_tup,
+                 graph_shd_arr_tup,
+                 is_ref,
+                 write_idx,
+                 kmer,
+                 repeat,
+                 isolate_names,
+                 search_radius=10000,
+                 prop_match=0.2,
+                 pairwise_id_thresh=0.95,
+                 merge_id_thresh=0.7):
     # load shared memory items
     ORF_existing_shm = shared_memory.SharedMemory(name=ORF_array_shd_tup.name)
     ORF_shd_arr = np.ndarray(ORF_array_shd_tup.shape, dtype=ORF_array_shd_tup.dtype, buffer=ORF_existing_shm.buf)
@@ -269,38 +268,17 @@ def search_gff(member,
     for node in node_search_dict:
         node_search_dict[node] = sorted(node_search_dict[node])
 
-    # split = gff_handle.read().replace(',', '').split("##FASTA\n")
     node_locs = {}
-    #
-    # if len(split) != 2:
-    #     raise NameError("File does not appear to be in GFF3 format!")
 
-    # # load fasta
-    # contigs = {}
-    # max_seq_len = 0
-    # with StringIO(split[1]) as temp_fasta:
-    #     for record in SeqIO.parse(temp_fasta, 'fasta'):
-    #         contigs[record.id] = np.array(list(str(record.seq)))
-    #         max_seq_len = max(max_seq_len, len(contigs[record.id]))
-    #
-    # # load gff annotation
-    # parsed_gff = gff.create_db("\n".join(
-    #     [l for l in split[0].splitlines() if '##sequence-region' not in l]),
-    #     dbfn=":memory:",
-    #     force=True,
-    #     keep_order=True,
-    #     from_string=True)
-
-    # mask regions that already have genes and convert back to string
-    seen = set()
+    # mask regions that already have genes
     for node, sid in conflicts:
         mem = int(sid.split("_")[0])
         ORF_ID = int(sid.split("_")[-1])
         ORF_info = ORF_shd_arr[0][mem][ORF_ID]
 
         if node in ORF_shd_arr[1][member]:
-            db_seq = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref, write_idx, kmer,
-                                                  isolate_names[member], repeat)
+            db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
+                                                                         write_idx, kmer, isolate_names[member], repeat)
 
             hit, loc = search_dna(db_seq,
                                   ORF_shd_arr[1][member][node],
@@ -309,25 +287,27 @@ def search_gff(member,
                                   pairwise_id_thresh=merge_id_thresh,
                                   refind=False)
 
-            # update location
-            loc[0] = loc[0] + max(0, (start - search_radius))
-            loc[1] = loc[1] + max(0, (start - search_radius))
-            node_locs[node] = [gene[0], loc]
+            # convert linear coordinates into node coordinates
+            node_locs[node] = (convert_coords(loc, nodelist, node_ranges))
+
+            # # update location
+            # loc[0] = loc[0] + max(0, (start - search_radius))
+            # loc[1] = loc[1] + max(0, (start - search_radius))
+            # node_locs[node] = [gene[0], loc]
         else:
-            node_locs[node] = [gene[0], [start - 1, end]]
+            # else assign the full length of ORF
+            traversed_nodes = {}
+            for node_ID, node_coords in zip(ORF_info[0], ORF_info[1]):
+                if node_ID < 0:
+                    node_ID *= -1
+                    node_end = graph_shd_arr[0].node_size(node_ID)
+                    reversed_end = node_end - node_coords[0]
+                    reversed_start = node_end - node_coords[1]
+                    traversed_nodes[node_ID] = (reversed_start, reversed_end)
+                else:
+                    traversed_nodes[node_ID] = (node_coords[0], node_coords[1])
 
-    for node, geneid in conflicts:
-        gene = parsed_gff[geneid]
-        start = min(gene.start, gene.end)
-        end = max(gene.start, gene.end)
-        # contigs[gene[0]][(start - 1):end] = "X"
-
-        if (gene[0], start - 1, end) in seen:
-            raise NameError("Duplicate entry!!!")
-        seen.add((gene[0], start - 1, end))
-
-    for sid in contigs:
-        contigs[sid] = "".join(list(contigs[sid]))
+            node_locs[node] = traversed_nodes
 
     # search for matches
     hits = []
@@ -335,33 +315,79 @@ def search_gff(member,
         best_hit = ""
         best_loc = None
         for search in ORF_shd_arr[2][member][node]:
-            gene = parsed_gff[search[1]]
-            start = min(gene.start, gene.end)
-            end = max(gene.start, gene.end)
-            db_seq = contigs[gene[0]][max(0, (start -
-                                              search_radius)):(end +
-                                                               search_radius)]
+            neighbour_sid = search[1]
+            mem = int(neighbour_sid.split("_")[0])
+            ORF_ID = int(neighbour_sid.split("_")[-1])
+            ORF_info = ORF_shd_arr[0][mem][ORF_ID]
+
+            db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
+                                                                         write_idx, kmer, isolate_names[member], repeat)
 
             hit, loc = search_dna(db_seq,
-                                  search[0],
+                                  ORF_shd_arr[1][member][node],
                                   prop_match,
                                   pairwise_id_thresh,
                                   refind=True)
-            # update location
-            loc[0] = loc[0] + max(0, (start - search_radius))
-            loc[1] = loc[1] + max(0, (start - search_radius))
+
+            # convert linear coordinates into node coordinates
+            ORF_loc = (convert_coords(loc, nodelist, node_ranges))
+
+            # # update location
+            # loc[0] = loc[0] + max(0, (start - search_radius))
+            # loc[1] = loc[1] + max(0, (start - search_radius))
 
             if len(hit) > len(best_hit):
                 best_hit = hit
-                best_loc = [gene[0], loc]
+                best_loc = ORF_loc
 
         hits.append((node, best_hit))
         if (best_loc is not None) and (best_hit != ""):
             node_locs[node] = best_loc
 
-    gff_handle.close()
+    return [hits, node_locs]
 
-    return [hits, node_locs, max_seq_len]
+
+def convert_coords(loc, nodelist, node_ranges):
+    # iterate over nodelist and node_coords to determine what bases are traversed
+    traversed_nodes = {}
+
+    for i in range(0, len(nodelist)):
+        start_assigned = False
+        end_assigned = False
+
+        # if start of ORF is below node range, then check ORF traverses node
+        if loc[0] < node_ranges[i][0]:
+            traversed_node_start = 0
+            start_assigned = True
+        elif loc[0] >= node_ranges[i][0] and loc[0] < node_ranges[i][1]:
+            traversed_node_start = loc[0] - node_ranges[i][0]
+            start_assigned = True
+
+        # if end of ORF is above node range, then check if ORF traversed
+        if loc[1] >= node_ranges[i][1] or loc[1] == 0:
+            traversed_node_end = node_ranges[i][2]
+            end_assigned = True
+        elif loc[1] >= node_ranges[i][0] and loc[1] < node_ranges[i][1]:
+            traversed_node_end = loc[1] - node_ranges[i][0]
+            end_assigned = True
+
+        # if the ORF traverses node, update coordinates
+        if start_assigned and end_assigned:
+            # check if node is negative and needs reversing
+            if nodelist[i] < 0:
+                reversed_node_id = nodelist[i] * -1
+                node_end = node_ranges[i][2]
+                reversed_end = node_end - traversed_node_start
+                reversed_start = node_end - traversed_node_end
+                traversed_nodes[reversed_node_id] = (reversed_start, reversed_end)
+            else:
+                traversed_nodes[nodelist[i]] = (traversed_node_start, traversed_node_end)
+
+        # gone past last node covering ORF so assign 3p and end index to previous node
+        elif start_assigned and not end_assigned:
+            break
+
+    return traversed_nodes
 
 
 def repl(m):

@@ -64,8 +64,7 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
-                    size_t num_threads,
-                    const bool is_ref) {
+                    size_t num_threads) {
 
     // Set number of threads
     if (num_threads < 1)

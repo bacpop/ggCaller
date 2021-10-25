@@ -28,8 +28,7 @@ class Graph {
                      const std::string& coloursfile,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& stop_codons_rev,
-                     size_t num_threads,
-                     const bool is_ref);
+                     size_t num_threads);
 
     // find ORFs
     std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
@@ -70,6 +69,11 @@ class Graph {
     std::string generate_sequence(const std::vector<int>& nodelist,
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
+
+    size_t node_size(const int& node_id)
+    {
+        return _GraphVector.at(abs(node_id) - 1).size().first;
+    }
 
     // clear graph object
     void clear() {_GraphVector.clear();};

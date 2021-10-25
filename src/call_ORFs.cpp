@@ -328,7 +328,6 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
     std::vector<int> ORF_node_id;
     std::vector<indexPair> ORF_node_coords;
-    bool assigned_5p = false;
 
     // generate a unique string for the ORF for storage using nodes traversed (will match across matching ORFs)
     std::string ORF_path_ID;
@@ -368,7 +367,6 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
             indexPair node_coords = std::make_pair(traversed_node_start, traversed_node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));
-
         }
         // gone past last node covering ORF so assign 3p and end index to previous node
         else if (start_assigned && !end_assigned)
