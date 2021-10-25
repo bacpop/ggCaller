@@ -13,5 +13,6 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def("generate_sequence", &Graph::generate_sequence)
             .def("connect_ORFs", &Graph::connect_ORFs)
             .def("generate_clusters", &Graph::generate_clusters)
-            .def("refind_gene", &Graph::refind_gene);
+            .def("refind_gene", &Graph::refind_gene)
+            .def("node_size", &Graph::node_size);
 }

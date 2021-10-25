@@ -128,21 +128,22 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("refinding genes...")
 
     # find genes that Prokka has missed
-    G = find_missing(G,
-                     shd_arr,
-                     high_scoring_ORFs,
-                     is_ref=is_ref,
-                     write_idx=write_idx,
-                     kmer=kmer,
-                     repeat=repeat,
-                     isolate_names=input_colours,
-                     remove_by_consensus=remove_by_consensus,
-                     search_radius=search_radius,
-                     prop_match=refind_prop_match,
-                     pairwise_id_thresh=identity_cutoff,
-                     merge_id_thresh=max(0.8, family_threshold),
-                     pool=pool,
-                     verbose=verbose)
+    G, refound_genes = find_missing(G,
+                                    shd_arr_tup,
+                                    high_scoring_ORFs,
+                                    is_ref=is_ref,
+                                    write_idx=write_idx,
+                                    kmer=kmer,
+                                    repeat=repeat,
+                                    isolate_names=input_colours,
+                                    remove_by_consensus=remove_by_consensus,
+                                    search_radius=search_radius,
+                                    prop_match=refind_prop_match,
+                                    pairwise_id_thresh=identity_cutoff,
+                                    merge_id_thresh=max(0.8, family_threshold),
+                                    pool=pool,
+                                    n_cpu=n_cpu,
+                                    verbose=verbose)
 
     # remove edges that are likely due to misassemblies (by consensus)
 
@@ -182,13 +183,31 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # write out roary like gene_presence_absence.csv
     # get original annotaiton IDs, lengts and whether or
     # not an internal stop codon is present
+
     orig_ids = {}
     ids_len_stop = {}
-    for genome_id, gene_dict in high_scoring_ORFs.items():
-        for gene_id, ORFNodeVector in gene_dict.items():
-            pan_centroid_ID = str(genome_id) + "_0_" + str(gene_id)
-            orig_ids[pan_centroid_ID] = pan_centroid_ID
-            ids_len_stop[pan_centroid_ID] = (ORFNodeVector[2] / 3, False)
+    # add helpful attributes and write out graph in GML format
+    for node in G.nodes():
+        G.nodes[node]['size'] = len(G.nodes[node]['members'])
+        G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
+        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+        G.nodes[node]['protein'] = ";".join(conv_list(
+            G.nodes[node]['protein']))
+        G.nodes[node]['genomeIDs'] = ";".join(
+            [str(m) for m in G.nodes[node]['members']])
+        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
+        G.nodes[node]['degrees'] = G.degree[node]
+        G.nodes[node]['members'] = list(G.nodes[node]['members'])
+        G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
+        for sid in G.nodes[node]['seqIDs']:
+            orig_ids[sid] = sid
+            mem = int(sid.split("_")[0])
+            ORF_ID = int(sid.split("_")[-1])
+            if (sid.split("_")[1] == "refound"):
+                ids_len_stop[sid] = (len(refound_genes[mem][ORF_ID][0]) / 3, refound_genes[mem][ORF_ID][1])
+            else:
+                ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
+                ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
 
     G = generate_roary_gene_presence_absence(G,
                                              mems_to_isolates=mems_to_isolates,
@@ -210,20 +229,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         mems_to_isolates=mems_to_isolates,
         min_variant_support=min_edge_support_sv)
 
-    # add helpful attributes and write out graph in GML format
-    for node in G.nodes():
-        G.nodes[node]['size'] = len(G.nodes[node]['members'])
-        G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
-        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        G.nodes[node]['protein'] = ";".join(conv_list(
-            G.nodes[node]['protein']))
-        G.nodes[node]['genomeIDs'] = ";".join(
-            [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
-        G.nodes[node]['degrees'] = G.degree[node]
-        G.nodes[node]['members'] = list(G.nodes[node]['members'])
-        G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
-
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
             [str(m) for m in G.edges[edge[0], edge[1]]['members']])
@@ -237,14 +242,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names, shd_arr_tup,
+                                      alr, isolate_names, refound_genes, shd_arr_tup,
                                       high_scoring_ORFs, overlap, pool)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
-                                       n_cpu, alr, isolate_names,
+                                       n_cpu, alr, isolate_names, refound_genes,
                                        core, len(input_colours), shd_arr_tup,
                                        high_scoring_ORFs, overlap, pool)
 

@@ -8,7 +8,8 @@ import itertools as iter
 from panaroo.generate_alignments import *
 
 
-def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap):
+def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+                    refound_genes):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -23,13 +24,16 @@ def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup
     isolate_no = 0
     # Look for gene sequences among all genes (from memory)
     for seq in sequence_ids:
-        isolate_num = int(seq.split('_')[0])
-        gene_num = int(seq.split('_')[-1])
-        isolate_name = isolate_list[isolate_num].replace(";",
-                                                         "") + ";" + seq
+        member = int(seq.split('_')[0])
+        ORF_ID = int(seq.split('_')[-1])
+        isolate_name = isolate_list[member].replace(";",
+                                                    "") + ";" + seq
         # generate DNA sequence
-        ORFNodeVector = high_scoring_ORFs[isolate_num][gene_num]
-        CDS = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        if (seq.split("_")[1] == "refound"):
+            CDS = refound_genes[member][ORF_ID][0]
+        else:
+            ORFNodeVector = high_scoring_ORFs[member][ORF_ID]
+            CDS = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
         output_sequences.append(
             SeqRecord(Seq(CDS), id=isolate_name, description=""))
@@ -231,7 +235,7 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
-                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool):
+                                  isolates, refound_genes, shd_arr_tup, high_scoring_ORFs, overlap, pool):
     unaligned_sequence_files = []
     # Make a folder for the output alignments
     try:
@@ -239,7 +243,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     except FileExistsError:
         None
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname in pool.map(partial(output_sequence, isolate_list=isolates,
+    for outname in pool.map(partial(output_sequence, isolate_list=isolates, refound_genes=refound_genes,
                                     temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap), G.nodes(data=True)):
         unaligned_sequence_files.append(outname)
@@ -309,7 +313,8 @@ def concatenate_core_genome_alignments(core_names, output_dir):
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
-                                   isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool):
+                                   isolates, refound_genes, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
+                                   overlap, pool):
     unaligned_sequence_files = []
     # Make a folder for the output alignments TODO: decide whether or not to keep these
     try:
@@ -320,7 +325,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     core_genes = get_core_gene_nodes(G, threshold, num_isolates)
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
     # Output core node sequences
-    for outname in pool.map(partial(output_sequence, isolate_list=isolates,
+    for outname in pool.map(partial(output_sequence, isolate_list=isolates, refound_genes=refound_genes,
                                     temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap), core_genes):
         unaligned_sequence_files.append(outname)
