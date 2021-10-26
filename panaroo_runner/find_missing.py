@@ -33,6 +33,9 @@ def find_missing(G,
                  n_cpu,
                  remove_by_consensus=False,
                  verbose=True):
+    # load shared memory items
+    graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
+    graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
     # # identify nodes that have been merged at the protein level
     # merged_nodes = defaultdict(dict)
@@ -127,28 +130,41 @@ def find_missing(G,
     bad_nodes = set()
     for member, node_locs in enumerate(all_node_locs):
         seq_coverage = {}
-
         # iterate over all nodes and add sequence information
         for node in nodes_by_size:
             # if node in bad_nodes: continue
             if node not in node_locs: continue
-            # iterate over all the nodes preesnt for the current ORF
+            # iterate over all the nodes present for the current ORF
             node_coverage = 0
-            for DBG_node, loc in node_locs[node].items():
-                if DBG_node not in seq_coverage:
-                    seq_coverage[DBG_node] = np.zeros(loc[1] + 1, dtype=bool)
-                    # seq_coverage[DBG_node][loc[0]:loc[1]] = True
-                    # node_coverage += loc[1] - loc[0]
+            for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
+                # check if node is negative and needs reversing
+                # make copies to avoid editing in place
+                temp_DBG_node = DBG_node
+                if temp_DBG_node < 0:
+                    temp_DBG_node *= -1
+                    node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
+                    temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
                 else:
-                    node_coverage += np.sum(seq_coverage[DBG_node][loc[0]:loc[1]])
+                    temp_node_coords = node_coords
+                if temp_DBG_node not in seq_coverage:
+                    seq_coverage[temp_DBG_node] = np.zeros(temp_node_coords[1] + 1, dtype=bool)
+                else:
+                    node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
             if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
                 if member in G.nodes[node]['members']:
                     remove_member_from_node(G, node, member)
                 bad_node_mem_pairs.add((node, member))
             else:
                 # if sequence coverage is less than threshold, iterate again and add sequence information
-                for DBG_node, loc in node_locs[node].items():
-                    seq_coverage[DBG_node][loc[0]:loc[1]] = True
+                for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
+                    temp_DBG_node = DBG_node
+                    if temp_DBG_node < 0:
+                        temp_DBG_node *= -1
+                        node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
+                        temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
+                    else:
+                        temp_node_coords = node_coords
+                    seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]] = True
 
     for node in G.nodes():
         if len(G.nodes[node]['members']) <= 0:
@@ -178,9 +194,8 @@ def find_missing(G,
     if verbose:
         print("Updating output...")
 
+    # update the graph
     n_found = 0
-    # hold new sequences for refound genes
-    refound_genes = {}
     for member, hits in enumerate(all_hits):
         i = -1
         for node, dna_hit in hits:
@@ -188,6 +203,7 @@ def find_missing(G,
             if dna_hit == "": continue
             if node in bad_nodes: continue
             if (node, member) in bad_node_mem_pairs: continue
+            n_found += 1
             hit_protein = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
             G.nodes[node]['size'] += 1
@@ -196,17 +212,18 @@ def find_missing(G,
             G.nodes[node]['protein'] = del_dups(
                 G.nodes[node]['protein'] + [hit_protein])
             G.nodes[node]['seqIDs'] |= set(
-                [str(member) + "_refound_" + str(n_found)])
-            # keep track of sequences of refound genes
-            if member not in refound_genes:
-                refound_genes[member] = {}
-            refound_genes[member][n_found] = (dna_hit, "*" in hit_protein[1:-3])
-            n_found += 1
+                [str(member) + "_refound_" + str(n_found * -1)])
+            # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
+            nodelist, node_coords = all_node_locs[member][node]
+            high_scoring_ORFs[member][n_found * -1] = (nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3])
+            test = graph_shd_arr[0].generate_sequence(nodelist, node_coords, 30)
+            if test != dna_hit:
+                issue = 1
 
     if verbose:
         print("Number of refound genes: ", n_found)
 
-    return (G, refound_genes)
+    return G, high_scoring_ORFs
 
 
 def search_graph(search_pair,
@@ -235,20 +252,22 @@ def search_graph(search_pair,
 
     # mask regions that already have genes
     for node, ORF_info in conflicts.items():
-        # ORF_info = high_scoring_ORFs[member][ORF_ID]
-        # assign the full length of ORF
-        traversed_nodes = {}
-        for node_ID, node_coords in zip(ORF_info[0], ORF_info[1]):
-            if node_ID < 0:
-                rev_node_ID = node_ID * -1
-                node_end = graph_shd_arr[0].node_size(rev_node_ID)
-                reversed_end = node_end - node_coords[0]
-                reversed_start = node_end - node_coords[1]
-                traversed_nodes[rev_node_ID] = (reversed_start, reversed_end)
-            else:
-                traversed_nodes[node_ID] = (node_coords[0], node_coords[1])
+        # # ORF_info = high_scoring_ORFs[member][ORF_ID]
+        # # assign the full length of ORF
+        # traversed_nodes = []
+        # traversed_loci = []
+        # for node_ID, node_coords in zip(ORF_info[0], ORF_info[1]):
+        #     if node_ID < 0:
+        #         rev_node_ID = node_ID * -1
+        #         node_end = graph_shd_arr[0].node_size(rev_node_ID)
+        #         reversed_end = node_end - node_coords[0]
+        #         reversed_start = node_end - node_coords[1]
+        #         traversed_nodes[rev_node_ID] = (reversed_start, reversed_end)
+        #     else:
+        #         traversed_nodes.append(node_ID)
+        #         traversed_loci.append((node_coords[0], node_coords[1]))
 
-        node_locs[node] = traversed_nodes
+        node_locs[node] = (ORF_info[0], ORF_info[1])
 
     # search for matches
     hits = []
@@ -263,16 +282,31 @@ def search_graph(search_pair,
             db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
                                                                          write_idx, kmer, fasta, repeat)
 
-            hit, loc = search_dna(db_seq,
-                                  search,
-                                  prop_match,
-                                  pairwise_id_thresh,
-                                  refind=True)
+            hit, loc, rev_comp = search_dna(db_seq,
+                                            search,
+                                            prop_match,
+                                            pairwise_id_thresh,
+                                            refind=True)
 
             # convert linear coordinates into node coordinates
             ORF_loc = (convert_coords(loc, nodelist, node_ranges))
 
-            # # update location
+            # if db_seq was reversed to align, need to reverse node coordinates
+            if rev_comp and hit != "":
+                reversed_nodes = []
+                reversed_loci = []
+                for node_ID, node_coords in zip(ORF_loc[0], ORF_loc[1]):
+                    rev_node_ID = node_ID * -1
+                    node_end = graph_shd_arr[0].node_size(rev_node_ID) - 1
+                    reversed_end = node_end - node_coords[0]
+                    reversed_start = node_end - node_coords[1]
+                    reversed_nodes.append(rev_node_ID)
+                    reversed_loci.append((reversed_start, reversed_end))
+                reversed_nodes.reverse()
+                reversed_loci.reverse()
+                ORF_loc = (reversed_nodes, reversed_loci)
+
+            # update location
             # loc[0] = loc[0] + max(0, (start - search_radius))
             # loc[1] = loc[1] + max(0, (start - search_radius))
 
@@ -290,45 +324,43 @@ def search_graph(search_pair,
 
 def convert_coords(loc, nodelist, node_ranges):
     # iterate over nodelist and node_coords to determine what bases are traversed
-    traversed_nodes = {}
+    traversed_nodes = []
+    traversed_loci = []
 
-    for i in range(0, len(nodelist)):
-        start_assigned = False
-        end_assigned = False
+    # check if hit found, otherwise pass
+    if loc[1] != 0:
+        # adjust loc[1] due to different indexing in alignment
+        loc[1] = loc[1] - 1
+        for i in range(0, len(nodelist)):
+            start_assigned = False
+            end_assigned = False
 
-        # if start of ORF is below node range, then check ORF traverses node
-        if loc[0] < node_ranges[i][0]:
-            traversed_node_start = 0
-            start_assigned = True
-        elif loc[0] >= node_ranges[i][0] and loc[0] < node_ranges[i][1]:
-            traversed_node_start = loc[0] - node_ranges[i][0]
-            start_assigned = True
+            # if start of ORF is below node range, then check ORF traverses node
+            if loc[0] < node_ranges[i][0]:
+                traversed_node_start = 0
+                start_assigned = True
+            elif loc[0] >= node_ranges[i][0] and loc[0] < node_ranges[i][1]:
+                traversed_node_start = loc[0] - node_ranges[i][0]
+                start_assigned = True
 
-        # if end of ORF is above node range, then check if ORF traversed
-        if loc[1] >= node_ranges[i][1] or loc[1] == 0:
-            traversed_node_end = node_ranges[i][2]
-            end_assigned = True
-        elif loc[1] >= node_ranges[i][0] and loc[1] < node_ranges[i][1]:
-            traversed_node_end = loc[1] - node_ranges[i][0]
-            end_assigned = True
+            # if end of ORF is above node range, then check if ORF traversed
+            if loc[1] >= node_ranges[i][1]:
+                traversed_node_end = node_ranges[i][2]
+                end_assigned = True
+            elif loc[1] >= node_ranges[i][0] and loc[1] < node_ranges[i][1]:
+                traversed_node_end = loc[1] - node_ranges[i][0]
+                end_assigned = True
 
-        # if the ORF traverses node, update coordinates
-        if start_assigned and end_assigned:
-            # check if node is negative and needs reversing
-            if nodelist[i] < 0:
-                reversed_node_id = nodelist[i] * -1
-                node_end = node_ranges[i][2]
-                reversed_end = node_end - traversed_node_start
-                reversed_start = node_end - traversed_node_end
-                traversed_nodes[reversed_node_id] = (reversed_start, reversed_end)
-            else:
-                traversed_nodes[nodelist[i]] = (traversed_node_start, traversed_node_end)
+            # if the ORF traverses node, update coordinates
+            if start_assigned and end_assigned:
+                traversed_nodes.append(nodelist[i])
+                traversed_loci.append((traversed_node_start, traversed_node_end))
 
-        # gone past last node covering ORF so assign 3p and end index to previous node
-        elif start_assigned and not end_assigned:
-            break
+            # gone past last node covering ORF so assign 3p and end index to previous node
+            elif start_assigned and not end_assigned:
+                break
 
-    return traversed_nodes
+    return traversed_nodes, traversed_loci
 
 
 def repl(m):
@@ -342,6 +374,7 @@ def search_dna(db_seq, search_sequence, prop_match, pairwise_id_thresh,
     end = None
     max_hit = 0
     loc = [0, 0]
+    rev_comp = False
 
     # found=False
     # if search_sequence=="":
@@ -433,6 +466,7 @@ def search_dna(db_seq, search_sequence, prop_match, pairwise_id_thresh,
                     loc = [start, end]
                 else:
                     loc = [len(posdb) - tloc[1] - 1, len(posdb) - tloc[0]]
+                    rev_comp = True
                 loc = [
                     max(0,
                         min(loc) - added_E_len),
@@ -446,7 +480,7 @@ def search_dna(db_seq, search_sequence, prop_match, pairwise_id_thresh,
     seq = found_dna.replace('X', 'N').replace('E', 'N')
     seq = seq.strip('N')
 
-    return seq, loc
+    return seq, loc, rev_comp
 
 
 def translate_to_match(hit, target_prot):

@@ -128,22 +128,22 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("refinding genes...")
 
     # find genes that Prokka has missed
-    G, refound_genes = find_missing(G,
-                                    shd_arr_tup,
-                                    high_scoring_ORFs,
-                                    is_ref=is_ref,
-                                    write_idx=write_idx,
-                                    kmer=kmer,
-                                    repeat=repeat,
-                                    isolate_names=input_colours,
-                                    remove_by_consensus=remove_by_consensus,
-                                    search_radius=search_radius,
-                                    prop_match=refind_prop_match,
-                                    pairwise_id_thresh=identity_cutoff,
-                                    merge_id_thresh=max(0.8, family_threshold),
-                                    pool=pool,
-                                    n_cpu=n_cpu,
-                                    verbose=verbose)
+    G, high_scoring_ORFs = find_missing(G,
+                                        shd_arr_tup,
+                                        high_scoring_ORFs,
+                                        is_ref=is_ref,
+                                        write_idx=write_idx,
+                                        kmer=kmer,
+                                        repeat=repeat,
+                                        isolate_names=input_colours,
+                                        remove_by_consensus=remove_by_consensus,
+                                        search_radius=search_radius,
+                                        prop_match=refind_prop_match,
+                                        pairwise_id_thresh=identity_cutoff,
+                                        merge_id_thresh=max(0.8, family_threshold),
+                                        pool=pool,
+                                        n_cpu=n_cpu,
+                                        verbose=verbose)
 
     # remove edges that are likely due to misassemblies (by consensus)
 
@@ -203,10 +203,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
             ORF_ID = int(sid.split("_")[-1])
-            if (sid.split("_")[1] == "refound"):
-                ids_len_stop[sid] = (len(refound_genes[mem][ORF_ID][0]) / 3, refound_genes[mem][ORF_ID][1])
+            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
+            # determine if gene is refound. If it is, then determine if premature stop codon present
+            if (ORF_ID < 0):
+                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[-1])
             else:
-                ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
 
     G = generate_roary_gene_presence_absence(G,
@@ -242,14 +243,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names, refound_genes, shd_arr_tup,
+                                      alr, isolate_names, shd_arr_tup,
                                       high_scoring_ORFs, overlap, pool)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
-                                       n_cpu, alr, isolate_names, refound_genes,
+                                       n_cpu, alr, isolate_names,
                                        core, len(input_colours), shd_arr_tup,
                                        high_scoring_ORFs, overlap, pool)
 
