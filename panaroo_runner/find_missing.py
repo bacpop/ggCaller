@@ -33,57 +33,31 @@ def find_missing(G,
                  n_cpu,
                  remove_by_consensus=False,
                  verbose=True):
-    # Iterate over each genome file checking to see if any missing accessory genes
-    #  can be found.
 
-    # # generate mapping between internal nodes and gff ids
-    # id_to_gff = {}
-    # with open(gene_data_file, 'r') as infile:
-    #     next(infile)
-    #     for line in infile:
-    #         line = line.split(",")
-    #         if line[2] in id_to_gff:
-    #             raise NameError("Duplicate internal ids!")
-    #         id_to_gff[line[2]] = line[3]
-
-    # identify nodes that have been merged at the protein level
-    merged_nodes = defaultdict(dict)
-    for node in G.nodes():
-        if (len(G.nodes[node]['centroid']) >
-            1) or (G.nodes[node]['mergedDNA']):
-            # get the DNA sequence of the largest centroid
-            max_len_id = G.nodes[node]['maxLenId']
-            long_centroid_seq = G.nodes[node]['dna'][max_len_id]
-            for sid in sorted(G.nodes[node]['seqIDs']):
-                # for each entry, add the merged node and the longest centroid id to merged_nodes
-                mem = int(sid.split("_")[0])
-                merged_nodes[mem][node] = long_centroid_seq
-
+    # # identify nodes that have been merged at the protein level
     # merged_nodes = defaultdict(dict)
-    # with open(gene_data_file, 'r') as infile:
-    #     next(infile)
-    #     for line in infile:
-    #         line = line.split(",")
-    #         if line[2] in merged_ids:
+    # for node in G.nodes():
+    #     if (len(G.nodes[node]['centroid']) >
+    #         1) or (G.nodes[node]['mergedDNA']):
+    #         # get the DNA sequence of the largest centroid
+    #         max_len_id = G.nodes[node]['maxLenId']
+    #         long_centroid_seq = G.nodes[node]['dna'][max_len_id]
+    #         for sid in sorted(G.nodes[node]['seqIDs']):
+    #             # for each entry, add the merged node and the longest centroid id to merged_nodes
     #             mem = int(sid.split("_")[0])
-    #             if merged_ids[line[2]] in merged_nodes[mem]:
-    #                 merged_nodes[mem][merged_ids[line[2]]] = G.nodes[
-    #                     merged_ids[line[2]]]["dna"][G.nodes[merged_ids[
-    #                     line[2]]]['maxLenId']]
-    #             else:
-    #                 merged_nodes[mem][merged_ids[line[2]]] = line[5]
+    #             merged_nodes[mem][node] = long_centroid_seq
 
     # iterate through nodes to identify accessory genes for searching
     # these are nodes missing a member with at least one neighbour that has that member
     n_searches = 0
-    search_list = defaultdict(lambda: defaultdict(set))
-    conflicts = defaultdict(set)
+    search_dict = {key: {"conflicts": {}, "searches": {}} for key in range(0, len(isolate_names))}
     for node in G.nodes():
         for neigh in G.neighbors(node):
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
                 ORF_ID = int(sid.split("_")[-1])
-                conflicts[member].add((neigh, ORF_ID))
+                ORF_info = high_scoring_ORFs[member][ORF_ID]
+                search_dict[member]["conflicts"][neigh] = ORF_info
 
                 if member not in G.nodes[node]['members']:
                     if len(G.nodes[node]["dna"][G.nodes[node]
@@ -91,9 +65,9 @@ def find_missing(G,
                         print(G.nodes[node]["dna"])
                         raise NameError("Problem!")
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
-                    search_list[member][node].add(
-                        (G.nodes[node]["dna"][G.nodes[node]['maxLenId']],
-                         sid))
+                    if node not in search_dict[member]["searches"]:
+                        search_dict[member]["searches"][node] = {}
+                    search_dict[member]["searches"][node][G.nodes[node]["dna"][G.nodes[node]['maxLenId']]] = ORF_info
 
                     n_searches += 1
 
@@ -101,58 +75,39 @@ def find_missing(G,
         print("Number of searches to perform: ", n_searches)
         print("Searching...")
 
-    # create numpy arrays for shared memory
-    total_arr = np.array([high_scoring_ORFs, merged_nodes, search_list, conflicts])
+    # create lists to return results
+    all_hits = [None] * len(isolate_names)
+    all_node_locs = [None] * len(isolate_names)
 
-    all_hits = []
-    all_node_locs = []
+    # for isolate_pair in enumerate(isolate_names):
+    #     member, hits, node_locs = search_graph(isolate_pair,
+    #                                    high_scoring_ORFs=high_scoring_ORFs,
+    #                                    graph_shd_arr_tup=graph_shd_arr_tup,
+    #                                    search_radius=search_radius,
+    #                                    prop_match=prop_match,
+    #                                    pairwise_id_thresh=pairwise_id_thresh,
+    #                                    merge_id_thresh=merge_id_thresh,
+    #                                    is_ref=is_ref,
+    #                                    write_idx=write_idx,
+    #                                    kmer=kmer,
+    #                                    repeat=repeat)
+    #     all_hits[member] = hits
+    #     all_node_locs[member] = node_locs
 
-    with SharedMemoryManager() as smm:
-        # generate shared numpy arrays
-        ORF_array_shd, ORF_shd_array_tup = generate_shared_mem_array(total_arr, smm)
-
-        for isolate_pair in enumerate(isolate_names):
-            hits, node_locs = search_graph(isolate_pair,
-                                           ORF_shd_array_tup=ORF_shd_array_tup,
-                                           graph_shd_arr_tup=graph_shd_arr_tup,
-                                           search_radius=search_radius,
-                                           prop_match=prop_match,
-                                           pairwise_id_thresh=pairwise_id_thresh,
-                                           merge_id_thresh=merge_id_thresh,
-                                           is_ref=is_ref,
-                                           write_idx=write_idx,
-                                           kmer=kmer,
-                                           repeat=repeat)
-            all_hits.append(hits)
-            all_node_locs.append(node_locs)
-
-        # all_hits, all_node_locs = pool.map(partial(search_graph,
-        #                                                ORF_shd_array_tup=ORF_shd_array_tup,
-        #                                                graph_shd_arr_tup=graph_shd_arr_tup,
-        #                                                search_radius=search_radius,
-        #                                                prop_match=prop_match,
-        #                                                pairwise_id_thresh=pairwise_id_thresh,
-        #                                                merge_id_thresh=merge_id_thresh,
-        #                                                is_ref=is_ref,
-        #                                                write_idx=write_idx,
-        #                                                kmer=kmer,
-        #                                                repeat=repeat),
-        #                                        enumerate(isolate_names))
-
-    # all_hits, all_node_locs, max_seq_lengths = zip(*Parallel(n_jobs=n_cpu)(
-    #     delayed(search_gff)(search_list[member],
-    #                         conflicts[member],
-    #                         member,
-    #                         merged_nodes=merged_nodes[member],
-    #                         search_radius=search_radius,
-    #                         prop_match=prop_match,
-    #                         pairwise_id_thresh=pairwise_id_thresh,
-    #                         merge_id_thresh=merge_id_thresh)
-    #     for member in tqdm(range(0, len(isolate_names)),
-    #                                    disable=(not verbose))))
-
-    all_hits = tuple(all_hits)
-    all_node_locs = tuple(all_node_locs)
+    for member, hits, node_locs in pool.map(partial(search_graph,
+                                                    graph_shd_arr_tup=graph_shd_arr_tup,
+                                                    isolate_names=isolate_names,
+                                                    search_radius=search_radius,
+                                                    prop_match=prop_match,
+                                                    pairwise_id_thresh=pairwise_id_thresh,
+                                                    merge_id_thresh=merge_id_thresh,
+                                                    is_ref=is_ref,
+                                                    write_idx=write_idx,
+                                                    kmer=kmer,
+                                                    repeat=repeat),
+                                            search_dict.items()):
+        all_hits[member] = hits
+        all_node_locs[member] = node_locs
 
     if verbose:
         print("translating hits...")
@@ -238,21 +193,8 @@ def find_missing(G,
             G.nodes[node]['size'] += 1
             G.nodes[node]['dna'] = del_dups(G.nodes[node]['dna'] +
                                             [dna_hit])
-            # dna_out.write(">" + str(member) + "_refound_" +
-            #               str(n_found) + "\n" + dna_hit + "\n")
             G.nodes[node]['protein'] = del_dups(
                 G.nodes[node]['protein'] + [hit_protein])
-            # prot_out.write(">" + str(member) + "_refound_" +
-            #                str(n_found) + "\n" + hit_protein +
-            #                "\n")
-            # data_out.write(",".join([
-            #     os.path.splitext(
-            #         os.path.basename(
-            #             gff_file_handles[member]))[0], "",
-            #     str(member) + "_refound_" + str(n_found),
-            #     str(member) + "_refound_" +
-            #     str(n_found), hit_protein, dna_hit, "", ""
-            # ]) + "\n")
             G.nodes[node]['seqIDs'] |= set(
                 [str(member) + "_refound_" + str(n_found)])
             # keep track of sequences of refound genes
@@ -267,9 +209,9 @@ def find_missing(G,
     return (G, refound_genes)
 
 
-def search_graph(isolate_pair,
-                 ORF_shd_array_tup,
+def search_graph(search_pair,
                  graph_shd_arr_tup,
+                 isolate_names,
                  is_ref,
                  write_idx,
                  kmer,
@@ -278,61 +220,31 @@ def search_graph(isolate_pair,
                  prop_match=0.2,
                  pairwise_id_thresh=0.95,
                  merge_id_thresh=0.7):
-    # unpack isolate_pair
-    member, fasta = isolate_pair
-
-    print("refinding: ", member)
+    # unpack search_pair and assign fasta
+    member, dicts = search_pair
+    fasta = isolate_names[member]
 
     # load shared memory items
-    ORF_existing_shm = shared_memory.SharedMemory(name=ORF_shd_array_tup.name)
-    ORF_shd_arr = np.ndarray(ORF_shd_array_tup.shape, dtype=ORF_shd_array_tup.dtype, buffer=ORF_existing_shm.buf)
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
     graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
-    # unpack from shared memory
-    node_search_dict = ORF_shd_arr[2][member]
-    # sort sets to fix order
-    conflicts = sorted(ORF_shd_arr[3][member])
-
-    for node in node_search_dict:
-        node_search_dict[node] = sorted(node_search_dict[node])
+    conflicts = dicts["conflicts"]
+    node_search_dict = dicts["searches"]
 
     node_locs = {}
 
     # mask regions that already have genes
-    for node, ORF_ID in conflicts:
-        # mem = int(sid.split("_")[0])
-        # ORF_ID = int(sid.split("_")[-1])
-        ORF_info = ORF_shd_arr[0][member][ORF_ID]
-
-        # if node in ORF_shd_arr[1][member]:
-        #     db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
-        #                                                                  write_idx, kmer, fasta, repeat)
-        #
-        #     hit, loc = search_dna(db_seq,
-        #                           ORF_shd_arr[1][member][node],
-        #                           prop_match=(len(db_seq)) /
-        #                                      float(len(ORF_shd_arr[1][member][node])),
-        #                           pairwise_id_thresh=merge_id_thresh,
-        #                           refind=False)
-        #
-        #     # convert linear coordinates into node coordinates
-        #     node_locs[node] = (convert_coords(loc, nodelist, node_ranges))
-        #
-        #     # # update location
-        #     # loc[0] = loc[0] + max(0, (start - search_radius))
-        #     # loc[1] = loc[1] + max(0, (start - search_radius))
-        #     # node_locs[node] = [gene[0], loc]
-        # else:
-        # else assign the full length of ORF
+    for node, ORF_info in conflicts.items():
+        # ORF_info = high_scoring_ORFs[member][ORF_ID]
+        # assign the full length of ORF
         traversed_nodes = {}
         for node_ID, node_coords in zip(ORF_info[0], ORF_info[1]):
             if node_ID < 0:
-                node_ID *= -1
-                node_end = graph_shd_arr[0].node_size(node_ID)
+                rev_node_ID = node_ID * -1
+                node_end = graph_shd_arr[0].node_size(rev_node_ID)
                 reversed_end = node_end - node_coords[0]
                 reversed_start = node_end - node_coords[1]
-                traversed_nodes[node_ID] = (reversed_start, reversed_end)
+                traversed_nodes[rev_node_ID] = (reversed_start, reversed_end)
             else:
                 traversed_nodes[node_ID] = (node_coords[0], node_coords[1])
 
@@ -340,20 +252,19 @@ def search_graph(isolate_pair,
 
     # search for matches
     hits = []
-    for node in ORF_shd_arr[2][member]:
+    for node in node_search_dict:
         best_hit = ""
         best_loc = None
-        for search in ORF_shd_arr[2][member][node]:
-            neighbour_sid = search[1]
-            mem = int(neighbour_sid.split("_")[0])
-            ORF_ID = int(neighbour_sid.split("_")[-1])
-            ORF_info = ORF_shd_arr[0][mem][ORF_ID]
+        for search, ORF_info in node_search_dict[node].items():
+            # neighbour_sid = search[1]
+            # mem = int(neighbour_sid.split("_")[0])
+            # ORF_ID = int(neighbour_sid.split("_")[-1])
 
             db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
                                                                          write_idx, kmer, fasta, repeat)
 
             hit, loc = search_dna(db_seq,
-                                  search[0],
+                                  search,
                                   prop_match,
                                   pairwise_id_thresh,
                                   refind=True)
@@ -373,7 +284,8 @@ def search_graph(isolate_pair,
         if (best_loc is not None) and (best_hit != ""):
             node_locs[node] = best_loc
 
-    return [hits, node_locs]
+    print("finished: ", member)
+    return member, hits, node_locs
 
 
 def convert_coords(loc, nodelist, node_ranges):

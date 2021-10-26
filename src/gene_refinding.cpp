@@ -240,7 +240,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
                              const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
-                             bool is_ref,
+                             const bool is_ref,
                              const bool write_idx,
                              const int kmer,
                              const std::string& FM_fasta_file,
@@ -252,12 +252,6 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
     // initialise path of nodes to use for coordinate generation
     std::vector<int> full_nodelist;
-
-    // if no FM_fasta_file specified, cannot generate FM Index
-    if (FM_fasta_file == "NA")
-    {
-        is_ref = false;
-    }
 
     fm_index_coll fm_idx;
     if (is_ref)
