@@ -150,6 +150,9 @@ def find_missing(G,
                     seq_coverage[temp_DBG_node] = np.zeros(temp_node_coords[1] + 1, dtype=bool)
                 else:
                     node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
+            # negate coverage from node overlaps in DBG
+            node_coverage -= node_locs[node][2]
+            # check if node coverage is exceeded
             if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
                 if member in G.nodes[node]['members']:
                     remove_member_from_node(G, node, member)
@@ -214,7 +217,7 @@ def find_missing(G,
             G.nodes[node]['seqIDs'] |= set(
                 [str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
-            nodelist, node_coords = all_node_locs[member][node]
+            nodelist, node_coords, total_overlap = all_node_locs[member][node]
             high_scoring_ORFs[member][n_found * -1] = (nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3])
             test = graph_shd_arr[0].generate_sequence(nodelist, node_coords, 30)
             if test != dna_hit:
@@ -266,8 +269,15 @@ def search_graph(search_pair,
         #     else:
         #         traversed_nodes.append(node_ID)
         #         traversed_loci.append((node_coords[0], node_coords[1]))
-
-        node_locs[node] = (ORF_info[0], ORF_info[1])
+        # determine sequence ovelap of ORFs
+        total_overlap = 0
+        for i, node_coords in enumerate(ORF_info[1]):
+            if i != 0:
+                if node_coords[1] >= kmer - 1:
+                    total_overlap += ((kmer - 1) - node_coords[0])
+                else:
+                    total_overlap += (node_coords[1] - node_coords[0]) + 1
+        node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # search for matches
     hits = []
@@ -275,10 +285,6 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, ORF_info in node_search_dict[node].items():
-            # neighbour_sid = search[1]
-            # mem = int(neighbour_sid.split("_")[0])
-            # ORF_ID = int(neighbour_sid.split("_")[-1])
-
             db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
                                                                          write_idx, kmer, fasta, repeat)
 
@@ -289,7 +295,7 @@ def search_graph(search_pair,
                                             refind=True)
 
             # convert linear coordinates into node coordinates
-            ORF_loc = (convert_coords(loc, nodelist, node_ranges))
+            ORF_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
 
             # if db_seq was reversed to align, need to reverse node coordinates
             if rev_comp and hit != "":
@@ -304,7 +310,7 @@ def search_graph(search_pair,
                     reversed_loci.append((reversed_start, reversed_end))
                 reversed_nodes.reverse()
                 reversed_loci.reverse()
-                ORF_loc = (reversed_nodes, reversed_loci)
+                ORF_loc = (reversed_nodes, reversed_loci, ORF_loc[-1])
 
             # update location
             # loc[0] = loc[0] + max(0, (start - search_radius))
@@ -318,14 +324,15 @@ def search_graph(search_pair,
         if (best_loc is not None) and (best_hit != ""):
             node_locs[node] = best_loc
 
-    print("finished: ", member)
     return member, hits, node_locs
 
 
-def convert_coords(loc, nodelist, node_ranges):
+def convert_coords(loc, nodelist, node_ranges, overlap):
     # iterate over nodelist and node_coords to determine what bases are traversed
     traversed_nodes = []
     traversed_loci = []
+
+    total_overlap = 0
 
     # check if hit found, otherwise pass
     if loc[1] != 0:
@@ -356,11 +363,19 @@ def convert_coords(loc, nodelist, node_ranges):
                 traversed_nodes.append(nodelist[i])
                 traversed_loci.append((traversed_node_start, traversed_node_end))
 
+                # work out how much sequence overlap is present between nodes, add 1 and zero indexed
+                if len(traversed_nodes) != 1:
+                    if traversed_node_end >= overlap:
+                        total_overlap += (overlap - traversed_node_start)
+                    else:
+                        total_overlap += (traversed_node_end - traversed_node_start) + 1
+
+
             # gone past last node covering ORF so assign 3p and end index to previous node
             elif start_assigned and not end_assigned:
                 break
 
-    return traversed_nodes, traversed_loci
+    return traversed_nodes, traversed_loci, total_overlap
 
 
 def repl(m):
