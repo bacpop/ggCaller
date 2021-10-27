@@ -49,11 +49,19 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
+    # check if reference-guided alignment specified
+    ref_aln = False
+    if "ref" in alr:
+        ref_aln = True
+
     # Check cd-hit is installed
     check_cdhit_version()
     # Make sure aligner is installed if alignment requested
     if aln != None:
-        check_aligner_install(alr)
+        if ref_aln:
+            check_aligner_install(alr[:-4])
+        else:
+            check_aligner_install(alr)
 
     # create directory if it isn't present already
     if not os.path.exists(output_dir):
@@ -218,6 +226,22 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         mems_to_isolates=mems_to_isolates,
         min_variant_support=min_edge_support_sv)
 
+    # Write out core/pan-genome alignments
+    # determine if reference-guided alignment being done
+    if aln == "pan":
+        if verbose: print("generating pan genome MSAs...")
+        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
+                                      alr, isolate_names, shd_arr_tup,
+                                      high_scoring_ORFs, overlap, pool, ref_aln)
+        core_nodes = get_core_gene_nodes(G, core, len(input_colours))
+        concatenate_core_genome_alignments(core_nodes, output_dir)
+    elif aln == "core":
+        if verbose: print("generating core genome MSAs...")
+        generate_core_genome_alignment(G, temp_dir, output_dir,
+                                       n_cpu, alr, isolate_names,
+                                       core, len(input_colours), shd_arr_tup,
+                                       high_scoring_ORFs, overlap, pool, ref_aln)
+
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
@@ -240,25 +264,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                                    edge[1]]['members'])
 
     nx.write_gml(G, output_dir + "final_graph.gml")
-
-    # Write out core/pan-genome alignments
-    # determine if reference-guided alignment being done
-    ref_aln = False
-    if "ref" in alr:
-        ref_aln = True
-    if aln == "pan":
-        if verbose: print("generating pan genome MSAs...")
-        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool, ref_aln)
-        core_nodes = get_core_gene_nodes(G, core, len(input_colours))
-        concatenate_core_genome_alignments(core_nodes, output_dir)
-    elif aln == "core":
-        if verbose: print("generating core genome MSAs...")
-        generate_core_genome_alignment(G, temp_dir, output_dir,
-                                       n_cpu, alr, isolate_names,
-                                       core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool, ref_aln)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

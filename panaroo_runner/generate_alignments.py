@@ -94,7 +94,8 @@ def output_sequence(node, isolate_list, temp_directory, outdir):
 
 
 def get_alignment_commands(fastafile_name, outdir, aligner, threads):
-    geneName = fastafile_name.split('/')[-1].split('.')[0]
+    if isinstance(fastafile_name, str):
+        geneName = fastafile_name.split('/')[-1].split('.')[0]
     if aligner == "prank":
         command = PrankCommandline(d=fastafile_name,
                                    o=geneName,
@@ -105,6 +106,11 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
             command = MafftCommandline(input=fastafile_name,
                                        auto=True,
                                        nuc=True)
+        elif aligner == "mafft-ref":
+            ref_file, seq_file = fastafile_name
+            outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+            command = "mafft --6merpair --addfragments " + \
+                      " " + seq_file + " " + ref_file + " > " + outfile
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -117,6 +123,11 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
                                        auto=True,
                                        thread=threads,
                                        nuc=True)
+        elif aligner == "mafft-ref":
+            ref_file, seq_file = fastafile_name
+            outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+            command = "mafft --6merpair --addfragments --thread " + \
+                      str(threads) + " " + seq_file + " " + ref_file + " > " + outfile
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -134,10 +145,7 @@ def align_sequences(command, outdir, aligner):
         with open(outdir + name + '.aln.fas', 'w+') as handle:
             handle.write(stdout)
     elif aligner == "mafft-ref":
-        name = str(command[0]).split()[-1].split('/')[-1].split('.')[0]
-        stdout, stderr = command[0]()
-        with open(outdir + name + '.aln.fas', 'w+') as handle:
-            handle.write(stdout)
+        subprocess.run(command[0].split(" "))
     elif aligner == "clustal":
         try:
             stdout, stderr = command[0]()
@@ -151,16 +159,24 @@ def align_sequences(command, outdir, aligner):
                 raise Exception("Clustal failed to run on" + inputname)
     else:
         stdout, stderr = command[0]()
-    try:
-        os.remove(command[1])
-    except FileNotFoundError:
-        None
+    if isinstance(command[1], tuple):
+        for file in command[1]:
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                None
+    else:
+        try:
+            os.remove(command[1])
+        except FileNotFoundError:
+            None
     return True
 
 
 def multi_align_sequences(commands, outdir, threads, aligner):
-    alignment_results = Parallel(n_jobs=threads, prefer="threads")(
-        delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands))
+    # alignment_results = Parallel(n_jobs=threads, prefer="threads")(
+    #     delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands))
+    alignment_results = [align_sequences(x, outdir, aligner) for x in commands]
 
     return True
 

@@ -152,7 +152,7 @@ def main():
     edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
     merge_paralogs = True
     aln = "pan"
-    alr = "mafft"
+    alr = "mafft-ref"
     core = 0.95
     min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
     all_seq_in_graph = False
