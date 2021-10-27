@@ -109,8 +109,8 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
         elif aligner == "mafft-ref":
             ref_file, seq_file = fastafile_name
             outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = "mafft --6merpair --addfragments " + \
-                      " " + seq_file + " " + ref_file + " > " + outfile
+            command = "mafft --6merpair --addfragments " \
+                      + seq_file + " " + ref_file + " > " + outfile
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -126,8 +126,8 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
         elif aligner == "mafft-ref":
             ref_file, seq_file = fastafile_name
             outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = "mafft --6merpair --addfragments --thread " + \
-                      str(threads) + " " + seq_file + " " + ref_file + " > " + outfile
+            command = "mafft --6merpair --thread " + str(threads) + " --addfragments " \
+                      + seq_file + " " + ref_file + " > " + outfile
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -174,9 +174,8 @@ def align_sequences(command, outdir, aligner):
 
 
 def multi_align_sequences(commands, outdir, threads, aligner):
-    # alignment_results = Parallel(n_jobs=threads, prefer="threads")(
-    #     delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands))
-    alignment_results = [align_sequences(x, outdir, aligner) for x in commands]
+    alignment_results = Parallel(n_jobs=threads, prefer="threads")(
+        delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands))
 
     return True
 
