@@ -88,7 +88,7 @@ typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand and population ID
 typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
-typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
+typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeVector sequence to its colour
 typedef std::unordered_map<size_t, std::unordered_map<size_t, ORFNodeVector>> ColourORFMap;
 // vector of ORF paths through graphs
