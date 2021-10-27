@@ -10,8 +10,8 @@ import ast
 # panaroo scripts
 from panaroo.isvalid import *
 from .generate_network import *
-# from panaroo.cdhit import check_cdhit_version
-# from panaroo.cdhit import run_cdhit
+from panaroo.cdhit import check_cdhit_version
+from panaroo.cdhit import run_cdhit
 from .find_missing import *
 # from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
@@ -21,8 +21,9 @@ from ggCaller.shared_memory import *
 from .clean_network import *
 from .generate_output import *
 
+
 # debugging scripts
-from .cdhit_align import *
+# from .cdhit_align import *
 
 
 class SmartFormatter(argparse.HelpFormatter):
@@ -181,24 +182,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("writing output...")
 
     # write out roary like gene_presence_absence.csv
-    # get original annotaiton IDs, lengts and whether or
+    # get original annotation IDs, lengths and whether or
     # not an internal stop codon is present
-
     orig_ids = {}
     ids_len_stop = {}
-    # add helpful attributes and write out graph in GML format
     for node in G.nodes():
-        G.nodes[node]['size'] = len(G.nodes[node]['members'])
-        G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
-        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        G.nodes[node]['protein'] = ";".join(conv_list(
-            G.nodes[node]['protein']))
-        G.nodes[node]['genomeIDs'] = ";".join(
-            [str(m) for m in G.nodes[node]['members']])
-        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
-        G.nodes[node]['degrees'] = G.degree[node]
-        G.nodes[node]['members'] = list(G.nodes[node]['members'])
-        G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
         for sid in G.nodes[node]['seqIDs']:
             orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
@@ -229,6 +217,20 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         output_dir=output_dir,
         mems_to_isolates=mems_to_isolates,
         min_variant_support=min_edge_support_sv)
+
+    # add helpful attributes and write out graph in GML format
+    for node in G.nodes():
+        G.nodes[node]['size'] = len(G.nodes[node]['members'])
+        G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
+        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+        G.nodes[node]['protein'] = ";".join(conv_list(
+            G.nodes[node]['protein']))
+        G.nodes[node]['genomeIDs'] = ";".join(
+            [str(m) for m in G.nodes[node]['members']])
+        G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
+        G.nodes[node]['degrees'] = G.degree[node]
+        G.nodes[node]['members'] = list(G.nodes[node]['members'])
+        G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
 
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
