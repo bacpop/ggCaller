@@ -248,8 +248,11 @@ def search_graph(search_pair,
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
     graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
-    conflicts = dicts["conflicts"]
+    # sort items to preserve order
+    conflicts = {k: v for k, v in sorted(dicts["conflicts"].items(), key=lambda item: item[0])}
     node_search_dict = dicts["searches"]
+    for node in dicts["searches"]:
+        node_search_dict[node] = {k: v for k, v in sorted(node_search_dict[node].items(), key=lambda item: item[0])}
 
     node_locs = {}
 
