@@ -23,7 +23,7 @@ from .generate_output import *
 
 
 # debugging scripts
-# from .cdhit_align import *
+from .cdhit_align import *
 
 
 class SmartFormatter(argparse.HelpFormatter):
@@ -242,11 +242,15 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     nx.write_gml(G, output_dir + "final_graph.gml")
 
     # Write out core/pan-genome alignments
+    # determine if reference-guided alignment being done
+    ref_aln = False
+    if "ref" in alr:
+        ref_aln = True
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
                                       alr, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool)
+                                      high_scoring_ORFs, overlap, pool, ref_aln)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
@@ -254,7 +258,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, alr, isolate_names,
                                        core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool)
+                                       high_scoring_ORFs, overlap, pool, ref_aln)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

@@ -219,9 +219,6 @@ def find_missing(G,
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node]
             high_scoring_ORFs[member][n_found * -1] = (nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3])
-            test = graph_shd_arr[0].generate_sequence(nodelist, node_coords, 30)
-            if test != dna_hit:
-                issue = 1
 
     if verbose:
         print("Number of refound genes: ", n_found)
