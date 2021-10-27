@@ -4,7 +4,7 @@
 
 #include "ORF_clustering.h"
 
-ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
                          const GraphVector& graph_vector)
 {
     // intialise Eigen Triplet
@@ -86,7 +86,7 @@ ORFGroupTuple group_ORFs(const std::unordered_map<size_t, ORFNodeMap>& colour_OR
     return return_tuple;
 }
 
-ORFClusterMap produce_clusters(const std::unordered_map<size_t, ORFNodeMap>& colour_ORF_map,
+ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const GraphVector& graph_vector,
                                const size_t& DBG_overlap,
                                const ORFMatrixVector& ORF_mat_vector,
