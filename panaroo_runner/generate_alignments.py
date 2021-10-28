@@ -108,9 +108,9 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
                                        nuc=True)
         elif aligner == "mafft-ref":
             ref_file, seq_file = fastafile_name
-            outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = "mafft --6merpair --addfragments " \
-                      + seq_file + " " + ref_file + " > " + outfile
+            outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+            command = ["mafft", "--6merpair", "--addfragments",
+                       seq_file, ref_file, outfile]
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -125,9 +125,9 @@ def get_alignment_commands(fastafile_name, outdir, aligner, threads):
                                        nuc=True)
         elif aligner == "mafft-ref":
             ref_file, seq_file = fastafile_name
-            outfile = outdir + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = "mafft --6merpair --thread " + str(threads) + " --addfragments " \
-                      + seq_file + " " + ref_file + " > " + outfile
+            outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+            command = ["mafft", "--6merpair", "--thread", str(threads), "--addfragments",
+                       seq_file, ref_file, outfile]
         elif aligner == "clustal":
             command = ClustalOmegaCommandline(
                 infile=fastafile_name,
@@ -145,7 +145,10 @@ def align_sequences(command, outdir, aligner):
         with open(outdir + name + '.aln.fas', 'w+') as handle:
             handle.write(stdout)
     elif aligner == "mafft-ref":
-        subprocess.run(command[0].split(" "))
+        with open(command[0][-1], 'w+') as handle:
+            result = subprocess.run(command[0][:-1], stdout=handle, stderr=subprocess.DEVNULL)
+            if result.returncode != 0:
+                raise Exception("Mafft-ref failed to run on file: " + command[0][-1].split("/")[-1])
     elif aligner == "clustal":
         try:
             stdout, stderr = command[0]()

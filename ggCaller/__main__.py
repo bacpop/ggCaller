@@ -271,7 +271,7 @@ def get_options():
         help=
         "Specify an aligner. Options:'prank', 'clustal', and default: 'mafft'",
         type=str,
-        choices=['prank', 'clustal', 'mafft'],
+        choices=['prank', 'clustal', 'mafft', 'mafft-ref'],
         default="mafft")
     Panaroo_core.add_argument("--core_threshold",
                               dest="core",

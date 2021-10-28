@@ -178,6 +178,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if merge_para:
         G = merge_paralogs(G, seqid_to_centroid)
 
+    # generate list of input isolate names
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
@@ -232,7 +233,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
                                       alr, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool, ref_aln)
+                                      high_scoring_ORFs, overlap, pool, ref_aln, verbose)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
@@ -240,7 +241,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, alr, isolate_names,
                                        core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool, ref_aln)
+                                       high_scoring_ORFs, overlap, pool, ref_aln, verbose)
 
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():

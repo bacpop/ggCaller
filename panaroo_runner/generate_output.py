@@ -265,7 +265,7 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
-                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln):
+                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments
@@ -297,6 +297,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
             get_alignment_commands(fastafile, output_dir, aligner[:-4], threads)
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
+        if verbose: print("Aligning centroids...")
         multi_align_sequences(commands, temp_dir,
                               threads, aligner[:-4])
         # repeat with reference-guided alignment
@@ -304,6 +305,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
             get_alignment_commands(fastapair, output_dir, aligner, threads)
             for fastapair in ref_seq_pairs
         ]
+        if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
                               threads, aligner)
     else:
@@ -333,7 +335,7 @@ def concatenate_core_genome_alignments(core_names, output_dir):
     core_filenames = [
         x for x in alignment_filenames if x.split('.')[0] in core_names
     ]
-    # Read in all these alginemnts
+    # Read in all these alignments
     gene_alignments = []
     isolates = set()
     for filename in core_filenames:
@@ -368,9 +370,10 @@ def concatenate_core_genome_alignments(core_names, output_dir):
     write_alignment_header(gene_alignments, output_dir)
     return core_filenames
 
+
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
                                    isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
-                                   overlap, pool, ref_aln):
+                                   overlap, pool, ref_aln, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments
@@ -406,6 +409,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
             get_alignment_commands(fastafile, output_dir, aligner[:-4], threads)
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
+        if verbose: print("Aligning centroids...")
         multi_align_sequences(commands, temp_dir,
                               threads, aligner[:-4])
         # repeat with reference-guided alignment
@@ -413,6 +417,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
             get_alignment_commands(fastapair, output_dir, aligner, threads)
             for fastapair in ref_seq_pairs
         ]
+        if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
                               threads, aligner)
     else:
