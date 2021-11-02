@@ -343,23 +343,25 @@ double align_seqs(const ORFNodeVector& ORF1_info,
         ORF1_aa.reserve(ORF1_sequence.size() / 3);
         ORF2_aa.reserve(ORF2_sequence.size() / 3);
 
-        const auto ORF1_dna_vect = ORF1_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-        const auto ORF2_dna_vect = ORF2_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+        ORF1_aa = (translate(ORF1_sequence)).aa();
+        ORF2_aa = (translate(ORF2_sequence)).aa();
 
-        const auto ORF1_aa_vect = ORF1_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
-        const auto ORF2_aa_vect = ORF2_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
-
-        for (auto && residue : ORF1_aa_vect)
-        {
-            ORF1_aa += residue.to_char();
-        }
-
-        for (auto && residue : ORF2_aa_vect)
-        {
-            ORF2_aa += residue.to_char();
-        }
+//        const auto ORF1_dna_vect = ORF1_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+//        const auto ORF2_dna_vect = ORF2_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+//
+//        const auto ORF1_aa_vect = ORF1_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
+//        const auto ORF2_aa_vect = ORF2_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
+//
+//        for (auto && residue : ORF1_aa_vect)
+//        {
+//            ORF1_aa += residue.to_char();
+//        }
+//
+//        for (auto && residue : ORF2_aa_vect)
+//        {
+//            ORF2_aa += residue.to_char();
+//        }
     }
-
 
     // convert sequence to const char * and calculate edit distance
     const char * seq1 = ORF1_aa.c_str();

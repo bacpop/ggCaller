@@ -7,6 +7,7 @@
 
 #include "unitigDict.h"
 #include "gene_overlap.h"
+#include "translation.h"
 
 ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
                          const GraphVector& graph_vector);

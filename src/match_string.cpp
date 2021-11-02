@@ -9,52 +9,55 @@ fm_index_coll index_fasta(const std::string& fasta_file,
     // create fm index file name
     std::string idx_file_name = fasta_file + ".fm";
 
-    // Read index if it already exists
-    if (std::filesystem::exists(idx_file_name))
+    // if fm_index not available, generate it
+    if (!load_from_file(ref_index, idx_file_name))
     {
-        std::ifstream is{idx_file_name, std::ios::binary};
-        cereal::BinaryInputArchive iarchive{is};
-        iarchive(ref_index);
-    }
-    else
-    {
-        // Create index - should be viable for both single and collections fmindexes
-        seqan3::sequence_file_input reference_in{fasta_file};
-        std::vector<seqan3::dna5_vector> reference_seq;
+        std::string reference_seq;
 
-        for (auto & [seq, id, qual] : reference_in) {
-            reference_seq.push_back(std::move(seq));
+        // open the file handler
+        gzFile fp = gzopen(fasta_file.c_str(), "r");
+
+        if(fp == 0) {
+            perror("fopen");
+            exit(1);
+        }
+        // initialize seq
+        kseq_t *seq = kseq_init(fp);
+
+        // read sequence
+        int l;
+        while ((l = kseq_read(seq)) >= 0)
+        {
+            reference_seq += seq->seq.s;
+            reference_seq += ",";
         }
 
-        // this is where the sequence is indexed
-        ref_index = fm_index_coll{reference_seq};
+        // destroy seq and fp objects
+        kseq_destroy(seq);
+        gzclose(fp);
 
-        // write indexes to file if specified
+        construct(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
-            std::ofstream os{idx_file_name, std::ios::binary};
-            cereal::BinaryOutputArchive oarchive{os};
-            oarchive(ref_index);
+            store_to_file(ref_index, idx_file_name); // save it
         }
     }
     return ref_index;
 }
 
 //search for a specific sequence within an fm index array
-int seq_search(const seqan3::dna5_vector& query,
+int seq_search(const std::string& query,
                const fm_index_coll& ref_idx)
 {
     int present = 0;
-    int query_count = 0;
     //count number of occurrences in positive strand
-    auto results = search(query, ref_idx);
-    query_count = (int)std::ranges::distance(results);
+    size_t query_count = sdsl::count(ref_idx, query.begin(), query.end());
 
     // if not found, check reverse strand
     if (query_count == 0)
     {
-        auto results = search(query | std::views::reverse | seqan3::views::complement, ref_idx);
-        query_count = (int)std::ranges::distance(results);
+        const std::string rev_query = reverse_complement(query);
+        query_count = sdsl::count(ref_idx, rev_query.begin(), rev_query.end());
     }
 
     if (query_count != 0)
@@ -66,14 +69,11 @@ int seq_search(const seqan3::dna5_vector& query,
 }
 
 // determine true colours of sequence
-bool check_colours(const std::string& path_sequence,
+bool check_colours(const std::string& query,
                    const fm_index_coll& fm_idx)
 {
     // initialise present
     bool present = true;
-
-    // convert string to dn5 vector, get colours
-    seqan3::dna5_vector query = path_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
 
     //if sequence present then add to hits
     int hits = seq_search(query, fm_idx);

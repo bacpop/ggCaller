@@ -1,0 +1,9 @@
+Gene	CR931662_Streptococcus_pneumoniae_strain_34359_serotype_14	CR931663_Streptococcus_pneumoniae_strain_389_39_serotype_15a	CR931664_Streptococcus_pneumoniae_strain_7904_39_serotype_15b	CR931665_Streptococcus_pneumoniae_strain_553_62_serotype_15c	CR931666_Streptococcus_pneumoniae_strain_688_63_serotype_15f
+group_16-group_14-group_17	0	1	1	1	0
+group_18-group_19-group_20	1	0	1	1	0
+group_7-group_19-group_20	0	1	0	0	1
+group_21-group_22-group_15	0	1	1	1	1
+group_7-group_24-group_27	0	1	0	0	1
+group_18-group_24-group_27	1	0	1	1	0
+group_23-group_25-group_26	0	1	1	1	0
+group_25-group_26-group_29	1	1	1	1	0

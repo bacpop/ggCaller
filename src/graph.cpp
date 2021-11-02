@@ -309,7 +309,7 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
             // add to node_colour_map_private
             for (size_t i = 0; i < unitig_dict.full_colour().size(); i++)
             {
-                if (unitig_dict.full_colour().at(i))
+                if (unitig_dict.full_colour()[i])
                 {
                     node_colour_vector_private[i].push_back(unitig_dict.id);
                 }

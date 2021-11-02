@@ -1,24 +1,23 @@
 #ifndef TRANSLATION_H
 #define TRANSLATION_H
 
-#include "definintions.h"
+#include "definitions.h"
 
 class translate
 {
     public:
     // take a DNA string and translate
-    std::string translate (const std::string dna_seq)
+    translate (const std::string dna_seq)
     {
-        std::string aa_seq;
         for (size_t i = 0; i < dna_seq.size(); i += 3)
         {
-            const std::string codon = dna_seq(i, 3);
-            aa_seq += tMap_[codon];
+            const std::string codon = dna_seq.substr(i, 3);
+            aa_seq_ += tMap_[codon];
         }
-        return aa_seq;
-    }
+    };
+    std::string aa () {return aa_seq_;};
     private:
-        robin_hood::unordered_map<std::string, char>> tMap_
+        robin_hood::unordered_map<std::string, char> tMap_ =
         {
             {"TTT", 'F'},
             {"TTC", 'F'},
@@ -83,9 +82,10 @@ class translate
             {"GGT", 'G'},
             {"GGC", 'G'},
             {"GGA", 'G'},
-            {"GGG", 'G')
+            {"GGG", 'G'}
         };
-}
+    std::string aa_seq_;
+};
 
 
 #endif //TRANSLATION_H

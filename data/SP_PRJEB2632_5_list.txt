@@ -1,0 +1,5 @@
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/S_pneumoniae/SP_PRJEB2632/ENA_files/assemblies/CFQL02.fasta
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/S_pneumoniae/SP_PRJEB2632/ENA_files/assemblies/CNNH02.fasta
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/S_pneumoniae/SP_PRJEB2632/ENA_files/assemblies/CNNI02.fasta
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/S_pneumoniae/SP_PRJEB2632/ENA_files/assemblies/CNNK02.fasta
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/S_pneumoniae/SP_PRJEB2632/ENA_files/assemblies/CNNP02.fasta

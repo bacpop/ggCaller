@@ -15,7 +15,7 @@
 #include <iterator>
 #include <functional>
 #include <cassert>
-#include <experimental/filesystem>
+//#include <experimental/filesystem>
 #include <mutex>
 #include <math.h>
 
@@ -25,26 +25,30 @@
 // robinhood hashing header
 #include "robin_hood.h"
 
+// sdsl header
+#include <sdsl/suffix_arrays.hpp>
+#include <sdsl/bit_vectors.hpp>
+
 // seqan3 headers
-#include <seqan3/core/debug_stream.hpp>
-#include <seqan3/search/fm_index/all.hpp>
-#include <cereal/archives/binary.hpp>
-#include <seqan3/alphabet/nucleotide/dna5.hpp>
-#include <seqan3/io/sequence_file/all.hpp>
-#include <seqan3/range/views/all.hpp>
-#include <seqan3/search/search.hpp>
-#include <seqan3/std/filesystem>
-#include <seqan3/range/views/translate.hpp>
-#include <seqan3/alignment/pairwise/all.hpp>
-#include <seqan3/alignment/scoring/all.hpp>
-#include <seqan3/alphabet/aminoacid/aa27.hpp>
+//#include <seqan3/core/debug_stream.hpp>
+//#include <seqan3/search/fm_index/all.hpp>
+//#include <cereal/archives/binary.hpp>
+//#include <seqan3/alphabet/nucleotide/dna5.hpp>
+//#include <seqan3/io/sequence_file/all.hpp>
+//#include <seqan3/range/views/all.hpp>
+//#include <seqan3/search/search.hpp>
+//#include <seqan3/std/filesystem>
+//#include <seqan3/range/views/translate.hpp>
+//#include <seqan3/alignment/pairwise/all.hpp>
+//#include <seqan3/alignment/scoring/all.hpp>
+//#include <seqan3/alphabet/aminoacid/aa27.hpp>
 
 // pybind11 headers
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 // Eigen header
-#include "Eigen/Sparse"
+#include <Eigen/Sparse>
 
 // edlib header
 #include "edlib/edlib.h"
@@ -63,18 +67,20 @@ typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 typedef Eigen::Triplet<double> ET;
 
 // fmindex typedef
-using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
-        sdsl::rank_support_v<>,
-        sdsl::select_support_scan<>,
-        sdsl::select_support_scan<0>>,
-        16,
-        10000000,
-        sdsl::sa_order_sa_sampling<>,
-        sdsl::isa_sampling<>,
-        sdsl::plain_byte_alphabet>;
-typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
-using seqan3::operator""_dna5;
-using seqan3::operator""_aa27;
+//using cust_sdsl_wt_index_type = sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector,
+//        sdsl::rank_support_v<>,
+//        sdsl::select_support_scan<>,
+//        sdsl::select_support_scan<0>>,
+//        16,
+//        10000000,
+//        sdsl::sa_order_sa_sampling<>,
+//        sdsl::isa_sampling<>,
+//        sdsl::plain_byte_alphabet>;
+//typedef seqan3::fm_index<seqan3::dna5, seqan3::text_layout::collection, cust_sdsl_wt_index_type> fm_index_coll;
+//using seqan3::operator""_dna5;
+//using seqan3::operator""_aa27;
+
+typedef sdsl::csa_wt<> fm_index_coll;
 
 // general typedefs
 // hasher for strings
