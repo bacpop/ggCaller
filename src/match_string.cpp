@@ -37,7 +37,7 @@ fm_index_coll index_fasta(const std::string& fasta_file,
         kseq_destroy(seq);
         gzclose(fp);
 
-        sdsl::construct(ref_index, reference_seq, 1); // generate index
+        sdsl::construct_im(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
             store_to_file(ref_index, idx_file_name); // save it
