@@ -47,7 +47,7 @@ class translate
             {"CAC", 'H'},
             {"CAA", 'Q'},
             {"CAG", 'Q'},
-            {"CGU", 'R'},
+            {"CGT", 'R'},
             {"CGC", 'R'},
             {"CGA", 'R'},
             {"CGG", 'R'},

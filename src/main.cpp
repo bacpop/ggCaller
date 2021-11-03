@@ -112,9 +112,9 @@ int main(int argc, char *argv[]) {
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
 
     GraphTuple graph_tuple = unitig_graph.read(
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.gfa",
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_119_230_372_list.bfg_colors",
-            stop_codons_for, stop_codons_rev, num_threads, is_ref);
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+            stop_codons_for, stop_codons_rev, num_threads);
 
     const auto& node_colour_vector = std::get<0>(graph_tuple);
     const auto& input_colours = std::get<1>(graph_tuple);
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     robin_hood::unordered_map<std::string, std::vector<bool>> ORF_print_map;
 
     // initialise colour_ORF_map
-    std::unordered_map<size_t, ORFNodeMap> colour_ORF_map;
+    ColourORFMap colour_ORF_map;
 
     // parse ORFs known to be genes
     const auto known_genes_pair = parse_fasta("/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_test_ORFs_for_panaroo.fasta");
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
         }
 
         // generate a map that holds only high scoring ORFs
-        ORFNodeMap ORF_node_map;
+        std::unordered_map<size_t, ORFNodeVector> ORF_node_map;
         for (const auto& gene : known_gene_ids)
         {
             // get true entry number

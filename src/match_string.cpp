@@ -6,6 +6,7 @@ fm_index_coll index_fasta(const std::string& fasta_file,
                           const bool& write_idx)
 {
     fm_index_coll ref_index;
+    fm_index_coll test_index;
     // create fm index file name
     std::string idx_file_name = fasta_file + ".fm";
 
@@ -36,12 +37,13 @@ fm_index_coll index_fasta(const std::string& fasta_file,
         kseq_destroy(seq);
         gzclose(fp);
 
-        construct(ref_index, reference_seq, 1); // generate index
+        sdsl::construct(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
             store_to_file(ref_index, idx_file_name); // save it
         }
     }
+
     return ref_index;
 }
 
@@ -51,13 +53,13 @@ int seq_search(const std::string& query,
 {
     int present = 0;
     //count number of occurrences in positive strand
-    size_t query_count = sdsl::count(ref_idx, query.begin(), query.end());
+    size_t query_count = sdsl::count(ref_idx, query);
 
     // if not found, check reverse strand
     if (query_count == 0)
     {
         const std::string rev_query = reverse_complement(query);
-        query_count = sdsl::count(ref_idx, rev_query.begin(), rev_query.end());
+        query_count = sdsl::count(ref_idx, rev_query);
     }
 
     if (query_count != 0)
