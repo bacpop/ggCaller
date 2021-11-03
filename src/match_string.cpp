@@ -82,12 +82,12 @@ int seq_search(const std::string& query,
 }
 
 // determine true colours of sequence
-std::pair<size_t, std::pair<size_t, size_t>> check_colours(const std::string& query,
-                                                           const fm_index_coll& fm_idx,
-                                                           const std::vector<size_t>& contig_locs)
+ContigLoc check_colours(const std::string& query,
+                       const fm_index_coll& fm_idx,
+                       const std::vector<size_t>& contig_locs)
 {
     // initialise location pair
-    std::pair<size_t, std::pair<size_t, size_t>> loc_pair;
+    ContigLoc contig_loc;
 
     int query_loc = seq_search(query, fm_idx);
 
@@ -101,16 +101,16 @@ std::pair<size_t, std::pair<size_t, size_t>> check_colours(const std::string& qu
             {
                 if (i == 0)
                 {
-                    loc_pair = {1, {query_loc + 1, query_loc + query.size()}};
+                    contig_loc = {1, {query_loc + 1, query_loc + query.size()}};
                 } else
                 {
                     size_t relative_loc = (query_loc - contig_locs.at(i - 1));
-                    loc_pair = {i + 1, {relative_loc, relative_loc + query.size() - 1}};
+                    contig_loc = {i + 1, {relative_loc, relative_loc + query.size() - 1}};
                 }
                 break;
             }
         }
     }
 
-    return loc_pair;
+    return contig_loc;
 }
