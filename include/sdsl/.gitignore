@@ -1,6 +1,0 @@
-*
-!experimental/
-!CMakeLists.txt
-!.gitignore
-!*.hpp
-!*.cmake
