@@ -2,13 +2,16 @@
 #include "match_string.h"
 
 // index fasta files
-fm_index_coll index_fasta(const std::string& fasta_file,
-                          const bool& write_idx)
+std::pair<fm_index_coll, std::vector<size_t>>  index_fasta(const std::string& fasta_file,
+                                                           const bool& write_idx)
 {
     fm_index_coll ref_index;
-    fm_index_coll test_index;
+
     // create fm index file name
     std::string idx_file_name = fasta_file + ".fm";
+
+    // create entry for start and end of contigs within fm_index
+    std::vector<size_t> contig_locs;
 
     // if fm_index not available, generate it
     if (!load_from_file(ref_index, idx_file_name))
@@ -30,6 +33,7 @@ fm_index_coll index_fasta(const std::string& fasta_file,
         while ((l = kseq_read(seq)) >= 0)
         {
             reference_seq += seq->seq.s;
+            contig_locs.push_back(reference_seq.size());
             reference_seq += ",";
         }
 
@@ -42,47 +46,71 @@ fm_index_coll index_fasta(const std::string& fasta_file,
         {
             store_to_file(ref_index, idx_file_name); // save it
         }
+    } else
+    {
+        auto locations = sdsl::locate(ref_index, ",");
+        sort(locations.begin(), locations.end());
+        contig_locs.insert(contig_locs.end(), locations.begin(), locations.end());
     }
 
-    return ref_index;
+    return {ref_index, contig_locs};
 }
 
 //search for a specific sequence within an fm index array
 int seq_search(const std::string& query,
-               const fm_index_coll& ref_idx)
+                const fm_index_coll& ref_idx)
 {
-    int present = 0;
+    int query_loc = -1;
     //count number of occurrences in positive strand
-    size_t query_count = sdsl::count(ref_idx, query);
+    auto locations = sdsl::locate(ref_idx, query);
 
     // if not found, check reverse strand
-    if (query_count == 0)
+    if (locations.empty())
     {
         const std::string rev_query = reverse_complement(query);
-        query_count = sdsl::count(ref_idx, rev_query);
+        locations = sdsl::locate(ref_idx, rev_query);
     }
 
-    if (query_count != 0)
+    // take first entry from locations
+    if (!locations.empty())
     {
         // debug_stream << "found" << std::endl;
-        present = 1;
+        sort(locations.begin(), locations.end());
+        query_loc = locations[0];
     }
-    return present;
+    return query_loc;
 }
 
 // determine true colours of sequence
-bool check_colours(const std::string& query,
-                   const fm_index_coll& fm_idx)
+std::pair<size_t, std::pair<size_t, size_t>> check_colours(const std::string& query,
+                                                           const fm_index_coll& fm_idx,
+                                                           const std::vector<size_t>& contig_locs)
 {
-    // initialise present
-    bool present = true;
+    // initialise location pair
+    std::pair<size_t, std::pair<size_t, size_t>> loc_pair;
 
-    //if sequence present then add to hits
-    int hits = seq_search(query, fm_idx);
-    if (!hits)
+    int query_loc = seq_search(query, fm_idx);
+
+    //if sequence present then determine contig coordinates
+    if (query_loc > 0)
     {
-        present = false;
+        // go through contig_locs to determine in which contig sequence sits
+        for (int i = 0; i < contig_locs.size(); i++)
+        {
+            if (query_loc < contig_locs.at(i))
+            {
+                if (i == 0)
+                {
+                    loc_pair = {1, {query_loc + 1, query_loc + query.size()}};
+                } else
+                {
+                    size_t relative_loc = (query_loc - contig_locs.at(i - 1));
+                    loc_pair = {i + 1, {relative_loc, relative_loc + query.size() - 1}};
+                }
+                break;
+            }
+        }
     }
 
-    return present;
+    return loc_pair;
 }

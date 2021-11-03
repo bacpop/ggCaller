@@ -14,6 +14,7 @@ std::vector<int> assign_seq(const GraphVector& graph_vector,
                             const int kmer,
                             const bool is_ref,
                             const fm_index_coll& fm_idx,
+                            const std::vector<size_t>& contig_locs,
                             std::string& stream_seq,
                             const size_t& ORF_end,
                             const std::string& ORF_seq);

@@ -13,7 +13,8 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                    const int& overlap,
                    const size_t min_len,
                    const bool is_ref,
-                   const fm_index_coll& fm_idx)
+                   const fm_index_coll& fm_idx,
+                   const std::vector<size_t>& contig_locs)
 {
     // initialise path sequence
     std::string path_sequence;
@@ -266,10 +267,10 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                         }
 
                         // check path sequence is real if is_ref
-                        const bool present = check_colours(ORF_seq, fm_idx);
+                        const auto present = check_colours(ORF_seq, fm_idx, contig_locs);
 
                         // check if real sequence, if not pass on the ORF, move to next highest
-                        if (!present)
+                        if (!present.first)
                         {
                             continue;
                         }
@@ -661,7 +662,8 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                      const int overlap,
                      const size_t min_ORF_length,
                      const bool is_ref,
-                     const fm_index_coll& fm_idx)
+                     const fm_index_coll& fm_idx,
+                     const std::vector<size_t>& contig_locs)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -673,7 +675,7 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+            generate_ORFs(ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
         }
     }
 

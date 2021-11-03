@@ -15,7 +15,8 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                    const int& overlap,
                    const size_t min_len,
                    const bool is_ref,
-                   const fm_index_coll& fm_idx);
+                   const fm_index_coll& fm_idx,
+                   const std::vector<size_t>& contig_locs);
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,
@@ -23,13 +24,14 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
                            const int& overlap);
 
 ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
-                     const GraphVector& graph_vector,
-                     const std::vector<std::string>& stop_codons_for,
-                     const std::vector<std::string>& start_codons_for,
-                     const int overlap,
-                     const size_t min_ORF_length,
-                     const bool is_ref,
-                     const fm_index_coll& fm_idx);
+                    const GraphVector& graph_vector,
+                    const std::vector<std::string>& stop_codons_for,
+                    const std::vector<std::string>& start_codons_for,
+                    const int overlap,
+                    const size_t min_ORF_length,
+                    const bool is_ref,
+                    const fm_index_coll& fm_idx,
+                    const std::vector<size_t>& contig_locs);
 
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,

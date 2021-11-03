@@ -48,6 +48,7 @@ std::vector<int> assign_seq(const GraphVector& graph_vector,
                             const int kmer,
                             const bool is_ref,
                             const fm_index_coll& fm_idx,
+                            const std::vector<size_t>& contig_locs,
                             std::string& stream_seq,
                             const size_t& ORF_end,
                             const std::string& ORF_seq)
@@ -90,10 +91,10 @@ std::vector<int> assign_seq(const GraphVector& graph_vector,
         // check new_sequence is real if is_ref
         if (is_ref)
         {
-            const bool present = check_colours(path_sequence, fm_idx);
+            const auto present = check_colours(path_sequence, fm_idx, contig_locs);
 
             // check if real sequence, if not pass on the ORF, move to next highest
-            if (!present)
+            if (!present.first)
             {
                 continue;
             }
@@ -254,9 +255,12 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
     std::vector<int> full_nodelist;
 
     fm_index_coll fm_idx;
+    std::vector<size_t> contig_locs;
     if (is_ref)
     {
-        fm_idx = index_fasta(FM_fasta_file, write_idx);
+        auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
+        fm_idx = fm_idx_pair.first;
+        contig_locs = fm_idx_pair.second;
     }
 
     // generate a string of the ORF to check against FM-index
@@ -321,7 +325,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto upstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+            auto upstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, contig_locs, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
 
             // reverse upstream_nodelist
             if (!upstream_seq.empty())
@@ -408,7 +412,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto downstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
+            auto downstream_nodelist = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, contig_locs, downstream_seq, ORF_end, ORF_seq));
             if (downstream_nodelist.size() > 1)
             {
                 full_nodelist.insert(full_nodelist.end(), downstream_nodelist.begin() + 1, downstream_nodelist.end());
