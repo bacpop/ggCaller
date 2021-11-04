@@ -136,7 +136,7 @@ def find_missing(G,
             if node not in node_locs: continue
             # iterate over all the nodes present for the current ORF
             node_coverage = 0
-            for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
+            for DBG_node, node_coords in zip(node_locs[node][0][0], node_locs[node][0][1]):
                 # check if node is negative and needs reversing
                 # make copies to avoid editing in place
                 temp_DBG_node = DBG_node
@@ -151,7 +151,7 @@ def find_missing(G,
                 else:
                     node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
             # negate coverage from node overlaps in DBG
-            node_coverage -= node_locs[node][2]
+            node_coverage -= node_locs[node][0][2]
             # check if node coverage is exceeded
             if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
                 if member in G.nodes[node]['members']:
@@ -159,7 +159,7 @@ def find_missing(G,
                 bad_node_mem_pairs.add((node, member))
             else:
                 # if sequence coverage is less than threshold, iterate again and add sequence information
-                for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
+                for DBG_node, node_coords in zip(node_locs[node][0][0], node_locs[node][0][1]):
                     temp_DBG_node = DBG_node
                     if temp_DBG_node < 0:
                         temp_DBG_node *= -1
@@ -217,8 +217,10 @@ def find_missing(G,
             G.nodes[node]['seqIDs'] |= set(
                 [str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
-            nodelist, node_coords, total_overlap = all_node_locs[member][node]
-            high_scoring_ORFs[member][n_found * -1] = (nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3])
+            nodelist, node_coords, total_overlap = all_node_locs[member][node][0]
+            contig_coords = all_node_locs[member][node][1]
+            high_scoring_ORFs[member][n_found * -1] = (
+            nodelist, node_coords, len(dna_hit), contig_coords, "*" in hit_protein[1:-3])
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -277,7 +279,7 @@ def search_graph(search_pair,
                     total_overlap += ((kmer - 1) - node_coords[0])
                 else:
                     total_overlap += (node_coords[1] - node_coords[0]) + 1
-        node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
+        node_locs[node] = ((ORF_info[0], ORF_info[1], total_overlap), ORF_info[6])
 
     # search for matches
     hits = []
@@ -285,8 +287,9 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, ORF_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius, is_ref,
-                                                                         write_idx, kmer, fasta, repeat)
+            db_seq, nodelist, node_ranges, contig_coords = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius,
+                                                                                        is_ref, write_idx, kmer, fasta,
+                                                                                        repeat)
 
             hit, loc, rev_comp = search_dna(db_seq,
                                             search,
@@ -295,13 +298,16 @@ def search_graph(search_pair,
                                             refind=True)
 
             # convert linear coordinates into node coordinates
-            ORF_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
+            ORF_graph_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
+
+            # convert linear coordinates into contig coordinates
+            ORF_contig_loc = (contig_coords[0], (loc[0] - contig_coords[1][0], loc[1] - contig_coords[1][0]))
 
             # if db_seq was reversed to align, need to reverse node coordinates
             if rev_comp and hit != "":
                 reversed_nodes = []
                 reversed_loci = []
-                for node_ID, node_coords in zip(ORF_loc[0], ORF_loc[1]):
+                for node_ID, node_coords in zip(ORF_graph_loc[0], ORF_graph_loc[1]):
                     rev_node_ID = node_ID * -1
                     node_end = graph_shd_arr[0].node_size(rev_node_ID) - 1
                     reversed_end = node_end - node_coords[0]
@@ -310,7 +316,7 @@ def search_graph(search_pair,
                     reversed_loci.append((reversed_start, reversed_end))
                 reversed_nodes.reverse()
                 reversed_loci.reverse()
-                ORF_loc = (reversed_nodes, reversed_loci, ORF_loc[-1])
+                ORF_graph_loc = (reversed_nodes, reversed_loci, ORF_graph_loc[-1])
 
             # update location
             # loc[0] = loc[0] + max(0, (start - search_radius))
@@ -318,7 +324,7 @@ def search_graph(search_pair,
 
             if len(hit) > len(best_hit):
                 best_hit = hit
-                best_loc = ORF_loc
+                best_loc = (ORF_graph_loc, ORF_contig_loc)
 
         hits.append((node, best_hit))
         if (best_loc is not None) and (best_hit != ""):

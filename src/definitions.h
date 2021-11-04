@@ -51,10 +51,6 @@ typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
 
-//typedef sdsl::csa_wt<sdsl::wt_huff<sdsl::rrr_vector<256>>,
-//                    512,
-//                    1024> fm_index_coll;
-//csa_wt_int<sdsl::wt_huff<sdsl::rrr_vector<256>>, 512, 1024> fm_index_coll;
 typedef sdsl::csa_wt<> fm_index_coll;
 
 // general typedefs
