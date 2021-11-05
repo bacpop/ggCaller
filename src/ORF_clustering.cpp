@@ -203,7 +203,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
     }
 
     // sort the ORFs in descending order
-    sort(ORF_length_list.rbegin(), ORF_length_list.rend());
+    std::stable_sort(ORF_length_list.rbegin(), ORF_length_list.rend());
 
     // generate set to determine which ORFs have already been assigned clusters
     std::set<size_t> cluster_assigned;
@@ -236,6 +236,11 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                     final_clusters[ORF_ID].push_back(homolog_ID);
                     cluster_assigned.insert(homolog_ID);
                 }
+                // if homolog already assigned to a cluster, skip
+                else
+                {
+                    continue;
+                }
 
                 // check whether homolog is also a centroid, and that it is not the current ORF being incremented
                 if (cluster_map.find(homolog_ID) != cluster_map.end() && homolog_ID != ORF_ID)
@@ -247,6 +252,12 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
 
                     for (const auto& homolog2_ID : cluster_map.at(homolog_ID))
                     {
+                        // if homolog2 cluster already assigned, skip
+                        if (cluster_assigned.find(homolog2_ID) != cluster_assigned.end())
+                        {
+                            continue;
+                        }
+
                         // check that homolog is not the same as current iteration, and that this
                         // homolog is not in the current set for the current centroid
                         if (homolog2_ID != homolog_ID && cluster_map.at(ORF_ID).find(homolog2_ID) == cluster_map.at(ORF_ID).end())
@@ -269,7 +280,14 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                     // assign a new centroid with the unassigned ORFs
                     if (!homolog_set.empty())
                     {
-                        cluster_map[centroid_id] = homolog_set;
+                        // check if the new centroid already has entry in cluster_map, if so, append
+                        if (cluster_map.find(centroid_id) != cluster_map.end())
+                        {
+                            cluster_map[centroid_id].insert(homolog_set.begin(), homolog_set.end());
+                        } else
+                        {
+                            cluster_map[centroid_id] = homolog_set;
+                        }
                     }
                 }
             }
@@ -345,22 +363,6 @@ double align_seqs(const ORFNodeVector& ORF1_info,
 
         ORF1_aa = (translate(ORF1_sequence)).aa();
         ORF2_aa = (translate(ORF2_sequence)).aa();
-
-//        const auto ORF1_dna_vect = ORF1_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-//        const auto ORF2_dna_vect = ORF2_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
-//
-//        const auto ORF1_aa_vect = ORF1_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
-//        const auto ORF2_aa_vect = ORF2_dna_vect | seqan3::views::translate_single(seqan3::translation_frames::forward_frame0);
-//
-//        for (auto && residue : ORF1_aa_vect)
-//        {
-//            ORF1_aa += residue.to_char();
-//        }
-//
-//        for (auto && residue : ORF2_aa_vect)
-//        {
-//            ORF2_aa += residue.to_char();
-//        }
     }
 
     // convert sequence to const char * and calculate edit distance

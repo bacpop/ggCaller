@@ -81,10 +81,10 @@ void write_to_file (const robin_hood::unordered_map<std::string, std::vector<boo
 
 int main(int argc, char *argv[]) {
 
-    int num_threads = 4;
+    int num_threads = 6;
     bool is_ref = true;
     const std::string outfile = "/home/shorsfield/software/ggCaller/all_test_capsular_loci_list_v1.2.4.fasta";
-    //omp_set_num_threads(num_threads);
+    omp_set_num_threads(num_threads);
     const bool write_graph = true;
     const bool write_idx = true;
     const bool repeat = false;
@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
 //            stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA");
 
     GraphTuple graph_tuple = unitig_graph.read(
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
-            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.gfa",
+            "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.bfg_colors",
             stop_codons_for, stop_codons_rev, num_threads);
 
     const auto& node_colour_vector = std::get<0>(graph_tuple);
@@ -128,14 +128,14 @@ int main(int argc, char *argv[]) {
     ColourORFMap colour_ORF_map;
 
     // parse ORFs known to be genes
-    const auto known_genes_pair = parse_fasta("/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/group3_test_ORFs_for_panaroo.fasta");
+    const auto known_genes_pair = parse_fasta("/mnt/c/Users/sth19/CLionProjects/Bifrost_API/data/plasmid_clique_556_test_ORFs.fasta");
     const auto& known_genes_entries = known_genes_pair.first;
     const auto& known_genes = known_genes_pair.second;
 
 
-    //#pragma omp parallel for
+    //    for (size_t colour_ID = 30; colour_ID < 31; colour_ID++)
+    #pragma omp parallel for
     for (size_t colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
-//    for (size_t colour_ID = 30; colour_ID < 31; colour_ID++)
     {
 
         std::pair<ORFOverlapMap, ORFVector> ORF_pair = unitig_graph.findORFs(colour_ID, node_colour_vector[colour_ID], repeat,
@@ -193,10 +193,10 @@ int main(int argc, char *argv[]) {
         }
 
         // testing for ORF upsteam/downstram pulling
-        for (const auto& ORF : ORF_vector)
-        {
-            const auto seq = unitig_graph.refind_gene(colour_ID, ORF, 5000, is_ref, write_idx, overlap + 1, input_colours[colour_ID], repeat);
-        }
+//        for (const auto& ORF : ORF_vector)
+//        {
+//            const auto seq = unitig_graph.refind_gene(colour_ID, ORF, 5000, is_ref, write_idx, overlap + 1, input_colours[colour_ID], repeat);
+//        }
 
         // move to colour_ORF_map
         colour_ORF_map[colour_ID] = std::move(ORF_node_map);
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]) {
     }
 
     // calculate identity between ORFs in colour_ORF_map
-    const auto return_pair = unitig_graph.generate_clusters(colour_ORF_map, overlap, 0.7, 0.98);
+    const auto return_pair = unitig_graph.generate_clusters(colour_ORF_map, overlap, 0.98, 0.98);
 
 
     // print to file
