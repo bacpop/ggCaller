@@ -1,6 +1,5 @@
 # imports
 import argparse
-import json
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 from functools import partial
@@ -296,6 +295,9 @@ def get_options():
 def main():
     # parse command line arguments for ggCaller
     options = get_options()
+
+    # set working directory for snakefile
+    os.environ["WORKDIR"] = options.out_dir
 
     # determine if references/assemblies present
     if (options.refs != None and options.reads == None) or (options.graph != None and options.colours != None

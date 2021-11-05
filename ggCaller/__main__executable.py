@@ -160,6 +160,9 @@ def main():
     search_radius = 5000
     refind_prop_match = 0.2
 
+    # set working directory for snakefile
+    os.environ["PANWORKDIR"] = out_dir
+
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
 
