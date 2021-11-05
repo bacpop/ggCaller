@@ -71,16 +71,16 @@ def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup
     # Put gene of interest sequences in a generator, with corrected isolate names
     output_sequences = (x for x in output_sequences)
     # set filename to gene name, if more than one sequence to be aligned
-    if not ref_aln and seq_no > 1 or ref_aln and seq_no > 0:
+    if (not ref_aln and seq_no > 1) or (ref_aln and seq_no > 0):
         outname = temp_directory + node["name"] + ".fasta"
     else:
-        # If only one sequence, output it to aligned directory and break
-        outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".fasta"
-        SeqIO.write(output_sequences, outname, 'fasta')
+        # if number sequences is 0, do not output
+        if seq_no > 0:
+            # If only one sequence, output it to aligned directory and break
+            outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".aln.fas"
+            SeqIO.write(output_sequences, outname, 'fasta')
         return None, ref_outname
-    # check to see if filename is too long
-    if len(outname) >= 248:
-        outname = outname[:248] + ".fasta"
+
     # Write them to disk
     SeqIO.write(output_sequences, outname, 'fasta')
     return outname, ref_outname
@@ -282,10 +282,18 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
         unaligned_sequence_files.append(outname)
         unaligned_reference_files.append(ref_outname)
     if ref_aln:
+        # centroid files with paired sequence files
         ref_seq_pairs = [
-            (unaligned_reference_files[i].split("_ref")[0] + "_ref.aln.fas", unaligned_sequence_files[i])
+            (temp_dir + unaligned_reference_files[i].split("/")[-1].split("_ref.")[0] + "_ref.aln.fas",
+             unaligned_sequence_files[i])
             for i in range(0, len(unaligned_reference_files)) if unaligned_sequence_files[i] is not None
                                                                  and unaligned_reference_files[i] is not None]
+        # reference files with no paired sequence files
+        ref_seq_singles = [
+            temp_dir + unaligned_reference_files[i].split("/")[-1].split("_ref.")[0] + "_ref.aln.fas"
+            for i in range(0, len(unaligned_reference_files))
+            if unaligned_sequence_files[i] is None and unaligned_reference_files[i] is not None]
+
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     unaligned_reference_files = filter(None, unaligned_reference_files)
@@ -294,12 +302,16 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     if ref_aln:
         # conduct MSA on reference files, first using standard MSA
         commands = [
-            get_alignment_commands(fastafile, output_dir, aligner[:-4], threads)
+            get_alignment_commands(fastafile, None, aligner[:-4], threads)
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir,
-                              threads, aligner[:-4])
+        multi_align_sequences(commands, temp_dir, threads, aligner[:-4])
+
+        # move any centroid alignments which do not have associated sequence files
+        for file in ref_seq_singles:
+            os.rename(file, output_dir + "aligned_gene_sequences/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
+
         # repeat with reference-guided alignment
         commands = [
             get_alignment_commands(fastapair, output_dir, aligner, threads)
@@ -394,10 +406,18 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
         unaligned_sequence_files.append(outname)
         unaligned_reference_files.append(ref_outname)
     if ref_aln:
+        # centroid files with paired sequence files
         ref_seq_pairs = [
-            (unaligned_reference_files[i].split("_ref")[0] + "_ref.aln.fas", unaligned_sequence_files[i])
+            (temp_dir + unaligned_reference_files[i].split("/")[-1].split("_ref.")[0] + "_ref.aln.fas",
+             unaligned_sequence_files[i])
             for i in range(0, len(unaligned_reference_files)) if unaligned_sequence_files[i] is not None
                                                                  and unaligned_reference_files[i] is not None]
+        # reference files with no paired sequence files
+        ref_seq_singles = [
+            temp_dir + unaligned_reference_files[i].split("/")[-1].split("_ref.")[0] + "_ref.aln.fas"
+            for i in range(0, len(unaligned_reference_files))
+            if unaligned_sequence_files[i] is None and unaligned_reference_files[i] is not None]
+
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     unaligned_reference_files = filter(None, unaligned_reference_files)
@@ -406,12 +426,16 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     if ref_aln:
         # conduct MSA on reference files, first using standard MSA
         commands = [
-            get_alignment_commands(fastafile, output_dir, aligner[:-4], threads)
+            get_alignment_commands(fastafile, None, aligner[:-4], threads)
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir,
-                              threads, aligner[:-4])
+        multi_align_sequences(commands, temp_dir, threads, aligner[:-4])
+
+        # move any centroid alignments which do not have associated sequence files
+        for file in ref_seq_singles:
+            os.rename(file, output_dir + "aligned_gene_sequences/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
+
         # repeat with reference-guided alignment
         commands = [
             get_alignment_commands(fastapair, output_dir, aligner, threads)

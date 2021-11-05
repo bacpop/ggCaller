@@ -301,7 +301,7 @@ def search_graph(search_pair,
             ORF_graph_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
 
             # convert linear coordinates into contig coordinates
-            ORF_contig_loc = (contig_coords[0], (loc[0] - contig_coords[1][0], loc[1] - contig_coords[1][0]))
+            ORF_contig_loc = (contig_coords[0], (loc[0] + contig_coords[1][0], loc[1] + contig_coords[1][0]))
 
             # if db_seq was reversed to align, need to reverse node coordinates
             if rev_comp and hit != "":
