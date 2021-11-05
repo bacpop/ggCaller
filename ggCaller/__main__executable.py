@@ -9,6 +9,7 @@ from balrog.__main__ import *
 from ggCaller.shared_memory import *
 from panaroo_runner.__main__ import run_panaroo
 import math
+import tqdm
 
 
 def get_options():
@@ -119,7 +120,7 @@ def main():
     max_orf_orf_distance = 10000
     cluster_ORFs = True
 
-    num_threads = 1
+    num_threads = 6
 
     # graph_tuple = ggCaller_cpp.index_existing(
     #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.gfa",
@@ -133,8 +134,8 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -230,21 +231,23 @@ def main():
         #         true_genes[colour_ID] = "done"
 
         with Pool(processes=num_threads) as pool:
-            for colour_tuple in enumerate(node_colour_vector):
-                colour_ID, gene_dict, ORF_edges = run_calculate_ORFs(colour_tuple, shd_arr_tup=array_shd_tup,
-                                                                     repeat=repeat,
-                                                                     overlap=overlap,
-                                                                     max_path_length=max_path_length, is_ref=is_ref,
-                                                                     no_filter=no_filter,
-                                                                     stop_codons_for=stop_codons_for,
-                                                                     start_codons=start_codons,
-                                                                     min_ORF_length=min_ORF_length,
-                                                                     max_ORF_overlap=max_ORF_overlap,
-                                                                     minimum_ORF_score=minimum_ORF_score,
-                                                                     minimum_path_score=minimum_path_score,
-                                                                     write_idx=write_idx,
-                                                                     input_colours=input_colours,
-                                                                     max_orf_orf_distance=max_orf_orf_distance)
+            # for colour_tuple in enumerate(node_colour_vector):
+            for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(
+                    pool.imap(partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup,
+                                      repeat=repeat,
+                                      overlap=overlap,
+                                      max_path_length=max_path_length, is_ref=is_ref,
+                                      no_filter=no_filter,
+                                      stop_codons_for=stop_codons_for,
+                                      start_codons=start_codons,
+                                      min_ORF_length=min_ORF_length,
+                                      max_ORF_overlap=max_ORF_overlap,
+                                      minimum_ORF_score=minimum_ORF_score,
+                                      minimum_path_score=minimum_path_score,
+                                      write_idx=write_idx,
+                                      input_colours=input_colours,
+                                      max_orf_orf_distance=max_orf_orf_distance), enumerate(node_colour_vector)),
+                    total=nb_colours):
                 # iterate over entries in col_true_genes to generate the sequences
                 # true_genes[colour_ID] = {}
                 high_scoring_ORFs[colour_ID] = gene_dict

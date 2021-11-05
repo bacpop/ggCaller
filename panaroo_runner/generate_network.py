@@ -160,8 +160,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
 
             # iterate through edge_set, adding nodes and then adding edges if required
             for neighbour in edge_set:
-                # # parse neighbour information from high_scoring_ORFs
-                # neighbour_id = high_scoring_ORFs[genome_id][neighbour][6]
+                # parse neighbour information from high_scoring_ORFs
 
                 # generate panaroo neighbour id
                 pan_neigbour_id = str(genome_id) + "_0_" + str(neighbour)
