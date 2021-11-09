@@ -2,6 +2,9 @@ import os
 import re
 import sys
 import subprocess
+from .generate_output import get_unannotated_nodes, output_aa_sequence
+from Bio import SeqIO
+import pandas as pd
 
 
 def check_diamond_install():
@@ -41,10 +44,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(annotate, annotation_temp_dir, annotation_db, n_cpu, verbose):
-    if verbose:
-        print("annotating gene families...")
-
+def run_diamond_search(annotate, annotation_temp_dir, annotation_db):
     # set working directory and reference for snakefile
     os.environ["ANNOWORKDIR"] = annotation_temp_dir
     os.environ["ANNODB"] = annotation_db
@@ -54,15 +54,40 @@ def run_diamond_search(annotate, annotation_temp_dir, annotation_db, n_cpu, verb
     # remove
     snakemake = "/home/sth19/miniconda3/envs/ggCaller/bin/snakemake"
     if annotate == "fast":
-        command = [snakemake, "--cores", str(n_cpu), "-R", "diamond_search_90perc"]
+        command = [snakemake, "-c1", "-R", "diamond_search_90perc"]
     elif annotate == "medium":
-        command = [snakemake, "--cores", str(n_cpu), "-R", "diamond_search_70perc"]
+        command = [snakemake, "-c1", "-R", "diamond_search_70perc"]
     elif annotate == "sensitive":
-        command = [snakemake, "--cores", str(n_cpu), "-R", "diamond_search_0perc"]
+        command = [snakemake, "-c1", "-R", "diamond_search_0perc"]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
         raise Exception("Snakemake failed with diamond search!")
         sys.exit(1)
 
-    return
+
+def iterative_diamond_search(G, annotation_temp_dir, annotation_db, threshold, pool):
+    # first iteration of annotation
+    all_centroid_aa = []
+
+    # get unannotated nodes
+    unannotated_nodes = get_unannotated_nodes(G, threshold)
+
+    # Multithread writing amino acid sequences to disk (temp directory)
+    for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
+        all_centroid_aa = all_centroid_aa + centroid_aa
+
+    # write all sequences to single file
+    all_centroid_aa = (x for x in all_centroid_aa)
+    SeqIO.write(all_centroid_aa, annotation_temp_dir + "all_aa_f.fasta", 'fasta')
+
+    run_diamond_search("fast", annotation_temp_dir, annotation_db)
+
+    # read in file, map highest scoring annotation and escore
+    df = pd.read_csv(annotation_temp_dir + "all_aa_f_f.tsv", sep='\t')
+    df = pd.concat([df.iloc[:, 0:2], df.iloc[:, 10:]], axis=1)
+    df.rename(index={0: "query", 1: "target", 2: "evalue"})
+
+    df.sort_values('evalue').drop_duplicates("query", keep='last')
+
+    return G

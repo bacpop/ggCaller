@@ -7,11 +7,13 @@ DIAMONDSETTING = os.environ['DIAMONDSETTING']
 #remove
 diamond = "/home/sth19/miniconda3/envs/ggCaller/bin/diamond"
 
-nodes = [file.split("/")[-1].split(".")[0] for file in os.listdir(ANNOWORKDIR) if ".fasta" in file]
+file_suffix = "_" + DIAMONDSETTING + ".fasta"
+
+nodes = [file.split("/")[-1].split(".")[0] for file in os.listdir(ANNOWORKDIR) if file_suffix in file]
 
 rule all:
     input:
-        expand(ANNOWORKDIR + "{samples}_" + DIAMONDSETTING + ".tsv", samples=nodes)
+        expand(ANNOWORKDIR + "{samples}" + "_" + DIAMONDSETTING + ".tsv", samples=nodes)
 
 rule diamond_search_90perc:
     input:

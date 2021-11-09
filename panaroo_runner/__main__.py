@@ -113,6 +113,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           quiet=(not verbose))[0]
 
     if annotate is not None:
+        threshold = 0.000000001
+        if verbose:
+            print("annotating gene families...")
+
         # create directory for annotation
         annotation_temp_dir = os.path.join(temp_dir, "annotation")
         if not os.path.exists(annotation_temp_dir):
@@ -120,17 +124,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # make sure trailing forward slash is present
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
-        all_centroid_aa = []
-
-        # Multithread writing amino acid sequences to disk (temp directory)
-        for centroid_aa in pool.map(output_aa_sequence, G.nodes(data=True)):
-            all_centroid_aa = all_centroid_aa + centroid_aa
-
-        # write all sequences to single file
-        all_centroid_aa = (x for x in all_centroid_aa)
-        SeqIO.write(all_centroid_aa, annotation_temp_dir + "all_aa.fasta", 'fasta')
-
-        run_diamond_search(annotate, annotation_temp_dir, annotation_db, n_cpu, verbose)
+        G = iterative_diamond_search(G, annotation_temp_dir, annotation_db, threshold, pool)
 
     if verbose:
         print("collapse gene families...")

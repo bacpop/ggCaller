@@ -345,6 +345,15 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     return
 
 
+def get_unannotated_nodes(G, threshold):
+    # Get the unannotated nodes based on escore of annotation threshold
+    unannotated_nodes = []
+    for node in G.nodes(data=True):
+        if float(G.nodes[node[0]]["evalue"]) < threshold:
+            unannotated_nodes.append(node)
+    return unannotated_nodes
+
+
 def get_core_gene_nodes(G, threshold, num_isolates):
     # Get the core genes based on percent threshold
     core_nodes = []

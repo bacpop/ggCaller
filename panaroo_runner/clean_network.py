@@ -45,6 +45,9 @@ def merge_node_cluster(G,
     dna = [element for index, element in enumerate(dna) if index not in to_remove]
     protein = [element for index, element in enumerate(protein) if index not in to_remove]
 
+    # take the highest e-score for annotation
+    evalue = max([x for x in gen_node_iterables(G, nodes, 'evalue')])
+
     # generate iterables of centroids and seqIDs
     centroid = iter_del_dups(gen_node_iterables(G, nodes, 'centroid'))
     seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
@@ -84,6 +87,7 @@ def merge_node_cluster(G,
         annotation=";".join(
             iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
                                              split=";"))),
+        evalue=evalue,
         description=";".join(
             iter_del_dups(
                 gen_node_iterables(G, nodes, 'description', split=";"))),
