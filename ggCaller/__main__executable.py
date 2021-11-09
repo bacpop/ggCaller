@@ -8,8 +8,10 @@ from functools import partial
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 from panaroo_runner.__main__ import run_panaroo
+from panaroo_runner.annotate import *
 import math
 import tqdm
+import tempfile
 
 
 def get_options():
@@ -134,15 +136,15 @@ def main():
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/plasmid_clique_556_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
     # panaroo options
-    out_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
+    output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
     out = "test_ORFs.fasta"
     verbose = True
     length_outlier_support_proportion = 0.1
@@ -161,8 +163,37 @@ def main():
     search_radius = 5000
     refind_prop_match = 0.2
 
-    # set working directory for snakefile
-    os.environ["PANWORKDIR"] = out_dir
+    # check diamond is installed correctly
+    check_diamond_install()
+
+    annotation_db = "Bacteria"
+    annotate = "fast"
+    # unpack annotation database
+    if annotation_db == "Bacteria" or annotation_db == "Viruses":
+        db_id = annotation_db
+        db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db")
+        annotation_db = os.path.join(db_dir, annotation_db)
+
+        if not os.path.exists(annotation_db):
+            print("Unzipping protein annotation file...")
+            tar = tarfile.open(annotation_db + ".tar.gz", mode="r:gz")
+            tar.extractall(db_dir)
+            tar.close()
+
+        annotation_db = os.path.join(annotation_db, db_id + ".dmnd")
+
+    # if custom annotation database specified, then create diamond db if not present already
+    else:
+        if ".dmnd" not in annotation_db:
+            annotation_db = generate_diamond_index(annotation_db)
+
+    # create directory if it isn't present already
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    # make sure trailing forward slash is present
+    output_dir = os.path.join(output_dir, "")
+    # Create temporary directory
+    temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
@@ -268,13 +299,13 @@ def main():
                                                                         len_diff_cutoff)
 
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
-                            cluster_dict, overlap, input_colours, out_dir, verbose, num_threads,
+                            cluster_dict, overlap, input_colours, output_dir, temp_dir, verbose, num_threads,
                             length_outlier_support_proportion, identity_cutoff,
                             family_threshold, min_trailing_support, trailing_recursive,
                             clean_edges, edge_support_threshold, merge_paralogs, aln,
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
-                            search_radius, refind_prop_match)
+                            search_radius, refind_prop_match, annotate, annotation_db)
 
     print("Finished.")
 

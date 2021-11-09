@@ -7,8 +7,22 @@ import itertools as iter
 
 from .generate_alignments import *
 
+def output_aa_sequence(node_pair):
+    # unpack node_pair
+    node = node_pair[1]
 
-def output_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap, ref_aln):
+    ref_output_sequences = []
+
+    # iterate over centroids to generate fasta files
+    for i in range(0, len(node["centroid"])):
+        name = str(node_pair[0]) + ";" + node["centroid"][i]
+        ref_output_sequences.append(SeqRecord(Seq(node["protein"][i]), id=name, description=""))
+
+    return ref_output_sequences
+
+
+def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+                        ref_aln):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -275,7 +289,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
         None
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_dna_sequence, isolate_list=isolates,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          G.nodes(data=True)):
@@ -399,7 +413,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_dna_sequence, isolate_list=isolates,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          core_genes):

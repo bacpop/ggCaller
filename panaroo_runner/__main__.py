@@ -20,6 +20,7 @@ from ggCaller.shared_memory import *
 # custom panaroo scripts
 from .clean_network import *
 from .generate_output import *
+from .annotate import *
 
 
 # debugging scripts
@@ -41,10 +42,10 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
-                input_colours, output_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
+                input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
-                remove_by_consensus, search_radius, refind_prop_match):
+                remove_by_consensus, search_radius, refind_prop_match, annotate, annotation_db):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -63,13 +64,13 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         else:
             check_aligner_install(alr)
 
-    # create directory if it isn't present already
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    # make sure trailing forward slash is present
-    output_dir = os.path.join(output_dir, "")
-    # Create temporary directory
-    temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
+    # # create directory if it isn't present already
+    # if not os.path.exists(output_dir):
+    #     os.mkdir(output_dir)
+    # # make sure trailing forward slash is present
+    # output_dir = os.path.join(output_dir, "")
+    # # Create temporary directory
+    # temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
     if verbose:
         print("Generating initial network...")
@@ -110,6 +111,26 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           length_outlier_support_proportion=length_outlier_support_proportion,
                           n_cpu=n_cpu,
                           quiet=(not verbose))[0]
+
+    if annotate is not None:
+        # create directory for annotation
+        annotation_temp_dir = os.path.join(temp_dir, "annotation")
+        if not os.path.exists(annotation_temp_dir):
+            os.mkdir(annotation_temp_dir)
+        # make sure trailing forward slash is present
+        annotation_temp_dir = os.path.join(annotation_temp_dir, "")
+
+        all_centroid_aa = []
+
+        # Multithread writing amino acid sequences to disk (temp directory)
+        for centroid_aa in pool.map(output_aa_sequence, G.nodes(data=True)):
+            all_centroid_aa = all_centroid_aa + centroid_aa
+
+        # write all sequences to single file
+        all_centroid_aa = (x for x in all_centroid_aa)
+        SeqIO.write(all_centroid_aa, annotation_temp_dir + "all_aa.fasta", 'fasta')
+
+        run_diamond_search(annotate, annotation_temp_dir, annotation_db, n_cpu, verbose)
 
     if verbose:
         print("collapse gene families...")

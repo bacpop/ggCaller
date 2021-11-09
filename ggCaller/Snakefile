@@ -1,0 +1,41 @@
+import os
+
+ANNOWORKDIR = os.getenv("ANNOWORKDIR", "./")
+ANNODB = os.environ['ANNODB']
+DIAMONDSETTING = os.environ['DIAMONDSETTING']
+
+#remove
+diamond = "/home/sth19/miniconda3/envs/ggCaller/bin/diamond"
+
+nodes = [file.split("/")[-1].split(".")[0] for file in os.listdir(ANNOWORKDIR) if ".fasta" in file]
+
+rule all:
+    input:
+        expand(ANNOWORKDIR + "{samples}_" + DIAMONDSETTING + ".tsv", samples=nodes)
+
+rule diamond_search_90perc:
+    input:
+        reference = ANNODB,
+        query = ANNOWORKDIR + "{samples}.fasta"
+    output:
+        ANNOWORKDIR + "{samples}_f.tsv"
+    shell:
+        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
+
+rule diamond_search_70perc:
+    input:
+        reference = ANNODB,
+        query = ANNOWORKDIR + "{samples}.fasta"
+    output:
+        ANNOWORKDIR + "{samples}_m.tsv"
+    shell:
+        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
+
+rule diamond_search_0perc:
+    input:
+        reference = ANNODB,
+        query = ANNOWORKDIR + "{samples}.fasta"
+    output:
+        ANNOWORKDIR + "{samples}_s.tsv"
+    shell:
+        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
