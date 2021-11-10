@@ -125,7 +125,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     ],
                     annotation=cluster_centroid_data[current_cluster]
                     ['annotation'],
-                    evalue=0,
+                    bitscore=0,
                     description=cluster_centroid_data[current_cluster]
                     ['description'],
                     lengths=[
@@ -210,7 +210,7 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         ],
                         annotation=cluster_centroid_data[neighbour_cluster]
                         ['annotation'],
-                        evalue=0,
+                        bitscore=0,
                         description=cluster_centroid_data[neighbour_cluster]
                         ['description'],
                         lengths=[

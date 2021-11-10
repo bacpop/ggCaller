@@ -46,7 +46,7 @@ def merge_node_cluster(G,
     protein = [element for index, element in enumerate(protein) if index not in to_remove]
 
     # take the highest e-score for annotation
-    evalue = max([x for x in gen_node_iterables(G, nodes, 'evalue')])
+    bitscore = max([x for x in gen_node_iterables(G, nodes, 'bitscore')])
 
     # generate iterables of centroids and seqIDs
     centroid = iter_del_dups(gen_node_iterables(G, nodes, 'centroid'))
@@ -87,7 +87,7 @@ def merge_node_cluster(G,
         annotation=";".join(
             iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
                                              split=";"))),
-        evalue=evalue,
+        bitscore=bitscore,
         description=";".join(
             iter_del_dups(
                 gen_node_iterables(G, nodes, 'description', split=";"))),

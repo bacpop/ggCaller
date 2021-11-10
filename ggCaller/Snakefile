@@ -3,41 +3,51 @@ import os
 ANNOWORKDIR = os.getenv("ANNOWORKDIR", "./")
 ANNODB = os.environ['ANNODB']
 DIAMONDSETTING = os.environ['DIAMONDSETTING']
+EVALUETHRESHOLD = os.environ['EVALUETHRESHOLD']
 
 #remove
 diamond = "/home/sth19/miniconda3/envs/ggCaller/bin/diamond"
 
 file_suffix = "_" + DIAMONDSETTING + ".fasta"
 
-nodes = [file.split("/")[-1].split(".")[0] for file in os.listdir(ANNOWORKDIR) if file_suffix in file]
+nodes = [file.split("/")[-1].split("_")[0] for file in os.listdir(ANNOWORKDIR) if file_suffix in file]
 
 rule all:
     input:
         expand(ANNOWORKDIR + "{samples}" + "_" + DIAMONDSETTING + ".tsv", samples=nodes)
 
-rule diamond_search_90perc:
+rule diamond_search_iter:
     input:
         reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}.fasta"
+        query = ANNOWORKDIR + "{samples}_i.fasta"
+    output:
+        ANNOWORKDIR + "{samples}_i.tsv"
+    shell:
+        diamond + " blastp --iterate --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
+
+rule diamond_search_fast:
+    input:
+        reference = ANNODB,
+        query = ANNOWORKDIR + "{samples}_f.fasta"
     output:
         ANNOWORKDIR + "{samples}_f.tsv"
     shell:
-        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
+        diamond + " blastp --fast --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
 
-rule diamond_search_70perc:
+rule diamond_search_med:
     input:
         reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}.fasta"
+        query = ANNOWORKDIR + "{samples}_m.fasta"
     output:
         ANNOWORKDIR + "{samples}_m.tsv"
     shell:
-        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
+        diamond + " blastp --sensitive --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
 
-rule diamond_search_0perc:
+rule diamond_search_sens:
     input:
         reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}.fasta"
+        query = ANNOWORKDIR + "{samples}_s.fasta"
     output:
         ANNOWORKDIR + "{samples}_s.tsv"
     shell:
-        diamond + " blastp --fast -d {input.reference} -q {input.query} -o {output}"
+       diamond + " blastp --ultra-sensitive --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"

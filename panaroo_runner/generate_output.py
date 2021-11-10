@@ -145,7 +145,8 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                         ';').split(';') if gn != ''
                 ])
                 name = ''.join(e for e in name
-                               if e.isalnum() or e in ["_", "~"])
+                               if e.isalnum() or e in ["_", "~", "|"])
+                name = name.replace("|", "-")
                 if name not in used_gene_names:
                     entry = [name]
                     used_gene_names.add(name)
@@ -345,11 +346,11 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     return
 
 
-def get_unannotated_nodes(G, threshold):
-    # Get the unannotated nodes based on escore of annotation threshold
+def get_unannotated_nodes(G):
+    # Get the unannotated nodes based on bitscore
     unannotated_nodes = []
     for node in G.nodes(data=True):
-        if float(G.nodes[node[0]]["evalue"]) < threshold:
+        if float(G.nodes[node[0]]["bitscore"]) == 0:
             unannotated_nodes.append(node)
     return unannotated_nodes
 
