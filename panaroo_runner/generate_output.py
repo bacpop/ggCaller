@@ -56,6 +56,8 @@ def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr
             # If only one sequence, output it to aligned directory and break
             # if no other sequences, then just output with no alignment
             ref_outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".aln.fas"
+            if len(ref_outname) >= 248:
+                ref_outname = ref_outname[:248] + ".fasta"
             SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
             return None, None
         else:
@@ -64,6 +66,8 @@ def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr
                 ref_outname = temp_directory + node["name"] + "_ref.fasta"
             else:
                 ref_outname = temp_directory + node["name"] + "_ref.aln.fas"
+        if len(ref_outname) >= 248:
+            ref_outname = ref_outname[:248] + ".fasta"
         SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
 
     # Look for gene sequences among all genes (from memory)
@@ -92,10 +96,14 @@ def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr
         if seq_no > 0:
             # If only one sequence, output it to aligned directory and break
             outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".aln.fas"
+            if len(outname) >= 248:
+                outname = outname[:248] + ".fasta"
             SeqIO.write(output_sequences, outname, 'fasta')
         return None, ref_outname
 
     # Write them to disk
+    if len(outname) >= 248:
+        outname = outname[:248] + ".fasta"
     SeqIO.write(output_sequences, outname, 'fasta')
     return outname, ref_outname
 

@@ -2,52 +2,35 @@ import os
 
 ANNOWORKDIR = os.getenv("ANNOWORKDIR", "./")
 ANNODB = os.environ['ANNODB']
-DIAMONDSETTING = os.environ['DIAMONDSETTING']
+ALIGNSETTING = os.environ['ALIGNSETTING']
 EVALUETHRESHOLD = os.environ['EVALUETHRESHOLD']
 
 #remove
 diamond = "/home/sth19/miniconda3/envs/ggCaller/bin/diamond"
+hmmscan=  "/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan"
 
-file_suffix = "_" + DIAMONDSETTING + ".fasta"
+file_suffix = "_" + ALIGNSETTING + ".fasta"
 
 nodes = [file.split("/")[-1].split("_")[0] for file in os.listdir(ANNOWORKDIR) if file_suffix in file]
 
 rule all:
     input:
-        expand(ANNOWORKDIR + "{samples}" + "_" + DIAMONDSETTING + ".tsv", samples=nodes)
+        expand(ANNOWORKDIR + "{samples}" + "_" + ALIGNSETTING + ".tsv", samples=nodes)
 
-rule diamond_search_iter:
+rule diamond:
     input:
         reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}_i.fasta"
+        query = ANNOWORKDIR + "{samples}_d.fasta"
     output:
-        ANNOWORKDIR + "{samples}_i.tsv"
+        ANNOWORKDIR + "{samples}_d.tsv"
     shell:
         diamond + " blastp --iterate --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
 
-rule diamond_search_fast:
+rule hmmscan:
     input:
         reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}_f.fasta"
+        query = ANNOWORKDIR + "{samples}_h.fasta"
     output:
-        ANNOWORKDIR + "{samples}_f.tsv"
+        ANNOWORKDIR + "{samples}_h.tsv"
     shell:
-        diamond + " blastp --fast --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
-
-rule diamond_search_med:
-    input:
-        reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}_m.fasta"
-    output:
-        ANNOWORKDIR + "{samples}_m.tsv"
-    shell:
-        diamond + " blastp --sensitive --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
-
-rule diamond_search_sens:
-    input:
-        reference = ANNODB,
-        query = ANNOWORKDIR + "{samples}_s.fasta"
-    output:
-        ANNOWORKDIR + "{samples}_s.tsv"
-    shell:
-       diamond + " blastp --ultra-sensitive --evalue " + EVALUETHRESHOLD + " -d {input.reference} -q {input.query} -o {output}"
+        hmmscan + " -E " + EVALUETHRESHOLD +  " --tblout {output} {input.reference} {input.query}"

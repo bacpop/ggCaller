@@ -45,7 +45,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
-                remove_by_consensus, search_radius, refind_prop_match, annotate, annotation_db):
+                remove_by_consensus, search_radius, refind_prop_match, annotate, annotation_db, hmm_db):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -124,7 +124,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # make sure trailing forward slash is present
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
-        G = iterative_diamond_search(G, annotation_temp_dir, annotation_db, threshold, pool)
+        G = iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, threshold, pool)
 
     if verbose:
         print("collapse gene families...")

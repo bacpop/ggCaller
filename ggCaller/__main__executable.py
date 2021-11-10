@@ -163,15 +163,17 @@ def main():
     search_radius = 5000
     refind_prop_match = 0.2
 
-    # check diamond is installed correctly
+    # check diamond and HMMER are installed correctly
     check_diamond_install()
+    check_HMMER_install()
 
     annotation_db = "Bacteria"
+    hmm_db = "default"
     annotate = "fast"
     # unpack annotation database
     if annotation_db == "Bacteria" or annotation_db == "Viruses":
         db_id = annotation_db
-        db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db")
+        db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "diamond")
         annotation_db = os.path.join(db_dir, annotation_db)
 
         if not os.path.exists(annotation_db):
@@ -186,6 +188,14 @@ def main():
     else:
         if ".dmnd" not in annotation_db:
             annotation_db = generate_diamond_index(annotation_db)
+
+    # set-up hmm_db
+    if hmm_db == "default":
+        db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "hmm")
+        hmm_db = os.path.join(db_dir, "HAMAP.hmm")
+
+    if not os.path.exists(hmm_db + ".h3f"):
+        generate_HMMER_index(hmm_db)
 
     # create directory if it isn't present already
     if not os.path.exists(output_dir):
@@ -305,7 +315,7 @@ def main():
                             clean_edges, edge_support_threshold, merge_paralogs, aln,
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
-                            search_radius, refind_prop_match, annotate, annotation_db)
+                            search_radius, refind_prop_match, annotate, annotation_db, hmm_db)
 
     print("Finished.")
 
