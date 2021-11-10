@@ -1,13 +1,17 @@
 import os
 
-ANNOWORKDIR = os.getenv("ANNOWORKDIR", "./")
+ANNOWORKDIR = os.environ["ANNOWORKDIR"]
 ANNODB = os.environ['ANNODB']
 ALIGNSETTING = os.environ['ALIGNSETTING']
 EVALUETHRESHOLD = os.environ['EVALUETHRESHOLD']
 
+workdir: os.path.dirname(os.path.realpath(__file__))
+
 #remove
 diamond = "/home/sth19/miniconda3/envs/ggCaller/bin/diamond"
 hmmscan=  "/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan"
+#diamond = "diamond"
+#hmmscan=  "hmmscan"
 
 file_suffix = "_" + ALIGNSETTING + ".fasta"
 

@@ -9,7 +9,9 @@ from ggCaller.shared_memory import *
 import tqdm
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
+from panaroo_runner.annotate import *
 import ast
+import tempfile
 
 
 def get_options():
@@ -49,11 +51,8 @@ def get_options():
                     help='Number of threads to use. '
                          '[Default = 1] ')
     IO.add_argument('--out',
-                    default='calls.fasta',
-                    help='Output FASTA file containing ORF sequences. ')
-    IO.add_argument('--out_dir',
-                    default='panaroo_output',
-                    help='Panaroo output directory ')
+                    default='ggCaller_output',
+                    help='Output directory ')
     Settings = parser.add_argument_group('Cut-off settings')
     Settings.add_argument('--max-path-length',
                           type=int,
@@ -169,6 +168,26 @@ def get_options():
                                   help="don't split paralogs",
                                   action='store_true',
                                   default=False)
+    Panaroo_matching.add_argument("--no_annotate",
+                                  dest="annotate",
+                                  help="Don't annotate genes",
+                                  action='store_true',
+                                  default=False)
+    Panaroo_matching.add_argument("--diamonddb",
+                                  dest="annotation_db",
+                                  help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
+                                       "specify path to fasta file for custom database generation",
+                                  default="Bacteria")
+    Panaroo_matching.add_argument("--hmmdb",
+                                  dest="hmm_db",
+                                  help="HMMER hmm profile file. Default is Uniprot HAMAP. Can also"
+                                       "specify path to pre-built hmm profile file generated using hmmbuild",
+                                  default="default")
+    Panaroo_matching.add_argument("--evalue",
+                                  dest="evalue",
+                                  help="Maximum e-value to return for DIAMOND and HMMER searches during annotation",
+                                  default=0.001,
+                                  type=float)
 
     Panaroo_refind = parser.add_argument_group('Refind')
     Panaroo_refind.add_argument(
@@ -296,9 +315,6 @@ def main():
     # parse command line arguments for ggCaller
     options = get_options()
 
-    # set working directory for snakefile
-    os.environ["WORKDIR"] = options.out_dir
-
     # determine if references/assemblies present
     if (options.refs != None and options.reads == None) or (options.graph != None and options.colours != None
                                                             and options.not_ref):
@@ -355,6 +371,52 @@ def main():
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
 
+    # check diamond and HMMER are installed correctly
+    check_diamond_install()
+    check_HMMER_install()
+
+    options.annotate = not options.annotate
+    annotation_db = options.annotation_db
+    hmm_db = options.hmm_db
+    if options.annotate:
+        # unpack annotation database
+        if annotation_db == "Bacteria" or annotation_db == "Viruses":
+            db_id = annotation_db
+            db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "diamond")
+            annotation_db = os.path.join(db_dir, annotation_db)
+
+            if not os.path.exists(annotation_db):
+                print("Unzipping protein annotation file...")
+                tar = tarfile.open(annotation_db + ".tar.gz", mode="r:gz")
+                tar.extractall(db_dir)
+                tar.close()
+
+            annotation_db = os.path.join(annotation_db, db_id + ".dmnd")
+
+        # if custom annotation database specified, then create diamond db if not present already
+        else:
+            if ".dmnd" not in annotation_db:
+                print("Generating diamond index...")
+                annotation_db = generate_diamond_index(annotation_db)
+
+        # set-up hmm_db
+        if hmm_db == "default":
+            db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "hmm")
+            hmm_db = os.path.join(db_dir, "HAMAP.hmm")
+
+        if not os.path.exists(hmm_db + ".h3f"):
+            print("Generating HMMER index...")
+            generate_HMMER_index(hmm_db)
+
+    # create directory if it isn't present already
+    if not os.path.exists(options.out):
+        os.mkdir(options.out)
+
+    # make sure trailing forward slash is present
+    output_dir = os.path.join(options.out, "")
+    # Create temporary directory
+    temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
+
     # create numpy arrays for shared memory
     total_arr = np.array([graph])
 
@@ -410,13 +472,15 @@ def main():
                                                                         options.len_diff_cutoff)
 
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
-                            cluster_dict, overlap, input_colours, options.out_dir, options.verbose, options.threads,
+                            cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
+                            options.threads,
                             options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
                             options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
-                            options.search_radius, options.refind_prop_match)
+                            options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
+                            annotation_db, hmm_db)
 
     print("Finished.")
 
