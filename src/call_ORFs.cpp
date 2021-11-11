@@ -252,7 +252,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                     size_t ORF_hash;
 
                     // check if check against fm_index necessary
-                    ContigLoc contig_loc;
+                    std::pair<ContigLoc, bool> contig_pair;
                     if (is_ref)
                     {
                         // generate ORF sequence.
@@ -268,7 +268,8 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                         }
 
                         // check path sequence is real if is_ref
-                        contig_loc = check_colours(ORF_seq, fm_idx, contig_locs);
+                        contig_pair = check_colours(ORF_seq, fm_idx, contig_locs);
+                        const ContigLoc& contig_loc = std::get<0>(contig_pair);
 
                         // check if real sequence, if not pass on the ORF, move to next highest
                         if (contig_loc.first == 0)
@@ -304,7 +305,7 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                     auto& TIS_node_coords = std::get<1>(TIS_coords);
 
                     // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand and population ID, to be worked out later).
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, contig_loc);
+                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, contig_pair);
 
                     // think about if there is no TIS, then can ignore ORF?
                     update_ORF_node_map(graph_vector, ORF_hash, ORF_node_vector, ORF_node_map);

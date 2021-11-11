@@ -65,7 +65,7 @@ typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, strand information, length of an ORF, TIS coordinate information, relative strand and location in contigs
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, ContigLoc> ORFNodeVector;
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, std::pair<ContigLoc, bool>> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
 typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeVector sequence to its colour
@@ -91,6 +91,6 @@ typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std
 // map of ORFs to clusters, with centroid as key
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
-typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, ContigLoc> RefindTuple;
+typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, std::pair<ContigLoc, bool>> RefindTuple;
 
 #endif //DEFINITIONS_H

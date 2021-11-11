@@ -43,21 +43,21 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
     return node_ranges;
 }
 
-std::pair<std::vector<int>, ContigLoc> assign_seq(const GraphVector& graph_vector,
-                                                const PathVector& unitig_complete_paths,
-                                                const int kmer,
-                                                const bool is_ref,
-                                                const fm_index_coll& fm_idx,
-                                                const std::vector<size_t>& contig_locs,
-                                                std::string& stream_seq,
-                                                const size_t& ORF_end,
-                                                const std::string& ORF_seq)
+std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const GraphVector& graph_vector,
+                                                                    const PathVector& unitig_complete_paths,
+                                                                    const int kmer,
+                                                                    const bool is_ref,
+                                                                    const fm_index_coll& fm_idx,
+                                                                    const std::vector<size_t>& contig_locs,
+                                                                    std::string& stream_seq,
+                                                                    const size_t& ORF_end,
+                                                                    const std::string& ORF_seq)
 {
     // initialise path of nodes to return
     std::vector<int> nodelist;
 
     // initialise coordinates if using fm-index
-    ContigLoc contig_loc;
+    std::pair<ContigLoc, bool> contig_pair;
 
     // iterate over all the paths, determine which is the longest and real.
     // If multiple, choose from that with the lowest hash for first kmer
@@ -92,13 +92,13 @@ std::pair<std::vector<int>, ContigLoc> assign_seq(const GraphVector& graph_vecto
 
         // check against FMindex
         // check new_sequence is real if is_ref
-        ContigLoc contig_loc_check;
+        std::pair<ContigLoc, bool> contig_loc_check;
         if (is_ref)
         {
             contig_loc_check = check_colours(path_sequence, fm_idx, contig_locs);
 
             // check if real sequence, if not pass on the ORF, move to next highest
-            if (contig_loc_check.first == 0)
+            if (contig_loc_check.first.first == 0)
             {
                 continue;
             }
@@ -109,7 +109,7 @@ std::pair<std::vector<int>, ContigLoc> assign_seq(const GraphVector& graph_vecto
         {
             stream_seq = path_sequence;
             nodelist = unitig_path;
-            contig_loc = contig_loc_check;
+            contig_pair = contig_loc_check;
         } else if (path_sequence.size() == stream_seq.size() && path_sequence != stream_seq)
         {
             // if equal size, get the hash of the last kmer in each and assign to highest
@@ -120,11 +120,11 @@ std::pair<std::vector<int>, ContigLoc> assign_seq(const GraphVector& graph_vecto
             {
                 stream_seq = path_sequence;
                 nodelist = unitig_path;
-                contig_loc = contig_loc_check;
+                contig_pair = contig_loc_check;
             }
         }
     }
-    return {nodelist, contig_loc};
+    return {nodelist, contig_pair};
 }
 
 PathVector iter_nodes_length (const GraphVector& graph_vector,
@@ -261,7 +261,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
     std::vector<int> full_nodelist;
 
     // initialise full set of contig locations if using fm_index
-    ContigLoc full_contig_loc;
+    std::pair<ContigLoc, bool> full_contig_loc;
 
     fm_index_coll fm_idx;
     std::vector<size_t> contig_locs;

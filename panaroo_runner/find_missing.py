@@ -287,9 +287,11 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, ORF_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, contig_coords = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius,
-                                                                                        is_ref, write_idx, kmer, fasta,
-                                                                                        repeat)
+            db_seq, nodelist, node_ranges, contig_pair = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius,
+                                                                                      is_ref, write_idx, kmer, fasta,
+                                                                                      repeat)
+
+            contig_coords, path_rev_comp = contig_pair
 
             hit, loc, rev_comp = search_dna(db_seq,
                                             search,
@@ -297,11 +299,16 @@ def search_graph(search_pair,
                                             pairwise_id_thresh,
                                             refind=True)
 
+            # work out how ORF is orientated with respect to original sequence
+            if rev_comp and path_rev_comp:
+                rev_comp = False
+
             # convert linear coordinates into node coordinates
             ORF_graph_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
 
-            # convert linear coordinates into contig coordinates
-            ORF_contig_loc = (contig_coords[0], (loc[0] + contig_coords[1][0], loc[1] + contig_coords[1][0]))
+            # convert linear coordinates into contig coordinates, determine strand of sequence
+            ORF_contig_loc = (
+            (contig_coords[0], (loc[0] + contig_coords[1][0], loc[1] + contig_coords[1][0])), not rev_comp)
 
             # if db_seq was reversed to align, need to reverse node coordinates
             if rev_comp and hit != "":
@@ -318,9 +325,6 @@ def search_graph(search_pair,
                 reversed_loci.reverse()
                 ORF_graph_loc = (reversed_nodes, reversed_loci, ORF_graph_loc[-1])
 
-            # update location
-            # loc[0] = loc[0] + max(0, (start - search_radius))
-            # loc[1] = loc[1] + max(0, (start - search_radius))
 
             if len(hit) > len(best_hit):
                 best_hit = hit
