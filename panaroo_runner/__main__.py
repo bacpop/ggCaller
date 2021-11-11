@@ -46,6 +46,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db):
+
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -112,8 +113,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           n_cpu=n_cpu,
                           quiet=(not verbose))[0]
 
-    if annotate is not None:
-        threshold = 0.000000001
+    if annotate:
         if verbose:
             print("annotating gene families...")
 
@@ -124,7 +124,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # make sure trailing forward slash is present
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
-        G = iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, evalue, n_cpu, pool)
+        # generate annotations
+        G, annotation_list = iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, evalue,
+                                                         len(input_colours), n_cpu, pool)
 
     if verbose:
         print("collapse gene families...")
@@ -218,9 +220,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[-1])
+                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[-2])
             else:
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
+            if annotate:
+                if sid in annotation_list[mem]:
+                    annotation_list[mem][sid].append(ORFNodeVector[-1])
+                else:
+                    annotation_list[mem][sid] = [None, "hypothetical protein", 0, ORFNodeVector[-1]]
 
     G = generate_roary_gene_presence_absence(G,
                                              mems_to_isolates=mems_to_isolates,

@@ -4,8 +4,15 @@ import networkx as nx
 import numpy as np
 from Bio import AlignIO
 import itertools as iter
+from BCBio import GFF
 
 from .generate_alignments import *
+
+
+def generate_GFF(G, annotation_list, output_dir):
+    for mem in G.graph['isolateNames']:
+        continue
+
 
 def output_aa_sequence(node_pair):
     # unpack node_pair
