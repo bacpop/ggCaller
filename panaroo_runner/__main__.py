@@ -65,14 +65,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         else:
             check_aligner_install(alr)
 
-    # # create directory if it isn't present already
-    # if not os.path.exists(output_dir):
-    #     os.mkdir(output_dir)
-    # # make sure trailing forward slash is present
-    # output_dir = os.path.join(output_dir, "")
-    # # Create temporary directory
-    # temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
-
     if verbose:
         print("Generating initial network...")
 
@@ -224,6 +216,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             else:
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
             if annotate:
+                # here, add each sequence to its respective contig for each gff file.
                 if sid in annotation_list[mem]:
                     annotation_list[mem][sid].append(ORFNodeVector[-1])
                 else:

@@ -75,13 +75,12 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, annotation_temp_dir, annotation_db, nb_colours, evalue, pool):
+def run_diamond_search(G, annotation_temp_dir, annotation_db, evalue, nb_colours, pool):
     # list of sequence records
     all_centroid_aa = []
 
     # list of dictionary of annotations for each sequence if available
-    annotation_list = [{}] * nb_colours
-
+    annotation_list = [dict() for _ in range(nb_colours)]
     # get unannotated nodes
     unannotated_nodes = get_unannotated_nodes(G)
 
@@ -94,7 +93,7 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, nb_colours, evalue
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_d.fasta", 'fasta')
 
     command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
-               annotation_db, "-q",
+               annotation_db, "--outfmt", "6", "qseqid", "sseqid", "evalue", "bitscore", "stitle", "-q",
                annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -104,8 +103,8 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, nb_colours, evalue
 
     # read in file, map highest scoring annotation and bitscore to query
     df = pd.read_csv(annotation_temp_dir + "aa_d.tsv", sep='\t', header=None)
-    df = pd.concat([df.iloc[:, 0:2], df.iloc[:, 10:]], axis=1)
-    df.set_axis(['query', 'target', 'evalue', 'bitscore'], axis=1, inplace=True)
+    # df = pd.concat([df.iloc[:, 0:2], df.iloc[:, 10:]], axis=1)
+    df.set_axis(['query', 'target', 'evalue', 'bitscore', 'stitle'], axis=1, inplace=True)
 
     # split node in which query is found
     df['node'] = df['query'].str.split(';').str[0]
@@ -114,7 +113,7 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, nb_colours, evalue
     df = df.sort_values('bitscore').drop_duplicates("node", keep='last')
 
     # pull information from dataframe
-    node_info = [(w, x, y, z) for w, x, y, z in
+    node_info = [(w, int(x), y, z) for w, x, y, z in
                  zip(df['query'], df['node'], df['target'], df['bitscore'])]
 
     # add information to graph. If multiple centroids aligned, take the annotation with the highest bitscore
@@ -122,13 +121,11 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, nb_colours, evalue
         G.nodes[entry[1]]['annotation'] = entry[2]
         G.nodes[entry[1]]['bitscore'] = entry[3]
 
-        # add entries for node to annotation_list
-        gene_id = entry[0].split(";")[-1]
-        genome = gene_id.split("_")[0]
-
         # add list for each seqid entry for annotation
-        for entry in G.nodes[entry[1]]['seqIDs']:
-            annotation_list[genome][entry] = ["diamond", entry[2], entry[3]]
+        for seqID in G.nodes[entry[1]]['seqIDs']:
+            # add entries for node to annotation_list
+            genome = int(seqID.split("_")[0])
+            annotation_list[genome][seqID] = ["diamond", entry[2], entry[3]]
 
     return G, annotation_list
 
@@ -160,8 +157,9 @@ def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue
     # read in file, map highest scoring annotation and bitscore to query
     df = pd.read_csv(annotation_temp_dir + "aa_h.tsv", delim_whitespace=True, header=None,
                      comment='#')
-    df = pd.concat([df.iloc[:, 0], df.iloc[:, 2], df.iloc[:, 4:6]], axis=1)
-    df.set_axis(['target', 'query', 'evalue', 'bitscore'], axis=1, inplace=True)
+    df['stitle'] = df.iloc[:, 18:].fillna('').astype(str).add(' ').values.sum(axis=1)
+    df = pd.concat([df.iloc[:, 0], df.iloc[:, 2], df.iloc[:, 4:6], df['stitle']], axis=1)
+    df.set_axis(['target', 'query', 'evalue', 'bitscore', 'stitle'], axis=1, inplace=True)
 
     # split node in which query is found
     df['node'] = df['query'].str.split(';').str[0]
@@ -170,23 +168,21 @@ def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue
     df = df.sort_values('bitscore').drop_duplicates("node", keep='last')
 
     # pull information from dataframe
-    node_info = [(int(x.split(";")[0]), x.split(";")[1], y, z) for x, y, z in
-                 zip(df['query'], df['target'], df['bitscore'])]
+    node_info = [(w, int(x), y, z) for w, x, y, z in
+                 zip(df['query'], df['node'], df['target'], df['bitscore'])]
 
     # add information to graph. If multiple centroids aligned, take the annotation with the highest bitscore
     for entry in node_info:
-        G.nodes[entry[0]]['annotation'] = entry[2]
-        G.nodes[entry[0]]['bitscore'] = entry[3]
-
-        # add entries for node to annotation_list
-        gene_id = entry[0].split(";")[-1]
-        genome = gene_id.split("_")[0]
+        G.nodes[entry[1]]['annotation'] = entry[2]
+        G.nodes[entry[1]]['bitscore'] = entry[3]
 
         # add list for each seqid entry for annotation
-        for entry in G.nodes[entry[1]]['seqIDs']:
-            annotation_list[genome][entry] = ["diamond", entry[2], entry[3]]
+        for seqID in G.nodes[entry[1]]['seqIDs']:
+            # add entries for node to annotation_list
+            genome = int(seqID.split("_")[0])
+            annotation_list[genome][seqID] = ["diamond", entry[2], entry[3]]
 
-    return G
+    return G, annotation_list
 
 
 def iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, evalue, nb_colours, n_cpu, pool):
