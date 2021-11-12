@@ -1,17 +1,59 @@
 from functools import partial
 from ggCaller.shared_memory import *
+from ggCaller import __version__
 import networkx as nx
 import numpy as np
 from Bio import AlignIO
 import itertools as iter
 from BCBio import GFF
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from .generate_alignments import *
 
 
-def generate_GFF(G, annotation_list, output_dir):
-    for mem in G.graph['isolateNames']:
-        continue
+def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
+    # create directory for gffs
+    GFF_dir = os.path.join(output_dir, "GFF")
+    if not os.path.exists(GFF_dir):
+        os.mkdir(GFF_dir)
+    # make sure trailing forward slash is present
+    GFF_dir = os.path.join(GFF_dir, "")
+
+    # iterate over colours in contig_annotation, writing output file
+    for colour in range(len(input_colours)):
+        # iterate over the entries in input_colors
+        with open(input_colours[colour]) as handle:
+            gff_record_list = []
+            record_id = 1
+            for record in SeqIO.parse(handle, "fasta"):
+                gff_record = record
+                gff_record.features = []
+                for entry in contig_annotation[colour][record_id]:
+                    qualifiers = {
+                        "source": "ggCaller:" + __version__,
+                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
+                        "inference": entry[2][0],
+                        "score": entry[2][2],
+                        "annotation": [entry[2][3]],
+                    }
+                    feature = SeqFeature(
+                        FeatureLocation(entry[1][0][1][0], entry[1][0][1][1]),
+                        type="CDS", strand=entry[1][1], qualifiers=qualifiers
+                    )
+                    gff_record.features.append(feature)
+                gff_record_list.append(gff_record)
+                record_id += 1
+
+        # write to GFF file
+        gff_record_list = (x for x in gff_record_list)
+        outfile = GFF_dir + isolate_names[colour] + ".gff"
+
+        with open(outfile, "w") as out_handle:
+            GFF.write(gff_record_list, out_handle)
+
+    return True
 
 
 def output_aa_sequence(node_pair):

@@ -225,8 +225,12 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     annotation = ORFNodeVector[-1]
                 else:
                     contig_coords = ORFNodeVector[-1]
-                    annotation = ("prediction", "hypothetical protein", 0, None)
+                    annotation = ("prediction", "hypothetical protein", 0, "NA")
                 contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
+
+    # write output GFF
+    if annotate:
+        generate_GFF(input_colours, isolate_names, contig_annotation, output_dir)
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,
@@ -234,8 +238,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                              orig_ids=orig_ids,
                                              ids_len_stop=ids_len_stop,
                                              output_dir=output_dir)
-    # # Write out presence_absence summary
-    # generate_summary_stats(output_dir=output_dir)
 
     # write pan genome reference fasta file
     generate_pan_genome_reference(G,
