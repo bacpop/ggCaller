@@ -124,6 +124,14 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
         isolates.append(mems_to_isolates[mem])
         mems_to_index[str(mem)] = i
 
+    noSamples = len(isolates)
+    # Layout categories
+    noCore = 0
+    noSoftCore = 0
+    noShell = 0
+    noCloud = 0
+    total_genes = 0
+
     # generate file
     with open(output_dir + "gene_presence_absence_roary.csv", 'w') as roary_csv_outfile, \
             open(output_dir + "gene_presence_absence.csv", 'w') as csv_outfile, \
@@ -170,8 +178,12 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                     G.nodes[node]['name'] = "group_" + str(unique_id_count)
                     entry = [G.nodes[node]['name']]
                     unique_id_count += 1
-                entry.append(G.nodes[node]['annotation'])
-                entry.append(G.nodes[node]['description'])
+                if G.nodes[node]['annotation'] != '':
+                    entry.append(G.nodes[node]['annotation'])
+                    entry.append(G.nodes[node]['description'].replace(',', ' '))
+                else:
+                    entry.append("hypothetical protein")
+                    entry.append("NA")
                 entry.append(G.nodes[node]['size'])
                 entry.append(len(G.nodes[node]['seqIDs']))
                 entry.append((1.0 * len(G.nodes[node]['seqIDs'])) /
@@ -217,6 +229,19 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                 entry_sizes.append((entry_size, entry_count))
                 entry_count += 1
 
+                # determine gene presence/absence
+                num_isolates = G.nodes[node]['size']
+                proportion_present = float(num_isolates) / noSamples * 100.0
+                if proportion_present >= 99:
+                    noCore += 1
+                elif proportion_present >= 95:
+                    noSoftCore += 1
+                elif proportion_present >= 15:
+                    noShell += 1
+                else:
+                    noCloud += 1
+                total_genes += 1
+
         # sort so that the most common genes are first (as in roary)
         entry_sizes = sorted(entry_sizes, reverse=True)
         for s, i in entry_sizes:
@@ -227,6 +252,17 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
             Rtab_outfile.write(entry_list[i][0] + "\t")
             Rtab_outfile.write("\t".join(
                 (["0" if e == "" else "1" for e in pres_abs_list[i]])) + "\n")
+
+    # write summary output
+    with open(output_dir + "summary_statistics.txt", 'w') as outfile:
+        output = ("Core genes\t(99% <= strains <= 100%)\t" + str(noCore) +
+                  "\n" + "Soft core genes\t(95% <= strains < 99%)\t" +
+                  str(noSoftCore) + "\n" +
+                  "Shell genes\t(15% <= strains < 95%)\t" + str(noShell) +
+                  "\n" + "Cloud genes\t(0% <= strains < 15%)\t" +
+                  str(noCloud) + "\n" +
+                  "Total genes\t(0% <= strains <= 100%)\t" + str(total_genes))
+        outfile.write(output)
 
     return G
 
