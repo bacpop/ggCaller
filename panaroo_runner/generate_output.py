@@ -28,21 +28,26 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
             gff_record_list = []
             record_id = 1
             for record in SeqIO.parse(handle, "fasta"):
+                # sort records based on first position
+                contig_annotation[colour][record_id].sort(key=lambda x: x[1][0][1][0])
                 gff_record = record
                 gff_record.features = []
+                entry_ID = 1
                 for entry in contig_annotation[colour][record_id]:
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
-                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
+                        "ID": isolate_names[colour] + "_" + str(entry_ID).zfill(5),
                         "inference": entry[2][0],
                         "score": entry[2][2],
-                        "annotation": [entry[2][3]],
+                        "annotation": [entry[2][3].replace(",", " ").replace("|", "-")
+                                           .replace("=", "-").replace("(", "").replace(")", "")],
                     }
                     feature = SeqFeature(
                         FeatureLocation(entry[1][0][1][0], entry[1][0][1][1]),
-                        type="CDS", strand=entry[1][1], qualifiers=qualifiers
+                        type="gene", strand=int(entry[1][1]), qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
+                    entry_ID += 1
                 gff_record_list.append(gff_record)
                 record_id += 1
 

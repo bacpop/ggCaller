@@ -225,7 +225,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     annotation = ORFNodeVector[-1]
                 else:
                     contig_coords = ORFNodeVector[-1]
-                    annotation = ("prediction", "hypothetical protein", 0, "NA")
+                    annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")
                 contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
 
     # write output GFF

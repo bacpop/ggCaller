@@ -223,7 +223,7 @@ def find_missing(G,
                 annotation = (
                 "refound", G.nodes[node]['annotation'], G.nodes[node]['bitscore'], G.nodes[node]['description'])
             else:
-                annotation = ("refound", "hypothetical protein", 0, "NA")
+                annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
                 nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3], contig_coords, annotation)
 
