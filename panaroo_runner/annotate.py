@@ -78,12 +78,10 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, annotation_temp_dir, annotation_db, evalue, nb_colours, pool):
+def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, nb_colours, pool):
     # list of sequence records
     all_centroid_aa = []
 
-    # list of dictionary of annotations for each sequence if available
-    annotation_list = [dict() for _ in range(nb_colours)]
     # get unannotated nodes
     unannotated_nodes = get_unannotated_nodes(G)
 
@@ -128,12 +126,14 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, evalue, nb_colours
         for seqID in G.nodes[entry[0]]['seqIDs']:
             # add entries for node to annotation_list
             genome = int(seqID.split("_")[0])
-            annotation_list[genome][seqID] = ["diamond", entry[1], entry[2], entry[3]]
+            gene_ID = int(seqID.split("_")[-1])
+            high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
+            ("diamond", entry[1], entry[2], entry[3]),)
 
-    return G, annotation_list
+    return G, high_scoring_ORFs
 
 
-def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue, n_cpu, pool):
+def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, n_cpu, pool):
     # list of sequence records
     all_centroid_aa = []
 
@@ -189,16 +189,20 @@ def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue
         for seqID in G.nodes[entry[0]]['seqIDs']:
             # add entries for node to annotation_list
             genome = int(seqID.split("_")[0])
-            annotation_list[genome][seqID] = ["hmmscan", entry[1], entry[2], entry[3]]
+            gene_ID = int(seqID.split("_")[-1])
+            high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
+            ("hmmscan", entry[1], entry[2], entry[3]),)
 
-    return G, annotation_list
+    return G, high_scoring_ORFs
 
 
-def iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, evalue, nb_colours, n_cpu, pool):
+def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db, evalue, nb_colours,
+                                n_cpu, pool):
     # run initial iterative search
-    G, annotation_list = run_diamond_search(G, annotation_temp_dir, annotation_db, evalue, nb_colours, pool)
+    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue,
+                                              nb_colours, pool)
 
     # run ultra-sensitive search
-    G, annotation_list = run_HMMERscan(G, annotation_list, annotation_temp_dir, hmm_db, evalue, n_cpu, pool)
+    G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, hmm_db, evalue, n_cpu, pool)
 
-    return G, annotation_list
+    return G, high_scoring_ORFs

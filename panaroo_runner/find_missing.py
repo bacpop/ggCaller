@@ -219,8 +219,13 @@ def find_missing(G,
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node][0]
             contig_coords = all_node_locs[member][node][1]
+            if G.nodes[node]['bitscore'] != 0:
+                annotation = (
+                "refound", G.nodes[node]['annotation'], G.nodes[node]['bitscore'], G.nodes[node]['description'])
+            else:
+                annotation = ("refound", "hypothetical protein", 0, None)
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3], contig_coords)
+                nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3], contig_coords, annotation)
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -287,7 +292,8 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, ORF_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, contig_pair = graph_shd_arr[0].refind_gene(member, ORF_info, search_radius,
+            db_seq, nodelist, node_ranges, contig_pair = graph_shd_arr[0].refind_gene(member, ORF_info[:7],
+                                                                                      search_radius,
                                                                                       is_ref, write_idx, kmer, fasta,
                                                                                       repeat)
 

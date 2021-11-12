@@ -6,6 +6,7 @@ import networkx as nx
 import argparse
 import textwrap
 import ast
+from collections import defaultdict
 
 # panaroo scripts
 from panaroo.isvalid import *
@@ -117,8 +118,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
         # generate annotations
-        G, annotation_list = iterative_annotation_search(G, annotation_temp_dir, annotation_db, hmm_db, evalue,
-                                                         len(input_colours), n_cpu, pool)
+        G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
+                                                           hmm_db, evalue, len(input_colours), n_cpu, pool)
 
     if verbose:
         print("collapse gene families...")
@@ -204,6 +205,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # not an internal stop codon is present
     orig_ids = {}
     ids_len_stop = {}
+    contig_annotation = defaultdict(lambda: defaultdict(list))
     for node in G.nodes():
         for sid in G.nodes[node]['seqIDs']:
             orig_ids[sid] = sid
@@ -212,15 +214,19 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[-2])
+                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[3])
             else:
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
             if annotate:
-                # here, add each sequence to its respective contig for each gff file.
-                if sid in annotation_list[mem]:
-                    annotation_list[mem][sid].append(ORFNodeVector[-1])
+                # annotated genes
+                if len(ORFNodeVector) == 8 or ORF_ID < 0:
+                    # add each sequence to its respective contig for each gff file.
+                    contig_coords = ORFNodeVector[-2]
+                    annotation = ORFNodeVector[-1]
                 else:
-                    annotation_list[mem][sid] = [None, "hypothetical protein", 0, ORFNodeVector[-1]]
+                    contig_coords = ORFNodeVector[-1]
+                    annotation = ("prediction", "hypothetical protein", 0, None)
+                contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,
