@@ -113,19 +113,20 @@ def run_diamond_search(G, annotation_temp_dir, annotation_db, evalue, nb_colours
     df = df.sort_values('bitscore').drop_duplicates("node", keep='last')
 
     # pull information from dataframe
-    node_info = [(w, int(x), y, z) for w, x, y, z in
-                 zip(df['query'], df['node'], df['target'], df['bitscore'])]
+    node_info = [(int(w), x, y, z) for w, x, y, z in
+                 zip(df['node'], df['target'], df['bitscore'], df['stitle'])]
 
     # add information to graph. If multiple centroids aligned, take the annotation with the highest bitscore
     for entry in node_info:
-        G.nodes[entry[1]]['annotation'] = entry[2]
-        G.nodes[entry[1]]['bitscore'] = entry[3]
+        G.nodes[entry[0]]['annotation'] = entry[1]
+        G.nodes[entry[0]]['bitscore'] = entry[2]
+        G.nodes[entry[0]]['description'] = entry[3]
 
         # add list for each seqid entry for annotation
-        for seqID in G.nodes[entry[1]]['seqIDs']:
+        for seqID in G.nodes[entry[0]]['seqIDs']:
             # add entries for node to annotation_list
             genome = int(seqID.split("_")[0])
-            annotation_list[genome][seqID] = ["diamond", entry[2], entry[3]]
+            annotation_list[genome][seqID] = ["diamond", entry[1], entry[2], entry[3]]
 
     return G, annotation_list
 
@@ -158,6 +159,7 @@ def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue
     df = pd.read_csv(annotation_temp_dir + "aa_h.tsv", delim_whitespace=True, header=None,
                      comment='#')
     df['stitle'] = df.iloc[:, 18:].fillna('').astype(str).add(' ').values.sum(axis=1)
+    df['stitle'] = df['stitle'].str.rstrip()
     df = pd.concat([df.iloc[:, 0], df.iloc[:, 2], df.iloc[:, 4:6], df['stitle']], axis=1)
     df.set_axis(['target', 'query', 'evalue', 'bitscore', 'stitle'], axis=1, inplace=True)
 
@@ -168,19 +170,20 @@ def run_HMMERscan(G, annotation_list, annotation_temp_dir, annotation_db, evalue
     df = df.sort_values('bitscore').drop_duplicates("node", keep='last')
 
     # pull information from dataframe
-    node_info = [(w, int(x), y, z) for w, x, y, z in
-                 zip(df['query'], df['node'], df['target'], df['bitscore'])]
+    node_info = [(int(w), x, y, z) for w, x, y, z in
+                 zip(df['node'], df['target'], df['bitscore'], df['stitle'])]
 
     # add information to graph. If multiple centroids aligned, take the annotation with the highest bitscore
     for entry in node_info:
-        G.nodes[entry[1]]['annotation'] = entry[2]
-        G.nodes[entry[1]]['bitscore'] = entry[3]
+        G.nodes[entry[0]]['annotation'] = entry[1]
+        G.nodes[entry[0]]['bitscore'] = entry[2]
+        G.nodes[entry[0]]['description'] = entry[3]
 
         # add list for each seqid entry for annotation
-        for seqID in G.nodes[entry[1]]['seqIDs']:
+        for seqID in G.nodes[entry[0]]['seqIDs']:
             # add entries for node to annotation_list
             genome = int(seqID.split("_")[0])
-            annotation_list[genome][seqID] = ["diamond", entry[2], entry[3]]
+            annotation_list[genome][seqID] = ["hmmscan", entry[1], entry[2], entry[3]]
 
     return G, annotation_list
 
