@@ -13,6 +13,58 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from .generate_alignments import *
 
 
+def back_translate_dir(high_scoring_ORFs, isolate_names, annotation_dir, overlap, shd_arr_tup, pool):
+    # iterate over all files in annotation directory multithreaded
+    pool.map(partial(back_translate, isolate_names=isolate_names, shd_arr_tup=shd_arr_tup,
+                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, annotation_dir=annotation_dir),
+             os.listdir(annotation_dir))
+
+    return True
+
+
+def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate_names, overlap):
+    # load shared memory items
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
+
+    file = os.path.join(annotation_dir, file)
+
+    output_sequences = []
+    with open(file, "r") as handle:
+        for record in SeqIO.parse(handle, "fasta"):
+            ORF_ID = record.id
+            protein = str(record.seq)
+            mem = int(ORF_ID.split("_")[0])
+            gene_ID = int(ORF_ID.split("_")[-1])
+
+            # parse DNA sequence
+            ORFNodeVector = high_scoring_ORFs[mem][gene_ID]
+            dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+
+            # add on stop codon if not present in aa sequence
+            if protein[-1] != "*":
+                protein += "*"
+
+            # back translate sequence
+            aligned_dna = ""
+            dna_idx = 0
+            for aa_idx in range(len(protein)):
+                if protein[aa_idx] == "-":
+                    aligned_dna += "---"
+                else:
+                    aligned_dna += dna[dna_idx: dna_idx + 3]
+                    dna_idx += 3
+
+            id = isolate_names[mem] + "_" + str(gene_ID).zfill(5)
+            output_sequences.append(SeqRecord(Seq(aligned_dna), id=id, description=""))
+
+    # overwrite existing alignment file
+    output_sequences = (x for x in output_sequences)
+    SeqIO.write(output_sequences, file, 'fasta')
+
+    return
+
+
 def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
@@ -58,7 +110,7 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
         with open(outfile, "w") as out_handle:
             GFF.write(gff_record_list, out_handle)
 
-    return True
+    return
 
 
 def output_aa_sequence(node_pair):
@@ -75,8 +127,8 @@ def output_aa_sequence(node_pair):
     return ref_output_sequences
 
 
-def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
-                        ref_aln):
+def output_alignment_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+                              ref_aln):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -99,10 +151,7 @@ def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr
     # if reference-guided alignment being done, separate centroids and other sequences
     if ref_aln:
         for i in range(0, len(node["centroid"])):
-            member = int(node["centroid"][i].split("_")[0])
-            isolate_name = isolate_list[member].replace(";",
-                                                        "") + ";" + node["centroid"][i]
-            ref_output_sequences.append(SeqRecord(Seq(node["dna"][i]), id=isolate_name, description=""))
+            ref_output_sequences.append(SeqRecord(Seq(node["protein"][i]), id=node["centroid"][i], description=""))
         centroid_no = len(ref_output_sequences)
         # Put gene of interest sequences in a generator, with corrected isolate names
         ref_output_sequences_gen = (x for x in ref_output_sequences)
@@ -131,14 +180,12 @@ def output_dna_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr
             continue
         member = int(seq.split('_')[0])
         ORF_ID = int(seq.split('_')[-1])
-        isolate_name = isolate_list[member].replace(";",
-                                                    "") + ";" + seq
         # generate DNA sequence
         ORFNodeVector = high_scoring_ORFs[member][ORF_ID]
-        CDS = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        protein = str(Seq(shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)).translate())
 
         output_sequences.append(
-            SeqRecord(Seq(CDS), id=isolate_name, description=""))
+            SeqRecord(Seq(protein), id=seq, description=""))
         seq_no += 1
     # Put gene of interest sequences in a generator, with corrected isolate names
     output_sequences = (x for x in output_sequences)
@@ -388,7 +435,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         None
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_dna_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_alignment_sequence, isolate_list=isolates,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          G.nodes(data=True)):
@@ -441,6 +488,10 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         # Run these commands in a multi-threaded way
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
                               threads, "def", not verbose)
+
+    # back translate sequences
+    back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
+
     return
 
 
@@ -521,7 +572,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_dna_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_alignment_sequence, isolate_list=isolates,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          core_genes):
@@ -575,8 +626,11 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         # Run alignment commands
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
                               threads, "def", not verbose)
+    # back translate sequences
+    back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
     # Concatenate them together to produce the two output files
     concatenate_core_genome_alignments(core_gene_names, output_dir)
+
     return
 
 def generate_summary_stats(output_dir):

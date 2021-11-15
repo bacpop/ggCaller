@@ -44,48 +44,48 @@ def check_aligner_install():
     return present
 
 
-def output_sequence(node, isolate_list, temp_directory, outdir):
-    # Get the name of the sequences for the gene of interest
-    sequence_ids = node["seqIDs"]
-    output_sequences = []
-    # Counter for the number of sequences to
-    isolate_no = 0
-    # Look for gene sequences among all genes (from disk)
-    for seq in SeqIO.parse(outdir + "combined_DNA_CDS.fasta", 'fasta'):
-        isolate_num = int(seq.id.split('_')[0])
-        isolate_name = isolate_list[isolate_num].replace(";",
-                                                         "") + ";" + seq.id
-        if seq.id in sequence_ids:
-            output_sequences.append(
-                SeqRecord(seq.seq, id=isolate_name, description=""))
-            isolate_no += 1
-    # Put gene of interest sequences in a generator, with corrected isolate names
-    output_sequences = (x for x in output_sequences)
-    # set filename to gene name, if more than one sequence to be aliged
-    if isolate_no > 1:
-        outname = temp_directory + node["name"] + ".fasta"
-    else:
-        # If only one sequence, output it to aliged directory and break
-        outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".fasta"
-        SeqIO.write(output_sequences, outname, 'fasta')
-        return None
-    # check to see if filename is too long
-    if len(outname) >= 248:
-        outname = outname[:248] + ".fasta"
-    # Write them to disk
-    SeqIO.write(output_sequences, outname, 'fasta')
-    return outname
+# def output_sequence(node, isolate_list, temp_directory, outdir):
+#     # Get the name of the sequences for the gene of interest
+#     sequence_ids = node["seqIDs"]
+#     output_sequences = []
+#     # Counter for the number of sequences to
+#     isolate_no = 0
+#     # Look for gene sequences among all genes (from disk)
+#     for seq in SeqIO.parse(outdir + "combined_DNA_CDS.fasta", 'fasta'):
+#         isolate_num = int(seq.id.split('_')[0])
+#         isolate_name = isolate_list[isolate_num].replace(";",
+#                                                          "") + ";" + seq.id
+#         if seq.id in sequence_ids:
+#             output_sequences.append(
+#                 SeqRecord(seq.seq, id=isolate_name, description=""))
+#             isolate_no += 1
+#     # Put gene of interest sequences in a generator, with corrected isolate names
+#     output_sequences = (x for x in output_sequences)
+#     # set filename to gene name, if more than one sequence to be aliged
+#     if isolate_no > 1:
+#         outname = temp_directory + node["name"] + ".fasta"
+#     else:
+#         # If only one sequence, output it to aliged directory and break
+#         outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".fasta"
+#         SeqIO.write(output_sequences, outname, 'fasta')
+#         return None
+#     # check to see if filename is too long
+#     if len(outname) >= 248:
+#         outname = outname[:248] + ".fasta"
+#     # Write them to disk
+#     SeqIO.write(output_sequences, outname, 'fasta')
+#     return outname
 
 
 def get_alignment_commands(fastafile_name, outdir, aligner):
     if aligner == "def":
         command = MafftCommandline(input=fastafile_name,
                                    auto=True,
-                                   nuc=True)
+                                   amino=True)
     elif aligner == "ref":
         ref_file, seq_file = fastafile_name
         outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-        command = ["mafft", "--6merpair", "--addfragments",
+        command = ["mafft", "--amino", "--6merpair", "--addfragments",
                    seq_file, ref_file, outfile]
 
     return (command, fastafile_name)
