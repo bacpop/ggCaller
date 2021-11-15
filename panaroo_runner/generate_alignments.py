@@ -10,13 +10,10 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from Bio.Align.Applications import PrankCommandline
 from Bio.Align.Applications import MafftCommandline
-from Bio.Align.Applications import ClustalOmegaCommandline
-import Bio.Application
 
 
-def check_aligner_install(aligner):
+def check_aligner_install():
     """Checks for the presence of the specified aligned in $PATH
 
     Args:
@@ -27,15 +24,7 @@ def check_aligner_install(aligner):
         presence (bool)
             True/False aligner present
     """
-    if aligner == "clustal":
-        command = "clustalo --help"
-    elif aligner == "prank":
-        command = "prank -help"
-    elif aligner == "/home/sth19/miniconda3/envs/ggCaller/bin/mafft":
-        command = "mafft --help"
-    else:
-        sys.stderr.write("Incorrect aligner specification\n")
-        sys.exit()
+    command = "mafft --help"
 
     p = str(
         subprocess.run(command,
@@ -44,17 +33,12 @@ def check_aligner_install(aligner):
                        shell=True))
     present = False
 
-    if aligner == "clustal":
-        find_ver = re.search(r'Clustal Omega - \d+\.\d+\.\d+', p)
-    elif aligner == "prank":
-        find_ver = re.search(r'prank v\.\d+\.', p)
-    elif aligner == "mafft":
-        find_ver = re.search(r'MAFFT v\d+\.\d+', p)
+    find_ver = re.search(r'MAFFT v7\.\d+', p)
     if find_ver != None:
         present = True
 
     if present == False:
-        sys.stderr.write("Need specified aligner to be installed " + "\n")
+        sys.stderr.write("Need Mafft version 7 or later to be installed " + "\n")
         sys.exit(1)
 
     return present
@@ -93,75 +77,32 @@ def output_sequence(node, isolate_list, temp_directory, outdir):
     return outname
 
 
-def get_alignment_commands(fastafile_name, outdir, aligner, threads):
-    if isinstance(fastafile_name, str):
-        geneName = fastafile_name.split('/')[-1].split('.')[0]
-    if aligner == "prank":
-        command = PrankCommandline(d=fastafile_name,
-                                   o=geneName,
-                                   f=8,
-                                   codon=True)
-    elif (threads > 3):
-        if aligner == "mafft":
-            command = MafftCommandline(input=fastafile_name,
-                                       auto=True,
-                                       nuc=True)
-        elif aligner == "mafft-ref":
-            ref_file, seq_file = fastafile_name
-            outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = ["mafft", "--6merpair", "--addfragments",
-                       seq_file, ref_file, outfile]
-        elif aligner == "clustal":
-            command = ClustalOmegaCommandline(
-                infile=fastafile_name,
-                outfile=outdir + "aligned_gene_sequences/" + geneName +
-                        ".aln.fas",
-                seqtype="DNA")
-    elif (threads <= 3):
-        if aligner == "mafft":
-            command = MafftCommandline(input=fastafile_name,
-                                       auto=True,
-                                       thread=threads,
-                                       nuc=True)
-        elif aligner == "mafft-ref":
-            ref_file, seq_file = fastafile_name
-            outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-            command = ["mafft", "--6merpair", "--thread", str(threads), "--addfragments",
-                       seq_file, ref_file, outfile]
-        elif aligner == "clustal":
-            command = ClustalOmegaCommandline(
-                infile=fastafile_name,
-                outfile=outdir + "aligned_gene_sequences/" + geneName +
-                        ".aln.fas",
-                seqtype="DNA",
-                threads=threads)
+def get_alignment_commands(fastafile_name, outdir, aligner):
+    if aligner == "def":
+        command = MafftCommandline(input=fastafile_name,
+                                   auto=True,
+                                   nuc=True)
+    elif aligner == "ref":
+        ref_file, seq_file = fastafile_name
+        outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+        command = ["mafft", "--6merpair", "--addfragments",
+                   seq_file, ref_file, outfile]
+
     return (command, fastafile_name)
 
 
 def align_sequences(command, outdir, aligner):
-    if aligner == "mafft":
+    if aligner == "def":
         name = str(command[0]).split()[-1].split('/')[-1].split('.')[0]
         stdout, stderr = command[0]()
         with open(outdir + name + '.aln.fas', 'w+') as handle:
             handle.write(stdout)
-    elif aligner == "mafft-ref":
+    elif aligner == "ref":
         with open(command[0][-1], 'w+') as handle:
             result = subprocess.run(command[0][:-1], stdout=handle, stderr=subprocess.DEVNULL)
             if result.returncode != 0:
                 raise Exception("Mafft-ref failed to run on file: " + command[0][-1].split("/")[-1])
-    elif aligner == "clustal":
-        try:
-            stdout, stderr = command[0]()
-        except Bio.Application.ApplicationError as error:
-            inputname = str(command[0]).split('-i')[1].split('-t')[0].strip()
-            name = inputname.split('/')[-1]
-            print(error)
-            if "contains 1 sequence, nothing to align" in str(error):
-                os.rename(inputname, outdir + name)
-            else:
-                raise Exception("Clustal failed to run on" + inputname)
-    else:
-        stdout, stderr = command[0]()
+
     if isinstance(command[1], tuple):
         for file in command[1]:
             try:
@@ -176,9 +117,9 @@ def align_sequences(command, outdir, aligner):
     return True
 
 
-def multi_align_sequences(commands, outdir, threads, aligner):
+def multi_align_sequences(commands, outdir, threads, aligner, quiet):
     alignment_results = Parallel(n_jobs=threads, prefer="threads")(
-        delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands))
+        delayed(align_sequences)(x, outdir, aligner) for x in tqdm(commands, disable=quiet))
 
     return True
 

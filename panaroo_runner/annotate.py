@@ -197,12 +197,13 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
 
 
 def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db, evalue, nb_colours,
-                                n_cpu, pool):
+                                annotate, n_cpu, pool):
     # run initial iterative search
     G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue,
                                               nb_colours, pool)
 
     # run ultra-sensitive search
-    G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, hmm_db, evalue, n_cpu, pool)
+    if annotate == "sensitive":
+        G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, hmm_db, evalue, n_cpu, pool)
 
     return G, high_scoring_ORFs

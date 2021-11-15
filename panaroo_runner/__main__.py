@@ -22,11 +22,11 @@ from ggCaller.shared_memory import *
 from .clean_network import *
 from .generate_output import *
 from .annotate import *
+from .generate_alignments import check_aligner_install
 
 
 # debugging scripts
-from .cdhit_align import *
-
+# from .cdhit_align import *
 
 class SmartFormatter(argparse.HelpFormatter):
     def _split_lines(self, text, width):
@@ -54,17 +54,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # check if reference-guided alignment specified
     ref_aln = False
-    if "ref" in alr:
+    if alr == "ref":
         ref_aln = True
 
     # Check cd-hit is installed
     check_cdhit_version()
     # Make sure aligner is installed if alignment requested
     if aln != None:
-        if ref_aln:
-            check_aligner_install(alr[:-4])
-        else:
-            check_aligner_install(alr)
+        check_aligner_install()
 
     if verbose:
         print("Generating initial network...")
@@ -72,7 +69,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # generate network from clusters and adjacency information
     G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], high_scoring_ORFs, high_scoring_ORF_edges,
                                                                cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
-
 
     # merge paralogs
     if verbose:
@@ -106,7 +102,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           n_cpu=n_cpu,
                           quiet=(not verbose))[0]
 
-    if annotate:
+    if annotate is not None:
         if verbose:
             print("annotating gene families...")
 
@@ -119,7 +115,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # generate annotations
         G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
-                                                           hmm_db, evalue, len(input_colours), n_cpu, pool)
+                                                           hmm_db, evalue, len(input_colours), annotate, n_cpu, pool)
 
     if verbose:
         print("collapse gene families...")
@@ -198,7 +194,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         mems_to_isolates[i] = iso
 
     if verbose:
-        print("writing output...")
+        print("writing Roary output...")
 
     # write out roary like gene_presence_absence.csv
     # get original annotation IDs, lengths and whether or
@@ -217,7 +213,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[3])
             else:
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
-            if annotate:
+            if annotate is not None:
                 # annotated genes
                 if len(ORFNodeVector) == 8 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
@@ -229,7 +225,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
 
     # write output GFF
-    if annotate:
+    if annotate is not None:
+        if verbose:
+            print("writing GFF files...")
         generate_GFF(input_colours, isolate_names, contig_annotation, output_dir)
 
     # write roary output and summary stats file
@@ -255,16 +253,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # determine if reference-guided alignment being done
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
-        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu,
-                                      alr, isolate_names, shd_arr_tup,
+        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
                                       high_scoring_ORFs, overlap, pool, ref_aln, verbose)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
-                                       n_cpu, alr, isolate_names,
-                                       core, len(input_colours), shd_arr_tup,
+                                       n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
                                        high_scoring_ORFs, overlap, pool, ref_aln, verbose)
 
     # add helpful attributes and write out graph in GML format

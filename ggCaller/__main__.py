@@ -168,11 +168,12 @@ def get_options():
                                   help="don't split paralogs",
                                   action='store_true',
                                   default=False)
-    Panaroo_matching.add_argument("--no_annotate",
+    Panaroo_matching.add_argument("--annotation",
                                   dest="annotate",
-                                  help="Don't annotate genes",
-                                  action='store_true',
-                                  default=False)
+                                  help="Annotate genes using diamond (fast) or diamond and HMMscan (sensitive)."
+                                       "If not specified, no annotation done",
+                                  choices=["fast", "sensitive"],
+                                  default=None)
     Panaroo_matching.add_argument("--diamonddb",
                                   dest="annotation_db",
                                   help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
@@ -287,10 +288,10 @@ def get_options():
         "--aligner",
         dest="alr",
         help=
-        "Specify an aligner. Options:'prank', 'clustal', and default: 'mafft'",
+        "Specify an aligner. Options:'ref' for reference-guided MSA and 'def' for default standard MSA",
         type=str,
-        choices=['prank', 'clustal', 'mafft', 'mafft-ref'],
-        default="mafft")
+        choices=['def', 'ref'],
+        default="def")
     Panaroo_core.add_argument("--core_threshold",
                               dest="core",
                               help="Core-genome sample threshold (default=0.95)",
@@ -375,10 +376,9 @@ def main():
     check_diamond_install()
     check_HMMER_install()
 
-    options.annotate = not options.annotate
     annotation_db = options.annotation_db
     hmm_db = options.hmm_db
-    if options.annotate:
+    if options.annotate is not None:
         # unpack annotation database
         if annotation_db == "Bacteria" or annotation_db == "Viruses":
             db_id = annotation_db

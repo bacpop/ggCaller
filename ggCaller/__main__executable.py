@@ -131,14 +131,14 @@ def main():
 
     graph = ggCaller_cpp.Graph()
 
-    # graph_tuple = graph.build(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group1_capsular_fa_list.txt",
-    #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
+    graph_tuple = graph.build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_capsular_fa_list.txt",
+        31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
-    graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-        stop_codons_for, stop_codons_rev, num_threads)
+    # graph_tuple = graph.read(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
+    #     stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -155,7 +155,7 @@ def main():
     edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
     merge_paralogs = True
     aln = "pan"
-    alr = "mafft"
+    alr = "ref"
     core = 0.95
     min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
     all_seq_in_graph = False
@@ -298,11 +298,20 @@ def main():
 
             # print("Generating fasta file of gene calls...")
             # # print output to file
+            # merged_dict = {}
             # with open(out, "w") as f:
             #     for colour, gene_dict in high_scoring_ORFs.items():
             #         for gene_id, ORFNodeVector in gene_dict.items():
             #             gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
             #             f.write(">" + str(colour) + "_" + str(gene_id) + "\n" + gene + "\n")
+            #             if gene not in merged_dict:
+            #                 merged_dict[gene] = [0] * nb_colours
+            #             merged_dict[gene][colour] = 1
+            # with open("merged_" + out, "w") as f:
+            #     gene_id = 1
+            #     for gene, colour_list in merged_dict.items():
+            #         f.write(">" + str(gene_id) + "_" + ''.join(str(col) for col in colour_list) + "\n" + gene + "\n")
+            #         gene_id += 1
 
             # cluster ORFs
             if cluster_ORFs is True:

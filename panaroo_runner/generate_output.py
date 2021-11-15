@@ -36,7 +36,7 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
                 for entry in contig_annotation[colour][record_id]:
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
-                        "ID": isolate_names[colour] + "_" + str(entry_ID).zfill(5),
+                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
                         "inference": entry[2][0],
                         "score": entry[2][2],
                         "annotation": [entry[2][3].replace(",", " ").replace("|", "-")
@@ -377,7 +377,7 @@ def generate_common_struct_presence_absence(G,
     return
 
 
-def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
+def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
                                   isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
@@ -415,11 +415,11 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     if ref_aln:
         # conduct MSA on reference files, first using standard MSA
         commands = [
-            get_alignment_commands(fastafile, None, aligner[:-4], threads)
+            get_alignment_commands(fastafile, None, "def")
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir, threads, aligner[:-4])
+        multi_align_sequences(commands, temp_dir, threads, "def", not verbose)
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
@@ -427,20 +427,20 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads, aligner,
 
         # repeat with reference-guided alignment
         commands = [
-            get_alignment_commands(fastapair, output_dir, aligner, threads)
+            get_alignment_commands(fastapair, output_dir, "ref")
             for fastapair in ref_seq_pairs
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, aligner)
+                              threads, "ref", not verbose)
     else:
         commands = [
-            get_alignment_commands(fastafile, output_dir, aligner, threads)
+            get_alignment_commands(fastafile, output_dir, "def")
             for fastafile in unaligned_sequence_files
         ]
         # Run these commands in a multi-threaded way
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, aligner)
+                              threads, "def", not verbose)
     return
 
 
@@ -505,7 +505,7 @@ def concatenate_core_genome_alignments(core_names, output_dir):
     return core_filenames
 
 
-def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
+def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                    isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
                                    overlap, pool, ref_aln, verbose):
     unaligned_sequence_files = []
@@ -548,11 +548,11 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
     if ref_aln:
         # conduct MSA on reference files, first using standard MSA
         commands = [
-            get_alignment_commands(fastafile, None, aligner[:-4], threads)
+            get_alignment_commands(fastafile, None, "def")
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir, threads, aligner[:-4])
+        multi_align_sequences(commands, temp_dir, threads, "def", not verbose)
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
@@ -560,21 +560,21 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads, aligner,
 
         # repeat with reference-guided alignment
         commands = [
-            get_alignment_commands(fastapair, output_dir, aligner, threads)
+            get_alignment_commands(fastapair, output_dir, "ref")
             for fastapair in ref_seq_pairs
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, aligner)
+                              threads, "ref", not verbose)
     else:
         # Get alignment commands
         commands = [
-            get_alignment_commands(fastafile, output_dir, aligner, threads)
+            get_alignment_commands(fastafile, output_dir, "def")
             for fastafile in unaligned_sequence_files
         ]
         # Run alignment commands
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, aligner)
+                              threads, "def", not verbose)
     # Concatenate them together to produce the two output files
     concatenate_core_genome_alignments(core_gene_names, output_dir)
     return
