@@ -22,10 +22,10 @@ def run_snpsites(file, annotation_dir, vcf_dir):
 
     command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-v", "-o", outfile, file]
 
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if result.returncode != 0:
-        find_err = re.search(r'Warning:', str(result))
+        find_err = re.search(r'No SNPs were detected', str(result))
         if find_err is None:
             raise Exception("Snp-sites failed to run on file: " + file)
 
