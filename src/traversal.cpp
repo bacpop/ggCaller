@@ -46,7 +46,6 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
         // get length of vector for new pos_idx
         const size_t new_pos_idx = node_vector.size();
 
-
         // get unitig_dict entry in graph_vector
         const auto& node_dict = graph_vector.at(abs(node_id) - 1);
 
@@ -69,7 +68,6 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
 
             // get reference to unitig_dict object for neighbour
             const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
-
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
@@ -130,14 +128,14 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
     return path_list;
 }
 
-AllPaths traverse_graph(const GraphVector& graph_vector,
-                         const size_t& colour_ID,
-                         const std::vector<size_t>& node_ids,
-                         const bool repeat,
-                         const size_t max_path_length)
+std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
+                                         const size_t& colour_ID,
+                                         const std::vector<size_t>& node_ids,
+                                         const bool repeat,
+                                         const size_t max_path_length)
 {
     // initialise all_paths
-    AllPaths all_paths;
+    std::vector<PathVector> all_paths;
 
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
@@ -170,6 +168,8 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
+//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
+//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
             all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
@@ -205,6 +205,8 @@ AllPaths traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
+//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
+//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
             all_paths.push_back(std::move(unitig_complete_paths));
         }
     }

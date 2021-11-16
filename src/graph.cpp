@@ -5,13 +5,13 @@
 #include "graph.h"
 
 GraphTuple Graph::build (const std::string& infile1,
-                    const int kmer,
-                    const std::vector<std::string>& stop_codons_for,
-                    const std::vector<std::string>& stop_codons_rev,
-                    size_t num_threads,
-                    bool is_ref,
-                    const bool write_graph,
-                    const std::string& infile2) {
+                        const int kmer,
+                        const std::vector<std::string>& stop_codons_for,
+                        const std::vector<std::string>& stop_codons_rev,
+                        size_t num_threads,
+                        bool is_ref,
+                        const bool write_graph,
+                        const std::string& infile2) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -64,8 +64,7 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
-                    size_t num_threads,
-                    const bool is_ref) {
+                    size_t num_threads) {
 
     // Set number of threads
     if (num_threads < 1)
@@ -127,12 +126,13 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
                                                      const bool write_idx,
                                                      const std::string& FM_fasta_file)
 {
-    std::pair<ORFVector, NodeStrandMap> ORF_pair;
+    ORFVector ORF_vector;
+    
     // traverse graph, set scope for all_paths and fm_idx
     {
         // recursive traversal
-        //cout << "Traversing graph: " << to_string(colour_ID) << endl;
-        AllPaths all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
+//        cout << "Traversing graph: " << to_string(colour_ID) << endl;
+        std::vector<PathVector> all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
 
         // if no FM_fasta_file specified, cannot generate FM Index
         if (FM_fasta_file == "NA")
@@ -142,27 +142,90 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 
         // generate FM_index if is_ref
         fm_index_coll fm_idx;
+        std::vector<size_t> contig_locs;
+
         if (is_ref)
         {
-            fm_idx = index_fasta(FM_fasta_file, write_idx);
+//            cout << "FM-indexing: " << to_string(colour_ID) << endl;
+            auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
+            fm_idx = fm_idx_pair.first;
+            contig_locs = fm_idx_pair.second;
         }
 
         // generate ORF calls
-        //cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_pair = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
+//        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
+        ORF_vector = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
     }
 
     // if no filtering required, do not calculate overlaps
     ORFOverlapMap ORF_overlap_map;
     if (!no_filter)
     {
-        // << "Determining overlaps: " << to_string(colour_ID) << endl;
-        ORF_overlap_map = std::move(calculate_overlaps(_GraphVector, ORF_pair, overlap, max_overlap));
+//        cout << "Determining overlaps: " << to_string(colour_ID) << endl;
+        ORF_overlap_map = std::move(calculate_overlaps(_GraphVector, ORF_vector, overlap, max_overlap));
     }
 
-    std::pair<ORFOverlapMap, ORFVector> return_pair = std::make_pair(ORF_overlap_map, ORF_pair.first);
+    std::pair<ORFOverlapMap, ORFVector> return_pair = std::make_pair(ORF_overlap_map, ORF_vector);
 
     return return_pair;
+}
+
+std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_ID,
+                                                           const ORFVector& ORF_vector,
+                                                           const std::vector<size_t>& target_ORFs,
+                                                           const size_t& max_ORF_path_length)
+{
+    std::vector<std::pair<size_t, size_t>> connected_ORFs;
+
+    // add ORF info for colour to graph
+    add_ORF_info(_GraphVector, colour_ID, target_ORFs, ORF_vector);
+
+    // initialise prev_node_set to avoid same ORFs being traversed from again
+    std::unordered_set<int> prev_node_set;
+
+    // conduct DBG traversal for upstream...
+    auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set);
+    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
+
+    // ... and downstream
+    new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set);
+    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
+    
+    return connected_ORFs;
+}
+
+std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourORFMap& colour_ORF_map,
+                                                                  const size_t& overlap,
+                                                                  const double& id_cutoff,
+                                                                  const double& len_diff_cutoff)
+{
+    // group ORFs together based on single shared k-mer
+    auto ORF_group_tuple = group_ORFs(colour_ORF_map, _GraphVector);
+
+    //unpack ORF_group_tuple
+    auto& ORF_mat_vector = std::get<0>(ORF_group_tuple);
+    auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
+    auto& centroid_vector = std::get<2>(ORF_group_tuple);
+
+    // generate clusters for ORFs based on identity
+    auto cluster_map = produce_clusters(colour_ORF_map, _GraphVector, overlap, ORF_mat_vector,
+                                                   ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
+
+    // generate return pair of mappings of ORF IDs and clusters
+    const auto return_pair = std::make_pair(ORF_mat_vector, cluster_map);
+    return return_pair;
+}
+
+RefindTuple Graph::refind_gene(const size_t& colour_ID,
+                                const ORFNodeVector& ORF_info,
+                                const size_t& radius,
+                                const bool is_ref,
+                                const bool write_idx,
+                                const int kmer,
+                                const std::string& FM_fasta_file,
+                                const bool repeat)
+{
+    return traverse_outward(_GraphVector, colour_ID, ORF_info, radius, is_ref, write_idx, kmer, FM_fasta_file, repeat);
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,
@@ -201,6 +264,9 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
             if (node_seq_len > 0)
             {
                 substring = unitig_seq.substr(overlap, node_seq_len);
+            } else
+            {
+                break;
             }
         }
         sequence += substring;
@@ -247,7 +313,7 @@ NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
             // add to node_colour_map_private
             for (size_t i = 0; i < unitig_dict.full_colour().size(); i++)
             {
-                if (unitig_dict.full_colour().at(i))
+                if (unitig_dict.full_colour()[i])
                 {
                     node_colour_vector_private[i].push_back(unitig_dict.id);
                 }

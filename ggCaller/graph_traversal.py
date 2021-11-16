@@ -1,6 +1,14 @@
 import graph_tool.all as gt
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
+import json
+
+
+class SetEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
 
 
 # @profile
@@ -57,8 +65,8 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
     # for highest scoring path, see if greater than cut-off, if so, add high scoring ORFs to set
     if high_score_temp >= minimum_path_score:
-        for node in high_scoring_ORFs_temp:
-            high_scoring_ORFs.add(u.vertex_properties["ID"][node])
+        ORF_ID_list = tuple([u.vertex_properties["ID"][node] for node in high_scoring_ORFs_temp])
+        high_scoring_ORFs.add(ORF_ID_list)
 
     return high_scoring_ORFs
 
@@ -76,9 +84,9 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     ORF_index = {}
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF in ORF_score_dict.keys():
+    for ORF_ID in ORF_score_dict.keys():
         v = g.add_vertex()
-        ORF_index[ORF] = g.vertex_index[v]
+        ORF_index[ORF_ID] = int(v)
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     for ORF1, overlap_dict in ORF_overlap_dict.items():
@@ -184,7 +192,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
 #@profile
 def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
-                       minimum_path_score, write_idx, input_colours, aa_kmer_set):
+                       minimum_path_score, write_idx, input_colours, max_orf_orf_distance):
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
@@ -192,28 +200,97 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
+    # print("Finding ORFs: " + str(colour_ID))
+
     # determine all ORFs in Bifrost graph
     ORF_overlap_dict, ORF_vector = shd_arr[0].findORFs(colour_ID, node_set, repeat,
                                                        overlap, max_path_length, is_ref, no_filter,
                                                        stop_codons_for, start_codons, min_ORF_length,
                                                        max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-    # if no filter specified, just copy ORF_vector to true_genes
+    # cycle testing
+    # print output to file
+    # node_dict = {}
+    # with open("calls_" + str(colour_ID) + ".fasta", "w") as f:
+    #     for gene_id, ORFNodeVector in enumerate(ORF_vector):
+    #         upstream_TIS_seq = shd_arr[0].generate_sequence(ORFNodeVector[3], ORFNodeVector[4], overlap)
+    #         gene = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+    #         upstream_TIS_seq += gene
+    #         f.write(">" + str(gene_id) + "\n" + upstream_TIS_seq + "\n")
+    #         node_dict[upstream_TIS_seq] = ORFNodeVector
+    #
+    # # print output to file
+    # with open("overlaps_" + str(colour_ID) + ".json", "w") as j:
+    #     json.dump(ORF_overlap_dict, j)
+    #
+    # with open("node_list_" + str(colour_ID) + ".nodes", "w") as j:
+    #     json.dump(node_dict, j)
+
+    # initialise return dictionaries
+    gene_dict = {}
+
+    # if no filter specified, just copy ORF_vector to gene_dict with dictionary comprehension
     if no_filter:
-        true_genes = ORF_vector
+        gene_dict = {i: ORF_vector[i] for i in range(0, len(ORF_vector))}
     else:
+        # print("Scoring ORFs: " + str(colour_ID))
+
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2],
-                                     aa_kmer_set)
+        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
-        # determine highest scoring genes
-        high_scoring_ORFs = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+        # with open("score_dict_" + str(colour_ID) + ".score", "w") as j:
+        #     json.dump(ORF_score_dict, j)
 
-        # initiate true genes list
-        true_genes = [None] * len(high_scoring_ORFs)
+        # print("Finding highest scoring paths: " + str(colour_ID))
 
-        for index, ORF_id in enumerate(high_scoring_ORFs):
-            # add only high scoring ORFs to true_genes
-            true_genes[index] = ORF_vector[ORF_id]
+        # determine highest scoring genes, stored in list of lists
+        edge_list = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
 
-    return colour_ID, true_genes
+        # with open("edge_list_" + str(colour_ID) + ".pre_edges", "w") as j:
+        #     j.write(str(edge_list))
+
+        # generate a dictionary of all true gene info
+        for entry in edge_list:
+            for ORF in entry:
+                gene_dict[ORF] = ORF_vector[ORF]
+
+        # generate list of target ORFs, removing duplicates
+        target_ORFs = list(set([x for f in edge_list for x in (f[0], f[-1])]))
+
+        # print("Connecting ORFs: " + str(colour_ID))
+
+        # determine next ORFs for each terminal ORF in edge_list
+        next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance))
+
+        # determine redundant edges in high_scoring_ORFs
+        redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in edge_list if len(i) > 1])
+
+        # remove any ORFs with no connections in high_scoring_ORFs
+        edge_list = [i for i in edge_list if len(i) > 1]
+
+        # remove redundant edges between high_scoring_ORFs and next_nodes
+        for edge in next_ORFs:
+            if edge not in redundant_edges:
+                edge_list.append(edge)
+
+        # print("Arranging highest scoring ORFs: " + str(colour_ID))
+
+        # iterate over edge_list and append to a dictionary of high_scoring_ORF_edges for each ORF
+        high_scoring_ORF_edges = {}
+        for entry in edge_list:
+            # work out last index of entry
+            last_index = len(entry) - 1
+            for i, ORF in enumerate(entry):
+                # create new entry for current ORF
+                if ORF not in high_scoring_ORF_edges:
+                    high_scoring_ORF_edges[ORF] = set()
+                # if ORF not last in list, add next entry to set
+                if (i != last_index):
+                    high_scoring_ORF_edges[ORF].add(entry[i + 1])
+
+        # with open("edge_list_" + str(colour_ID) + ".post_edges", "w") as j:
+        #     json.dump(high_scoring_ORF_edges, j, cls=SetEncoder)
+
+    # print("Finished:  " + str(colour_ID))
+
+    return colour_ID, gene_dict, high_scoring_ORF_edges

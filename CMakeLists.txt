@@ -11,19 +11,16 @@ find_package(Threads REQUIRED)
 
 # find pybind and create python module
 find_package(pybind11 REQUIRED)
-pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/edlib/edlib.cpp)
 
 # check for conda environment
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
-  # find Seqan3 packages
-  find_path(SEQAN3_CLONE_DIR name bin PATHS ${CONDA_DIR} NO_DEFAULT_PATH)
-  find_path(SEQAN3_INCLUDE_DIR name seqan PATHS ${SEQAN3_CLONE_DIR}/include NO_DEFAULT_PATH)
-  find_path(SEQAN3_SUBMODULES_DIR name submodules PATHS ${SEQAN3_INCLUDE_DIR}/seqan3 NO_DEFAULT_PATH)
 ENDIF()
 
-#Find include dirs for z and bifrost
+#Find include dirs for z, bifrost
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
 
@@ -41,11 +38,11 @@ SET( z_LIBRARIES ${z_LIBRARY} )
 SET( bifrost_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 
-# find Seqan3 package
-find_package(SeqAn3 REQUIRED HINTS ${CONDA_DIR}/share/cmake/seqan3)
+# add sdsl include directory
+target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE seqan3::seqan3 ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads)
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen)
 
 #find OpenMP library
 find_package(OpenMP)

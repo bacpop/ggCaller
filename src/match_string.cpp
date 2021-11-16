@@ -2,85 +2,121 @@
 #include "match_string.h"
 
 // index fasta files
-fm_index_coll index_fasta(const std::string& fasta_file,
-                          const bool& write_idx)
+std::pair<fm_index_coll, std::vector<size_t>>  index_fasta(const std::string& fasta_file,
+                                                           const bool& write_idx)
 {
     fm_index_coll ref_index;
+
     // create fm index file name
     std::string idx_file_name = fasta_file + ".fm";
 
-    // Read index if it already exists
-    if (std::filesystem::exists(idx_file_name))
-    {
-        std::ifstream is{idx_file_name, std::ios::binary};
-        cereal::BinaryInputArchive iarchive{is};
-        iarchive(ref_index);
-    }
-    else
-    {
-        // Create index - should be viable for both single and collections fmindexes
-        seqan3::sequence_file_input reference_in{fasta_file};
-        std::vector<seqan3::dna5_vector> reference_seq;
+    // create entry for start and end of contigs within fm_index
+    std::vector<size_t> contig_locs;
 
-        for (auto & [seq, id, qual] : reference_in) {
-            reference_seq.push_back(std::move(seq));
+    // if fm_index not available, generate it
+    if (!load_from_file(ref_index, idx_file_name))
+    {
+        std::string reference_seq;
+
+        // open the file handler
+        gzFile fp = gzopen(fasta_file.c_str(), "r");
+
+        if(fp == 0) {
+            perror("fopen");
+            exit(1);
+        }
+        // initialize seq
+        kseq_t *seq = kseq_init(fp);
+
+        // read sequence
+        int l;
+        while ((l = kseq_read(seq)) >= 0)
+        {
+            reference_seq += seq->seq.s;
+            contig_locs.push_back(reference_seq.size());
+            reference_seq += ",";
         }
 
-        // this is where the sequence is indexed
-        ref_index = fm_index_coll{reference_seq};
+        // destroy seq and fp objects
+        kseq_destroy(seq);
+        gzclose(fp);
 
-        // write indexes to file if specified
+        sdsl::construct_im(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
-            std::ofstream os{idx_file_name, std::ios::binary};
-            cereal::BinaryOutputArchive oarchive{os};
-            oarchive(ref_index);
+            store_to_file(ref_index, idx_file_name); // save it
         }
+    } else
+    {
+        auto locations = sdsl::locate(ref_index, ",");
+        sort(locations.begin(), locations.end());
+        contig_locs.insert(contig_locs.end(), locations.begin(), locations.end());
     }
-    return ref_index;
+
+    return {ref_index, contig_locs};
 }
 
 //search for a specific sequence within an fm index array
-int seq_search(const seqan3::dna5_vector& query,
-               const fm_index_coll& ref_idx)
+std::pair<int, bool> seq_search(const std::string& query,
+                                const fm_index_coll& ref_idx)
 {
-    int present = 0;
-    int query_count = 0;
+    int query_loc = -1;
     //count number of occurrences in positive strand
-    auto results = search(query, ref_idx);
-    query_count = (int)std::ranges::distance(results);
+    auto locations = sdsl::locate(ref_idx, query);
+
+    // determine if sequence reversed
+    bool rev_comp = false;
 
     // if not found, check reverse strand
-    if (query_count == 0)
+    if (locations.empty())
     {
-        auto results = search(query | std::views::reverse | seqan3::views::complement, ref_idx);
-        query_count = (int)std::ranges::distance(results);
+        const std::string rev_query = reverse_complement(query);
+        locations = sdsl::locate(ref_idx, rev_query);
+        rev_comp = true;
     }
 
-    if (query_count != 0)
+    // take first entry from locations
+    if (!locations.empty())
     {
         // debug_stream << "found" << std::endl;
-        present = 1;
+        sort(locations.begin(), locations.end());
+        query_loc = locations[0];
     }
-    return present;
+    return {query_loc, rev_comp};
 }
 
 // determine true colours of sequence
-bool check_colours(const std::string& path_sequence,
-                   const fm_index_coll& fm_idx)
+std::pair<ContigLoc, bool> check_colours(const std::string& query,
+                                           const fm_index_coll& fm_idx,
+                                           const std::vector<size_t>& contig_locs)
 {
-    // initialise present
-    bool present = true;
+    // initialise location pair
+    ContigLoc contig_loc;
 
-    // convert string to dn5 vector, get colours
-    seqan3::dna5_vector query = path_sequence | seqan3::views::char_to<seqan3::dna5> | seqan3::views::to<std::vector>;
+    const auto query_pair = seq_search(query, fm_idx);
+    const int& query_loc = std::get<0>(query_pair);
+    const int& rev_comp = std::get<1>(query_pair);
 
-    //if sequence present then add to hits
-    int hits = seq_search(query, fm_idx);
-    if (!hits)
+    //if sequence present then determine contig coordinates
+    if (query_loc > 0)
     {
-        present = false;
+        // go through contig_locs to determine in which contig sequence sits
+        for (int i = 0; i < contig_locs.size(); i++)
+        {
+            if (query_loc < contig_locs.at(i))
+            {
+                if (i == 0)
+                {
+                    contig_loc = {1, {query_loc + 1, query_loc + query.size()}};
+                } else
+                {
+                    size_t relative_loc = (query_loc - contig_locs.at(i - 1));
+                    contig_loc = {i + 1, {relative_loc, relative_loc + query.size() - 1}};
+                }
+                break;
+            }
+        }
     }
 
-    return present;
+    return {contig_loc, rev_comp};
 }

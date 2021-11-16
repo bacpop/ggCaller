@@ -85,31 +85,6 @@ aa_table = {"L": 1,
 
 
 # generate ORF sequences from coordinates
-# @profile
-def generate_sequence(graph_vector, nodelist, node_coords, overlap):
-    sequence = ""
-    for i in range(0, len(nodelist)):
-        id = nodelist[i]
-        coords = node_coords[i]
-
-        # calculate strand based on value of node (if negative, strand is false)
-        strand = True if id >= 0 else False
-
-        if strand:
-            unitig_seq = graph_vector[abs(id) - 1].seq
-        else:
-            unitig_seq = str(Seq(graph_vector[abs(id) - 1].seq).reverse_complement())
-
-        if len(sequence) == 0:
-            substring = unitig_seq[coords[0]:(coords[1] + 1)]
-        else:
-            if coords[1] >= overlap:
-                substring = unitig_seq[overlap:(coords[1] + 1)]
-
-        sequence += substring
-
-    return sequence
-
 
 #@profile
 def tokenize_aa_seq(aa_seq):
@@ -186,23 +161,6 @@ def kmerize(seq, k):
         kmerset.add(kmer)
     return kmerset
 
-
-def load_kmer_model():
-    # check if directory exists. If not, unzip file
-    if not os.path.exists(model_dir):
-        tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
-        tar.extractall(module_dir)
-        tar.close()
-
-    """Load k-mer filters"""
-    genexa_kmer_path = os.path.join(model_dir, "10mer_thresh2_minusARF_all.pkl")
-
-    with open(genexa_kmer_path, "rb") as f:
-        aa_kmer_set = pickle.load(f)
-
-    return aa_kmer_set
-
-
 def load_gene_models():
     # check if directory exists. If not, unzip file
     if not os.path.exists(model_dir):
@@ -227,24 +185,11 @@ def load_gene_models():
 
 
 #@profile
-def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis, aa_kmer_set):
+def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis):
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")
 
     ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph_vector, overlap)
-
-    # seengene check
-    if protein_kmer_filter:
-        seengene = []
-        for s in ORF_seq_enc:
-            kmerset = kmerize(s, k_seengene)
-            # s = [x in aa_kmer_set for x in kmerset]
-            s = np.isin(list(kmerset), aa_kmer_set)
-            seen = np.count_nonzero(s) >= multimer_threshold
-            seengene.append(seen)
-
-    # score
-    # print("Scoring ORFs with temporal convolutional network...")
 
     # sort by length to minimize impact of batch padding
     ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
@@ -314,10 +259,10 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
         pred = predict_tis(model_tis, TIS_stacked)
 
         TIS_prob_list.extend(pred)
-    y_pred_TIS = np.asarray(TIS_prob_list, dtype=float)
+    TIS_prob_list = [x.item() for x in TIS_prob_list]
 
     # reindex batched scores
-    for i, prob in enumerate(y_pred_TIS):
+    for i, prob in enumerate(TIS_prob_list):
         idx = ORF_TIS_seq_idx[i]
         ORF_TIS_prob[idx] = float(prob)
 
