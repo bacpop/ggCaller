@@ -7,11 +7,11 @@ from Bio import AlignIO
 import itertools as iter
 from BCBio import GFF
 from Bio import SeqIO
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from .generate_alignments import *
-
 
 def back_translate_dir(high_scoring_ORFs, isolate_names, annotation_dir, overlap, shd_arr_tup, pool):
     # iterate over all files in annotation directory multithreaded
@@ -112,7 +112,6 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
 
     return
 
-
 def output_aa_sequence(node_pair):
     # unpack node_pair
     node = node_pair[1]
@@ -127,7 +126,7 @@ def output_aa_sequence(node_pair):
     return ref_output_sequences
 
 
-def output_alignment_sequence(node_pair, isolate_list, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
                               ref_aln):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -425,7 +424,8 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
-                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln, verbose):
+                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln,
+                                  call_variants, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments
@@ -435,7 +435,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         None
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          G.nodes(data=True)):
@@ -457,6 +457,11 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     unaligned_reference_files = filter(None, unaligned_reference_files)
+
+    # create set of files not to be used for variant calling
+    if call_variants:
+        no_vc_set = set(os.listdir(output_dir + "aligned_gene_sequences"))
+
     # Get Biopython command calls for each output gene sequences
     # check if ref_alignment being done
     if ref_aln:
@@ -491,6 +496,14 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
 
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
+
+    # call variants using snp-sites
+    if call_variants:
+        try:
+            os.mkdir(output_dir + "VCF")
+        except FileExistsError:
+            None
+        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
 
     return
 
@@ -558,7 +571,7 @@ def concatenate_core_genome_alignments(core_names, output_dir):
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                    isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
-                                   overlap, pool, ref_aln, verbose):
+                                   overlap, pool, ref_aln, call_variants, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments
@@ -572,7 +585,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence, isolate_list=isolates,
+    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln),
                                          core_genes):
@@ -594,6 +607,11 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     # remove single sequence files
     unaligned_sequence_files = filter(None, unaligned_sequence_files)
     unaligned_reference_files = filter(None, unaligned_reference_files)
+
+    # create set of files not to be used for variant calling
+    if call_variants:
+        no_vc_set = set(os.listdir(output_dir + "aligned_gene_sequences/"))
+
     # Get Biopython command calls for each output gene sequences
     # check if ref_alignment being done
     if ref_aln:
@@ -628,6 +646,11 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                               threads, "def", not verbose)
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
+
+    # call variants using snp-sites
+    if call_variants:
+        run_snpsites_dir(output_dir + "aligned_gene_sequences/", no_vc_set, pool)
+
     # Concatenate them together to produce the two output files
     concatenate_core_genome_alignments(core_gene_names, output_dir)
 

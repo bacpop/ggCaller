@@ -275,8 +275,8 @@ def get_options():
         action='store_false',
         default=True)
 
-    Panaroo_core = parser.add_argument_group('Gene alignment')
-    Panaroo_core.add_argument(
+    Panaroo_aln = parser.add_argument_group('Gene alignment')
+    Panaroo_aln.add_argument(
         "--alignment",
         dest="aln",
         help=("Output alignments of core genes or all genes. Options are" +
@@ -284,7 +284,7 @@ def get_options():
         type=str,
         choices=['core', 'pan'],
         default=None)
-    Panaroo_core.add_argument(
+    Panaroo_aln.add_argument(
         "--aligner",
         dest="alr",
         help=
@@ -292,11 +292,17 @@ def get_options():
         type=str,
         choices=['def', 'ref'],
         default="def")
-    Panaroo_core.add_argument("--core_threshold",
-                              dest="core",
-                              help="Core-genome sample threshold (default=0.95)",
-                              type=float,
-                              default=0.95)
+    Panaroo_aln.add_argument("--core_threshold",
+                             dest="core",
+                             help="Core-genome sample threshold (default=0.95)",
+                             type=float,
+                             default=0.95)
+    Panaroo_aln.add_argument("--no_variants",
+                             dest="call_variants",
+                             help="Do not call variants using SNP-sites after alignment.",
+                             type=bool,
+                             action='store_false',
+                             default=True)
 
     # Other options
     parser.add_argument("--codon-table",
@@ -480,7 +486,7 @@ def main():
                             options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                            annotation_db, hmm_db)
+                            annotation_db, hmm_db, options.call_variants)
 
     print("Finished.")
 

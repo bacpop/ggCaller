@@ -46,8 +46,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
-                remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db):
-
+                remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
+                call_variants):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -62,6 +62,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # Make sure aligner is installed if alignment requested
     if aln != None:
         check_aligner_install()
+
+    # check snp-sites installed
+    if call_variants:
+        check_snpsites_install()
 
     if verbose:
         print("Generating initial network...")
@@ -254,14 +258,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool, ref_aln, verbose)
+                                      high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         concatenate_core_genome_alignments(core_nodes, output_dir)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool, ref_aln, verbose)
+                                       high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose)
 
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():

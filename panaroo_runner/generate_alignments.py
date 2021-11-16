@@ -4,13 +4,51 @@ import sys
 import re
 
 from joblib import Parallel, delayed
+from functools import partial
 from tqdm import tqdm
-
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 from Bio.Align.Applications import MafftCommandline
+
+
+def run_snpsites_dir(annotation_dir, vcf_dir, no_vc_set, pool):
+    pool.map(partial(run_snpsites, annotation_dir=annotation_dir, vcf_dir=vcf_dir),
+             [file for file in os.listdir(annotation_dir) if file not in no_vc_set])
+
+    return True
+
+
+def run_snpsites(file, annotation_dir, vcf_dir):
+    outfile = os.path.join(vcf_dir, file.split(".")[0] + ".vcf")
+    file = os.path.join(annotation_dir, file)
+
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-v", "-o", outfile, file]
+
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+    if result.returncode != 0:
+        find_err = re.search(r'Warning:', str(result))
+        if find_err is None:
+            raise Exception("Snp-sites failed to run on file: " + file)
+
+    return
+
+
+def check_snpsites_install():
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-V"]
+
+    p = str(
+        subprocess.run(command,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE))
+    present = False
+    find_ver = re.search(r'snp-sites 2\.\d+\.\d+', p)
+    if find_ver != None:
+        present = True
+
+    if present == False:
+        sys.stderr.write("Need snp-sites v2 or greater to be installed " + "\n")
+        sys.exit(1)
+
+    return present
 
 
 def check_aligner_install():
@@ -24,13 +62,12 @@ def check_aligner_install():
         presence (bool)
             True/False aligner present
     """
-    command = "mafft --help"
+    command = ["mafft", "--help"]
 
     p = str(
         subprocess.run(command,
                        stdout=subprocess.PIPE,
-                       stderr=subprocess.PIPE,
-                       shell=True))
+                       stderr=subprocess.PIPE))
     present = False
 
     find_ver = re.search(r'MAFFT v7\.\d+', p)
@@ -42,39 +79,6 @@ def check_aligner_install():
         sys.exit(1)
 
     return present
-
-
-# def output_sequence(node, isolate_list, temp_directory, outdir):
-#     # Get the name of the sequences for the gene of interest
-#     sequence_ids = node["seqIDs"]
-#     output_sequences = []
-#     # Counter for the number of sequences to
-#     isolate_no = 0
-#     # Look for gene sequences among all genes (from disk)
-#     for seq in SeqIO.parse(outdir + "combined_DNA_CDS.fasta", 'fasta'):
-#         isolate_num = int(seq.id.split('_')[0])
-#         isolate_name = isolate_list[isolate_num].replace(";",
-#                                                          "") + ";" + seq.id
-#         if seq.id in sequence_ids:
-#             output_sequences.append(
-#                 SeqRecord(seq.seq, id=isolate_name, description=""))
-#             isolate_no += 1
-#     # Put gene of interest sequences in a generator, with corrected isolate names
-#     output_sequences = (x for x in output_sequences)
-#     # set filename to gene name, if more than one sequence to be aliged
-#     if isolate_no > 1:
-#         outname = temp_directory + node["name"] + ".fasta"
-#     else:
-#         # If only one sequence, output it to aliged directory and break
-#         outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".fasta"
-#         SeqIO.write(output_sequences, outname, 'fasta')
-#         return None
-#     # check to see if filename is too long
-#     if len(outname) >= 248:
-#         outname = outname[:248] + ".fasta"
-#     # Write them to disk
-#     SeqIO.write(output_sequences, outname, 'fasta')
-#     return outname
 
 
 def get_alignment_commands(fastafile_name, outdir, aligner):

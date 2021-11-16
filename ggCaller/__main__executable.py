@@ -171,6 +171,7 @@ def main():
     hmm_db = "default"
     annotate = "fast"
     evalue = 0.001
+    call_variants = True
     # unpack annotation database
     if annotation_db == "Bacteria" or annotation_db == "Viruses":
         db_id = annotation_db
@@ -325,7 +326,7 @@ def main():
                             clean_edges, edge_support_threshold, merge_paralogs, aln,
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
-                            search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db)
+                            search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants)
 
     print("Finished.")
 
