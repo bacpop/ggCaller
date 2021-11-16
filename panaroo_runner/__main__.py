@@ -24,10 +24,6 @@ from .generate_output import *
 from .annotate import *
 from .generate_alignments import check_aligner_install
 
-
-# debugging scripts
-# from .cdhit_align import *
-
 class SmartFormatter(argparse.HelpFormatter):
     def _split_lines(self, text, width):
         if text.startswith('R|'):
@@ -217,7 +213,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[3])
             else:
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
-            if annotate is not None:
+            if annotate is not None and is_ref:
                 # annotated genes
                 if len(ORFNodeVector) == 8 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
@@ -229,7 +225,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
 
     # write output GFF
-    if annotate is not None:
+    if annotate is not None and is_ref:
         if verbose:
             print("writing GFF files...")
         generate_GFF(input_colours, isolate_names, contig_annotation, output_dir)
