@@ -7,7 +7,6 @@ dependencies:
   - pip
   - numpy
   - scipy
-  - python-dateutil
   - pandas
   - bifrost
   - biopython
