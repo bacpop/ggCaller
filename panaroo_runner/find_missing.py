@@ -1,7 +1,7 @@
 from collections import defaultdict, Counter
 from Bio.Seq import translate, reverse_complement, Seq
 from Bio import SeqIO
-from .cdhit_align import align_dna_cdhit
+from panaroo.cdhit import align_dna_cdhit
 from panaroo.isvalid import del_dups
 from joblib import Parallel, delayed
 import os
@@ -36,19 +36,6 @@ def find_missing(G,
     # load shared memory items
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
     graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
-
-    # # identify nodes that have been merged at the protein level
-    # merged_nodes = defaultdict(dict)
-    # for node in G.nodes():
-    #     if (len(G.nodes[node]['centroid']) >
-    #         1) or (G.nodes[node]['mergedDNA']):
-    #         # get the DNA sequence of the largest centroid
-    #         max_len_id = G.nodes[node]['maxLenId']
-    #         long_centroid_seq = G.nodes[node]['dna'][max_len_id]
-    #         for sid in sorted(G.nodes[node]['seqIDs']):
-    #             # for each entry, add the merged node and the longest centroid id to merged_nodes
-    #             mem = int(sid.split("_")[0])
-    #             merged_nodes[mem][node] = long_centroid_seq
 
     # iterate through nodes to identify accessory genes for searching
     # these are nodes missing a member with at least one neighbour that has that member

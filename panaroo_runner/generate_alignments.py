@@ -20,7 +20,7 @@ def run_snpsites(file, annotation_dir, vcf_dir):
     outfile = os.path.join(vcf_dir, file.split(".")[0] + ".vcf")
     file = os.path.join(annotation_dir, file)
 
-    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-v", "-o", outfile, file]
+    command = ["snp-sites", "-v", "-o", outfile, file]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -33,7 +33,7 @@ def run_snpsites(file, annotation_dir, vcf_dir):
 
 
 def check_snpsites_install():
-    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-V"]
+    command = ["snp-sites", "-V"]
 
     p = str(
         subprocess.run(command,

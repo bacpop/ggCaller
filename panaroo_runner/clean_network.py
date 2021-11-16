@@ -1,9 +1,8 @@
 import networkx as nx
-from .cdhit_align import *
+from panaroo.cdhit import *
 from panaroo.merge_nodes import *
 from panaroo.isvalid import del_dups
 from collections import defaultdict, deque, Counter
-# from .cdhit_align import is_valid
 from itertools import chain, combinations
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix

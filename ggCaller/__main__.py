@@ -300,7 +300,6 @@ def get_options():
     Panaroo_aln.add_argument("--no_variants",
                              dest="call_variants",
                              help="Do not call variants using SNP-sites after alignment.",
-                             type=bool,
                              action='store_false',
                              default=True)
 
