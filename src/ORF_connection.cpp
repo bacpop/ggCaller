@@ -161,9 +161,6 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const GraphVector& graph_
             }
 
             prev_node_set.insert(start_node);
-        } else
-        {
-            int test = 1;
         }
     }
     return ORF_edges;
