@@ -30,6 +30,7 @@ dependencies:
   - xorg-libxpm
   - xorg-libxaw
   - xorg-libxfixes
+  - intbitset
   - networkx
   - pybind11
   - eigen
