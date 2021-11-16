@@ -1,0 +1,34 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+
+name: Run tests
+
+on: [push]
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.10
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        conda env update --file environment.yml --name base
+    - name: Install and run_test.py
+      run: |
+        PATH=$CONDA/bin/bin:$PATH
+        source $CONDA/bin/activate base
+        $CONDA/bin/python setup.py install
+        cd test && export POPPUNK_PYTHON=$CONDA/bin/python && $CONDA/bin/python run_test.py
