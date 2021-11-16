@@ -14,7 +14,6 @@ from .generate_network import *
 from panaroo.cdhit import check_cdhit_version
 from panaroo.cdhit import run_cdhit
 from .find_missing import *
-# from panaroo.generate_alignments import check_aligner_install
 from intbitset import intbitset
 from ggCaller.shared_memory import *
 
