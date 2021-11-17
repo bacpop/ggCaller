@@ -14,7 +14,7 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - bioconda::panaroo
+  - panaroo=1.2.9
   - pytorch
   - snp-sites
   - zlib

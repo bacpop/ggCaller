@@ -26,5 +26,5 @@ jobs:
       run: |
         PATH=$CONDA/bin/bin:$PATH
         source $CONDA/bin/activate base
-        $CONDA/bin/python -m pip install --no-deps --ignore-installed --use-feature=in-tree-build .
+        $CONDA/bin/python setup.py install
         cd test && export GGCALLER_PYTHON=$CONDA/bin/python && $CONDA/bin/python run_test.py
