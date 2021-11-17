@@ -1,4 +1,5 @@
 from functools import partial
+import shutil
 from ggCaller.shared_memory import *
 from ggCaller import __version__
 import networkx as nx
@@ -61,6 +62,41 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
     # overwrite existing alignment file
     output_sequences = (x for x in output_sequences)
     SeqIO.write(output_sequences, file, 'fasta')
+
+    return
+
+
+def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, G=None):
+    isolate_names = [
+        os.path.splitext(os.path.basename(x))[0] for x in input_colours
+    ]
+    if G == None:
+        with open(outfile, "w") as f:
+            for colour, gene_dict in high_scoring_ORFs.items():
+                for ORF_ID, ORFNodeVector in gene_dict.items():
+                    gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
+    else:
+        with open(outfile, "w") as f:
+            for node in G.nodes():
+                node_annotation = G.nodes[node]["description"]
+                centroid_sequence_ids = set(G.nodes[node]["centroid"])
+                for i in range(0, len(G.nodes[node]["centroid"])):
+                    colour = int(G.nodes[node]["centroid"][i].split("_")[0])
+                    ORF_ID = G.nodes[node]["centroid"][i].split("_")[-1]
+                    gene = G.nodes[node]["dna"][i]
+                    if node_annotation != "":
+                        f.write(">" + isolate_names[colour] + "_" + ORF_ID.zfill(
+                            5) + " " + node_annotation + "\n" + gene + "\n")
+                    else:
+                        f.write(">" + isolate_names[colour] + "_" + ORF_ID.zfill(5) + "\n" + gene + "\n")
+                for sid in G.nodes[node]['seqIDs']:
+                    if sid not in centroid_sequence_ids:
+                        colour = int(sid.split("_")[0])
+                        ORF_ID = int(sid.split("_")[-1])
+                        ORFNodeVector = high_scoring_ORFs[colour][ORF_ID]
+                        gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
 
     return
 
@@ -428,11 +464,12 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
                                   call_variants, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
-    # Make a folder for the output alignments
+    # Make a folder for the output alignments, clear if present and remake
     try:
         os.mkdir(output_dir + "aligned_gene_sequences")
     except FileExistsError:
-        None
+        shutil.rmtree(output_dir + "aligned_gene_sequences")
+        os.mkdir(output_dir + "aligned_gene_sequences")
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
@@ -574,11 +611,12 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                    overlap, pool, ref_aln, call_variants, verbose):
     unaligned_sequence_files = []
     unaligned_reference_files = []
-    # Make a folder for the output alignments
+    # Make a folder for the output alignments, clear if present and remake
     try:
         os.mkdir(output_dir + "aligned_gene_sequences")
     except FileExistsError:
-        None
+        shutil.rmtree(output_dir + "aligned_gene_sequences")
+        os.mkdir(output_dir + "aligned_gene_sequences")
 
     # Get core nodes
     core_genes = get_core_gene_nodes(G, threshold, num_isolates)

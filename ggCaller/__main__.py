@@ -9,6 +9,7 @@ from ggCaller.shared_memory import *
 import tqdm
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
+from panaroo_runner.generate_output import print_ORF_calls
 from panaroo_runner.annotate import *
 import ast
 import tempfile
@@ -486,6 +487,9 @@ def main():
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants)
+            else:
+                print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+                                input_colours, overlap, graph)
 
     print("Finished.")
 

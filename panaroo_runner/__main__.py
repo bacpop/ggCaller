@@ -259,6 +259,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
                                        high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose)
 
+    if verbose:
+        print("writing gene fasta...")
+    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+                    input_colours, overlap, shd_arr[0], G)
+
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
@@ -280,6 +285,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 edge[1]]['members'] = list(G.edges[edge[0],
                                                    edge[1]]['members'])
 
+    if verbose:
+        print("writing graph file...")
     nx.write_gml(G, output_dir + "final_graph.gml")
 
     # remove temporary directory
