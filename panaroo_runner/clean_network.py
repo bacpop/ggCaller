@@ -12,6 +12,20 @@ from tqdm import tqdm
 from intbitset import intbitset
 import sys
 
+
+def gen_node_iterables(G, nodes, feature, split=None):
+    for n in nodes:
+        if split is None:
+            yield G.nodes[n][feature]
+        else:
+            yield G.nodes[n][feature].split(split)
+
+
+def gen_edge_iterables(G, edges, feature):
+    for e in edges:
+        yield G[e[0]][e[1]][feature]
+
+
 def merge_node_cluster(G,
                        nodes,
                        newNode,
