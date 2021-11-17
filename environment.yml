@@ -1,7 +1,7 @@
 name: ggc_env
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
   - pip
@@ -14,13 +14,13 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - panaroo
+  - bioconda::panaroo
   - pytorch
   - snp-sites
   - zlib
   - pthread-stubs
   - matplotlib
-  - graph-tool >=2.35
+  - graph-tool>=2.35
   - xorg-libxi
   - xorg-libxcursor
   - xorg-libxdamage
@@ -35,7 +35,7 @@ dependencies:
   - pybind11
   - eigen
   - openblas
-  - cmake >=3.4
+  - cmake>=3.4
   - libgomp
   - llvm-openmp
   - tqdm
