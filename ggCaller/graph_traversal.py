@@ -234,7 +234,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in edge_list if len(i) > 1])
 
         # remove any ORFs with no connections in high_scoring_ORFs
-        edge_list = [i for i in edge_list if len(i) > 1]
+        edge_list = [i for i in edge_list]
 
         # remove redundant edges between high_scoring_ORFs and next_nodes
         for edge in next_ORFs:
