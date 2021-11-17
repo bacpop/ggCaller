@@ -14,13 +14,13 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - panaroo >=1.28
+  - panaroo >= 1.28
   - pytorch
   - snp-sites
   - zlib
   - pthread-stubs
   - matplotlib
-  - graph-tool >=2.35
+  - graph-tool >= 2.35
   - xorg-libxi
   - xorg-libxcursor
   - xorg-libxdamage
