@@ -5,9 +5,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# find pthreads
+# find pthreads and eigen
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 # find pybind and create python module
 find_package(pybind11 REQUIRED)
@@ -17,10 +18,7 @@ pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cp
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
-  SET(Eigen3_DIR "${CONDA_DIR}/share/eigen3/cmake")
 ENDIF()
-
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 #Find include dirs for z, bifrost
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
