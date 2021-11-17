@@ -687,7 +687,11 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
 
     # call variants using snp-sites
     if call_variants:
-        run_snpsites_dir(output_dir + "aligned_gene_sequences/", no_vc_set, pool)
+        try:
+            os.mkdir(output_dir + "VCF")
+        except FileExistsError:
+            None
+        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
 
     # Concatenate them together to produce the two output files
     concatenate_core_genome_alignments(core_gene_names, output_dir)
