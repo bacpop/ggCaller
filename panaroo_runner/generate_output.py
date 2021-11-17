@@ -4,6 +4,7 @@ from ggCaller.shared_memory import *
 from ggCaller import __version__
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 from Bio import AlignIO
 import itertools as iter
 from BCBio import GFF
@@ -246,6 +247,12 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
 
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                                          ids_len_stop, output_dir):
+    # hold gene proportions for gene frequency histogram
+    gene_frequencies = []
+
+    # hold genes per cluster for cluster frequency histogram
+    cluster_sizes = []
+
     # arange isolates
     isolates = []
     mems_to_index = {}
@@ -361,6 +368,8 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                 # determine gene presence/absence
                 num_isolates = G.nodes[node]['size']
                 proportion_present = float(num_isolates) / noSamples * 100.0
+                gene_frequencies.append(proportion_present)
+                cluster_sizes.append(entry_size)
                 if proportion_present >= 99:
                     noCore += 1
                 elif proportion_present >= 95:
@@ -393,8 +402,30 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                   "Total genes\t(0% <= strains <= 100%)\t" + str(total_genes))
         outfile.write(output)
 
-    return G
+    # write gene frequency histogram
+    gene_frequencies = np.array(gene_frequencies)
+    plt.hist(gene_frequencies, bins="auto",
+             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlim(xmin=0, xmax=100)
+    plt.xlabel('Proportion of genomes (%)')
+    plt.ylabel('Frequency')
+    plt.text(23, 45, r'$\mu=15, b=3$')
+    plt.savefig(output_dir + "gene_frequency.png", format="png")
+    plt.clf()
 
+    # write cluster frequency histogram
+    cluster_sizes = np.array(cluster_sizes)
+    plt.hist(cluster_sizes, bins="auto",
+             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlabel('No. genes per cluster')
+    plt.ylabel('Frequency')
+    plt.text(23, 45, r'$\mu=15, b=3$')
+    plt.savefig(output_dir + "cluster_size.png", format="png")
+    plt.clf()
+
+    return G
 
 def generate_pan_genome_reference(G, output_dir, split_paralogs=False):
     # need to treat paralogs differently?
