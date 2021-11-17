@@ -35,7 +35,7 @@ dependencies:
   - pybind11
   - eigen
   - openblas
-  - cmake >=3.4
+  - cmake >=3.10
   - libgomp
   - llvm-openmp
   - tqdm
