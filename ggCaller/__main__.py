@@ -13,6 +13,7 @@ from panaroo_runner.generate_output import print_ORF_calls
 from panaroo_runner.annotate import *
 import ast
 import tempfile
+import json
 
 
 def get_options():
@@ -184,6 +185,7 @@ def get_options():
                                   dest="hmm_db",
                                   help="HMMER hmm profile file. Default is Uniprot HAMAP. Can also"
                                        "specify path to pre-built hmm profile file generated using hmmbuild",
+                                  type=str,
                                   default="default")
     Panaroo_matching.add_argument("--evalue",
                                   dest="evalue",
@@ -410,7 +412,7 @@ def main():
             db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "hmm")
             hmm_db = os.path.join(db_dir, "HAMAP.hmm")
 
-        if not os.path.exists(hmm_db + ".h3f"):
+        if not os.path.exists(hmm_db + ".h3f") and options.annotate == "sensitive":
             print("Generating HMMER index...")
             generate_HMMER_index(hmm_db)
 
