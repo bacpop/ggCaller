@@ -11,11 +11,8 @@ from collections import defaultdict
 # panaroo scripts
 from panaroo.isvalid import *
 from .generate_network import *
-from panaroo.cdhit import check_cdhit_version
-from panaroo.cdhit import run_cdhit
+from panaroo.cdhit import check_cdhit_version, run_cdhit
 from .find_missing import *
-from intbitset import intbitset
-from ggCaller.shared_memory import *
 
 # custom panaroo scripts
 from .clean_network import *
