@@ -20,6 +20,13 @@ subprocess.run(
     shell=True,
     check=True)
 
+### reference read workflow ###
+sys.stderr.write("Running reference read workflow without alignment\n")
+subprocess.run(
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --high_var_flag 4 --core_threshold 0.96",
+    shell=True,
+    check=True)
+
 ### read build workflow ###
 sys.stderr.write("Running read build workflow without alignment\n")
 subprocess.run(
@@ -31,13 +38,6 @@ subprocess.run(
 sys.stderr.write("Running reads + reference build workflow without alignment\n")
 subprocess.run(
     python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --reads pneumo_CL_group2.txt --out test_dir --repeat --family_threshold 0.75 --merge_paralogs --refind_prop_match 0.15 --edge_support_threshold 2 --remove_by_consensus True",
-    shell=True,
-    check=True)
-
-### reference read workflow ###
-sys.stderr.write("Running reference read workflow without alignment\n")
-subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --high_var_flag 4 --core_threshold 0.96",
     shell=True,
     check=True)
 

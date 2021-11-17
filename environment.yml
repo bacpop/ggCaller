@@ -33,7 +33,7 @@ dependencies:
   - intbitset
   - networkx
   - pybind11
-  - eigen
+  - eigen ==3.3
   - openblas
   - cmake >=3.10
   - libgomp
