@@ -449,10 +449,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
         temp_rarefaction_list = []
         prev_set = intbitset([])
         shuffle(genes_per_isolate)
-        # append zero for zeroth genome added
-        genome_list.append(0)
-        temp_rarefaction_list.append(0)
-        for mem in range(num_isolates):
+        for mem in range(noSamples):
             genome_list.append(mem + 1)
             new_genes = genes_per_isolate[mem].difference(prev_set)
             temp_rarefaction_list.append(len(new_genes))
@@ -466,10 +463,10 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                           ydata=rarefaction_list)
     genome_list = np.sort(np.unique(genome_list))
     spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
-    xnew = np.linspace(genome_list.min(), genome_list.max(), 300)
+    xnew = np.linspace(0, genome_list.max(), 100)
     power_smooth = spl(xnew)
 
-    stdevs = np.sqrt(np.diag(cov))
+    # stdevs = np.sqrt(np.diag(cov))
     # res = rarefaction_list - power_law(genome_list, *pars)
     plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='black')
     plt.ylim(ymin=0)
