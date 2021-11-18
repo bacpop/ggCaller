@@ -33,6 +33,7 @@ dependencies:
   - intbitset
   - networkx
   - pybind11
+  - uncertainties
   - eigen =3.3
   - openblas
   - cmake >=3.10
