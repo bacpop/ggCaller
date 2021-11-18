@@ -7,11 +7,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Bio import AlignIO
 import itertools as iter
+from intbitset import intbitset
 from BCBio import GFF
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+from scipy.optimize import curve_fit
+from random import shuffle
 from .generate_alignments import *
 
 
@@ -245,6 +248,9 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
     return outname, ref_outname
 
 
+def power_law(x, a, b):
+    return a * np.power(x, b)
+
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                                          ids_len_stop, output_dir):
     # hold gene proportions for gene frequency histogram
@@ -267,6 +273,9 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     noShell = 0
     noCloud = 0
     total_genes = 0
+
+    # hold set of nodes found in each colour for rarefaction curve
+    genes_per_isolate = [intbitset([]) for x in range(noSamples)]
 
     # generate file
     with open(output_dir + "gene_presence_absence_roary.csv", 'w') as roary_csv_outfile, \
@@ -365,6 +374,10 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                 entry_sizes.append((entry_size, entry_count))
                 entry_count += 1
 
+                # determine which genomes genes clusters are found in
+                for mem in G.nodes[node]['members']:
+                    genes_per_isolate[mem].add(node)
+
                 # determine gene presence/absence
                 num_isolates = G.nodes[node]['size']
                 proportion_present = float(num_isolates) / noSamples * 100.0
@@ -423,6 +436,39 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     plt.ylabel('Frequency')
     plt.text(23, 45, r'$\mu=15, b=3$')
     plt.savefig(output_dir + "cluster_size.png", format="png")
+    plt.clf()
+
+    # generate rarefaction curve
+    rarefaction_list = np.empty(0)
+    genome_list = []
+
+    # shuffle genes_per_isolate to generate many samples of genomes
+    shuffle_iterations = 50
+    for i in range(shuffle_iterations):
+        temp_rarefaction_list = []
+        prev_set = intbitset([])
+        shuffle(genes_per_isolate)
+        for mem in range(num_isolates):
+            genome_list.append(mem)
+            new_genes = genes_per_isolate[mem].difference(prev_set)
+            temp_rarefaction_list.append(len(new_genes))
+            prev_set.update(new_genes)
+        temp_rarefaction_list = np.cumsum(temp_rarefaction_list)
+        rarefaction_list = np.append(rarefaction_list, [temp_rarefaction_list])
+
+    genome_list = np.array(genome_list)
+    pars, cov = curve_fit(f=power_law, xdata=genome_list,
+                          ydata=rarefaction_list)
+
+    stdevs = np.sqrt(np.diag(cov))
+    res = rarefaction_list - power_law(genome_list, *pars)
+    plt.scatter(genome_list, rarefaction_list, s=20, color='#00b3b3', label='Data')
+    plt.plot(genome_list, power_law(genome_list, *pars), linestyle='--', linewidth=2, color='black')
+    plt.ylim(ymin=0)
+    plt.xlabel('Number of genomes')
+    plt.ylabel('Cumulative number of unique genes')
+    plt.text(23, 45, r'$\mu=15, b=3$')
+    plt.savefig(output_dir + "rarefaction_curve.png", format="png")
     plt.clf()
 
     return G
