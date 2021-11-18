@@ -661,7 +661,7 @@ def get_core_gene_nodes(G, threshold, num_isolates):
 
 def concatenate_core_genome_alignments(core_names, output_dir):
     alignments_dir = output_dir + "/aligned_gene_sequences/"
-    # Open up each alignment that is assosciated with a core node
+    # Open up each alignment that is associated with a core node
     alignment_filenames = os.listdir(alignments_dir)
     core_filenames = [
         x for x in alignment_filenames if x.split('.')[0] in core_names
@@ -674,7 +674,7 @@ def concatenate_core_genome_alignments(core_names, output_dir):
         alignment = AlignIO.read(alignments_dir + filename, 'fasta')
         gene_dict = {}
         for record in alignment:
-            genome_id = record.id.split(";")[0]
+            genome_id = record.id.rsplit("_", 1)[0]
             if genome_id in gene_dict:
                 if str(record.seq).count("-") < str(
                         gene_dict[genome_id][1]).count("-"):
