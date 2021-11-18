@@ -14,6 +14,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from scipy.optimize import curve_fit
+from scipy.interpolate import make_interp_spline, BSpline
 from random import shuffle
 from .generate_alignments import *
 
@@ -448,8 +449,11 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
         temp_rarefaction_list = []
         prev_set = intbitset([])
         shuffle(genes_per_isolate)
+        # append zero for zeroth genome added
+        genome_list.append(0)
+        temp_rarefaction_list.append(0)
         for mem in range(num_isolates):
-            genome_list.append(mem)
+            genome_list.append(mem + 1)
             new_genes = genes_per_isolate[mem].difference(prev_set)
             temp_rarefaction_list.append(len(new_genes))
             prev_set.update(new_genes)
@@ -457,13 +461,17 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
         rarefaction_list = np.append(rarefaction_list, [temp_rarefaction_list])
 
     genome_list = np.array(genome_list)
+    plt.scatter(genome_list, rarefaction_list, s=20, color='#00b3b3', label='Data')
     pars, cov = curve_fit(f=power_law, xdata=genome_list,
                           ydata=rarefaction_list)
+    genome_list = np.sort(np.unique(genome_list))
+    spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
+    xnew = np.linspace(genome_list.min(), genome_list.max(), 300)
+    power_smooth = spl(xnew)
 
     stdevs = np.sqrt(np.diag(cov))
-    res = rarefaction_list - power_law(genome_list, *pars)
-    plt.scatter(genome_list, rarefaction_list, s=20, color='#00b3b3', label='Data')
-    plt.plot(genome_list, power_law(genome_list, *pars), linestyle='--', linewidth=2, color='black')
+    # res = rarefaction_list - power_law(genome_list, *pars)
+    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='black')
     plt.ylim(ymin=0)
     plt.xlabel('Number of genomes')
     plt.ylabel('Cumulative number of unique genes')
