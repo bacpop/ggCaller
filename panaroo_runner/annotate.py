@@ -95,7 +95,10 @@ def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
         sys.exit(1)
 
     # read in file, map highest scoring annotation and bitscore to query
-    df = pd.read_csv(annotation_temp_dir + "aa_d.tsv", sep='\t', header=None)
+    try:
+        df = pd.read_csv(annotation_temp_dir + "aa_d.tsv", sep='\t', header=None)
+    except pd.errors.EmptyDataError:
+        return G, high_scoring_ORFs
     df.set_axis(['query_id', 'id', 'bitscore', 'description'], axis=1, inplace=True)
 
     # split node in which query is found
