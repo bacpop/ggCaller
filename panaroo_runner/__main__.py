@@ -39,7 +39,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
-                call_variants):
+                call_variants, ignore_pseduogenes, truncation_threshold):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -199,11 +199,13 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     ids_len_stop = {}
     contig_annotation = defaultdict(lambda: defaultdict(list))
     for node in G.nodes():
+        length_centroid = G.nodes[node]['longCentroidID'][0]
         for sid in G.nodes[node]['seqIDs']:
             orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
             ORF_ID = int(sid.split("_")[-1])
             ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
+            ORF_len = ORFNodeVector[2]
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
                 ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[3])
@@ -215,6 +217,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     # add each sequence to its respective contig for each gff file.
                     contig_coords = ORFNodeVector[-2]
                     annotation = ORFNodeVector[-1]
+                    if ORF_ID > 0 and ORF_len < (length_centroid * truncation_threshold):
+                        description = annotation[-1] + ", potential psuedogene"
+                        annotation = annotation[0:3] + (description,)
                 else:
                     contig_coords = ORFNodeVector[-1]
                     annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")

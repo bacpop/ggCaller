@@ -192,6 +192,12 @@ def get_options():
                                   help="Maximum e-value to return for DIAMOND and HMMER searches during annotation",
                                   default=0.001,
                                   type=float)
+    Panaroo_matching.add_argument("--truncation_threshold",
+                                  dest="truncation_threshold",
+                                  help="Sequences in a gene family cluster below this proportion of the length of the"
+                                       "centroid will be annotated as 'potential pseudogene'",
+                                  default=0.8,
+                                  type=float)
 
     Panaroo_refind = parser.add_argument_group('Refind')
     Panaroo_refind.add_argument(
@@ -305,6 +311,11 @@ def get_options():
                              help="Do not call variants using SNP-sites after alignment.",
                              action='store_false',
                              default=True)
+    Panaroo_matching.add_argument("--ignore_pseduogenes",
+                                  dest="ignore_pseduogenes",
+                                  help="Ignore ORFs annotated as 'potential pseudogenes' in alignment",
+                                  action='store_true',
+                                  default=False)
 
     # Other options
     parser.add_argument("--codon-table",
@@ -488,7 +499,8 @@ def main():
                             options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                            annotation_db, hmm_db, options.call_variants)
+                            annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
+                            options.truncation_threshold)
             else:
                 print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                                 input_colours, overlap, graph)

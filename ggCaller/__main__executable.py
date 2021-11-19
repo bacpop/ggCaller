@@ -108,18 +108,18 @@ def main():
 
     # set mimimum path score
     minimum_path_score = 100
-    minimum_ORF_score = 100
+    minimum_ORF_score = 150
     no_filter = False
-    repeat = False
+    repeat = True
     max_path_length = 10000
     is_ref = True
     min_ORF_length = 90
     max_ORF_overlap = 60
     write_idx = True
     write_graph = True
-    identity_cutoff = 0.98
+    identity_cutoff = 0.99
     len_diff_cutoff = 0.98
-    max_orf_orf_distance = 10000
+    max_orf_orf_distance = 5000
     cluster_ORFs = True
 
     num_threads = 6
@@ -135,10 +135,15 @@ def main():
     #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_capsular_fa_list.txt",
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
-    graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-        stop_codons_for, stop_codons_rev, num_threads)
+    graph_tuple = graph.build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
+        stop_codons_for, stop_codons_rev,
+        num_threads, is_ref, write_graph, "NA")
+
+    # graph_tuple = graph.read(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+    #     stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -148,20 +153,35 @@ def main():
     out = "test_ORFs.fasta"
     verbose = True
     length_outlier_support_proportion = 0.1
-    family_threshold = 0.7
-    min_trailing_support = max(2, math.ceil(0.05 * nb_colours))
-    trailing_recursive = 99999999
+    family_threshold = 0.75
+    min_trailing_support = None
+    trailing_recursive = None
     clean_edges = True
-    edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
+    edge_support_threshold = 2
     merge_paralogs = True
     aln = "pan"
-    alr = "ref"
+    alr = "def"
     core = 0.95
-    min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
+    min_edge_support_sv = None
     all_seq_in_graph = False
     remove_by_consensus = True
     search_radius = 5000
-    refind_prop_match = 0.2
+    refind_prop_match = 0.15
+    truncation_threshold = 0.8
+    ignore_pseduogenes = False
+
+    if family_threshold is None:
+        family_threshold = 0.7
+    if min_trailing_support is None:
+        min_trailing_support = 2
+    if trailing_recursive is None:
+        trailing_recursive = 0
+    if min_edge_support_sv is None:
+        min_edge_support_sv = 2
+    if remove_by_consensus is None:
+        remove_by_consensus = False
+    if edge_support_threshold is None:
+        edge_support_threshold = 0.0
 
     # check diamond and HMMER are installed correctly
     check_diamond_install()
@@ -326,7 +346,8 @@ def main():
                             clean_edges, edge_support_threshold, merge_paralogs, aln,
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
-                            search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants)
+                            search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants,
+                            ignore_pseduogenes, truncation_threshold)
 
     print("Finished.")
 

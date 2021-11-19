@@ -206,13 +206,20 @@ def find_missing(G,
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node][0]
             contig_coords = all_node_locs[member][node][1]
+            premature_stop = "*" in hit_protein[1:-3]
             if G.nodes[node]['bitscore'] != 0:
-                annotation = (
-                "refound", G.nodes[node]['annotation'], G.nodes[node]['bitscore'], G.nodes[node]['description'])
+                description = G.nodes[node]['description']
+                if premature_stop:
+                    description += ", potential psuedogene"
+                annotation = ("refound", G.nodes[node]['annotation'],
+                              G.nodes[node]['bitscore'], description)
             else:
-                annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
+                description = "hypothetical protein"
+                if premature_stop:
+                    description += ", potential psuedogene"
+                annotation = ("refound", "hypothetical protein", 0, description)
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), "*" in hit_protein[1:-3], contig_coords, annotation)
+                nodelist, node_coords, len(dna_hit), premature_stop, contig_coords, annotation)
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -249,21 +256,7 @@ def search_graph(search_pair,
 
     # mask regions that already have genes
     for node, ORF_info in conflicts.items():
-        # # ORF_info = high_scoring_ORFs[member][ORF_ID]
-        # # assign the full length of ORF
-        # traversed_nodes = []
-        # traversed_loci = []
-        # for node_ID, node_coords in zip(ORF_info[0], ORF_info[1]):
-        #     if node_ID < 0:
-        #         rev_node_ID = node_ID * -1
-        #         node_end = graph_shd_arr[0].node_size(rev_node_ID)
-        #         reversed_end = node_end - node_coords[0]
-        #         reversed_start = node_end - node_coords[1]
-        #         traversed_nodes[rev_node_ID] = (reversed_start, reversed_end)
-        #     else:
-        #         traversed_nodes.append(node_ID)
-        #         traversed_loci.append((node_coords[0], node_coords[1]))
-        # determine sequence ovelap of ORFs
+        # determine sequence overlap of ORFs
         total_overlap = 0
         for i, node_coords in enumerate(ORF_info[1]):
             if i != 0:
