@@ -253,6 +253,91 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
 def power_law(x, a, b):
     return a * np.power(x, b)
 
+
+def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_per_isolate, noSamples):
+    # write gene frequency histogram
+    gene_frequencies = np.array(gene_frequencies)
+    plt.hist(gene_frequencies, bins="auto",
+             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlim(xmin=0, xmax=100)
+    plt.xlabel('Proportion of genomes (%)')
+    plt.ylabel('Frequency')
+    plt.text(23, 45, r'$\mu=15, b=3$')
+    plt.savefig(output_dir + "gene_frequency.png", format="png")
+    plt.clf()
+
+    # write cluster frequency histogram
+    cluster_sizes = np.array(cluster_sizes)
+    plt.hist(cluster_sizes, bins="auto",
+             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlabel('No. genes per cluster')
+    plt.ylabel('Frequency')
+    plt.text(23, 45, r'$\mu=15, b=3$')
+    plt.savefig(output_dir + "cluster_size.png", format="png")
+    plt.clf()
+
+    # generate rarefaction curve
+    rarefaction_list = np.empty(0)
+    genome_list = []
+
+    # shuffle genes_per_isolate to generate many samples of genomes
+    shuffle_iterations = 50
+    for i in range(shuffle_iterations):
+        temp_rarefaction_list = []
+        prev_set = intbitset([])
+        shuffle(genes_per_isolate)
+        for mem in range(noSamples):
+            genome_list.append(mem + 1)
+            new_genes = genes_per_isolate[mem].difference(prev_set)
+            temp_rarefaction_list.append(len(new_genes))
+            prev_set.update(new_genes)
+        temp_rarefaction_list = np.cumsum(temp_rarefaction_list)
+        rarefaction_list = np.append(rarefaction_list, [temp_rarefaction_list])
+
+    # model power-law
+    genome_list = np.array(genome_list)
+    fig, ax = plt.subplots()
+    plt.scatter(genome_list, rarefaction_list, facecolor='silver',
+                edgecolor='k', s=10, alpha=1)
+    pars, cov = curve_fit(f=power_law, xdata=genome_list,
+                          ydata=rarefaction_list)
+    sigma_ab = np.sqrt(np.diagonal(cov))
+
+    b = ufloat(pars[1], sigma_ab[1])
+    # determine if pangenome open is upper confidence interval is above 0 for b (aka gamma)
+    if (pars[1] + sigma_ab[1]) < 0:
+        pangenome_openess = "closed"
+    elif (pars[1] - sigma_ab[1]) > 0:
+        pangenome_openess = "open"
+    else:
+        pangenome_openess = "non-significant"
+    text_res = r'$\gamma$' + " = {}\nPangenome: {}".format(b, pangenome_openess)
+
+    genome_list = np.sort(np.unique(genome_list))
+    spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
+    upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
+    lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
+    xnew = np.linspace(1, genome_list.max(), 100)
+    power_smooth = spl(xnew)
+    bound_upper = upper_spl(xnew)
+    bound_lower = lower_spl(xnew)
+
+    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='black')
+    plt.fill_between(xnew, bound_lower, bound_upper,
+                     color='black', alpha=0.15)
+    plt.ylim(ymin=0)
+    plt.xlim(xmin=0)
+    plt.xlabel('Number of genomes samples')
+    plt.ylabel('Cumulative number of genes discovered')
+    plt.text(0.7, 0.2, text_res, horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+    plt.savefig(output_dir + "rarefaction_curve.png", format="png")
+    plt.clf()
+
+    return
+
+
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                                          ids_len_stop, output_dir):
     # hold gene proportions for gene frequency histogram
@@ -417,78 +502,8 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                   "Total genes\t(0% <= strains <= 100%)\t" + str(total_genes))
         outfile.write(output)
 
-    # write gene frequency histogram
-    gene_frequencies = np.array(gene_frequencies)
-    plt.hist(gene_frequencies, bins="auto",
-             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
-    plt.grid(axis='y', alpha=0.75)
-    plt.xlim(xmin=0, xmax=100)
-    plt.xlabel('Proportion of genomes (%)')
-    plt.ylabel('Frequency')
-    plt.text(23, 45, r'$\mu=15, b=3$')
-    plt.savefig(output_dir + "gene_frequency.png", format="png")
-    plt.clf()
-
-    # write cluster frequency histogram
-    cluster_sizes = np.array(cluster_sizes)
-    plt.hist(cluster_sizes, bins="auto",
-             color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
-    plt.grid(axis='y', alpha=0.75)
-    plt.xlabel('No. genes per cluster')
-    plt.ylabel('Frequency')
-    plt.text(23, 45, r'$\mu=15, b=3$')
-    plt.savefig(output_dir + "cluster_size.png", format="png")
-    plt.clf()
-
-    # generate rarefaction curve
-    rarefaction_list = np.empty(0)
-    genome_list = []
-
-    # shuffle genes_per_isolate to generate many samples of genomes
-    shuffle_iterations = 50
-    for i in range(shuffle_iterations):
-        temp_rarefaction_list = []
-        prev_set = intbitset([])
-        shuffle(genes_per_isolate)
-        for mem in range(noSamples):
-            genome_list.append(mem + 1)
-            new_genes = genes_per_isolate[mem].difference(prev_set)
-            temp_rarefaction_list.append(len(new_genes))
-            prev_set.update(new_genes)
-        temp_rarefaction_list = np.cumsum(temp_rarefaction_list)
-        rarefaction_list = np.append(rarefaction_list, [temp_rarefaction_list])
-
-    # model power-law
-    genome_list = np.array(genome_list)
-    plt.scatter(genome_list, rarefaction_list, facecolor='silver',
-                edgecolor='k', s=10, alpha=1)
-    pars, cov = curve_fit(f=power_law, xdata=genome_list,
-                          ydata=rarefaction_list)
-    sigma_ab = np.sqrt(np.diagonal(cov))
-
-    a = ufloat(pars[0], sigma_ab[0])
-    b = ufloat(pars[1], sigma_ab[1])
-    text_res = "Best fit parameters:\na = {}\nb = {}".format(a, b)
-
-    genome_list = np.sort(np.unique(genome_list))
-    spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
-    upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
-    lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
-    xnew = np.linspace(0, genome_list.max(), 100)
-    power_smooth = spl(xnew)
-    bound_upper = upper_spl(xnew)
-    bound_lower = lower_spl(xnew)
-
-    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='black')
-    plt.fill_between(xnew, bound_lower, bound_upper,
-                     color='black', alpha=0.15)
-    plt.ylim(ymin=0)
-    plt.xlabel('Number of genomes')
-    plt.ylabel('Cumulative number of unique genes')
-    plt.text(140, 630, text_res)
-    plt.text(23, 45, r'$\mu=15, b=3$')
-    plt.savefig(output_dir + "rarefaction_curve.png", format="png")
-    plt.clf()
+    # generate summary graphs
+    generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_per_isolate, noSamples)
 
     return G
 
