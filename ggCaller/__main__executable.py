@@ -160,7 +160,7 @@ def main():
     edge_support_threshold = 2
     merge_paralogs = True
     aln = "pan"
-    alr = "def"
+    alr = "ref"
     core = 0.95
     min_edge_support_sv = None
     all_seq_in_graph = False
@@ -168,7 +168,7 @@ def main():
     search_radius = 5000
     refind_prop_match = 0.15
     truncation_threshold = 0.8
-    ignore_pseduogenes = False
+    ignore_pseduogenes = True
 
     if family_threshold is None:
         family_threshold = 0.7

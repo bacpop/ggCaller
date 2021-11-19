@@ -208,16 +208,10 @@ def find_missing(G,
             contig_coords = all_node_locs[member][node][1]
             premature_stop = "*" in hit_protein[1:-3]
             if G.nodes[node]['bitscore'] != 0:
-                description = G.nodes[node]['description']
-                if premature_stop:
-                    description += ", potential psuedogene"
                 annotation = ("refound", G.nodes[node]['annotation'],
-                              G.nodes[node]['bitscore'], description)
+                              G.nodes[node]['bitscore'], G.nodes[node]['description'])
             else:
-                description = "hypothetical protein"
-                if premature_stop:
-                    description += ", potential psuedogene"
-                annotation = ("refound", "hypothetical protein", 0, description)
+                annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
                 nodelist, node_coords, len(dna_hit), premature_stop, contig_coords, annotation)
 

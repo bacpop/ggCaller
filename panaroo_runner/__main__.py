@@ -217,12 +217,15 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     # add each sequence to its respective contig for each gff file.
                     contig_coords = ORFNodeVector[-2]
                     annotation = ORFNodeVector[-1]
-                    if ORF_ID > 0 and ORF_len < (length_centroid * truncation_threshold):
+                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and ORFNodeVector[3] is True):
                         description = annotation[-1] + ", potential psuedogene"
                         annotation = annotation[0:3] + (description,)
                 else:
                     contig_coords = ORFNodeVector[-1]
                     annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")
+                    if ORF_len < (length_centroid * truncation_threshold):
+                        description = annotation[-1] + ", potential psuedogene"
+                        annotation = annotation[0:3] + (description,)
                 contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
 
     # write output GFF
@@ -255,7 +258,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose)
+                                      high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
+                                      ignore_pseduogenes, truncation_threshold)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         core_gene_names = [G.nodes[x[0]]["name"] for x in core_nodes]
         concatenate_core_genome_alignments(core_gene_names, output_dir)
@@ -263,7 +267,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose)
+                                       high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
+                                       ignore_pseduogenes, truncation_threshold)
 
     if verbose:
         print("writing gene fasta...")
