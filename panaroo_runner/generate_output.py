@@ -5,6 +5,8 @@ from ggCaller import __version__
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from Bio import AlignIO
 import itertools as iter
 from intbitset import intbitset
@@ -312,14 +314,20 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
 
     # model power-law
     genome_list = np.array(genome_list)
+    df = pd.DataFrame({'x': genome_list, 'y': rarefaction_list})
     fig, ax = plt.subplots()
-    plt.scatter(genome_list, rarefaction_list, facecolor='silver',
-                edgecolor='k', s=10, alpha=1)
+
+    # plot scatter with jitter
+    sns.regplot(data=df, x="x", y="y", x_jitter=0.2, fit_reg=False, scatter=True,
+                color='silver', ax=ax, scatter_kws={'s': 10, 'alpha': 1, 'edgecolors': 'k'})
+
+    # fit power-law regression, determine confidence intervals
     pars, cov = curve_fit(f=power_law, xdata=genome_list,
                           ydata=rarefaction_list)
     sigma_ab = np.sqrt(np.diagonal(cov))
 
     b = ufloat(pars[1], sigma_ab[1])
+
     # determine if pangenome open is upper confidence interval is above 0 for b (aka gamma)
     if (pars[1] + sigma_ab[1]) < 0:
         pangenome_openess = "closed"
@@ -329,21 +337,29 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
         pangenome_openess = "non-significant"
     text_res = r'$\gamma$' + " = {}\nPangenome: {}".format(b, pangenome_openess)
 
+    # generate power-law spline
     genome_list = np.sort(np.unique(genome_list))
     spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
-    upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
-    lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
     xnew = np.linspace(1, genome_list.max(), 100)
     power_smooth = spl(xnew)
-    bound_upper = upper_spl(xnew)
-    bound_lower = lower_spl(xnew)
 
-    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='black')
-    plt.fill_between(xnew, bound_lower, bound_upper,
-                     color='black', alpha=0.15)
+    # fit may produce inf values in covariance matrix. If occurs don't plot confidence interval splines.
+    try:
+        upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
+        lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
+        bound_upper = upper_spl(xnew)
+        bound_lower = lower_spl(xnew)
+        plt.fill_between(xnew, bound_lower, bound_upper, color='red', alpha=0.15)
+    except ValueError:
+        print("Fitting of rarefaction curve failed. Power-law fit may look strange.")
+        pass
+
+    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='red')
+
+    # set axis variables
     plt.ylim(ymin=0)
     plt.xlim(xmin=0)
-    plt.xlabel('Number of genomes samples')
+    plt.xlabel('Number of genomes sampled')
     plt.ylabel('Cumulative number of genes discovered')
     plt.text(0.7, 0.2, text_res, horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
     plt.savefig(output_dir + "rarefaction_curve.png", format="png")
@@ -376,7 +392,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     total_genes = 0
 
     # hold set of nodes found in each colour for rarefaction curve
-    genes_per_isolate = [intbitset([]) for x in range(noSamples)]
+    genes_per_isolate = [intbitset([]) for _ in range(noSamples)]
 
     # generate file
     with open(output_dir + "gene_presence_absence_roary.csv", 'w') as roary_csv_outfile, \
