@@ -48,4 +48,17 @@ subprocess.run(
     shell=True,
     check=True)
 
+sys.stderr.write("Running reference build without panaroo\n")
+subprocess.run(
+    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --min-orf-length 100 --repeat --no-clustering",
+    shell=True,
+    check=True)
+
+### reference read workflow ###
+sys.stderr.write("Running reference read workflow without balrog\n")
+subprocess.run(
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --no-filter --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --truncation_threshold 0.7 --ignore_pseduogenes --no_variants",
+    shell=True,
+    check=True)
+
 sys.stderr.write("Tests completed\n")
