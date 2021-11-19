@@ -109,7 +109,7 @@ def main():
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 150
-    no_filter = False
+    no_filter = True
     repeat = True
     max_path_length = 10000
     is_ref = True
@@ -236,7 +236,7 @@ def main():
         model, model_tis = load_gene_models()
 
     else:
-        model, model_tis = None, None, None
+        model, model_tis = None, None
 
     # intiialise results dictionaries and lists
     high_scoring_ORFs = {}
