@@ -368,9 +368,46 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
 
     return
 
+def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
+    if alignment:
+        # determine distance matrix from gene_presence/absence
+        distance_mat = np.array(ggCaller_cpp.get_distances_align(matrix_in, threads)).reshape(len(isolate_names),
+                                                                                              len(isolate_names))
+        phylip_name = output_dir + 'core_gene_alignment.phylip'
+        tree_filename = output_dir + 'core_tree_NJ.nwk'
+
+    else:
+        # determine distance matrix from core gene alignment
+        distance_mat = np.array(ggCaller_cpp.get_distances_pa(matrix_in, threads)).reshape(len(isolate_names),
+                                                                                           len(isolate_names))
+        phylip_name = output_dir + 'pangenome_gene_presence_absence.phylip'
+        tree_filename = output_dir + 'pangenome_NJ.nwk'
+
+    # generate phylip matrix
+    with open(phylip_name, 'w') as pFile:
+        pFile.write(str(len(isolate_names)) + "\n")
+        for coreDist, iso in zip(distance_mat, isolate_names):
+            pFile.write(iso)
+            pFile.write(' ' + ' '.join(map(str, coreDist)))
+            pFile.write("\n")
+
+    # run rapidnj
+    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
+               tree_filename, "-c", str(threads)]
+
+    result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if result.returncode != 0:
+        raise Exception("RapidNJ failed to run on file: " + phylip_name)
+        sys.exit(1)
+
+    # remove phylip file
+    os.remove(phylip_name)
+
+    return
+
 
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
-                                         ids_len_stop, output_dir):
+                                         ids_len_stop, output_dir, threads):
     # hold gene proportions for gene frequency histogram
     gene_frequencies = []
 
@@ -395,6 +432,9 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     # hold set of nodes found in each colour for rarefaction curve
     genes_per_isolate = [intbitset([]) for _ in range(noSamples)]
 
+    # hold list of nodes found in each colour for distance calculation
+    isolate_gene_list = [[False] * G.number_of_nodes() for _ in range(noSamples)]
+
     # generate file
     with open(output_dir + "gene_presence_absence_roary.csv", 'w') as roary_csv_outfile, \
             open(output_dir + "gene_presence_absence.csv", 'w') as csv_outfile, \
@@ -410,7 +450,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
         csv_outfile.write(",".join(header[:3] + isolates) + "\n")
         Rtab_outfile.write("\t".join((["Gene"] + isolates)) + "\n")
 
-        # Iterate through coponents writing out to file
+        # Iterate through components writing out to file
         used_gene_names = set([""])
         unique_id_count = 0
         frag = 0
@@ -495,6 +535,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                 # determine which genomes genes clusters are found in
                 for mem in G.nodes[node]['members']:
                     genes_per_isolate[mem].add(node)
+                    isolate_gene_list[mem][total_genes] = True
 
                 # determine gene presence/absence
                 num_isolates = G.nodes[node]['size']
@@ -535,6 +576,10 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
 
     # generate summary graphs
     generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_per_isolate, noSamples)
+
+    # generate nwk tree from pangenome
+    isolate_names = G.graph['isolateNames']
+    generate_nwk_tree(isolate_gene_list, threads, isolate_names, output_dir, False)
 
     return G
 
@@ -763,30 +808,11 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
                 seq += "-" * gene[2]
         isolate_aln.append(SeqRecord(seq, id=iso, description=""))
 
-    # determine distances from core genome alignment
-    distance_mat = np.array(ggCaller_cpp.get_distances_align([str(record.seq) for record in isolate_aln],
-                                                             threads)).reshape(len(isolate_names), len(isolate_names))
-
-    # generate phylip matrix
-    phylip_name = output_dir + 'core_gene_alignment.phylip'
-    with open(phylip_name, 'w') as pFile:
-        pFile.write(str(len(isolate_names)) + "\n")
-        for coreDist, iso in zip(distance_mat, isolate_names):
-            pFile.write(iso)
-            pFile.write(' ' + ' '.join(map(str, coreDist)))
-            pFile.write("\n")
-
-    # run rapidnj
-    tree_filename = output_dir + 'core_tree_NJ.nwk'
-    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x", tree_filename, "-c", str(threads)]
-
-    result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if result.returncode != 0:
-        raise Exception("RapidNJ failed to run on file: " + phylip_name)
-        sys.exit(1)
-
     # Write out the two output files
     SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
+
+    # generate nwk tree from pangenome
+    generate_nwk_tree([str(record.seq) for record in isolate_aln], threads, isolate_names, output_dir, True)
 
     write_alignment_header(gene_alignments, output_dir)
     return core_filenames

@@ -240,7 +240,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                              mems_to_isolates=mems_to_isolates,
                                              orig_ids=orig_ids,
                                              ids_len_stop=ids_len_stop,
-                                             output_dir=output_dir)
+                                             output_dir=output_dir,
+                                             threads=n_cpu)
 
     # write pan genome reference fasta file
     generate_pan_genome_reference(G,
