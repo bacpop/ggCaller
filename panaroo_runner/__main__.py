@@ -51,9 +51,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # Check cd-hit is installed
     check_cdhit_version()
-    # Make sure aligner is installed if alignment requested
+    # Make sure aligner and rapidnj is installed if alignment requested
     if aln != None:
         check_aligner_install()
+        check_rapidnj_install()
 
     # check snp-sites installed
     if call_variants:

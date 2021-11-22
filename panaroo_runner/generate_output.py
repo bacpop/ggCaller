@@ -707,6 +707,25 @@ def get_core_gene_nodes(G, threshold, num_isolates):
             core_nodes.append(node)
     return core_nodes
 
+def check_rapidnj_install():
+    command = ["rapidnj", "-h"]
+
+    p = str(
+        subprocess.run(command,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE))
+
+    present = False
+
+    find_ver = re.search(r'Rapid neighbour-joining', p)
+    if find_ver != None:
+        present = True
+
+    if present == False:
+        sys.stderr.write("Need rapidnj to be installed and available in PATH. " + "\n")
+        sys.exit(1)
+
+    return present
 
 def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, threads):
     alignments_dir = output_dir + "/aligned_gene_sequences/"
