@@ -390,14 +390,14 @@ def main():
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
-
-    # check diamond and HMMER are installed correctly
-    check_diamond_install()
-    check_HMMER_install()
-
     annotation_db = options.annotation_db
     hmm_db = options.hmm_db
+
     if options.annotate is not None:
+        # check diamond and HMMER are installed correctly
+        check_diamond_install()
+        check_HMMER_install()
+
         # unpack annotation database
         if annotation_db == "Bacteria" or annotation_db == "Viruses":
             db_id = annotation_db
