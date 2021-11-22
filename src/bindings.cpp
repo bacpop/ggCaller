@@ -15,4 +15,12 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def("generate_clusters", &Graph::generate_clusters)
             .def("refind_gene", &Graph::refind_gene)
             .def("node_size", &Graph::node_size);
+
+    m.def("get_distances_align", &get_distances_align, "Get distances based on alignment.",
+        py::arg("matrix_in"),
+        py::arg("no_threads"));
+
+    m.def("get_distances_pa", &get_distances_pa, "Get distances based on feature presence/absence.",
+        py::arg("matrix_in"),
+        py::arg("no_threads"));
 }
