@@ -42,3 +42,6 @@ dependencies:
   - tqdm
   - setuptools
   - make
+  - seaborn
+  - rapidnj
+  - boost-cpp

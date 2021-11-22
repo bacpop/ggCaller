@@ -5,10 +5,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# find pthreads and eigen
+# find pthreads and eigen and boost
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Boost)
+include_directories(${Boost_INCLUDE_DIRS})
 
 # find pybind and create python module
 find_package(pybind11 REQUIRED)
