@@ -1,6 +1,7 @@
 from functools import partial
 import shutil
 from ggCaller.shared_memory import *
+import ggCaller_cpp
 from ggCaller import __version__
 import networkx as nx
 import numpy as np
@@ -601,7 +602,7 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
-                                  isolates, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln,
+                                  isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln,
                                   call_variants, verbose, ignore_pseduogenes, truncation_threshold):
     unaligned_sequence_files = []
     unaligned_reference_files = []
@@ -675,7 +676,8 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
                               threads, "def", not verbose)
 
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
+    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
+                       pool)
 
     # call variants using snp-sites
     if call_variants:
@@ -706,7 +708,7 @@ def get_core_gene_nodes(G, threshold, num_isolates):
     return core_nodes
 
 
-def concatenate_core_genome_alignments(core_names, output_dir):
+def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, threads):
     alignments_dir = output_dir + "/aligned_gene_sequences/"
     # Open up each alignment that is associated with a core node
     alignment_filenames = os.listdir(alignments_dir)
@@ -742,6 +744,28 @@ def concatenate_core_genome_alignments(core_names, output_dir):
                 seq += "-" * gene[2]
         isolate_aln.append(SeqRecord(seq, id=iso, description=""))
 
+    # determine distances from core genome alignment
+    distance_mat = np.array(ggCaller_cpp.get_distances_align([str(record.seq) for record in isolate_aln],
+                                                             threads)).reshape(len(isolate_names), len(isolate_names))
+
+    # generate phylip matrix
+    phylip_name = output_dir + 'core_gene_alignment.phylip'
+    with open(phylip_name, 'w') as pFile:
+        pFile.write(str(len(isolate_names)) + "\n")
+        for coreDist, iso in zip(distance_mat, isolate_names):
+            pFile.write(iso)
+            pFile.write(' ' + ' '.join(map(str, coreDist)))
+            pFile.write("\n")
+
+    # run rapidnj
+    tree_filename = output_dir + 'core_tree_NJ.nwk'
+    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x", tree_filename, "-c", str(threads)]
+
+    result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if result.returncode != 0:
+        raise Exception("RapidNJ failed to run on file: " + phylip_name)
+        sys.exit(1)
+
     # Write out the two output files
     SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
 
@@ -750,7 +774,7 @@ def concatenate_core_genome_alignments(core_names, output_dir):
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
-                                   isolates, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
+                                   isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
                                    overlap, pool, ref_aln, call_variants, verbose,
                                    ignore_pseduogenes, truncation_threshold):
     unaligned_sequence_files = []
@@ -829,7 +853,8 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
                               threads, "def", not verbose)
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolates, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup, pool)
+    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
+                       pool)
 
     # call variants using snp-sites
     if call_variants:
@@ -840,7 +865,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
 
     # Concatenate them together to produce the two output files
-    concatenate_core_genome_alignments(core_gene_names, output_dir)
+    concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, threads)
 
     return
 

@@ -109,7 +109,7 @@ def main():
     # set mimimum path score
     minimum_path_score = 100
     minimum_ORF_score = 150
-    no_filter = True
+    no_filter = False
     repeat = True
     max_path_length = 10000
     is_ref = True

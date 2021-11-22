@@ -12,10 +12,8 @@ std::vector<T> combine_vectors(const std::vector<std::vector<T>> &vec,
     return all;
 }
 
-std::tuple<std::vector<uint64_t>,
-        std::vector<uint64_t>,
-                std::vector<double>> get_distances_align(const std::vector<std::string>& matrix_in,
-                                                        const int n_threads)
+std::vector<double> get_distances_align(const std::vector<std::string>& matrix_in,
+                                        const int n_threads)
 {
     omp_set_num_threads(n_threads);
 
@@ -23,8 +21,6 @@ std::tuple<std::vector<uint64_t>,
     size_t seq_length = matrix_in.at(0).size();
 
     // Shared variables for openmp loop
-    std::vector<std::vector<uint64_t>> rows(n_seqs);
-    std::vector<std::vector<uint64_t>> cols(n_seqs);
     std::vector<std::vector<double>> distances(n_seqs);
     uint64_t len = 0;
 
@@ -155,8 +151,6 @@ std::tuple<std::vector<uint64_t>,
 
                 const int comp_snps = seq_length - res.count();
 
-                rows[i].push_back(i);
-                cols[i].push_back(j);
                 distances[i].push_back(comp_snps);
             }
             len += distances[i].size();
@@ -166,16 +160,12 @@ std::tuple<std::vector<uint64_t>,
 
     // Combine the lists from each thread
     std::vector<double> distances_all = combine_vectors(distances, len);
-    std::vector<uint64_t> rows_all = combine_vectors(rows, len);
-    std::vector<uint64_t> cols_all = combine_vectors(cols, len);
 
-    return std::make_tuple(rows_all, cols_all, distances_all);
+    return distances_all;
 }
 
-std::tuple<std::vector<uint64_t>,
-        std::vector<uint64_t>,
-        std::vector<double>> get_distances_pa(const std::vector<std::vector<bool>>& matrix_in,
-                                                const int n_threads)
+std::vector<double> get_distances_pa(const std::vector<std::vector<bool>>& matrix_in,
+                                    const int n_threads)
 {
     omp_set_num_threads(n_threads);
 
@@ -183,8 +173,6 @@ std::tuple<std::vector<uint64_t>,
     size_t seq_length = matrix_in.at(0).size();
 
     // Shared variables for openmp loop
-    std::vector<std::vector<uint64_t>> rows(n_seqs);
-    std::vector<std::vector<uint64_t>> cols(n_seqs);
     std::vector<std::vector<double>> distances(n_seqs);
     uint64_t len = 0;
 
@@ -217,8 +205,6 @@ std::tuple<std::vector<uint64_t>,
                 res = present_all[i] & present_all[j];
                 res |= absent_all[i] & absent_all[j];
                 const int comp_snps = seq_length - res.count();
-                rows[i].push_back(i);
-                cols[i].push_back(j);
                 distances[i].push_back(comp_snps);
             }
 
@@ -228,8 +214,6 @@ std::tuple<std::vector<uint64_t>,
 
     // Combine the lists from each thread
     std::vector<double> distances_all = combine_vectors(distances, len);
-    std::vector<uint64_t> rows_all = combine_vectors(rows, len);
-    std::vector<uint64_t> cols_all = combine_vectors(cols, len);
 
-    return std::make_tuple(rows_all, cols_all, distances_all);
+    return distances_all;
 }
