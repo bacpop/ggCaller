@@ -111,7 +111,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # generate annotations
         G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
-                                                           hmm_db, evalue, len(input_colours), annotate, n_cpu, pool)
+                                                           hmm_db, evalue, annotate, n_cpu, pool)
 
     if verbose:
         print("collapse gene families...")

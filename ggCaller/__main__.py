@@ -414,6 +414,7 @@ def main():
 
         # if custom annotation database specified, then create diamond db if not present already
         else:
+            annotation_db = os.path.abspath(annotation_db)
             if ".dmnd" not in annotation_db:
                 print("Generating diamond index...")
                 annotation_db = generate_diamond_index(annotation_db)
@@ -422,6 +423,8 @@ def main():
         if hmm_db == "default":
             db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "hmm")
             hmm_db = os.path.join(db_dir, "HAMAP.hmm")
+        else:
+            hmm_db = os.path.abspath(hmm_db)
 
         if not os.path.exists(hmm_db + ".h3f") and options.annotate == "sensitive":
             print("Generating HMMER index...")

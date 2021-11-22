@@ -59,9 +59,9 @@ def generate_HMMER_index(infile):
         sys.exit(1)
 
 def generate_diamond_index(infile):
-    outfile = infile.split["."][0] + ".dmnd"
-    command = ["diamond", "makedb", "--in", "infile", "-d",
-               infile.split["."][0]]
+    outfile = infile.split(".")[0] + ".dmnd"
+    command = ["diamond", "makedb", "--in", infile, "-d",
+               infile.split(".")[0]]
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
         raise Exception("Diamond make-db failed to run on file: " + infile)
@@ -70,7 +70,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, nb_colours, pool):
+def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool):
     # list of sequence records
     all_centroid_aa = []
 
@@ -191,11 +191,10 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
     return G, high_scoring_ORFs
 
 
-def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db, evalue, nb_colours,
+def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db, evalue,
                                 annotate, n_cpu, pool):
     # run initial iterative search
-    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue,
-                                              nb_colours, pool)
+    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool)
 
     # run ultra-sensitive search
     if annotate == "sensitive":
