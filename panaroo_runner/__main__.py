@@ -67,6 +67,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], high_scoring_ORFs, high_scoring_ORF_edges,
                                                                cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
 
+    # check if G is empty before proceeding
+    if G.number_of_nodes() == 0:
+        print("No genes detected in graph...")
+        return
+
     # merge paralogs
     if verbose:
         print("Processing paralogs...")
