@@ -154,7 +154,7 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         // unpack tuple
         const size_t & pos_idx = std::get<0>(node_tuple);
         const int & node_id = std::get<1>(node_tuple);
-        const sdsl::bit_vector & colour_arr = std::get<3>(node_tuple);
+        const boost::dynamic_bitset<> & colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
         // slice path, unless at first node
@@ -292,7 +292,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         // gather unitig information from graph_vector
         const uint8_t codon_arr = 0;
-        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
+        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path
         size_t path_length;
@@ -400,7 +400,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         // gather unitig information from graph_vector
         const uint8_t codon_arr = 0;
-        const sdsl::bit_vector colour_arr = unitig_dict.full_colour();
+        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path
         size_t path_length = unitig_dict.size().first - std::get<1>(ORF_info).back().second;

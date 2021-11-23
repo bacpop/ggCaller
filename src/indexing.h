@@ -25,9 +25,9 @@ ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& output_prefix);
 
 template <class T, class U, bool is_const>
-sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
-                                   const size_t& nb_colours,
-                                   const size_t position);
+boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
+                                         const size_t& nb_colours,
+                                         const size_t position);
 
 template<class T>
 std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);

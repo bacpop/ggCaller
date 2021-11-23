@@ -2,7 +2,6 @@
 #define GGCALLER_DISTANCES_H
 
 #include "unitigDict.h"
-#include <boost/dynamic_bitset.hpp>
 
 template <typename T>
 std::vector<T> combine_vectors(const std::vector<std::vector<T>> &vec,

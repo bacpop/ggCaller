@@ -133,13 +133,13 @@ uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame)
 }
 
 template <class T, class U, bool is_const>
-sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
-                                   const size_t& nb_colours,
-                                   const size_t position)
+boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
+                                           const size_t& nb_colours,
+                                           const size_t position)
 {
     // get colours information for unitig
     const auto colourset = unitig.getData()->getUnitigColors(unitig);
-    sdsl::bit_vector colours_arr(nb_colours, 0);
+    boost::dynamic_bitset<> colours_arr(nb_colours);
 
     // initialise a iterator, will only determine colours of single kmer, have to do for head and tail as may be different
     UnitigColors::const_iterator it_uc = colourset->begin(unitig);
@@ -156,6 +156,7 @@ sdsl::bit_vector generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U
            break;
         }
     }
+    
     return colours_arr;
 }
 
@@ -200,7 +201,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     unitig_dict.add_size(unitig_len, unitig_len - (kmer-1));
 
     // calculate colours for unitig
-    sdsl::bit_vector unitig_colours = generate_colours(um, nb_colours, 0);
+    boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
     unitig_dict.add_head_colour(std::move(unitig_colours));
 
     // generate colours for tail also
@@ -209,8 +210,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     const size_t tail_pos = unitig_len - kmer;
     unitig_colours = generate_colours(um_tail, nb_colours, tail_pos);
     unitig_dict.add_tail_colour(std::move(unitig_colours));
-
-
+    
     // generate successor head kmers (need to flip sign to get successors in reverse strand)
     unitig_dict.set_succ(std::move(get_neighbours(um.getSuccessors())));
     um.strand = !um.strand;
@@ -317,31 +317,24 @@ void update_neighbour_index(GraphVector& graph_vector,
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate tail, as this portion will overlap with next unitig
-                sdsl::bit_vector colours;
+                boost::dynamic_bitset<> colours;
                 if (succ.second)
                 {
-                    //colours = std::move(bool_and(unitig_dict.tail_colour(), adj_unitig_dict.head_colour()));
                     colours = unitig_dict.tail_colour();
                     colours &= adj_unitig_dict.head_colour();
                 } else
                 {
-                    //colours = std::move(bool_and(unitig_dict.tail_colour(), adj_unitig_dict.tail_colour()));
                     colours = unitig_dict.tail_colour();
                     colours &= adj_unitig_dict.tail_colour();
                 }
 
                 // negate adjacent full colours from full colours
-                //full_colours = std::move(bool_subtract(full_colours, adj_unitig_dict.full_colour()));
                 auto adj_unitig_dict_full = adj_unitig_dict.full_colour();
                 adj_unitig_dict_full.flip();
                 full_colours &= adj_unitig_dict_full;
 
-                // calculate sum_colours
-                sdsl::rank_support_v<> sum_colours(&colours);
-                //int sum_colours = accumulate(colours.begin(), colours.end(), 0);
-
                 // if colours are viable, add successor information to current unitig
-                if (sum_colours.rank(colours.size()) != 0)
+                if (!colours.empty())
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
@@ -350,10 +343,8 @@ void update_neighbour_index(GraphVector& graph_vector,
                 }
             }
 
-            // determine if unitig has new colour not found in successor, if so set end_contig as true
-            sdsl::rank_support_v<> sum_full_colours(&full_colours);
-
-            if (sum_full_colours.rank(full_colours.size()) != 0)
+            // determine if unitig has new colour not found in successors, if so set end_contig as true
+            if (!full_colours.empty())
             {
                 unitig_dict.set_end_contig(true);
             }
@@ -377,7 +368,7 @@ void update_neighbour_index(GraphVector& graph_vector,
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate head, as this portion will overlap with next unitig
-                sdsl::bit_vector colours;
+                boost::dynamic_bitset<> colours;
                 if (pred.second)
                 {
                     //colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.head_colour()));
@@ -390,17 +381,12 @@ void update_neighbour_index(GraphVector& graph_vector,
                     colours &= adj_unitig_dict.tail_colour();
                 }
 
-                //full_colours = std::move(bool_subtract(full_colours, adj_unitig_dict.full_colour()));
                 auto adj_unitig_dict_full = adj_unitig_dict.full_colour();
                 adj_unitig_dict_full.flip();
                 full_colours &= adj_unitig_dict_full;
 
-                // calculate sum_colours
-                sdsl::rank_support_v<> sum_colours(&colours);
-                //int sum_colours = accumulate(colours.begin(), colours.end(), 0);
-
                 // if colours are viable, add successor information to current unitig
-                if (sum_colours.rank(colours.size()) != 0)
+                if (!colours.empty())
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
@@ -409,9 +395,8 @@ void update_neighbour_index(GraphVector& graph_vector,
                 }
             }
 
-            // determine if unitig has new colour not found in predecessor, if so set end_contig as true
-            //sum_full_colours(&full_colours);
-            if (sum_full_colours.rank(full_colours.size()) != 0)
+            // determine if unitig has new colour not found in predecessors, if so set end_contig as true
+            if (!full_colours.empty())
             {
                 unitig_dict.set_end_contig(true);
             }
@@ -484,7 +469,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             // add to node_colour_map_private
             for (size_t i = 0; i < unitig_dict.full_colour().size(); i++)
             {
-                if (unitig_dict.full_colour().at(i))
+                if (unitig_dict.full_colour()[i])
                 {
                     node_colour_vector_private[i].push_back(unitig_dict.id);
                 }
