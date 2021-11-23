@@ -42,14 +42,21 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
     output_sequences = []
     with open(file, "r") as handle:
         for record in SeqIO.parse(handle, "fasta"):
-            ORF_ID = record.id
+            record_ID = record.id
             protein = str(record.seq)
-            mem = int(ORF_ID.split("_")[0])
-            gene_ID = int(ORF_ID.split("_")[-1])
+            mem = int(record_ID.split("_")[0])
+            ORF_ID = int(record_ID.split("_")[-1])
 
             # parse DNA sequence
-            ORFNodeVector = high_scoring_ORFs[mem][gene_ID]
-            dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
+            if ORF_ID < 0:
+                dna = ORFNodeVector[5]
+            else:
+                dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+
+            # determine if Ns have been added into alignment. If so, need to account for unaligned stop codon
+            if protein[-1] == "X":
+                dna += "---"
 
             # add on stop codon if not present in aa sequence
             if protein[-1] != "*":
@@ -65,7 +72,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                     aligned_dna += dna[dna_idx: dna_idx + 3]
                     dna_idx += 3
 
-            id = isolate_names[mem] + "_" + str(gene_ID).zfill(5)
+            id = isolate_names[mem] + "_" + str(ORF_ID).zfill(5)
             output_sequences.append(SeqRecord(Seq(aligned_dna), id=id, description=""))
 
     # overwrite existing alignment file
@@ -189,18 +196,25 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
     # determine sequences to aligned
     if ignore_pseduogenes:
         length_centroid = node['longCentroidID'][0]
-        # identify pseudogenes based on truncation threshold, and if annotated as having premature stop
+        # identify pseudogenes based on truncation threshold, and if annotated as
+        # having premature stop or not multiple of 3 long
         sequence_ids = [x for x in node["seqIDs"] if
                         not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                               < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
-                                                                            high_scoring_ORFs[int(x.split("_")[0])][
-                                                                                int(x.split("_")[-1])][3] is True))]
+                                                                            (high_scoring_ORFs[int(x.split("_")[0])][
+                                                                                 int(x.split("_")[-1])][3] is True or
+                                                                             high_scoring_ORFs[int(x.split("_")[0])][
+                                                                                 int(x.split("_")[-1])][2] % 3 != 0
+                                                                             )))]
         centroid_sequence_ids = set(
-            [x for x in node["centroid"] if not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
-                                                  < length_centroid * truncation_threshold) or (
-                                                             int(x.split("_")[-1]) < 0 and
-                                                             high_scoring_ORFs[int(x.split("_")[0])][
-                                                                 int(x.split("_")[-1])][3] is True))])
+            [x for x in node["centroid"] if
+             not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
+                   < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
+                                                                 (high_scoring_ORFs[int(x.split("_")[0])][
+                                                                      int(x.split("_")[-1])][3] is True or
+                                                                  high_scoring_ORFs[int(x.split("_")[0])][
+                                                                      int(x.split("_")[-1])][2] % 3 != 0
+                                                                  )))])
     else:
         sequence_ids = node["seqIDs"]
         centroid_sequence_ids = set(node["centroid"])
@@ -238,9 +252,12 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
             continue
         member = int(seq.split('_')[0])
         ORF_ID = int(seq.split('_')[-1])
-        # generate DNA sequence
+        # generate protein sequence. If refound, add found protein sequence from find_missing.py
         ORFNodeVector = high_scoring_ORFs[member][ORF_ID]
-        protein = str(Seq(shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)).translate())
+        if ORF_ID < 0:
+            protein = ORFNodeVector[4]
+        else:
+            protein = str(Seq(shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)).translate())
 
         output_sequences.append(
             SeqRecord(Seq(protein), id=seq, description=""))
@@ -404,7 +421,6 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
     os.remove(phylip_name)
 
     return
-
 
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                                          ids_len_stop, output_dir, threads):

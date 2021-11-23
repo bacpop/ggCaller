@@ -194,7 +194,7 @@ def find_missing(G,
             if node in bad_nodes: continue
             if (node, member) in bad_node_mem_pairs: continue
             n_found += 1
-            hit_protein = hits_trans_dict[member][i]
+            hit_protein, hit_dna = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
             G.nodes[node]['size'] += 1
             G.nodes[node]['dna'] = del_dups(G.nodes[node]['dna'] +
@@ -213,7 +213,7 @@ def find_missing(G,
             else:
                 annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, contig_coords, annotation)
+                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna, contig_coords, annotation)
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -381,13 +381,6 @@ def search_dna(db_seq, search_sequence, prop_match, pairwise_id_thresh,
     loc = [0, 0]
     rev_comp = False
 
-    # found=False
-    # if search_sequence=="":
-    #     if refind:
-    #         print(">>>>>>>>>>>>>")
-    #         print(db_seq)
-    #         found=True
-
     added_E_len = int(len(search_sequence) / 2)
 
     for i, db in enumerate([db_seq, str(Seq(db_seq).reverse_complement())]):
@@ -478,10 +471,6 @@ def search_dna(db_seq, search_sequence, prop_match, pairwise_id_thresh,
                     min(max(loc) - added_E_len, len(db_seq))
                 ]
 
-    # if found:
-    #     print(found_dna)
-    #     print(loc)
-    #     print("<<<<<<<<<<<<<<<<<<")
     seq = found_dna.replace('X', 'N').replace('E', 'N')
     seq = seq.strip('N')
 
@@ -492,27 +481,29 @@ def translate_to_match(hit, target_prot):
     if hit == "": return ""
 
     # translate in all 6 frames splitting on unknown
-    dna_seqs = [hit, reverse_complement(hit)]
+    dna_seqs = [
+        s[i:].ljust(len(s[i:]) + (3 - len(s[i:]) % 3), 'N')
+        for i in range(3) for s in [hit, reverse_complement(hit)]
+    ]
 
     proteins = [
-        translate(s[i:].ljust(len(s[i:]) + (3 - len(s[i:]) % 3), 'N'))
-        for i in range(3) for s in dna_seqs
+        translate(s) for s in dna_seqs
     ]
 
     search_set = set(
         [target_prot[i:i + 3] for i in range(len(target_prot) - 2)])
 
     alignments = []
-    for target_sequence in proteins:
+    for index, target_sequence in enumerate(proteins):
         query_set = set([
             target_sequence[i:i + 3] for i in range(len(target_sequence) - 2)
         ])
         alignments.append(
-            (target_sequence, len(search_set.intersection(query_set))))
+            (target_sequence, len(search_set.intersection(query_set)), index))
 
     prot = max(alignments, key=lambda x: x[1])
 
-    return prot[0]
+    return prot[0], dna_seqs[prot[2]]
 
 
 blosum50 = \

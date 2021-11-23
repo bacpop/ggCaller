@@ -218,7 +218,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     # add each sequence to its respective contig for each gff file.
                     contig_coords = ORFNodeVector[-2]
                     annotation = ORFNodeVector[-1]
-                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and ORFNodeVector[3] is True):
+                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORFNodeVector[3] is True
+                                                                                              or ORFNodeVector[
+                                                                                                  2] % 3 != 0)):
                         description = annotation[-1] + ", potential psuedogene"
                         annotation = annotation[0:3] + (description,)
                 else:

@@ -108,18 +108,18 @@ def main():
 
     # set mimimum path score
     minimum_path_score = 100
-    minimum_ORF_score = 150
+    minimum_ORF_score = 100
     no_filter = False
-    repeat = True
+    repeat = False
     max_path_length = 10000
     is_ref = True
     min_ORF_length = 90
     max_ORF_overlap = 60
     write_idx = True
     write_graph = True
-    identity_cutoff = 0.99
-    len_diff_cutoff = 0.98
-    max_orf_orf_distance = 5000
+    identity_cutoff = 0.98
+    len_diff_cutoff = 0.99
+    max_orf_orf_distance = 10000
     cluster_ORFs = True
 
     num_threads = 6
@@ -135,15 +135,15 @@ def main():
     #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_capsular_fa_list.txt",
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
-    graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
-        stop_codons_for, stop_codons_rev,
-        num_threads, is_ref, write_graph, "NA")
+    # graph_tuple = graph.build(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
+    #     stop_codons_for, stop_codons_rev,
+    #     num_threads, is_ref, write_graph, "NA")
 
-    # graph_tuple = graph.read(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-    #     stop_codons_for, stop_codons_rev, num_threads)
+    graph_tuple = graph.read(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -153,22 +153,22 @@ def main():
     out = "test_ORFs.fasta"
     verbose = True
     length_outlier_support_proportion = 0.1
-    family_threshold = 0.75
+    family_threshold = None
     min_trailing_support = None
     trailing_recursive = None
     clean_edges = True
-    edge_support_threshold = 2
+    edge_support_threshold = None
     merge_paralogs = True
     aln = "pan"
-    alr = "ref"
-    core = 0.95
+    alr = "def"
+    core = 0.96
     min_edge_support_sv = None
     all_seq_in_graph = False
-    remove_by_consensus = True
+    remove_by_consensus = None
     search_radius = 5000
-    refind_prop_match = 0.15
+    refind_prop_match = 0.2
     truncation_threshold = 0.8
-    ignore_pseduogenes = True
+    ignore_pseduogenes = False
 
     if family_threshold is None:
         family_threshold = 0.7
@@ -189,8 +189,8 @@ def main():
 
     annotation_db = "Bacteria"
     hmm_db = "default"
-    annotate = "fast"
-    evalue = 0.001
+    annotate = "sensitive"
+    evalue = 0.01
     call_variants = True
     # unpack annotation database
     if annotation_db == "Bacteria" or annotation_db == "Viruses":
