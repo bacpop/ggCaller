@@ -164,6 +164,10 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
     # generate pandas dataframe for determining most signficant hit per node
     df = pd.DataFrame.from_dict(hits)
 
+    # check if empty
+    if df.empty:
+        return G, high_scoring_ORFs
+
     # split node in which query is found
     df['node'] = df['query_id'].str.split(';').str[0]
 

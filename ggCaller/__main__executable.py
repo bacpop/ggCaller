@@ -112,7 +112,7 @@ def main():
     no_filter = False
     repeat = False
     max_path_length = 10000
-    is_ref = True
+    is_ref = False
     min_ORF_length = 90
     max_ORF_overlap = 60
     write_idx = True
@@ -135,15 +135,15 @@ def main():
     #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_capsular_fa_list.txt",
     #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
-    # graph_tuple = graph.build(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
-    #     stop_codons_for, stop_codons_rev,
-    #     num_threads, is_ref, write_graph, "NA")
+    graph_tuple = graph.build(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
+        stop_codons_for, stop_codons_rev,
+        num_threads, is_ref, write_graph, "NA")
 
-    graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-        stop_codons_for, stop_codons_rev, num_threads)
+    # graph_tuple = graph.read(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+    #     stop_codons_for, stop_codons_rev, num_threads)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple

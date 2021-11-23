@@ -593,9 +593,10 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     # generate summary graphs
     generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_per_isolate, noSamples)
 
-    # generate nwk tree from pangenome
+    # generate nwk tree from pangenome if genes detected
     isolate_names = G.graph['isolateNames']
-    generate_nwk_tree(isolate_gene_list, threads, isolate_names, output_dir, False)
+    if G.number_of_nodes() > 0:
+        generate_nwk_tree(isolate_gene_list, threads, isolate_names, output_dir, False)
 
     return G
 
@@ -827,8 +828,9 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
     # Write out the two output files
     SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
 
-    # generate nwk tree from pangenome
-    generate_nwk_tree([str(record.seq) for record in isolate_aln], threads, isolate_names, output_dir, True)
+    # generate nwk tree from core genome alignment if alignments present
+    if isolate_aln:
+        generate_nwk_tree([str(record.seq) for record in isolate_aln], threads, isolate_names, output_dir, True)
 
     write_alignment_header(gene_alignments, output_dir)
     return core_filenames
