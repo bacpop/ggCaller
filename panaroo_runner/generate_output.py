@@ -291,7 +291,7 @@ def power_law(x, a, b):
 def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_per_isolate, noSamples):
     # write gene frequency histogram
     gene_frequencies = np.array(gene_frequencies)
-    plt.hist(gene_frequencies, bins="auto",
+    plt.hist(gene_frequencies, bins=50, range=(0, 100),
              color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
     plt.grid(axis='y', alpha=0.75)
     plt.xlim(xmin=0, xmax=100)
