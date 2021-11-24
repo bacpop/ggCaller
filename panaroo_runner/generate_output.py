@@ -297,7 +297,6 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
     plt.xlim(xmin=0, xmax=100)
     plt.xlabel('Proportion of genomes (%)')
     plt.ylabel('Frequency')
-    plt.text(23, 45, r'$\mu=15, b=3$')
     plt.savefig(output_dir + "gene_frequency.png", format="png")
     plt.clf()
 
@@ -308,7 +307,6 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('No. genes per cluster')
     plt.ylabel('Frequency')
-    plt.text(23, 45, r'$\mu=15, b=3$')
     plt.savefig(output_dir + "cluster_size.png", format="png")
     plt.clf()
 
@@ -385,8 +383,9 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
 
     return
 
+
 def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
-    if alignment:
+    if alignment is True:
         # determine distance matrix from gene_presence/absence
         distance_mat = np.array(ggCaller_cpp.get_distances_align(matrix_in, threads)).reshape(len(isolate_names),
                                                                                               len(isolate_names))
@@ -421,6 +420,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
     os.remove(phylip_name)
 
     return
+
 
 def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                                          ids_len_stop, output_dir, threads):
@@ -600,6 +600,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
 
     return G
 
+
 def generate_pan_genome_reference(G, output_dir, split_paralogs=False):
     # need to treat paralogs differently?
     centroids = set()
@@ -769,6 +770,7 @@ def get_core_gene_nodes(G, threshold, num_isolates):
             core_nodes.append(node)
     return core_nodes
 
+
 def check_rapidnj_install():
     command = ["rapidnj", "-h"]
 
@@ -788,6 +790,7 @@ def check_rapidnj_install():
         sys.exit(1)
 
     return present
+
 
 def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, threads):
     alignments_dir = output_dir + "/aligned_gene_sequences/"
@@ -825,12 +828,12 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
                 seq += "-" * gene[2]
         isolate_aln.append(SeqRecord(seq, id=iso, description=""))
 
-    # Write out the two output files
-    SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
-
     # generate nwk tree from core genome alignment if alignments present
     if isolate_aln:
         generate_nwk_tree([str(record.seq) for record in isolate_aln], threads, isolate_names, output_dir, True)
+
+    # Write out the two output files
+    SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
 
     write_alignment_header(gene_alignments, output_dir)
     return core_filenames
@@ -862,6 +865,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                          core_genes):
         unaligned_sequence_files.append(outname)
         unaligned_reference_files.append(ref_outname)
+
     if ref_aln:
         # centroid files with paired sequence files
         ref_seq_pairs = [
@@ -931,6 +935,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, threads)
 
     return
+
 
 def generate_summary_stats(output_dir):
     with open(output_dir + "gene_presence_absence_roary.csv", 'r') as inhandle:
