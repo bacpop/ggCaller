@@ -273,6 +273,10 @@ def search_graph(search_pair,
         for search, search_info in node_search_dict[node].items():
             db_seq, nodelist, node_ranges, contig_pair = search_info
 
+            # check if no sequence found
+            if db_seq == "":
+                pass
+
             contig_coords, path_rev_comp = contig_pair
 
             hit, loc, rev_comp = search_dna(db_seq,
