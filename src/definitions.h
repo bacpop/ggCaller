@@ -94,5 +94,7 @@ typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
 typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, std::pair<ContigLoc, bool>> RefindTuple;
+// map containing nodeID, search sequence and refind tuple
+typedef std::map<int, std::map<std::string, RefindTuple>> RefindMap;
 
 #endif //DEFINITIONS_H

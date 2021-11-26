@@ -2,7 +2,7 @@
 #include "match_string.h"
 
 // index fasta files
-std::pair<fm_index_coll, std::vector<size_t>>  index_fasta(const std::string& fasta_file,
+std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
                                                            const bool& write_idx)
 {
     fm_index_coll ref_index;

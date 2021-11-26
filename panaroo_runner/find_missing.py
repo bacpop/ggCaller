@@ -57,7 +57,8 @@ def find_missing(G,
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = {}
-                    search_dict[member]["searches"][node][G.nodes[node]["dna"][G.nodes[node]['maxLenId']]] = ORF_info
+                    search_dict[member]["searches"][node][G.nodes[node]["dna"][G.nodes[node]['maxLenId']]] = ORF_info[
+                                                                                                             :7]
 
                     n_searches += 1
 
@@ -243,8 +244,8 @@ def search_graph(search_pair,
     # sort items to preserve order
     conflicts = {k: v for k, v in sorted(dicts["conflicts"].items(), key=lambda item: item[0])}
     node_search_dict = dicts["searches"]
-    for node in dicts["searches"]:
-        node_search_dict[node] = {k: v for k, v in sorted(node_search_dict[node].items(), key=lambda item: item[0])}
+    # for node in dicts["searches"]:
+    #     node_search_dict[node] = {k: v for k, v in sorted(node_search_dict[node].items(), key=lambda item: item[0])}
 
     node_locs = {}
 
@@ -260,16 +261,17 @@ def search_graph(search_pair,
                     total_overlap += (node_coords[1] - node_coords[0]) + 1
         node_locs[node] = ((ORF_info[0], ORF_info[1], total_overlap), ORF_info[6])
 
+    # get sequences to search
+    node_search_dict = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, is_ref,
+                                                    write_idx, kmer, fasta, repeat)
+
     # search for matches
     hits = []
     for node in node_search_dict:
         best_hit = ""
         best_loc = None
-        for search, ORF_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, contig_pair = graph_shd_arr[0].refind_gene(member, ORF_info[:7],
-                                                                                      search_radius,
-                                                                                      is_ref, write_idx, kmer, fasta,
-                                                                                      repeat)
+        for search, search_info in node_search_dict[node].items():
+            db_seq, nodelist, node_ranges, contig_pair = search_info
 
             contig_coords, path_rev_comp = contig_pair
 

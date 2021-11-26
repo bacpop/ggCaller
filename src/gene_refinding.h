@@ -32,7 +32,19 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
                              const bool is_ref,
                              const bool write_idx,
                              const int kmer,
-                             const std::string& FM_fasta_file,
+                             const fm_index_coll& fm_idx,
+                             const std::vector<size_t>& contig_locs,
                              const bool repeat);
+
+RefindMap refind_in_nodes(const GraphVector& graph_vector,
+                          const size_t& colour_ID,
+                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                          const size_t& radius,
+                          const bool is_ref,
+                          const bool write_idx,
+                          const int kmer,
+                          const fm_index_coll& fm_idx,
+                          const std::vector<size_t>& contig_locs,
+                          const bool repeat);
 
 #endif //GENE_REFINDING_H

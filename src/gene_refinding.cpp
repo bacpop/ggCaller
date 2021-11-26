@@ -250,7 +250,8 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
                              const bool is_ref,
                              const bool write_idx,
                              const int kmer,
-                             const std::string& FM_fasta_file,
+                             const fm_index_coll& fm_idx,
+                             const std::vector<size_t>& contig_locs,
                              const bool repeat)
 {
     // initialise upstream and downstream strings
@@ -262,15 +263,6 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
     // initialise full set of contig locations if using fm_index
     std::pair<ContigLoc, bool> full_contig_loc;
-
-    fm_index_coll fm_idx;
-    std::vector<size_t> contig_locs;
-    if (is_ref)
-    {
-        auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
-        fm_idx = fm_idx_pair.first;
-        contig_locs = fm_idx_pair.second;
-    }
 
     // generate a string of the ORF to check against FM-index
     std::string ORF_seq = generate_sequence_private(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector);
@@ -445,4 +437,35 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
     {
         return {};
     }
+}
+
+RefindMap refind_in_nodes(const GraphVector& graph_vector,
+                         const size_t& colour_ID,
+                         const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                         const size_t& radius,
+                         const bool is_ref,
+                         const bool write_idx,
+                         const int kmer,
+                         const fm_index_coll& fm_idx,
+                         const std::vector<size_t>& contig_locs,
+                         const bool repeat)
+{
+    RefindMap refind_map;
+
+    // iterate over nodes in node_search_dict
+    for (const auto node_search : node_search_dict)
+    {
+        const auto& node = node_search.first;
+
+        // iterate over search sequences in node_search
+        for (const auto& seq_search : node_search.second)
+        {
+            const auto& search = seq_search.first;
+            const auto& ORF_info = seq_search.second;
+
+            refind_map[node][search] = traverse_outward(graph_vector, colour_ID, ORF_info, radius, is_ref,
+                                                         write_idx, kmer, fm_idx, contig_locs, repeat);
+        }
+    }
+    return refind_map;
 }

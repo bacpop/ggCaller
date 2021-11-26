@@ -56,14 +56,14 @@ class Graph {
                                                                 const double& id_cutoff,
                                                                 const double& len_diff_cutoff);
 
-    RefindTuple refind_gene(const size_t& colour_ID,
-                             const ORFNodeVector& ORF_info,
-                             const size_t& radius,
-                             const bool is_ref,
-                             const bool write_idx,
-                             const int kmer,
-                             const std::string& FM_fasta_file,
-                             const bool repeat);
+    RefindMap refind_gene(const size_t& colour_ID,
+                         const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                         const size_t& radius,
+                         const bool is_ref,
+                         const bool write_idx,
+                         const int kmer,
+                         const std::string& FM_fasta_file,
+                         const bool repeat);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
@@ -73,7 +73,7 @@ class Graph {
     size_t node_size(const int& node_id)
     {
         return _GraphVector.at(abs(node_id) - 1).size().first;
-    }
+    };
 
     // clear graph object
     void clear() {_GraphVector.clear();};

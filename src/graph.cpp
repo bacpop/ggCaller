@@ -216,16 +216,26 @@ std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourO
     return return_pair;
 }
 
-RefindTuple Graph::refind_gene(const size_t& colour_ID,
-                                const ORFNodeVector& ORF_info,
-                                const size_t& radius,
-                                const bool is_ref,
-                                const bool write_idx,
-                                const int kmer,
-                                const std::string& FM_fasta_file,
-                                const bool repeat)
+RefindMap Graph::refind_gene(const size_t& colour_ID,
+                             const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                             const size_t& radius,
+                             const bool is_ref,
+                             const bool write_idx,
+                             const int kmer,
+                             const std::string& FM_fasta_file,
+                             const bool repeat)
 {
-    return traverse_outward(_GraphVector, colour_ID, ORF_info, radius, is_ref, write_idx, kmer, FM_fasta_file, repeat);
+    fm_index_coll fm_idx;
+    std::vector<size_t> contig_locs;
+    if (is_ref)
+    {
+        auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
+        fm_idx = fm_idx_pair.first;
+        contig_locs = fm_idx_pair.second;
+    }
+
+    return refind_in_nodes(_GraphVector, colour_ID, node_search_dict, radius, is_ref, write_idx,
+                            kmer, fm_idx, contig_locs, repeat);
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,
