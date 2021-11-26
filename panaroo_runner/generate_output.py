@@ -82,7 +82,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
     return
 
 
-def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, truncation_threshold, G=None):
+def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, truncation_threshold=0, G=None):
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
