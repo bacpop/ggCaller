@@ -210,26 +210,26 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
             ORF_ID = int(sid.split("_")[-1])
-            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
-            ORF_len = ORFNodeVector[2]
+            ORF_info = high_scoring_ORFs[mem][ORF_ID]
+            ORF_len = ORF_info[2]
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORFNodeVector[2] / 3, ORFNodeVector[3])
+                ids_len_stop[sid] = (ORF_info[2] / 3, ORF_info[3])
             else:
-                ids_len_stop[sid] = (ORFNodeVector[2] / 3, False)
+                ids_len_stop[sid] = (ORF_info[2] / 3, False)
             if annotate is not None and is_ref:
                 # annotated genes
-                if len(ORFNodeVector) == 8 or ORF_ID < 0:
+                if len(ORF_info) == 8 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
-                    contig_coords = ORFNodeVector[-2]
-                    annotation = ORFNodeVector[-1]
-                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORFNodeVector[3] is True
-                                                                                              or ORFNodeVector[
+                    contig_coords = ORF_info[-2]
+                    annotation = ORF_info[-1]
+                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
+                                                                                              or ORF_info[
                                                                                                   2] % 3 != 0)):
                         description = annotation[-1] + ", potential psuedogene"
                         annotation = annotation[0:3] + (description,)
                 else:
-                    contig_coords = ORFNodeVector[-1]
+                    contig_coords = ORF_info[-1]
                     annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")
                     if ORF_len < (length_centroid * truncation_threshold):
                         description = annotation[-1] + ", potential psuedogene"
@@ -262,6 +262,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         mems_to_isolates=mems_to_isolates,
         min_variant_support=min_edge_support_sv)
 
+    if verbose:
+        print("writing gene fasta...")
+    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+                    input_colours, overlap, shd_arr[0], truncation_threshold, G)
+
     # Write out core/pan-genome alignments
     # determine if reference-guided alignment being done
     if aln == "pan":
@@ -278,11 +283,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
                                        high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
                                        ignore_pseduogenes, truncation_threshold)
-
-    if verbose:
-        print("writing gene fasta...")
-    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
-                    input_colours, overlap, shd_arr[0], G)
 
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():

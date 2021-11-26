@@ -82,7 +82,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
     return
 
 
-def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, G=None):
+def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, truncation_threshold, G=None):
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
@@ -97,22 +97,42 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, G=N
             for node in G.nodes():
                 node_annotation = G.nodes[node]["description"]
                 centroid_sequence_ids = set(G.nodes[node]["centroid"])
+                length_centroid = G.nodes[node]['longCentroidID'][0]
                 for i in range(0, len(G.nodes[node]["centroid"])):
                     colour = int(G.nodes[node]["centroid"][i].split("_")[0])
-                    ORF_ID = G.nodes[node]["centroid"][i].split("_")[-1]
+                    ORF_ID = int(G.nodes[node]["centroid"][i].split("_")[-1])
+                    ORF_info = high_scoring_ORFs[colour][ORF_ID]
                     gene = G.nodes[node]["dna"][i]
-                    if node_annotation != "":
-                        f.write(">" + isolate_names[colour] + "_" + ORF_ID.zfill(
-                            5) + " " + node_annotation + "\n" + gene + "\n")
+                    ORF_len = ORF_info[2]
+                    gene_annotation = node_annotation
+                    if ORF_len < (length_centroid * truncation_threshold) or (
+                            ORF_ID < 0 and (ORF_info[3] is True
+                                            or ORF_info[
+                                                2] % 3 != 0)):
+                        gene_annotation += "(potential psuedogene)"
+                    if gene_annotation != "":
+                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
+                            5) + " " + gene_annotation + "\n" + gene + "\n")
                     else:
-                        f.write(">" + isolate_names[colour] + "_" + ORF_ID.zfill(5) + "\n" + gene + "\n")
+                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
                 for sid in G.nodes[node]['seqIDs']:
                     if sid not in centroid_sequence_ids:
                         colour = int(sid.split("_")[0])
                         ORF_ID = int(sid.split("_")[-1])
-                        ORFNodeVector = high_scoring_ORFs[colour][ORF_ID]
-                        gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
+                        ORF_info = high_scoring_ORFs[colour][ORF_ID]
+                        gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
+                        ORF_len = ORF_info[2]
+                        gene_annotation = node_annotation
+                        if ORF_len < (length_centroid * truncation_threshold) or (
+                                ORF_ID < 0 and (ORF_info[3] is True
+                                                or ORF_info[
+                                                    2] % 3 != 0)):
+                            gene_annotation += "(potential psuedogene)"
+                        if gene_annotation != "":
+                            f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
+                                5) + " " + gene_annotation + "\n" + gene + "\n")
+                        else:
+                            f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
 
     return
 
