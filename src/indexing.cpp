@@ -334,7 +334,7 @@ void update_neighbour_index(GraphVector& graph_vector,
                 full_colours &= adj_unitig_dict_full;
 
                 // if colours are viable, add successor information to current unitig
-                if (!colours.empty())
+                if (!colours.none())
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
@@ -344,7 +344,7 @@ void update_neighbour_index(GraphVector& graph_vector,
             }
 
             // determine if unitig has new colour not found in successors, if so set end_contig as true
-            if (!full_colours.empty())
+            if (!full_colours.none())
             {
                 unitig_dict.set_end_contig(true);
             }
@@ -386,7 +386,7 @@ void update_neighbour_index(GraphVector& graph_vector,
                 full_colours &= adj_unitig_dict_full;
 
                 // if colours are viable, add successor information to current unitig
-                if (!colours.empty())
+                if (!colours.none())
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
@@ -396,7 +396,7 @@ void update_neighbour_index(GraphVector& graph_vector,
             }
 
             // determine if unitig has new colour not found in predecessors, if so set end_contig as true
-            if (!full_colours.empty())
+            if (!full_colours.none())
             {
                 unitig_dict.set_end_contig(true);
             }
