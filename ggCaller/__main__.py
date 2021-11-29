@@ -3,6 +3,7 @@ import argparse
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 from functools import partial
+import shutil
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
@@ -507,6 +508,9 @@ def main():
             else:
                 print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                                 input_colours, overlap, graph)
+
+    # remove temporary directory
+    shutil.rmtree(temp_dir)
 
     print("Finished.")
 

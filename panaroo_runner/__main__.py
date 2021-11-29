@@ -1,7 +1,6 @@
 import os, sys
 import tempfile
 from Bio import SeqIO
-import shutil
 import networkx as nx
 import argparse
 import textwrap
@@ -313,9 +312,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if verbose:
         print("writing graph file...")
     nx.write_gml(G, output_dir + "final_graph.gml")
-
-    # remove temporary directory
-    shutil.rmtree(temp_dir)
 
     return
 

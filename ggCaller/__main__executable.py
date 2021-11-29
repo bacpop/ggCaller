@@ -4,6 +4,7 @@ import json
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 from functools import partial
+import shutil
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
@@ -108,18 +109,18 @@ def main():
 
     # set mimimum path score
     minimum_path_score = 100
-    minimum_ORF_score = 100
+    minimum_ORF_score = 150
     no_filter = False
     repeat = False
     max_path_length = 10000
-    is_ref = False
+    is_ref = True
     min_ORF_length = 90
     max_ORF_overlap = 60
     write_idx = True
     write_graph = True
-    identity_cutoff = 0.98
-    len_diff_cutoff = 0.99
-    max_orf_orf_distance = 10000
+    identity_cutoff = 0.99
+    len_diff_cutoff = 0.98
+    max_orf_orf_distance = 5000
     cluster_ORFs = True
 
     num_threads = 6
@@ -152,17 +153,17 @@ def main():
     output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
     out = "test_ORFs.fasta"
     verbose = True
-    length_outlier_support_proportion = 0.1
+    length_outlier_support_proportion = 0.15
     family_threshold = None
     min_trailing_support = None
     trailing_recursive = None
     clean_edges = True
     edge_support_threshold = None
-    merge_paralogs = True
+    merge_paralogs = False
     aln = "pan"
     alr = "def"
-    core = 0.96
-    min_edge_support_sv = None
+    core = 0.95
+    min_edge_support_sv = 1
     all_seq_in_graph = False
     remove_by_consensus = None
     search_radius = 5000
@@ -173,15 +174,15 @@ def main():
     if family_threshold is None:
         family_threshold = 0.7
     if min_trailing_support is None:
-        min_trailing_support = 2
+        min_trailing_support = max(2, math.ceil(0.01 * nb_colours))
     if trailing_recursive is None:
-        trailing_recursive = 0
+        trailing_recursive = 99999999
     if min_edge_support_sv is None:
-        min_edge_support_sv = 2
+        min_edge_support_sv = max(2, math.ceil(0.01 * nb_colours))
     if remove_by_consensus is None:
         remove_by_consensus = False
     if edge_support_threshold is None:
-        edge_support_threshold = 0.0
+        edge_support_threshold = max(2, math.ceil(0.01 * nb_colours))
 
     # check diamond and HMMER are installed correctly
     check_diamond_install()
@@ -348,6 +349,9 @@ def main():
                             write_idx, overlap + 1, repeat, remove_by_consensus,
                             search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants,
                             ignore_pseduogenes, truncation_threshold)
+
+    # remove temporary directory
+    shutil.rmtree(temp_dir)
 
     print("Finished.")
 
