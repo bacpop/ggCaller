@@ -53,7 +53,10 @@ typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
 
-typedef sdsl::csa_wt<sdsl::wt_huff<sdsl::rrr_vector<127> >, 512, 1024> fm_index_coll;
+//typedef sdsl::csa_wt<sdsl::wt_huff<sdsl::rrr_vector<127> >, 512, 1024> fm_index_coll;
+typedef sdsl::csa_wt<sdsl::wt_blcd<sdsl::bit_vector, sdsl::rank_support_v<>, sdsl::select_support_scan<>,
+        sdsl::select_support_scan<0> >, 16, 10000000, sdsl::sa_order_sa_sampling<>, sdsl::isa_sampling<>,
+                sdsl::plain_byte_alphabet> fm_index_coll;
 
 // general typedefs
 // hasher for strings
