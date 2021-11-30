@@ -143,19 +143,21 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 
         // generate FM_index if is_ref
         fm_index_coll fm_idx;
-        std::vector<size_t> contig_locs;
 
         if (is_ref)
         {
 //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
-            auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
-            fm_idx = fm_idx_pair.first;
-            contig_locs = fm_idx_pair.second;
+            const auto idx_file_name = FM_fasta_file + ".fm";
+            if (!load_from_file(fm_idx, idx_file_name))
+            {
+                cout << "FM-Index not available for " << FM_fasta_file << endl;
+                is_ref = false;
+            }
         }
 
         // generate ORF calls
 //        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_vector = call_ORFs(all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
+        ORF_vector = call_ORFs(colour_ID, all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
 
     // if no filtering required, do not calculate overlaps

@@ -472,17 +472,15 @@ NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::st
 
             // create int to identify if head and tail kmers in unitig have been traversed
             int prev_head = 0;
+            int kmer_counter = 0;
 
-            size_t kmer_index = 0;
+            size_t kmer_index = 1;
             for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
             {
                 auto um = ccdbg.find(it_km->first);
 
                 // if found, add to FM-index string
                 if (!um.isEmpty) {
-                    // bool to prevent writing of same node id twice
-                    bool write_node = false;
-
                     std::string head_kmer = um.getUnitigHead().toString();
                     int strand = um.strand ? 1 : -1;
 
@@ -490,16 +488,29 @@ NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::st
                     int node_ID = head_kmer_map.at(head_kmer) * strand;
 
                     if (prev_head != node_ID) {
+                        if (prev_head != 0)
+                        {
+                            // if moving to new node, need to update previous node distance
+                            std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
+                        }
                         prev_head = node_ID;
-                        write_node = true;
-                    }
 
-                    if (write_node) {
+                        // add new node
                         const std::string node_entry = std::to_string(node_ID);
                         contig_path += node_entry + ",";
-                        node_contig_mappings.push_back({abs(node_ID) - 1, {contig_ID, kmer_index, um.dist, um.strand}});
+                        node_contig_mappings.push_back({abs(node_ID) - 1, {contig_ID, kmer_index, um.dist, 0, um.strand}});
+
+                        // reset kmer counter
+                        kmer_counter = 0;
+                    }
+
+                    // if at last kmer, need to determine position within unitig
+                    if (kmer_index == num_kmers)
+                    {
+                        std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
                     }
                 }
+                kmer_counter++;
                 kmer_index++;
             }
 
@@ -515,6 +526,7 @@ NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::st
     gzclose(fp);
 
     sdsl::construct_im(ref_index, genome_path, 1); // generate index
+    store_to_file(ref_index, idx_file_name); // save it
 
     return node_contig_mappings;
 }

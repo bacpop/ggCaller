@@ -4,7 +4,8 @@
 #include "ORF_clustering.h"
 
 // generate ORFs from paths
-void generate_ORFs(ORFNodeMap& ORF_node_map,
+void generate_ORFs(const int& colour_ID,
+                   ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
                    const std::vector<std::string>& stop_codons,
@@ -13,9 +14,19 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                    const int& overlap,
                    const size_t min_len,
                    const bool is_ref,
-                   const fm_index_coll& fm_idx,
-                   const std::vector<size_t>& contig_locs)
+                   const fm_index_coll& fm_idx)
 {
+    // check if path is real, if not then pass
+    std::pair<bool, bool> present;
+    if (is_ref)
+    {
+        present = path_search(unitig_path, fm_idx);
+        if (!present.first)
+        {
+            return;
+        }
+    }
+
     // initialise path sequence
     std::string path_sequence;
 
@@ -248,47 +259,143 @@ void generate_ORFs(ORFNodeMap& ORF_node_map,
                         TIS_present = false;
                     }
 
-                    // generate hash for ORF sequence
+                    // generate hash for ORF sequence and ORF sequence
                     size_t ORF_hash;
+                    std::string ORF_seq;
+
+                    if (TIS_present)
+                    {
+                        ORF_seq = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
+                    } else
+                    {
+                        ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                    }
+
+                    // if TIS is present, add the non-TIS hash to to_remove
+                    if (TIS_present)
+                    {
+                        size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
+                        hashes_to_remove.insert(hash_to_remove);
+                    }
+
+                    // If ORF is real, continue and work out coordinates for ORF in node space
+                    ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
 
                     // check if check against fm_index necessary
                     std::pair<ContigLoc, bool> contig_pair;
                     if (is_ref)
                     {
-                        // generate ORF sequence.
-                        std::string ORF_seq;
+                        int start_node;
+                        indexPair start_coords;
+                        int end_node;
+                        indexPair end_coords;
 
-                        // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
-                        if (TIS_present)
+                        // think about reverse complement
+                        if (present.second)
                         {
-                            ORF_seq = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
+                            // get ORF node information
+                            start_node = std::get<0>(ORF_coords).back();
+                            end_node = std::get<0>(ORF_coords).at(0);
+
+                            const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
+                            const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
+
+                            start_coords = std::get<1>(ORF_coords).back();
+                            end_coords = std::get<1>(ORF_coords).at(0);
+
+                            // reverse start_coords
+                            size_t node_end = start_node_info.size().first - 1;
+                            size_t reversed_end = node_end - std::get<0>(start_coords);
+                            size_t reversed_start = node_end - std::get<1>(start_coords);
+                            start_coords = std::make_pair(reversed_start, reversed_end);
+
+                            // reverse end coords
+                            node_end = end_node_info.size().first - 1;
+                            reversed_end = node_end - std::get<0>(end_coords);
+                            reversed_start = node_end - std::get<1>(end_coords);
+                            end_coords = std::make_pair(reversed_start, reversed_end);
                         } else
                         {
-                            ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                            start_node = std::get<0>(ORF_coords).at(0);
+                            start_coords = std::get<1>(ORF_coords).at(0);
+                            end_node = std::get<0>(ORF_coords).back();
+                            end_coords = std::get<1>(ORF_coords).back();
                         }
 
-                        // check path sequence is real if is_ref
-                        contig_pair = check_colours(ORF_seq, fm_idx, contig_locs);
-                        const ContigLoc& contig_loc = std::get<0>(contig_pair);
+                        const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
+                        const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
 
-                        // check if real sequence, if not pass on the ORF, move to next highest
-                        if (contig_loc.first == 0)
+                        auto start_coords_vec = start_node_info.get_contig_coords(colour_ID);
+                        auto end_coords_vec = end_node_info.get_contig_coords(colour_ID);
+
+                        // iterate over the start and end vectors, finding match of contig
+                        std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
+                        std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
+                        bool found_match = false;
+                        for (const auto& i : start_coords_vec)
+                        {
+                            for (const auto& j : end_coords_vec)
+                            {
+                                // check if in same contig and end is after start
+                                if (std::get<0>(i) == std::get<0>(j) && std::get<1>(i) < std::get<1>(j))
+                                {
+                                    start_contig_coords = i;
+                                    end_contig_coords = j;
+                                    found_match = true;
+                                    break;
+                                }
+                            }
+                            if (found_match)
+                            {
+                                break;
+                            }
+                        }
+
+                        // if match not found, then ignore ORF as cannot determine correct orientation
+                        if (!found_match)
                         {
                             continue;
                         }
 
-                        ORF_hash = hasher{}(ORF_seq);
+                        // determine start and end coordinates for the nodes
+                        int start_contig_begin = std::get<2>(start_contig_coords);
+                        int start_contig_end = start_contig_begin + std::get<3>(start_contig_coords) + overlap - 1;
+                        int end_contig_begin = std::get<2>(end_contig_coords);
+                        int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + overlap - 1;
 
-                        // if TIS is present, add the non-TIS hash to to_remove
-                        if (TIS_present)
+                        // reverse start_contig_coords and end_contig_coords if necessary
+//                        if (!std::get<4>(start_contig_coords))
+//                        {
+//                            size_t node_end = start_node_info.size().first - 1;
+//                            start_contig_begin = node_end - start_contig_begin;
+//                            start_contig_end = node_end - start_contig_end;
+//                        }
+//                        if (!std::get<4>(end_contig_coords))
+//                        {
+//                            size_t node_end = end_node_info.size().first - 1;
+//                            end_contig_begin = node_end - end_contig_begin;
+//                            end_contig_end = node_end - end_contig_end;
+//                        }
+
+
+                        // contig ID
+                        contig_pair.first.first = std::get<0>(start_contig_coords);
+
+                        // rev_comp
+                        contig_pair.second = present.second;
+
+                        // first location within contig
+                        contig_pair.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin + start_coords.first;
+
+                        // second location within contig
+                        contig_pair.first.second.second = std::get<1>(end_contig_coords) + end_contig_begin + end_coords.second;
+
+                        // check for artifical ORFs i.e. those that whose ends go over the viable end of the node.
+                        if ((end_contig_begin + end_coords.second) > end_contig_end)
                         {
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
-                            hashes_to_remove.insert(hash_to_remove);
+                            return;
                         }
                     }
-
-                    // If ORF is real, continue and work out coordinates for ORF in node space
-                    ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
 
                     // work coordinates for TIS in node space
                     ORFCoords TIS_coords;
@@ -657,15 +764,15 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
     }
 }
 
-ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
+ORFVector call_ORFs(const int& colour_ID,
+                    const std::vector<PathVector>& all_paths,
                      const GraphVector& graph_vector,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& start_codons_for,
                      const int overlap,
                      const size_t min_ORF_length,
                      const bool is_ref,
-                     const fm_index_coll& fm_idx,
-                     const std::vector<size_t>& contig_locs)
+                     const fm_index_coll& fm_idx)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -677,7 +784,7 @@ ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
+            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
         }
     }
 

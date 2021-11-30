@@ -40,7 +40,8 @@ class unitigDict {
     std::string seq() const {return _unitig_seq;};
 
     // add contig mapping information
-    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
+    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
+    const std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>& get_contig_coords(const size_t& colour_ID) const {return _contigcoords.at(colour_ID);};
 
     // add and return unitig colours
     void add_head_colour(boost::dynamic_bitset<> colours) {_unitig_head_colour = colours;};
@@ -113,8 +114,8 @@ class unitigDict {
     std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 
     // mapping of colour (key) to tuple of contig ID, mapping position within contig
-    // and mapping position within node (if colours differ across unitig) and boolean of strand (1 if same strand, 0 if reversed)
-    std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, bool>>> _contigcoords;
+    // and mapping position within node (start and length in k-mers) and boolean of strand (1 if same strand, 0 if reversed)
+    std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>> _contigcoords;
 };
 
 // unitigDict typedefs

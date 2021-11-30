@@ -120,3 +120,53 @@ std::pair<ContigLoc, bool> check_colours(const std::string& query,
 
     return {contig_loc, rev_comp};
 }
+
+std::vector<int> reverse_unitig_path(const std::vector<int>& unitig_path)
+{
+    // fill reversed_path backwards, multiplying by -1
+    std::vector<int> reversed_path(unitig_path.size());
+    for (int i = 0; i < unitig_path.size(); i++)
+    {
+        reversed_path[(unitig_path.size() - 1) - i] = unitig_path[i] * - 1;
+    }
+    return reversed_path;
+}
+
+//search for a specific sequence within an fm index array
+std::pair<bool, bool> path_search(const std::vector<int>& query_path,
+                                 const fm_index_coll& ref_idx)
+{
+    bool present = false;
+
+    // convert query into string
+    std::ostringstream oss;
+    std::copy(query_path.begin(), query_path.end()-1,
+              std::ostream_iterator<int>(oss, ","));
+
+    std::string query = oss.str();
+
+    //count number of occurrences in positive strand
+    auto count = sdsl::count(ref_idx, query);
+
+    // determine if sequence reversed
+    bool rev_comp = false;
+
+    // if not found, check reverse strand
+    if (count == 0)
+    {
+        const auto rev_query_path = reverse_unitig_path(query_path);
+        oss.str(std::string());
+        std::copy(rev_query_path.begin(), rev_query_path.end()-1,
+                  std::ostream_iterator<int>(oss, ","));
+        query = oss.str();
+        count = sdsl::count(ref_idx, query);
+        rev_comp = true;
+    }
+
+    // take first entry from locations
+    if (count > 0)
+    {
+        present = true;
+    }
+    return {present, rev_comp};
+}
