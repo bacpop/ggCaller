@@ -323,6 +323,7 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
     # write cluster frequency histogram
     cluster_sizes = np.array(cluster_sizes)
     cluster_range = cluster_sizes.max() - cluster_sizes.min()
+    cluster_range = 1 if cluster_range <= 0 else cluster_range
     bins = cluster_range if cluster_range < 50 else 50
     plt.hist(cluster_sizes, bins=bins,
              color='#0504aa', alpha=0.7, rwidth=1.0, edgecolor='black')
