@@ -4,8 +4,7 @@
 #include "ORF_clustering.h"
 
 // generate ORFs from paths
-void generate_ORFs(const size_t& colour_ID,
-                   ORFNodeMap& ORF_node_map,
+void generate_ORFs(ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
                    const std::vector<std::string>& stop_codons,
@@ -46,24 +45,6 @@ void generate_ORFs(const size_t& colour_ID,
         for (size_t i = 0; i < 3; i++) {
             if (codon_arr & (1 << i)) {
                 stop_frames[i] = 1;
-            }
-        }
-    }
-
-    // determine whether same colour present across path, or changes in end unitigs
-    bool colour_change = false;
-    {
-        std::vector<boost::dynamic_bitset<>> colour_vector = {graph_vector.at(abs(unitig_path.at(0)) - 1).head_colour(),
-                                                              graph_vector.at(abs(unitig_path.at(0)) - 1).tail_colour(),
-                                                              graph_vector.at(abs(unitig_path.back()) - 1).head_colour(),
-                                                              graph_vector.at(abs(unitig_path.back()) - 1).tail_colour()};
-
-        for (const auto& colours : colour_vector)
-        {
-            if (!colours[colour_ID])
-            {
-                colour_change = true;
-                break;
             }
         }
     }
@@ -113,24 +94,10 @@ void generate_ORFs(const size_t& colour_ID,
         node_ranges.push_back(std::move(node_range));
     }
 
-    // if colour does not change across path, check full path against FM-index, otherwise pass on to check all ORFs
-    std::pair<ContigLoc, bool> contig_pair;
-    if (!colour_change && is_ref)
-    {
-        // check path sequence is real if is_ref
-        contig_pair = check_colours(path_sequence, fm_idx, contig_locs);
-        const ContigLoc& contig_loc = std::get<0>(contig_pair);
-
-        // check if real sequence, if not pass on the path
-        if (contig_loc.first == 0)
-        {
-            return;
-        }
-    }
-
     // generate dictionaries for start and stop codon indices for each frame
     std::unordered_map<size_t, std::vector<size_t>> start_codon_dict;
     std::unordered_map<size_t, std::vector<size_t>> stop_codon_dict;
+
 
     // scope for start_codon_indices, stop_codon_indices and frame vectors
     {
@@ -285,8 +252,8 @@ void generate_ORFs(const size_t& colour_ID,
                     size_t ORF_hash;
 
                     // check if check against fm_index necessary
-                    std::pair<ContigLoc, bool> ORF_contig_pair;
-                    if (is_ref && colour_change)
+                    std::pair<ContigLoc, bool> contig_pair;
+                    if (is_ref)
                     {
                         // generate ORF sequence.
                         std::string ORF_seq;
@@ -301,8 +268,8 @@ void generate_ORFs(const size_t& colour_ID,
                         }
 
                         // check path sequence is real if is_ref
-                        ORF_contig_pair = check_colours(ORF_seq, fm_idx, contig_locs);
-                        const ContigLoc& contig_loc = std::get<0>(ORF_contig_pair);
+                        contig_pair = check_colours(ORF_seq, fm_idx, contig_locs);
+                        const ContigLoc& contig_loc = std::get<0>(contig_pair);
 
                         // check if real sequence, if not pass on the ORF, move to next highest
                         if (contig_loc.first == 0)
@@ -318,21 +285,6 @@ void generate_ORFs(const size_t& colour_ID,
                             size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
-                    }
-                    // if colour_change not true and is_ref true, then can work out coordinates for ORF_contig_pair
-                    else if (is_ref)
-                    {
-                        // assign contig ID and rev_comp
-                        ORF_contig_pair.first.first = contig_pair.first.first;
-                        ORF_contig_pair.second = contig_pair.second;
-                        if (TIS_present)
-                        {
-                            ORF_contig_pair.first.second.first = contig_pair.first.second.first + (codon_pair.first - 16);
-                        } else
-                        {
-                            ORF_contig_pair.first.second.first = contig_pair.first.second.first + codon_pair.first;
-                        }
-                        ORF_contig_pair.first.second.second = contig_pair.first.second.first + codon_pair.second;
                     }
 
                     // If ORF is real, continue and work out coordinates for ORF in node space
@@ -353,7 +305,7 @@ void generate_ORFs(const size_t& colour_ID,
                     auto& TIS_node_coords = std::get<1>(TIS_coords);
 
                     // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand and population ID, to be worked out later).
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, ORF_contig_pair);
+                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, contig_pair);
 
                     // think about if there is no TIS, then can ignore ORF?
                     update_ORF_node_map(graph_vector, ORF_hash, ORF_node_vector, ORF_node_map);
@@ -705,8 +657,7 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
     }
 }
 
-ORFVector call_ORFs(const size_t& colour_ID,
-                     const std::vector<PathVector>& all_paths,
+ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                      const GraphVector& graph_vector,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& start_codons_for,
@@ -726,7 +677,7 @@ ORFVector call_ORFs(const size_t& colour_ID,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
+            generate_ORFs(ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, contig_locs);
         }
     }
 

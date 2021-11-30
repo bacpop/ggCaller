@@ -6,8 +6,7 @@
 #include "indexing.h"
 
 // call_ORFs
-void generate_ORFs(const size_t& colour_ID,
-                   ORFNodeMap& ORF_node_map,
+void generate_ORFs(ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
                    const std::vector<std::string>& stop_codons,
@@ -24,8 +23,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
                            const std::vector<std::vector<size_t>>& node_ranges,
                            const int& overlap);
 
-ORFVector call_ORFs(const size_t& colour_ID,
-                    const std::vector<PathVector>& all_paths,
+ORFVector call_ORFs(const std::vector<PathVector>& all_paths,
                     const GraphVector& graph_vector,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& start_codons_for,
