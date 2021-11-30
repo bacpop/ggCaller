@@ -2,18 +2,7 @@
 #define INDEXING_H
 
 #include "unitigDict.h"
-
-// function headers
-// indexing
-std::vector<std::size_t> findIndex(const std::string& seq,
-                                   const std::string& subseq,
-                                   const int start_index,
-                                   const int overlap,
-                                   const bool reverse);
-
-uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list);
-
-uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame);
+#include "kseq.h"
 
 ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const std::string& infile_2,
@@ -23,6 +12,16 @@ ColoredCDBG<> buildGraph (const std::string& infile_1,
                           const bool verb,
                           const bool write_graph,
                           const std::string& output_prefix);
+
+std::vector<std::size_t> findIndex(const std::string& seq,
+                                   const std::string& subseq,
+                                   const int start_index,
+                                   const int overlap,
+                                   const bool reverse);
+
+uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list);
+
+uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame);
 
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
@@ -41,12 +40,21 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const size_t& nb_colours);
 
 void update_neighbour_index(GraphVector& graph_vector,
-                            robin_hood::unordered_map<std::string, size_t> head_kmer_map);
+                            const robin_hood::unordered_map<std::string, size_t>& head_kmer_map);
 
-GraphPair index_graph(const ColoredCDBG<>& ccdbg,
-                       const std::vector<std::string>& stop_codons_for,
-                       const std::vector<std::string>& stop_codons_rev,
-                       const int kmer,
-                       const size_t nb_colours);
+NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                                         const ColoredCDBG<>& ccdbg,
+                                         const std::string& fasta_file,
+                                         const int& kmer);
+
+NodeColourVector index_graph(GraphVector& graph_vector,
+                             robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                             const ColoredCDBG<>& ccdbg,
+                             const std::vector<std::string>& stop_codons_for,
+                             const std::vector<std::string>& stop_codons_rev,
+                             const int kmer,
+                             const size_t nb_colours,
+                             const bool is_ref,
+                             const std::vector<std::string>& input_colours);
 
 #endif //INDEXING_H

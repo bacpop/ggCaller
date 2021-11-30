@@ -53,13 +53,15 @@ typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;
 
-typedef sdsl::csa_wt<sdsl::wt_huff<sdsl::rrr_vector<127> >, 512, 1024> fm_index_coll;
+typedef sdsl::csa_wt<> fm_index_coll;
 
 // general typedefs
 // hasher for strings
 typedef std::hash<std::string> hasher;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
+// vector of contig mappings for a node in the graph
+typedef std::vector<std::pair<size_t, std::tuple<size_t, size_t, size_t, bool>>> NodeContigMapping;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<size_t, size_t> indexPair;
 // pair that describes the contig locations of an ORF, 1-indexed for contig id (first) and locations within contig (second)

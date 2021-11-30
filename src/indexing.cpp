@@ -285,7 +285,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 }
 
 void update_neighbour_index(GraphVector& graph_vector,
-                            robin_hood::unordered_map<std::string, size_t> head_kmer_map)
+                            const robin_hood::unordered_map<std::string, size_t>& head_kmer_map)
 {
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
     size_t graph_vector_size = graph_vector.size();
@@ -430,13 +430,106 @@ void update_neighbour_index(GraphVector& graph_vector,
     }
 }
 
-GraphPair index_graph(const ColoredCDBG<>& ccdbg,
-                       const std::vector<std::string>& stop_codons_for,
-                       const std::vector<std::string>& stop_codons_rev,
-                       const int kmer,
-                       const size_t nb_colours)
+NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                                        const ColoredCDBG<>& ccdbg,
+                                        const std::string& fasta_file,
+                                        const int& kmer)
 {
-    // get all head kmers for parrellelisation
+    // generate the index
+    fm_index_coll ref_index;
+
+    // create fm index file name
+    std::string idx_file_name = fasta_file + ".fm";
+
+    // initialise string of nodes for FM-index generation
+    std::string genome_path;
+    NodeContigMapping node_contig_mappings;
+
+    // open the file handler
+    gzFile fp = gzopen(fasta_file.c_str(), "r");
+
+    if (fp == 0) {
+        perror("fopen");
+        exit(1);
+    }
+    // initialize seq
+    kseq_t *seq = kseq_init(fp);
+
+    // read sequence
+    size_t contig_ID = 1;
+    int l;
+    while ((l = kseq_read(seq)) >= 0) {
+        std::string entry = seq->seq.s;
+
+        const size_t num_kmers = entry.length() - kmer + 1;
+
+        // roll through the sequence, generating k-mers and querying them in graph
+        if (num_kmers > 0) {
+            // initialise variables for contig
+            std::string contig_path;
+
+            const char *query_str = entry.c_str();
+
+            // create int to identify if head and tail kmers in unitig have been traversed
+            int prev_head = 0;
+
+            size_t kmer_index = 0;
+            for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
+            {
+                auto um = ccdbg.find(it_km->first);
+
+                // if found, add to FM-index string
+                if (!um.isEmpty) {
+                    // bool to prevent writing of same node id twice
+                    bool write_node = false;
+
+                    std::string head_kmer = um.getUnitigHead().toString();
+                    int strand = um.strand ? 1 : -1;
+
+                    // look for the head in the graph, determine node ID and add to genome_path
+                    int node_ID = head_kmer_map.at(head_kmer) * strand;
+
+                    if (prev_head != node_ID) {
+                        prev_head = node_ID;
+                        write_node = true;
+                    }
+
+                    if (write_node) {
+                        const std::string node_entry = std::to_string(node_ID);
+                        contig_path += node_entry + ",";
+                        node_contig_mappings.push_back({abs(node_ID) - 1, {contig_ID, kmer_index, um.dist, um.strand}});
+                    }
+                }
+                kmer_index++;
+            }
+
+            // add delimiter between contigs
+            genome_path += contig_path;
+            genome_path += ";";
+            contig_ID++;
+        }
+    }
+
+    // destroy seq and fp objects
+    kseq_destroy(seq);
+    gzclose(fp);
+
+    sdsl::construct_im(ref_index, genome_path, 1); // generate index
+
+    return node_contig_mappings;
+}
+
+NodeColourVector index_graph(GraphVector& graph_vector,
+                              robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                              const ColoredCDBG<>& ccdbg,
+                              const std::vector<std::string>& stop_codons_for,
+                              const std::vector<std::string>& stop_codons_rev,
+                              const int kmer,
+                              const size_t nb_colours,
+                              const bool is_ref,
+                              const std::vector<std::string>& input_colours)
+{
+    // get all head kmers
     std::vector<Kmer> head_kmer_arr;
     for (const auto& um : ccdbg)
     {
@@ -444,15 +537,14 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
     }
 
     // structures for results
-    GraphVector graph_vector(head_kmer_arr.size());
+    GraphVector graph_vector_private(head_kmer_arr.size());
+
     NodeColourVector node_colour_vector(nb_colours);
-    robin_hood::unordered_map<std::string, size_t> head_kmer_map;
 
     // run unitig indexing in parallel
     size_t unitig_id = 1;
     #pragma omp parallel
     {
-        GraphVector graph_vector_private;
         NodeColourVector node_colour_vector_private(nb_colours);
         robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait
@@ -479,7 +571,7 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
             head_kmer_map_private[unitig_dict.head_kmer()] = unitig_dict.id;
 
             // add unitig to graph_vector, minus 1 as zero based
-            graph_vector[unitig_dict.id - 1] = std::move(unitig_dict);
+            graph_vector_private[unitig_dict.id - 1] = std::move(unitig_dict);
         }
         #pragma omp critical
         {
@@ -493,8 +585,31 @@ GraphPair index_graph(const ColoredCDBG<>& ccdbg,
         }
     }
     // update neighbour index in place within graph_vector
-    update_neighbour_index(graph_vector, head_kmer_map);
+    update_neighbour_index(graph_vector_private, head_kmer_map);
 
-    const auto graph_pair = std::make_pair(graph_vector, node_colour_vector);
-    return graph_pair;
+    // assign the graph vector to the graph _GraphVector
+    graph_vector = std::move(graph_vector_private);
+
+    // generate FM-indexes of all fastas in node-space
+    std::vector<NodeContigMapping> colour_contig_mappings(nb_colours);
+    if (is_ref)
+    {
+        for (int i = 0; i < nb_colours; i++)
+        {
+            colour_contig_mappings[i] = std::move(calculate_genome_paths(head_kmer_map, ccdbg, input_colours[i], kmer));
+        }
+    }
+
+    // add contig locations to graph_vector
+    for (size_t i = 0; i < nb_colours; i++)
+    {
+        const auto& contig_mappings = colour_contig_mappings.at(i);
+        for (const auto& node_entry : contig_mappings)
+        {
+            graph_vector[node_entry.first].add_contig_coords(i, node_entry.second);
+        }
+    }
+
+    // return node_colour vector
+    return node_colour_vector;
 }

@@ -41,7 +41,7 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
         kseq_destroy(seq);
         gzclose(fp);
 
-        sdsl::construct_im(ref_index, reference_seq.c_str(), 1); // generate index
+        sdsl::construct_im(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
             store_to_file(ref_index, idx_file_name); // save it
@@ -62,7 +62,7 @@ std::pair<int, bool> seq_search(const std::string& query,
 {
     int query_loc = -1;
     //count number of occurrences in positive strand
-    auto locations = sdsl::locate(ref_idx, query);
+    auto locations = sdsl::locate(ref_idx, query.begin(), query.end());
 
     // determine if sequence reversed
     bool rev_comp = false;
@@ -71,7 +71,7 @@ std::pair<int, bool> seq_search(const std::string& query,
     if (locations.empty())
     {
         const std::string rev_query = reverse_complement(query);
-        locations = sdsl::locate(ref_idx, rev_query);
+        locations = sdsl::locate(ref_idx, rev_query.begin(), rev_query.end());
         rev_comp = true;
     }
 

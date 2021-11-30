@@ -28,7 +28,8 @@ class Graph {
                      const std::string& coloursfile,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& stop_codons_rev,
-                     size_t num_threads);
+                     size_t num_threads,
+                     const bool is_ref);
 
     // find ORFs
     std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
@@ -81,13 +82,18 @@ class Graph {
     private:
     // index graph
     NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
-                             const std::vector<std::string>& stop_codons_for,
-                             const std::vector<std::string>& stop_codons_rev,
-                             const int& kmer,
-                             const size_t& nb_colours);
+                                   const std::vector<std::string>& stop_codons_for,
+                                   const std::vector<std::string>& stop_codons_rev,
+                                   const int& kmer,
+                                   const size_t& nb_colours,
+                                   const bool is_ref,
+                                   const std::vector<std::string>& input_colours);
 
     // stored unitigDict objects
-    std::vector<unitigDict> _GraphVector;
+    GraphVector _GraphVector;
+
+    // mapping of head kmers to nodes
+    robin_hood::unordered_map<std::string, size_t> _KmerMap;
 };
 
 #endif //GRAPH_H
