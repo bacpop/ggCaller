@@ -228,7 +228,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     # print("Connecting ORFs: " + str(colour_ID))
 
     # determine next ORFs for each terminal ORF in edge_list
-    next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance))
+    next_ORFs = set(shd_arr[0].connect_ORFs(colour_ID, ORF_vector, target_ORFs, max_orf_orf_distance, is_ref))
 
     # determine redundant edges in high_scoring_ORFs
     redundant_edges = set([tuple(sorted([i[0], i[-1]])) for i in edge_list if len(i) > 1])

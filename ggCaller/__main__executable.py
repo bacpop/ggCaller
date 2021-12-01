@@ -109,7 +109,7 @@ def main():
 
     # set mimimum path score
     minimum_path_score = 100
-    minimum_ORF_score = 150
+    minimum_ORF_score = 100
     no_filter = False
     repeat = False
     max_path_length = 10000
@@ -123,28 +123,20 @@ def main():
     max_orf_orf_distance = 5000
     cluster_ORFs = True
 
-    num_threads = 6
-
-    # graph_tuple = ggCaller_cpp.index_existing(
-    #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.gfa",
-    #     "/mnt/c/Users/sth19/Documents/PhD/Experiments/gene_caller_comparions/ggCaller_results/clique_119_230_372_list.bfg_colors",
-    #     stop_codons_for, stop_codons_rev, num_threads, True)
+    num_threads = 4
 
     graph = ggCaller_cpp.Graph()
 
-    # graph_tuple = graph.build(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/all_capsular_fa_list.txt",
-    #     31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.txt", 31,
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.txt", 31,
         stop_codons_for, stop_codons_rev,
         num_threads, is_ref, write_graph, "NA")
 
     # graph_tuple = graph.read(
     #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
     #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-    #     stop_codons_for, stop_codons_rev, num_threads)
+    #     stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple

@@ -263,7 +263,7 @@ def search_graph(search_pair,
 
     # get sequences to search
     node_search_dict = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, is_ref,
-                                                    write_idx, kmer, fasta, repeat)
+                                                    kmer, fasta, repeat)
 
     # search for matches
     hits = []
