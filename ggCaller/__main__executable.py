@@ -123,20 +123,19 @@ def main():
     max_orf_orf_distance = 5000
     cluster_ORFs = True
 
-    num_threads = 4
+    num_threads = 1
 
     graph = ggCaller_cpp.Graph()
 
+    # graph_tuple = graph.build(
+    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.txt", 31,
+    #     stop_codons_for, stop_codons_rev,
+    #     num_threads, is_ref, write_graph, "NA")
 
-    graph_tuple = graph.build(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.txt", 31,
-        stop_codons_for, stop_codons_rev,
-        num_threads, is_ref, write_graph, "NA")
-
-    # graph_tuple = graph.read(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
-    #     stop_codons_for, stop_codons_rev, num_threads, is_ref)
+    graph_tuple = graph.read(
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -250,41 +249,6 @@ def main():
         # generate shared numpy arrays
         total_arr = np.append(total_arr, [[model], [model_tis]])
         array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
-
-        # run run_calculate_ORFs with multithreading
-        # with Pool(processes=num_threads) as pool:
-        #     for colour_ID, col_true_genes in pool.map(
-        #             partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
-        #                     max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
-        #                     stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
-        #                     max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-        #                     minimum_path_score=minimum_path_score, write_idx=write_idx,
-        #                     input_colours=input_colours,
-        #                     aa_kmer_set=aa_kmer_set),
-        #             enumerate(node_colour_vector)):
-        #         # iterate over entries in col_true_genes to generate the sequences
-        #         for ORFNodeVector in col_true_genes:
-        #             gene = graph.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-        #             if gene not in true_genes:
-        #                 # create tuple to hold ORF sequence, colours and graph traversal information
-        #                 empty_colours_list = ["0"] * nb_colours
-        #                 true_genes[gene] = (empty_colours_list, ORFNodeVector)
-        #             # update colours with current colour_ID
-        #             true_genes[gene][0][colour_ID] = "1"
-
-        # run run_calculate_ORFs with multithreading
-        # with Pool(processes=num_threads) as pool:
-        #     for colour_ID in pool.map(
-        #             partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=repeat, overlap=overlap,
-        #                     max_path_length=max_path_length, is_ref=is_ref, no_filter=no_filter,
-        #                     stop_codons_for=stop_codons_for, start_codons=start_codons, min_ORF_length=min_ORF_length,
-        #                     max_ORF_overlap=max_ORF_overlap, minimum_ORF_score=minimum_ORF_score,
-        #                     minimum_path_score=minimum_path_score, write_idx=write_idx,
-        #                     input_colours=input_colours,
-        #                     aa_kmer_set=aa_kmer_set),
-        #             enumerate(node_colour_vector)):
-        #         # iterate over entries in col_true_genes to generate the sequences
-        #         true_genes[colour_ID] = "done"
 
         with Pool(processes=num_threads) as pool:
             # for colour_tuple in enumerate(node_colour_vector):

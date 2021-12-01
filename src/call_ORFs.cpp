@@ -18,19 +18,12 @@ void generate_ORFs(const int& colour_ID,
 {
     // check if path is real, if not then pass
     std::pair<bool, bool> present;
-    int test = 0;
     if (is_ref)
     {
         present = path_search(unitig_path, fm_idx);
         if (!present.first)
         {
             return;
-//            std::vector<unitigDict> test_vector;
-//            for (const auto& entry : unitig_path)
-//            {
-//                test_vector.push_back(graph_vector.at(abs(entry) - 1));
-//            }
-//            test = 1;
         }
     }
 
@@ -267,7 +260,7 @@ void generate_ORFs(const int& colour_ID,
                     }
 
                     // generate hash for ORF sequence and ORF sequence
-                    size_t ORF_hash;
+                    size_t ORF_hash = 0;
                     std::string ORF_seq;
 
                     if (TIS_present)
@@ -277,6 +270,8 @@ void generate_ORFs(const int& colour_ID,
                     {
                         ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
                     }
+
+                    ORF_hash = hasher{}(ORF_seq);
 
                     // if TIS is present, add the non-TIS hash to to_remove
                     if (TIS_present)
@@ -344,7 +339,7 @@ void generate_ORFs(const int& colour_ID,
                             for (const auto& j : end_coords_vec)
                             {
                                 // check if in same contig and end is after start and that the coordinates match up to the ORF length
-                                if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= ORF_len))
+                                if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) <= std::get<1>(j)))
                                 {
                                     start_contig_coords = i;
                                     end_contig_coords = j;
@@ -400,7 +395,7 @@ void generate_ORFs(const int& colour_ID,
                         // check for artifical ORFs i.e. those that whose ends go over the viable end of the node.
                         if ((end_contig_begin + end_coords.second) > end_contig_end)
                         {
-                            return;
+                            continue;
                         }
                     }
 

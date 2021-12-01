@@ -40,17 +40,17 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
                                    const size_t& nb_colours);
 
 void update_neighbour_index(GraphVector& graph_vector,
-                            const robin_hood::unordered_map<std::string, size_t>& head_kmer_map);
+                            const std::unordered_map<std::string, size_t>& head_kmer_map);
 
 NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
-                                         const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                                         const std::unordered_map<std::string, size_t>& head_kmer_map,
                                          const ColoredCDBG<>& ccdbg,
                                          const std::string& fasta_file,
                                          const int& kmer,
                                          const int& colour_ID);
 
 NodeColourVector index_graph(GraphVector& graph_vector,
-                             robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                             std::unordered_map<std::string, size_t>& head_kmer_map,
                              const ColoredCDBG<>& ccdbg,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,

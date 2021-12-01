@@ -93,7 +93,7 @@ class Graph {
     GraphVector _GraphVector;
 
     // mapping of head kmers to nodes
-    robin_hood::unordered_map<std::string, size_t> _KmerMap;
+    std::unordered_map<std::string, size_t> _KmerMap;
 };
 
 #endif //GRAPH_H

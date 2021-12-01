@@ -1,7 +1,7 @@
 // ggCaller header
 #include "indexing.h"
 
-// define mutex for safe addition to robinhood_maps
+// define mutex for safe addition to maps
 std::mutex mtx1;
 
 ColoredCDBG<> buildGraph (const std::string& infile_1,
@@ -285,7 +285,7 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
 }
 
 void update_neighbour_index(GraphVector& graph_vector,
-                            const robin_hood::unordered_map<std::string, size_t>& head_kmer_map)
+                            const std::unordered_map<std::string, size_t>& head_kmer_map)
 {
     // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
     size_t graph_vector_size = graph_vector.size();
@@ -431,7 +431,7 @@ void update_neighbour_index(GraphVector& graph_vector,
 }
 
 NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
-                                        const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                                        const std::unordered_map<std::string, size_t>& head_kmer_map,
                                         const ColoredCDBG<>& ccdbg,
                                         const std::string& fasta_file,
                                         const int& kmer,
@@ -500,7 +500,7 @@ NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
                             const bool current_strand = node_ID >= 0 ? true : false;
 
                             graph_vector[abs(prev_head) - 1].add_neighbour_colour(prev_strand, node_ID, colour_ID);
-//                            graph_vector[abs(node_ID) - 1].add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
+                            graph_vector[abs(node_ID) - 1].add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
                         }
                         prev_head = node_ID;
 
@@ -541,7 +541,7 @@ NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
 }
 
 NodeColourVector index_graph(GraphVector& graph_vector,
-                              robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+                              std::unordered_map<std::string, size_t>& head_kmer_map,
                               const ColoredCDBG<>& ccdbg,
                               const std::vector<std::string>& stop_codons_for,
                               const std::vector<std::string>& stop_codons_rev,
@@ -567,7 +567,7 @@ NodeColourVector index_graph(GraphVector& graph_vector,
     #pragma omp parallel
     {
         NodeColourVector node_colour_vector_private(nb_colours);
-        robin_hood::unordered_map<std::string, size_t> head_kmer_map_private;
+        std::unordered_map<std::string, size_t> head_kmer_map_private;
         #pragma omp for nowait
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
         {
