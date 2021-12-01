@@ -7,7 +7,8 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                                const size_t& current_colour,
                                const size_t& length_max,
-                               const bool& repeat)
+                               const bool& repeat,
+                               const bool& is_ref)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -56,8 +57,18 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = neighbour.first;
-            const auto& frame = neighbour.second;
+            const auto& neighbour_id = std::get<0>(neighbour);
+            const auto& frame = std::get<1>(neighbour);
+            const auto& colour_set = std::get<2>(neighbour);
+
+            // if is_ref, determine if edge is correct
+            if (is_ref)
+            {
+                if (colour_set.find(current_colour) == colour_set.end())
+                {
+                    continue;
+                }
+            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -132,7 +143,8 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
                                          const size_t& colour_ID,
                                          const std::vector<size_t>& node_ids,
                                          const bool repeat,
-                                         const size_t max_path_length)
+                                         const size_t max_path_length,
+                                         const bool is_ref)
 {
     // initialise all_paths
     std::vector<PathVector> all_paths;
@@ -164,7 +176,7 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
+        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat, is_ref);
 
         if (!unitig_complete_paths.empty())
         {
@@ -201,7 +213,7 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat);
+        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat, is_ref);
 
         if (!unitig_complete_paths.empty())
         {

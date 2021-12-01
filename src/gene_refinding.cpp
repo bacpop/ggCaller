@@ -131,7 +131,8 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                               const size_t& current_colour,
                               const size_t& radius,
-                              const bool& repeat)
+                              const bool& repeat,
+                              const bool& is_ref)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -182,14 +183,17 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         for (const auto& neighbour : node_dict.get_neighbours(strand))
         {
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = neighbour.first;
-            const auto& frame = neighbour.second;
+            const auto& neighbour_id = std::get<0>(neighbour);
+            const auto& frame = std::get<1>(neighbour);
+            const auto& colour_set = std::get<2>(neighbour);
 
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (!repeat && is_in)
+            // if is_ref, determine if edge is correct
+            if (is_ref)
             {
-                continue;
+                if (colour_set.find(current_colour) == colour_set.end())
+                {
+                    continue;
+                }
             }
 
             // get reference to unitig_dict object for neighbour
@@ -321,7 +325,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat);
+            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref);
         }
 
         if (!unitig_complete_paths.empty())
@@ -409,7 +413,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat);
+            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref);
         }
 
         if (!unitig_complete_paths.empty())

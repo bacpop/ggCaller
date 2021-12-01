@@ -48,9 +48,10 @@ class Graph {
 
     // search orientated paths and DBG to connect ORFs
     std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t& colour_ID,
-                                                        const ORFVector& ORF_vector,
-                                                        const std::vector<size_t>& target_ORFs,
-                                                        const size_t& max_ORF_path_length);
+                                                       const ORFVector& ORF_vector,
+                                                       const std::vector<size_t>& target_ORFs,
+                                                       const size_t& max_ORF_path_length,
+                                                       const bool is_ref);
 
     std::pair<ORFMatrixVector, ORFClusterMap> generate_clusters(const ColourORFMap& colour_ORF_map,
                                                                 const size_t& overlap,

@@ -5,7 +5,7 @@
 
 // UnitigDict typedefs and functions
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
-typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
+//typedef std::vector<std::pair<std::unordered_set<size_t>, std::pair<int, std::vector<uint8_t>>>> NeighbourVector;
 
 // unitigDict class declaration
 class unitigDict {
@@ -63,7 +63,8 @@ class unitigDict {
     void set_pred (std::vector<std::pair<std::string, bool>> vect) {_pred_heads = vect;};
     void clear_pred() {_pred_heads.clear(); _pred_heads.shrink_to_fit();}
     const std::vector<std::pair<std::string, bool>> & get_preds () const {return _pred_heads;};
-    void add_neighbour (bool strand, std::pair<int, std::vector<uint8_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
+    void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
+    void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
 
     // get neighbouring nodes
     const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};

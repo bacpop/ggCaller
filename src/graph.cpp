@@ -133,7 +133,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
     {
         // recursive traversal
 //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
-        std::vector<PathVector> all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length);
+        std::vector<PathVector> all_paths = traverse_graph(_GraphVector, colour_ID, node_ids, repeat, max_path_length, is_ref);
 
         // if no FM_fasta_file specified, cannot generate FM Index
         if (FM_fasta_file == "NA")
@@ -176,7 +176,8 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_ID,
                                                            const ORFVector& ORF_vector,
                                                            const std::vector<size_t>& target_ORFs,
-                                                           const size_t& max_ORF_path_length)
+                                                           const size_t& max_ORF_path_length,
+                                                           const bool is_ref)
 {
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
 
@@ -187,11 +188,11 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_
     std::unordered_set<int> prev_node_set;
 
     // conduct DBG traversal for upstream...
-    auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set);
+    auto new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set, is_ref);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
     // ... and downstream
-    new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set);
+    new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
     return connected_ORFs;

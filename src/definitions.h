@@ -47,8 +47,8 @@
 namespace py = pybind11;
 
 // UnitigDict typedefs
-// Vector of neighbouring nodes by ID, orientation and map of stop codon frames
-typedef std::vector<std::pair<int, std::vector<uint8_t>>> NeighbourVector;
+// Vector of neighbouring nodes by ID, map of stop codon frames and set of colours in which edge is found in
+typedef std::vector<std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>>> NeighbourVector;
 
 // Eigen typedef
 typedef Eigen::Triplet<double> ET;

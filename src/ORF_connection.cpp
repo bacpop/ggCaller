@@ -109,7 +109,8 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const GraphVector& graph_
                                                       const ORFVector& ORF_vector,
                                                       const size_t& max_ORF_path_length,
                                                       const int& stream,
-                                                      std::unordered_set<int>& prev_node_set)
+                                                      std::unordered_set<int>& prev_node_set,
+                                                      const bool is_ref)
 {
     // initialise pair of vectors (first = upstream of start_ORF, second = downstream of start_ORF)
     std::vector<std::pair<size_t, size_t>> ORF_edges;
@@ -156,7 +157,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const GraphVector& graph_
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
             if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
             {
-                auto next_ORFs = check_next_ORFs(graph_vector, start_node, source, colour_ID, stream, ORF_vector, max_ORF_path_length, prev_node_set);
+                auto next_ORFs = check_next_ORFs(graph_vector, start_node, source, colour_ID, stream, ORF_vector, max_ORF_path_length, prev_node_set, is_ref);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
 
@@ -173,7 +174,8 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
                                                         const int& stream,
                                                         const ORFVector& ORF_vector,
                                                         const size_t& max_ORF_path_length,
-                                                        std::unordered_set<int>& prev_node_set)
+                                                        std::unordered_set<int>& prev_node_set,
+                                                        const bool is_ref)
 {
     // initialise return vector of upstream ORFs (vectors will break at branches in graph)
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
@@ -213,7 +215,17 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const GraphVector& graph
             auto temp_path_length = path_length;
 
             // parse neighbour information.
-            const auto& neighbour_id = neighbour.first;
+            const auto& neighbour_id = std::get<0>(neighbour);
+            const auto& colour_set = std::get<2>(neighbour);
+
+            // if is_ref, determine if edge is correct
+            if (is_ref)
+            {
+                if (colour_set.find(current_colour) == colour_set.end())
+                {
+                    continue;
+                }
+            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();

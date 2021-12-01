@@ -2,6 +2,8 @@
 #include "unitigDict.h"
 #include "indexing.h"
 
+std::mutex mtx2;
+
 // add codon, copy semantics
 void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array) {
     if (full)
@@ -73,5 +75,17 @@ std::vector<uint8_t> unitigDict::get_codon_dict (bool full, bool forward) const 
     } else
     {
         return _part_codon.at(forward);
+    }
+}
+
+void unitigDict::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
+{
+    // search for neighbour in _neighbours, add colour_ID to colour set
+    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return get< 0 >(item) == neighbour_ID;});
+    if (it != _neighbours[strand].end())
+    {
+        mtx2.lock();
+        get<2>(*it).insert(colour_ID);
+        mtx2.unlock();
     }
 }

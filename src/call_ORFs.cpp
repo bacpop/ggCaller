@@ -18,12 +18,19 @@ void generate_ORFs(const int& colour_ID,
 {
     // check if path is real, if not then pass
     std::pair<bool, bool> present;
+    int test = 0;
     if (is_ref)
     {
         present = path_search(unitig_path, fm_idx);
         if (!present.first)
         {
             return;
+//            std::vector<unitigDict> test_vector;
+//            for (const auto& entry : unitig_path)
+//            {
+//                test_vector.push_back(graph_vector.at(abs(entry) - 1));
+//            }
+//            test = 1;
         }
     }
 
@@ -336,8 +343,8 @@ void generate_ORFs(const int& colour_ID,
                         {
                             for (const auto& j : end_coords_vec)
                             {
-                                // check if in same contig and end is after start
-                                if (std::get<0>(i) == std::get<0>(j) && std::get<1>(i) < std::get<1>(j))
+                                // check if in same contig and end is after start and that the coordinates match up to the ORF length
+                                if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= ORF_len))
                                 {
                                     start_contig_coords = i;
                                     end_contig_coords = j;

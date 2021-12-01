@@ -338,7 +338,7 @@ void update_neighbour_index(GraphVector& graph_vector,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
-                    std::pair<int, std::vector<uint8_t>> neighbour (succ_id_int, adj_unitig_dict.get_codon_dict(false, succ.second));
+                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (succ_id_int, adj_unitig_dict.get_codon_dict(false, succ.second), {});
                     unitig_dict.add_neighbour(true, neighbour);
                 }
             }
@@ -390,7 +390,7 @@ void update_neighbour_index(GraphVector& graph_vector,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
-                    std::pair<int, std::vector<uint8_t>> neighbour (pred_id_int, adj_unitig_dict.get_codon_dict(false, pred.second));
+                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (pred_id_int, adj_unitig_dict.get_codon_dict(false, pred.second), {});
                     unitig_dict.add_neighbour(false, neighbour);
                 }
             }
@@ -430,10 +430,12 @@ void update_neighbour_index(GraphVector& graph_vector,
     }
 }
 
-NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
+NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
+                                        const robin_hood::unordered_map<std::string, size_t>& head_kmer_map,
                                         const ColoredCDBG<>& ccdbg,
                                         const std::string& fasta_file,
-                                        const int& kmer)
+                                        const int& kmer,
+                                        const int& colour_ID)
 {
     // generate the index
     fm_index_coll ref_index;
@@ -492,6 +494,13 @@ NodeContigMapping calculate_genome_paths(const robin_hood::unordered_map<std::st
                         {
                             // if moving to new node, need to update previous node distance
                             std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
+
+                            // add edge to graph_vector in forward and reverse
+                            const bool prev_strand = prev_head >= 0 ? true : false;
+                            const bool current_strand = node_ID >= 0 ? true : false;
+
+                            graph_vector[abs(prev_head) - 1].add_neighbour_colour(prev_strand, node_ID, colour_ID);
+//                            graph_vector[abs(node_ID) - 1].add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
                         }
                         prev_head = node_ID;
 
@@ -596,6 +605,7 @@ NodeColourVector index_graph(GraphVector& graph_vector,
             }
         }
     }
+
     // update neighbour index in place within graph_vector
     update_neighbour_index(graph_vector_private, head_kmer_map);
 
@@ -606,19 +616,24 @@ NodeColourVector index_graph(GraphVector& graph_vector,
     std::vector<NodeContigMapping> colour_contig_mappings(nb_colours);
     if (is_ref)
     {
-        for (int i = 0; i < nb_colours; i++)
+        cout << "Mapping contigs to graph..." << endl;
+        #pragma omp parallel
         {
-            colour_contig_mappings[i] = std::move(calculate_genome_paths(head_kmer_map, ccdbg, input_colours[i], kmer));
+            #pragma omp for nowait
+            for (int i = 0; i < nb_colours; i++)
+            {
+                colour_contig_mappings[i] = std::move(calculate_genome_paths(graph_vector, head_kmer_map, ccdbg, input_colours[i], kmer, i));
+            }
         }
-    }
 
-    // add contig locations to graph_vector
-    for (size_t i = 0; i < nb_colours; i++)
-    {
-        const auto& contig_mappings = colour_contig_mappings.at(i);
-        for (const auto& node_entry : contig_mappings)
+        // add contig locations to graph_vector
+        for (size_t i = 0; i < nb_colours; i++)
         {
-            graph_vector[node_entry.first].add_contig_coords(i, node_entry.second);
+            const auto& contig_mappings = colour_contig_mappings.at(i);
+            for (const auto& node_entry : contig_mappings)
+            {
+                graph_vector[node_entry.first].add_contig_coords(i, node_entry.second);
+            }
         }
     }
 
