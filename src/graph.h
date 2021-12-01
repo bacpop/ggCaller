@@ -61,8 +61,7 @@ class Graph {
     RefindMap refind_gene(const size_t& colour_ID,
                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
                          const size_t& radius,
-                         const bool is_ref,
-                         const bool write_idx,
+                         bool is_ref,
                          const int kmer,
                          const std::string& FM_fasta_file,
                          const bool repeat);

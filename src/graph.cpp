@@ -223,23 +223,24 @@ std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourO
 RefindMap Graph::refind_gene(const size_t& colour_ID,
                              const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
                              const size_t& radius,
-                             const bool is_ref,
-                             const bool write_idx,
+                             bool is_ref,
                              const int kmer,
                              const std::string& FM_fasta_file,
                              const bool repeat)
 {
     fm_index_coll fm_idx;
-    std::vector<size_t> contig_locs;
     if (is_ref)
     {
-        auto fm_idx_pair = index_fasta(FM_fasta_file, write_idx);
-        fm_idx = fm_idx_pair.first;
-        contig_locs = fm_idx_pair.second;
+        const auto idx_file_name = FM_fasta_file + ".fm";
+        if (!load_from_file(fm_idx, idx_file_name))
+        {
+            cout << "FM-Index not available for " << FM_fasta_file << endl;
+            is_ref = false;
+        }
     }
 
-    return refind_in_nodes(_GraphVector, colour_ID, node_search_dict, radius, is_ref, write_idx,
-                            kmer, fm_idx, contig_locs, repeat);
+    return refind_in_nodes(_GraphVector, colour_ID, node_search_dict, radius, is_ref,
+                            kmer, fm_idx, repeat);
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

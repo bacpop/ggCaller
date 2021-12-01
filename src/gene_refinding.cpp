@@ -43,12 +43,12 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
     return node_ranges;
 }
 
-std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const GraphVector& graph_vector,
+std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t& colour_ID,
+                                                                    const GraphVector& graph_vector,
                                                                     const PathVector& unitig_complete_paths,
                                                                     const int kmer,
                                                                     const bool is_ref,
                                                                     const fm_index_coll& fm_idx,
-                                                                    const std::vector<size_t>& contig_locs,
                                                                     std::string& stream_seq,
                                                                     const size_t& ORF_end,
                                                                     const std::string& ORF_seq)
@@ -63,8 +63,19 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const GraphVe
     // If multiple, choose from that with the lowest hash for first kmer
     for (const auto& unitig_path : unitig_complete_paths)
     {
+        // check if path is real, if not then pass
+        std::pair<bool, bool> present;
+        if (is_ref)
+        {
+            present = path_search(unitig_path, fm_idx);
+            if (!present.first)
+            {
+                continue;
+            }
+        }
+
         // initilise path_sequence
-        std::string path_sequence = ORF_seq;
+        std::string path_sequence = "";
 
         // generate the path sequence
         for (int i = 0; i < unitig_path.size(); i++)
@@ -90,26 +101,90 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const GraphVe
             }
         }
 
-        // check against FMindex
-        // check new_sequence is real if is_ref
-        std::pair<ContigLoc, bool> contig_loc_check;
+        // check if check against fm_index necessary
+        std::pair<ContigLoc, bool> contig_pair_temp;
         if (is_ref)
         {
-            contig_loc_check = check_colours(path_sequence, fm_idx, contig_locs);
+            int start_node;
+            int end_node;
 
-            // check if real sequence, if not pass on the ORF, move to next highest
-            if (contig_loc_check.first.first == 0)
+            // think about reverse complement
+            if (present.second)
+            {
+                // get ORF node information
+                start_node = unitig_path.back();
+                end_node = unitig_path.at(0);
+            } else
+            {
+                start_node = unitig_path.at(0);
+                end_node = unitig_path.back();
+            }
+
+            const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
+            const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
+
+            auto start_coords_vec = start_node_info.get_contig_coords(colour_ID);
+            auto end_coords_vec = end_node_info.get_contig_coords(colour_ID);
+
+            // iterate over the start and end vectors, finding match of contig
+            std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
+            std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
+            bool found_match = false;
+            for (const auto& i : start_coords_vec)
+            {
+                for (const auto& j : end_coords_vec)
+                {
+                    // check if in same contig and end is after start and that the coordinates match up to the ORF length
+                    if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= path_sequence.size()))
+                    {
+                        start_contig_coords = i;
+                        end_contig_coords = j;
+                        found_match = true;
+                        break;
+                    }
+                }
+                if (found_match)
+                {
+                    break;
+                }
+            }
+
+            // if match not found, then ignore ORF as cannot determine correct orientation
+            if (!found_match)
             {
                 continue;
             }
+
+            // determine start and end coordinates for the nodes
+            int start_contig_begin = std::get<2>(start_contig_coords);
+            int end_contig_begin = std::get<2>(end_contig_coords);
+            int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + kmer - 2;
+
+            // contig ID
+            contig_pair_temp.first.first = std::get<0>(start_contig_coords);
+
+            // rev_comp
+            contig_pair_temp.second = present.second;
+
+            // first location within contig
+            contig_pair_temp.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin;
+
+            // second location within contig
+            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
+
+            // get substring of path_seq to avoid over-running source contig
+            path_sequence = path_sequence.substr(start_contig_begin, path_sequence.size() - end_contig_end);
         }
+
+        // add ORF seq to path_seq
+        path_sequence = ORF_seq + path_sequence;
 
         // compare the path_sequence to current stream_seq
         if (path_sequence.size() > stream_seq.size())
         {
             stream_seq = path_sequence;
             nodelist = unitig_path;
-            contig_pair = contig_loc_check;
+            contig_pair = contig_pair_temp;
         } else if (path_sequence.size() == stream_seq.size() && path_sequence != stream_seq)
         {
             // if equal size, get the hash of the last kmer in each and assign to highest
@@ -120,7 +195,7 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const GraphVe
             {
                 stream_seq = path_sequence;
                 nodelist = unitig_path;
-                contig_pair = contig_loc_check;
+                contig_pair = contig_pair_temp;
             }
         }
     }
@@ -252,10 +327,8 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
                              const bool is_ref,
-                             const bool write_idx,
                              const int kmer,
                              const fm_index_coll& fm_idx,
-                             const std::vector<size_t>& contig_locs,
                              const bool repeat)
 {
     // initialise upstream and downstream strings
@@ -330,7 +403,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto upstream_pair = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, contig_locs, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+            auto upstream_pair = std::move(assign_seq(colour_ID, graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
             full_contig_loc = upstream_pair.second;
 
             // reverse upstream_nodelist
@@ -418,7 +491,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto downstream_pair = std::move(assign_seq(graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, contig_locs, downstream_seq, ORF_end, ORF_seq));
+            auto downstream_pair = std::move(assign_seq(colour_ID, graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
             if (downstream_pair.first.size() > 1)
             {
                 full_nodelist.insert(full_nodelist.end(), downstream_pair.first.begin() + 1, downstream_pair.first.end());
@@ -448,10 +521,8 @@ RefindMap refind_in_nodes(const GraphVector& graph_vector,
                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
                          const size_t& radius,
                          const bool is_ref,
-                         const bool write_idx,
                          const int kmer,
                          const fm_index_coll& fm_idx,
-                         const std::vector<size_t>& contig_locs,
                          const bool repeat)
 {
     RefindMap refind_map;
@@ -468,7 +539,7 @@ RefindMap refind_in_nodes(const GraphVector& graph_vector,
             const auto& ORF_info = seq_search.second;
 
             refind_map[node][search] = traverse_outward(graph_vector, colour_ID, ORF_info, radius, is_ref,
-                                                         write_idx, kmer, fm_idx, contig_locs, repeat);
+                                                         kmer, fm_idx, repeat);
         }
     }
     return refind_map;
