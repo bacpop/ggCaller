@@ -169,11 +169,12 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
             // first location within contig
             contig_pair_temp.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin;
 
-            // second location within contig
-            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
-
             // get substring of path_seq to avoid over-running source contig
             path_sequence = path_sequence.substr(start_contig_begin, path_sequence.size() - end_contig_end);
+
+            // second location within contig
+//            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
+            contig_pair_temp.first.second.second = contig_pair_temp.first.second.first + path_sequence.size();
         }
 
         // add ORF seq to path_seq
@@ -207,7 +208,8 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const size_t& current_colour,
                               const size_t& radius,
                               const bool& repeat,
-                              const bool& is_ref)
+                              const bool& is_ref,
+                              const fm_index_coll& fm_idx)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -237,6 +239,16 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         if (pos_idx != 0)
         {
             node_vector = std::vector<int> (node_vector.begin(), node_vector.begin() + pos_idx);
+            // check if path is real, if not then pass
+            std::pair<bool, bool> present;
+            if (is_ref)
+            {
+                present = path_search(node_vector, fm_idx);
+                if (!present.first)
+                {
+                    continue;
+                }
+            }
         }
 
         // add node to path
@@ -271,6 +283,13 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                 }
             }
 
+            // check if unitig has already been traversed, and pass if repeat not specified
+            const bool is_in = node_set.find(neighbour_id) != node_set.end();
+            if (!repeat && is_in)
+            {
+                continue;
+            }
+
             // get reference to unitig_dict object for neighbour
             const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
 
@@ -291,7 +310,7 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
             const size_t updated_path_length = path_length + neighbour_dict.size().second;
 
             // if adding new node pushes path length over radius or neighbour is end contig, add neighbour and return
-            if (updated_path_length >= radius)
+            if (updated_path_length >= radius || neighbour_dict.end_contig())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -398,7 +417,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref);
+            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx);
         }
 
         if (!unitig_complete_paths.empty())
@@ -486,7 +505,7 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref);
+            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx);
         }
 
         if (!unitig_complete_paths.empty())
