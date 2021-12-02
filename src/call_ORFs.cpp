@@ -365,21 +365,6 @@ void generate_ORFs(const int& colour_ID,
                         int end_contig_begin = std::get<2>(end_contig_coords);
                         int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + overlap - 1;
 
-                        // reverse start_contig_coords and end_contig_coords if necessary
-//                        if (!std::get<4>(start_contig_coords))
-//                        {
-//                            size_t node_end = start_node_info.size().first - 1;
-//                            start_contig_begin = node_end - start_contig_begin;
-//                            start_contig_end = node_end - start_contig_end;
-//                        }
-//                        if (!std::get<4>(end_contig_coords))
-//                        {
-//                            size_t node_end = end_node_info.size().first - 1;
-//                            end_contig_begin = node_end - end_contig_begin;
-//                            end_contig_end = node_end - end_contig_end;
-//                        }
-
-
                         // contig ID
                         contig_pair.first.first = std::get<0>(start_contig_coords);
 
@@ -390,7 +375,8 @@ void generate_ORFs(const int& colour_ID,
                         contig_pair.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin + start_coords.first;
 
                         // second location within contig
-                        contig_pair.first.second.second = std::get<1>(end_contig_coords) + end_contig_begin + end_coords.second;
+//                        contig_pair.first.second.second = std::get<1>(end_contig_coords) + end_contig_begin + end_coords.second;
+                        contig_pair.first.second.second = contig_pair.first.second.first + ORF_len;
 
                         // check for artifical ORFs i.e. those that whose ends go over the viable end of the node.
                         if ((end_contig_begin + end_coords.second) > end_contig_end)
