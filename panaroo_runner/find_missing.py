@@ -1,8 +1,8 @@
 from collections import defaultdict, Counter
 from Bio.Seq import translate, reverse_complement, Seq
+from multiprocessing import get_context
 from Bio import SeqIO
 from panaroo.cdhit import align_dna_cdhit
-from panaroo.isvalid import del_dups
 from joblib import Parallel, delayed
 import os
 import gffutils as gff
@@ -16,7 +16,6 @@ from ggCaller.shared_memory import *
 from functools import partial
 
 
-# @profile
 def find_missing(G,
                  graph_shd_arr_tup,
                  high_scoring_ORFs,
@@ -70,18 +69,18 @@ def find_missing(G,
     all_hits = [None] * len(isolate_names)
     all_node_locs = [None] * len(isolate_names)
 
-    # for isolate_pair in enumerate(isolate_names):
+    # for isolate_pair in search_dict.items():
     #     member, hits, node_locs = search_graph(isolate_pair,
-    #                                    high_scoring_ORFs=high_scoring_ORFs,
-    #                                    graph_shd_arr_tup=graph_shd_arr_tup,
-    #                                    search_radius=search_radius,
-    #                                    prop_match=prop_match,
-    #                                    pairwise_id_thresh=pairwise_id_thresh,
-    #                                    merge_id_thresh=merge_id_thresh,
-    #                                    is_ref=is_ref,
-    #                                    write_idx=write_idx,
-    #                                    kmer=kmer,
-    #                                    repeat=repeat)
+    #                                            graph_shd_arr_tup=graph_shd_arr_tup,
+    #                                            isolate_names=isolate_names,
+    #                                            search_radius=search_radius,
+    #                                            prop_match=prop_match,
+    #                                            pairwise_id_thresh=pairwise_id_thresh,
+    #                                            merge_id_thresh=merge_id_thresh,
+    #                                            is_ref=is_ref,
+    #                                            write_idx=write_idx,
+    #                                            kmer=kmer,
+    #                                            repeat=repeat)
     #     all_hits[member] = hits
     #     all_node_locs[member] = node_locs
 
@@ -91,9 +90,7 @@ def find_missing(G,
                                                     search_radius=search_radius,
                                                     prop_match=prop_match,
                                                     pairwise_id_thresh=pairwise_id_thresh,
-                                                    merge_id_thresh=merge_id_thresh,
                                                     is_ref=is_ref,
-                                                    write_idx=write_idx,
                                                     kmer=kmer,
                                                     repeat=repeat),
                                             search_dict.items()):
@@ -198,10 +195,8 @@ def find_missing(G,
             hit_protein, hit_dna = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
             G.nodes[node]['size'] += 1
-            G.nodes[node]['dna'] = del_dups(G.nodes[node]['dna'] +
-                                            [dna_hit])
-            G.nodes[node]['protein'] = del_dups(
-                G.nodes[node]['protein'] + [hit_protein])
+            G.nodes[node]['dna'].append(dna_hit)
+            G.nodes[node]['protein'].append(hit_protein)
             G.nodes[node]['seqIDs'] |= set(
                 [str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
@@ -226,13 +221,11 @@ def search_graph(search_pair,
                  graph_shd_arr_tup,
                  isolate_names,
                  is_ref,
-                 write_idx,
                  kmer,
                  repeat,
                  search_radius=10000,
                  prop_match=0.2,
-                 pairwise_id_thresh=0.95,
-                 merge_id_thresh=0.7):
+                 pairwise_id_thresh=0.95):
     # unpack search_pair and assign fasta
     member, dicts = search_pair
     fasta = isolate_names[member]
