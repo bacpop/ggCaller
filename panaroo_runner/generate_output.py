@@ -54,13 +54,13 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
             else:
                 dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
-            # determine if Ns have been added into alignment. If so, need to account for unaligned stop codon
-            if dna[-1] == "N":
-                dna += "---"
-
-            # add on stop codon if not present in aa sequence
-            if protein[-1] != "*":
-                protein += "*"
+            # # determine if Ns have been added into alignment. If so, need to account for unaligned stop codon
+            # if dna[-1] == "N":
+            #     dna += "---"
+            #
+            # # add on stop codon if not present in aa sequence
+            # if protein[-1] != "*":
+            #     protein += "*"
 
             # back translate sequence
             aligned_dna = ""
@@ -69,7 +69,11 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                 if protein[aa_idx] == "-":
                     aligned_dna += "---"
                 else:
-                    aligned_dna += dna[dna_idx: dna_idx + 3]
+                    to_add = dna[dna_idx: dna_idx + 3]
+                    # remove any Ns present in DNA sequence
+                    if "N" in to_add:
+                        to_add.replace("N", "-")
+                    aligned_dna += to_add
                     dna_idx += 3
 
             id = isolate_names[mem] + "_" + str(ORF_ID).zfill(5)
