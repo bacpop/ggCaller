@@ -113,6 +113,30 @@ GraphTuple Graph::read (const std::string& graphfile,
     return graph_tuple;
 }
 
+void Graph::in(std::string infile)
+{
+    GraphVector newg;
+    std::ifstream ifs(infile);
+    boost::archive::text_iarchive ia(ifs);
+    ia >> newg;
+
+    _GraphVector = newg;
+
+    for (const auto& node : _GraphVector)
+    {
+        _KmerMap[node.head_kmer()] = node.id;
+    }
+}
+
+void Graph::out(std::string outfile)
+{
+    std::ofstream ofs(outfile);
+    boost::archive::text_oarchive oa(ofs);
+    // write class instance to archive
+    oa << _GraphVector;
+}
+
+
 std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
                                                      const std::vector<size_t>& node_ids,
                                                      const bool& repeat,

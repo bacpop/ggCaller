@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-find_package(Boost)
+find_package(Boost REQUIRED system serialization)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # find pybind and create python module
@@ -44,7 +44,7 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen)
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES})
 
 #find OpenMP library
 find_package(OpenMP)

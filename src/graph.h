@@ -31,6 +31,12 @@ class Graph {
                      size_t num_threads,
                      const bool is_ref);
 
+    // get graph object from serialised file
+    void in(std::string infile);
+
+    // generate serialised file from graph object
+    void out(std::string outfile);
+
     // find ORFs
     std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
                                                   const std::vector<size_t>& node_ids,
@@ -77,7 +83,7 @@ class Graph {
     };
 
     // clear graph object
-    void clear() {_GraphVector.clear();};
+    void clear() {_GraphVector.clear(); _KmerMap.clear();};
 
     private:
     // index graph

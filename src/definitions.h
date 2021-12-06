@@ -27,8 +27,18 @@
 // sdsl header
 #include <sdsl/suffix_arrays.hpp>
 
-// boost header
+// boost dynamic_bitset header
 #include <boost/dynamic_bitset.hpp>
+
+// boost serialising headers
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/dynamic_bitset/serialization.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/unordered_set.hpp>
+#include <serialize_tuple.h>
 
 // pybind11 headers
 #include <pybind11/pybind11.h>

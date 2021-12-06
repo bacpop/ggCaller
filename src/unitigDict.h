@@ -2,6 +2,7 @@
 #define UNITIG_DICT_H
 
 #include "definitions.h"
+#include <boost/serialization/access.hpp>
 
 // UnitigDict typedefs and functions
 // Vector of neighbouring nodes by ID, orientation and map of stop codon frames
@@ -10,6 +11,17 @@
 // unitigDict class declaration
 class unitigDict {
     public:
+
+    // serialisation protocol
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & id & _head_kmer & _full_codon & _part_codon & _unitig_size & _unitig_full_colour & _unitig_head_colour &
+                _unitig_tail_colour & _head_tail_colours_equal & _unitig_seq & _end_contig & _forward_stop_defined &
+                _reverse_stop_defined & _forward_stop & _reverse_stop & _succ_heads & _pred_heads & _neighbours &
+                _traversing_ORFs & _contigcoords;
+    }
 
     // add and return untig kmers and ids
     void add_head(const std::string& head) {_head_kmer = head;};
