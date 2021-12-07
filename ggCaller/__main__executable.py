@@ -122,8 +122,9 @@ def main():
     len_diff_cutoff = 0.98
     max_orf_orf_distance = 5000
     cluster_ORFs = True
+    save_objects = True
 
-    num_threads = 1
+    num_threads = 5
 
     graph = ggCaller_cpp.Graph()
 
@@ -133,8 +134,8 @@ def main():
     #     num_threads, is_ref, write_graph, "NA")
 
     graph_tuple = graph.read(
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa",
-        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.gfa",
+        "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_capsular_fa_list.bfg_colors",
         stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
@@ -181,7 +182,7 @@ def main():
 
     annotation_db = "Bacteria"
     hmm_db = "default"
-    annotate = "sensitive"
+    annotate = None
     evalue = 0.01
     call_variants = True
     # unpack annotation database
@@ -304,7 +305,7 @@ def main():
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
                             search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants,
-                            ignore_pseduogenes, truncation_threshold)
+                            ignore_pseduogenes, truncation_threshold, save_objects)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

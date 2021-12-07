@@ -40,6 +40,9 @@ def get_options():
     IO.add_argument('--reads',
                     default=None,
                     help='List of read files (one file path per line). ')
+    IO.add_argument('--query',
+                    default=None,
+                    help='List of unitig sequences to query (either FASTA or one sequence per line) ')
     IO.add_argument('--codons',
                     default=None,
                     help='JSON file containing start and stop codon sequences. ')
@@ -97,6 +100,11 @@ def get_options():
                           default=0.98,
                           help='Minimum ratio of length between two ORFs for clustering.  '
                                '[Default = 0.98] ')
+    Settings.add_argument('--save',
+                          action="store_true",
+                          default=False,
+                          help='Save graph objects for sequence querying. '
+                               '[Default = False] ')
     Algorithm = parser.add_argument_group('Settings to avoid/include algorithms')
     Algorithm.add_argument('--no-filter',
                            action="store_true",
@@ -362,25 +370,38 @@ def main():
     # initialise graph
     graph = ggCaller_cpp.Graph()
 
+    # set boolean for querying
+    query = False
+
     # if build graph specified, build graph and then call ORFs
-    if (options.graph != None) and (options.colours != None) and (options.refs == None) and (options.reads == None):
+    if (options.graph != None) and (options.colours != None) and (options.refs == None) and (
+            options.reads == None) and (options.query == None):
+        graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
+                                 options.threads, is_ref)
+    elif (options.graph != None) and (options.colours != None) and (options.refs == None) and (
+            options.reads == None) and (options.query != None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
                                  options.threads, is_ref)
     # if refs file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads == None):
+    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
+            options.reads == None) and (options.query == None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, True, options.no_write_graph, "NA")
     # if reads file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (options.reads != None):
+    elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (
+            options.reads != None) and (options.query == None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, "NA")
     # if both reads and refs file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (options.reads != None):
+    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
+            options.reads != None) and (options.query != None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, options.reads)
+        query = True
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
+              "- Bifrost GFA, Bifrost colours file and list of query sequences\n"
               "- List of reference files\n"
               "- List of read files\n"
               "- A list of reference files and a list of read files.")
@@ -504,7 +525,7 @@ def main():
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold)
+                            options.truncation_threshold, options.save)
             else:
                 print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                                 input_colours, overlap, graph)

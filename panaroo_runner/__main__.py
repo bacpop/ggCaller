@@ -6,6 +6,7 @@ import argparse
 import textwrap
 import ast
 from collections import defaultdict
+import _pickle as cPickle
 
 # panaroo scripts
 from panaroo.isvalid import *
@@ -38,7 +39,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
-                call_variants, ignore_pseduogenes, truncation_threshold):
+                call_variants, ignore_pseduogenes, truncation_threshold, save_objects):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -312,6 +313,31 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if verbose:
         print("writing graph file...")
     nx.write_gml(G, output_dir + "final_graph.gml")
+
+    if save_objects:
+        # create directory if it isn't present already
+        objects_dir = output_dir + "ggc_data"
+        if not os.path.exists(objects_dir):
+            os.mkdir(objects_dir)
+
+        # make sure trailing forward slash is present
+        objects_dir = os.path.join(objects_dir, "")
+
+        # serialise graph object and high scoring ORFs to future reading
+        shd_arr[0].data_out(objects_dir + "ggc_graph.dat")
+        with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
+            cPickle.dump(high_scoring_ORFs, o)
+
+        # create index of all high_scoring_ORFs node_IDs
+        node_index = defaultdict(list)
+        for colour, gene_dict in high_scoring_ORFs.items():
+            for ORF_ID, ORF_info in gene_dict.items():
+                entry_ID = str(colour) + "_" + str(ORF_ID)
+                for node in ORF_info[0]:
+                    node_index[abs(node)].append(entry_ID)
+
+        with open(objects_dir + "node_index.dat", "wb") as o:
+            cPickle.dump(node_index, o)
 
     return
 
