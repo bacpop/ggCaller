@@ -7,8 +7,9 @@
 
 #include "definitions.h"
 
-std::vector<std::tuple<std::string, bool, std::pair<size_t, size_t>>> query_DBG(const ColoredCDBG<>& ccdbg,
-                                                                                const std::string& query,
-                                                                                const int& kmer);
+MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
+                        const std::string& query,
+                        const int& kmer,
+                        const std::unordered_map<std::string, size_t>& kmer_map);
 
 #endif //GGCALLER_SEARCH_DBG_H

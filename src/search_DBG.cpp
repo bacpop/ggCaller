@@ -6,7 +6,8 @@
 
 MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
                         const std::string& query,
-                        const int& kmer)
+                        const int& kmer,
+                        const std::unordered_map<std::string, size_t>& kmer_map)
 {
     // tuple of head kmer string, strand and coordinates
     MappingCoords mapping_coords;
@@ -29,35 +30,37 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
         if (!um.isEmpty)
         {
             const std::string head_kmer = um.getUnitigHead().toString();
+            const int strand = um.strand ? 1 : -1;
+            const int node_id = kmer_map.at(head_kmer) * strand;
 
             if (mapping_coords.empty())
             {
-                if (um.strand)
+                if (node_id >= 0)
                 {
-                    mapping_coords.push_back({head_kmer, um.strand, {um.dist, 0}});
+                    mapping_coords.push_back({node_id, {um.dist, 0}});
                 } else
                 {
-                    mapping_coords.push_back({head_kmer, um.strand, {0, um.dist + (kmer - 1)}});
+                    mapping_coords.push_back({node_id, {0, um.dist + (kmer - 1)}});
                 }
             } else
             {
-                if (std::get<0>(mapping_coords.back()) != head_kmer)
+                if (std::get<0>(mapping_coords.back()) != node_id)
                 {
                     // if previous node is forward strand
-                    if (std::get<1>(mapping_coords.back()))
+                    if (std::get<0>(mapping_coords.back()) >= 0)
                     {
-                        std::get<2>(mapping_coords.back()).second = std::get<2>(mapping_coords.back()).first + kmer_counter + kmer - 2;
+                        std::get<1>(mapping_coords.back()).second = std::get<1>(mapping_coords.back()).first + kmer_counter + kmer - 2;
                     } else
                     {
-                        std::get<2>(mapping_coords.back()).first = std::get<2>(mapping_coords.back()).second - kmer_counter - kmer + 2;
+                        std::get<1>(mapping_coords.back()).first = std::get<1>(mapping_coords.back()).second - kmer_counter - kmer + 2;
                     }
 
-                    if (um.strand)
+                    if (node_id >= 0)
                     {
-                        mapping_coords.push_back({head_kmer, um.strand, {um.dist, 0}});
+                        mapping_coords.push_back({node_id, {um.dist, 0}});
                     } else
                     {
-                        mapping_coords.push_back({head_kmer, um.strand, {0, um.dist + (kmer - 1)}});
+                        mapping_coords.push_back({node_id, {0, um.dist + (kmer - 1)}});
                     }
 
                     kmer_counter = 0;
@@ -69,12 +72,12 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
             if (kmer_index == num_kmers)
             {
                 // if previous node is forward strand, need to add on kmer length
-                if (std::get<1>(mapping_coords.back()))
+                if (node_id >= 0)
                 {
-                    std::get<2>(mapping_coords.back()).second = std::get<2>(mapping_coords.back()).first + kmer_counter + kmer - 1;
+                    std::get<1>(mapping_coords.back()).second = std::get<1>(mapping_coords.back()).first + kmer_counter + kmer - 1;
                 } else
                 {
-                    std::get<2>(mapping_coords.back()).first = um.dist;
+                    std::get<1>(mapping_coords.back()).first = um.dist;
                 }
                 break;
             }

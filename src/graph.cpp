@@ -340,7 +340,7 @@ std::vector<MappingCoords> Graph::search_graph(const std::string& graphfile,
     #pragma omp parallel for
     for (int i = 0; i < query_vec.size(); i++)
     {
-        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer));
+        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap));
     }
 
     return query_coords;

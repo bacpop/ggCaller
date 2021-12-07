@@ -109,6 +109,6 @@ typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t
 // map containing nodeID, search sequence and refind tuple
 typedef std::map<int, std::map<std::string, RefindTuple>> RefindMap;
 // vector of unitig coordinates from mapping of sequence to graph
-typedef std::vector<std::tuple<std::string, bool, std::pair<size_t, size_t>>> MappingCoords;
+typedef std::vector<std::pair<int, std::pair<size_t, size_t>>> MappingCoords;
 
 #endif //DEFINITIONS_H
