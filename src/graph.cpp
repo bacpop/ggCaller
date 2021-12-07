@@ -313,6 +313,39 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return sequence;
 }
 
+std::vector<MappingCoords> Graph::search_graph(const std::string& graphfile,
+                                              const std::string& coloursfile,
+                                              const std::vector<std::string>& query_vec,
+                                              size_t num_threads)
+{
+    // Set number of threads
+    if (num_threads < 1)
+    {
+        num_threads = 1;
+    }
+
+    // set OMP number of threads
+    omp_set_num_threads(num_threads);
+
+    // read in graph
+    ColoredCDBG<> ccdbg;
+    ccdbg.read(graphfile, coloursfile, num_threads);
+
+    //set local variables
+    const int kmer = ccdbg.getK();
+
+    std::vector<MappingCoords> query_coords(query_vec.size());
+
+    // go through query, determine head-kmers of each node and map to _GraphVector
+    #pragma omp parallel for
+    for (int i = 0; i < query_vec.size(); i++)
+    {
+        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer));
+    }
+
+    return query_coords;
+}
+
 NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
                                      const std::vector<std::string>& stop_codons_for,
                                      const std::vector<std::string>& stop_codons_rev,

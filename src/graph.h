@@ -10,6 +10,7 @@
 #include "ORF_connection.h"
 #include "ORF_clustering.h"
 #include "gene_refinding.h"
+#include "search_DBG.h"
 
 class Graph {
     public:
@@ -76,6 +77,11 @@ class Graph {
     std::string generate_sequence(const std::vector<int>& nodelist,
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
+
+    std::vector<MappingCoords> search_graph(const std::string& graphfile,
+                                           const std::string& coloursfile,
+                                           const std::vector<std::string>& query_vec,
+                                           size_t num_threads);
 
     size_t node_size(const int& node_id)
     {
