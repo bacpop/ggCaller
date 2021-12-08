@@ -48,7 +48,8 @@ def merge_node_cluster(G,
     bitscore = max([x for x in gen_node_iterables(G, nodes, 'bitscore')])
 
     # generate iterables of centroids and seqIDs
-    centroid = iter_del_dups(gen_node_iterables(G, nodes, 'centroid'))
+    centroid = [item for sublist in gen_node_iterables(G, nodes, 'centroid') for item in sublist]
+    centroid = [element for index, element in enumerate(centroid) if index not in to_remove]
     seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
 
     # update seqid_to_centroid
