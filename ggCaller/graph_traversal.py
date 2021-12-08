@@ -3,6 +3,10 @@ from balrog.__main__ import *
 from ggCaller.shared_memory import *
 import _pickle as cPickle
 
+def range_overlapping(x, y):
+    if x.start == x.stop or y.start == y.stop:
+        return False
+    return x.start <= y.stop and y.start <= x.stop
 
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, num_threads):
     # check if objects_dir present, if not exit
@@ -23,7 +27,13 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     graph.data_in(objects_dir + "ggc_graph.dat")
 
     # query the sequences in the graph
-    query_coords = graph.search_graph(graphfile, coloursfile, query_vec, num_threads)
+    print("Querying unitigs in graph...")
+    input_colours, kmer, query_coords = graph.search_graph(graphfile, coloursfile, query_vec, num_threads)
+
+    # parse isolate names
+    isolate_names = [
+        os.path.splitext(os.path.basename(x))[0] for x in input_colours
+    ]
 
     with open(objects_dir + "high_scoring_orfs.dat", "rb") as input_file:
         high_scoring_ORFs = cPickle.load(input_file)
@@ -31,6 +41,54 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     with open(objects_dir + "node_index.dat", "rb") as input_file:
         node_index = cPickle.load(input_file)
 
+    outfile = output_dir + "matched_queries.fasta"
+    print("Matching overlapping ORFs...")
+    with open(outfile, "w") as f:
+        for i in range(len(query_coords)):
+            query_set = set()
+            for coord in query_coords[i]:
+                coord_range = range(coord[1][0], coord[1][1])
+                potential_ORFs = node_index[abs(coord[0])]
+                for ORF in potential_ORFs:
+                    split_ID = ORF.split("_")
+                    colour = int(split_ID[0])
+                    ORF_ID = int(split_ID[1])
+
+                    # get ORF_info
+                    ORF_info = high_scoring_ORFs[colour][ORF_ID]
+
+                    # find index of current node coord
+                    try:
+                        index = ORF_info[0].index(abs(coord[0]))
+                    except ValueError:
+                        index = ORF_info[0].index(abs(coord[0]) * -1)
+
+                    # get ORF coords for current node
+                    ORF_start = ORF_info[1][index][0]
+                    ORF_end = ORF_info[1][index][1]
+
+                    # determine if ORF overlaps with the query node based on coordinates
+                    if (ORF_info[0][index] < 0):
+                        node_end = graph.node_size(coord[0]) - 1
+                        reversed_end = node_end - ORF_start
+                        reversed_start = node_end - ORF_end
+                        ORF_start = reversed_start
+                        ORF_end = reversed_end
+
+                    ORF_range = range(ORF_start, ORF_end)
+
+                    if range_overlapping(ORF_range, coord_range):
+                        query_set.add(ORF)
+            for ORF in query_set:
+                split_ID = ORF.split("_")
+                colour = int(split_ID[0])
+                ORF_ID = int(split_ID[1])
+                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(5)
+                ORF_info = high_scoring_ORFs[colour][ORF_ID]
+                seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
+                f.write(">" + fasta_ID + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
+
+    return
 
 # @profile
 def traverse_components(component, tc, component_list, edge_weights, minimum_path_score):

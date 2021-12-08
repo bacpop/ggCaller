@@ -313,10 +313,10 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return sequence;
 }
 
-std::vector<MappingCoords> Graph::search_graph(const std::string& graphfile,
-                                              const std::string& coloursfile,
-                                              const std::vector<std::string>& query_vec,
-                                              size_t num_threads)
+std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::string& graphfile,
+                                                                                          const std::string& coloursfile,
+                                                                                          const std::vector<std::string>& query_vec,
+                                                                                          size_t num_threads)
 {
     // Set number of threads
     if (num_threads < 1)
@@ -331,6 +331,9 @@ std::vector<MappingCoords> Graph::search_graph(const std::string& graphfile,
     ColoredCDBG<> ccdbg;
     ccdbg.read(graphfile, coloursfile, num_threads);
 
+    // get input colours
+    std::vector<std::string> input_colours = ccdbg.getColorNames();
+
     //set local variables
     const int kmer = ccdbg.getK();
 
@@ -343,7 +346,7 @@ std::vector<MappingCoords> Graph::search_graph(const std::string& graphfile,
         query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap));
     }
 
-    return query_coords;
+    return {input_colours, kmer, query_coords};
 }
 
 NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,

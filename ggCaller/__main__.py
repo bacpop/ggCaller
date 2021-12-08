@@ -105,6 +105,9 @@ def get_options():
                           default=False,
                           help='Save graph objects for sequence querying. '
                                '[Default = False] ')
+    Settings.add_argument('--data',
+                          default=None,
+                          help='Directory containing data from previous ggCaller run generated via "--save" ')
     Algorithm = parser.add_argument_group('Settings to avoid/include algorithms')
     Algorithm.add_argument('--no-filter',
                            action="store_true",
@@ -345,14 +348,15 @@ def main():
     options = get_options()
 
     # determine if references/assemblies present
-    if (options.refs != None and options.reads == None) or (options.graph != None and options.colours != None
-                                                            and options.not_ref):
+    if (options.refs is not None and options.reads is None) or (
+            options.graph is not None and options.colours is not None
+            and options.not_ref):
         is_ref = True
     else:
         is_ref = False
 
     # define start/stop codons
-    if options.codons != None:
+    if options.codons is not None:
         with open(options.codons, "r") as json_file:
             try:
                 data = json.load(json_file)
@@ -373,32 +377,41 @@ def main():
     # set boolean for querying
     query = False
 
+    # create directory if it isn't present already
+    if not os.path.exists(options.out):
+        os.mkdir(options.out)
+
+    # make sure trailing forward slash is present
+    output_dir = os.path.join(options.out, "")
+
     # if build graph specified, build graph and then call ORFs
-    if (options.graph != None) and (options.colours != None) and (options.refs == None) and (
-            options.reads == None) and (
-            options.query == None):
+    if (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
+            options.reads is None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
                                  options.threads, is_ref)
-    elif (options.graph != None) and (options.colours != None) and (options.refs == None) and (
-            options.reads == None) and (
-            options.query != None):
-        query = True
+    # query unitigs in previous saved ggc graph
+    elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
+            options.reads is None) and (options.query is not None):
+        if options.data is None:
+            print("Please specify a ggc_dat directory from a previous ggCaller run.")
+            sys.exit(1)
+        search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.threads)
+        print("Finished.")
+        sys.exit(0)
     # if refs file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
-            options.reads == None) and (
-            options.query == None):
+    elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
+            options.reads is None) and (
+            options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, True, options.no_write_graph, "NA")
     # if reads file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (
-            options.reads != None) and (
-            options.query == None):
+    elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
+            options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, "NA")
     # if both reads and refs file specified for building
-    elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
-            options.reads != None) and (
-            options.query == None):
+    elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
+            options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, options.reads)
     else:
@@ -455,12 +468,6 @@ def main():
             print("Generating HMMER index...")
             generate_HMMER_index(hmm_db)
 
-    # create directory if it isn't present already
-    if not os.path.exists(options.out):
-        os.mkdir(options.out)
-
-    # make sure trailing forward slash is present
-    output_dir = os.path.join(options.out, "")
     # Create temporary directory
     temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
