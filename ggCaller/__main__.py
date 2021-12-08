@@ -375,29 +375,32 @@ def main():
 
     # if build graph specified, build graph and then call ORFs
     if (options.graph != None) and (options.colours != None) and (options.refs == None) and (
-            options.reads == None) and (options.query == None):
+            options.reads == None) and (
+            options.query == None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
                                  options.threads, is_ref)
     elif (options.graph != None) and (options.colours != None) and (options.refs == None) and (
-            options.reads == None) and (options.query != None):
-        graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, is_ref)
+            options.reads == None) and (
+            options.query != None):
+        query = True
     # if refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
-            options.reads == None) and (options.query == None):
+            options.reads == None) and (
+            options.query == None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, True, options.no_write_graph, "NA")
     # if reads file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs == None) and (
-            options.reads != None) and (options.query == None):
+            options.reads != None) and (
+            options.query == None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, "NA")
     # if both reads and refs file specified for building
     elif (options.graph == None) and (options.colours == None) and (options.refs != None) and (
-            options.reads != None) and (options.query != None):
+            options.reads != None) and (
+            options.query == None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
                                   options.threads, False, options.no_write_graph, options.reads)
-        query = True
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file\n"
