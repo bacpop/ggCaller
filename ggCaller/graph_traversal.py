@@ -11,7 +11,7 @@ def range_overlapping(x, y):
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, num_threads):
     # check if objects_dir present, if not exit
     if not os.path.exists(objects_dir):
-        print("Please specify a ggc_dat directory")
+        print("Please specify a ggc_data directory")
         sys.exit(1)
 
     objects_dir = os.path.join(objects_dir, "")

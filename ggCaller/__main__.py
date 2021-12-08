@@ -390,7 +390,7 @@ def main():
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
             options.reads is None) and (options.query is not None):
         if options.data is None:
-            print("Please specify a ggc_dat directory from a previous ggCaller run.")
+            print("Please specify a ggc_data directory from a previous ggCaller run.")
             sys.exit(1)
         search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.threads)
         print("Finished.")
