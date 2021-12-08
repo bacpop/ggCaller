@@ -374,9 +374,6 @@ def main():
     # initialise graph
     graph = ggCaller_cpp.Graph()
 
-    # set boolean for querying
-    query = False
-
     # create directory if it isn't present already
     if not os.path.exists(options.out):
         os.mkdir(options.out)

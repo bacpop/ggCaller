@@ -16,7 +16,13 @@ else:
 ### reference build workflow ###
 sys.stderr.write("Running reference build workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --clean-mode strict --min-orf-length 100 --max-ORF-overlap 55 --alignment core --aligner def --annotation fast --evalue 0.0001 --search_radius 3000",
+    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --clean-mode strict --min-orf-length 100 --max-ORF-overlap 55 --alignment core --aligner def --annotation fast --evalue 0.0001 --search_radius 3000 --save",
+    shell=True,
+    check=True)
+
+sys.stderr.write("Running unitig query workflow\n")
+subprocess.run(
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --data test_dir/ggc_dat --query pneumo_CL_group2_queries.fasta --out test_dir",
     shell=True,
     check=True)
 
