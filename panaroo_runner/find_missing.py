@@ -195,7 +195,7 @@ def find_missing(G,
             hit_protein, hit_dna = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
             G.nodes[node]['size'] += 1
-            G.nodes[node]['dna'].append(dna_hit)
+            G.nodes[node]['dna'].append(hit_dna)
             G.nodes[node]['protein'].append(hit_protein)
             G.nodes[node]['seqIDs'] |= set(
                 [str(member) + "_refound_" + str(n_found * -1)])
