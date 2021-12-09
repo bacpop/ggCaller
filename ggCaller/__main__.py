@@ -134,6 +134,12 @@ def get_options():
                            default=False,
                            help='Do not cluster ORFs. '
                                 '[Default = False] ')
+    Algorithm.add_argument('--no-refind',
+                           dest="refind",
+                           action="store_false",
+                           default=True,
+                           help='Do not refind uncalled genes '
+                                '[Default = False] ')
     Panaroo_mode_opts = parser.add_argument_group('Mode')
 
     Panaroo_mode_opts.add_argument(
@@ -532,7 +538,7 @@ def main():
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save)
+                            options.truncation_threshold, options.save, options.refind)
             else:
                 print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                                 input_colours, overlap, graph)

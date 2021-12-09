@@ -122,15 +122,16 @@ def main():
     len_diff_cutoff = 0.98
     max_orf_orf_distance = 5000
     cluster_ORFs = True
-    save_objects = True
+    save_objects = False
+    refind = True
 
     num_threads = 5
 
     graph = ggCaller_cpp.Graph()
 
     output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
-    graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa"
-    coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors"
+    graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.gfa"
+    coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.bfg_colors"
     data_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp/ggc_data"
     queryfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_test_query_unitigs.fasta"
 
@@ -162,7 +163,7 @@ def main():
     edge_support_threshold = None
     merge_paralogs = False
     aln = "pan"
-    alr = "def"
+    alr = "ref"
     core = 0.95
     min_edge_support_sv = 1
     all_seq_in_graph = False
@@ -309,7 +310,7 @@ def main():
                             alr, core, min_edge_support_sv, all_seq_in_graph, is_ref,
                             write_idx, overlap + 1, repeat, remove_by_consensus,
                             search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db, call_variants,
-                            ignore_pseduogenes, truncation_threshold, save_objects)
+                            ignore_pseduogenes, truncation_threshold, save_objects, refind)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

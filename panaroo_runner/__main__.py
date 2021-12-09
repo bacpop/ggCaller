@@ -39,7 +39,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
-                call_variants, ignore_pseduogenes, truncation_threshold, save_objects):
+                call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -141,47 +141,48 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                        min_support=min_trailing_support,
                                        max_recursive=trailing_recursive)
 
-    if verbose:
-        print("refinding genes...")
+    if refind:
+        if verbose:
+            print("refinding genes...")
 
-    # do first pass of cleaning edges, removing those found in only single genome
-    if clean_edges:
-        G = clean_misassembly_edges(
-            G, edge_support_threshold=2)
+        # do first pass of cleaning edges, removing those found in only single genome
+        if clean_edges:
+            G = clean_misassembly_edges(
+                G, edge_support_threshold=2)
 
-    # find genes that Prokka has missed
-    G, high_scoring_ORFs = find_missing(G,
-                                        shd_arr_tup,
-                                        high_scoring_ORFs,
-                                        is_ref=is_ref,
-                                        write_idx=write_idx,
-                                        kmer=kmer,
-                                        repeat=repeat,
-                                        isolate_names=input_colours,
-                                        remove_by_consensus=remove_by_consensus,
-                                        search_radius=search_radius,
-                                        prop_match=refind_prop_match,
-                                        pairwise_id_thresh=identity_cutoff,
-                                        merge_id_thresh=max(0.8, family_threshold),
-                                        pool=pool,
-                                        n_cpu=n_cpu,
-                                        verbose=verbose)
+        # find genes that Prokka has missed
+        G, high_scoring_ORFs = find_missing(G,
+                                            shd_arr_tup,
+                                            high_scoring_ORFs,
+                                            is_ref=is_ref,
+                                            write_idx=write_idx,
+                                            kmer=kmer,
+                                            repeat=repeat,
+                                            isolate_names=input_colours,
+                                            remove_by_consensus=remove_by_consensus,
+                                            search_radius=search_radius,
+                                            prop_match=refind_prop_match,
+                                            pairwise_id_thresh=identity_cutoff,
+                                            merge_id_thresh=max(0.8, family_threshold),
+                                            pool=pool,
+                                            n_cpu=n_cpu,
+                                            verbose=verbose)
 
-    # remove edges that are likely due to misassemblies (by consensus)
+        # remove edges that are likely due to misassemblies (by consensus)
 
-    # merge again in case refinding has resolved issues
-    if verbose:
-        print("collapse gene families with refound genes...")
-    G = collapse_families(G,
-                          seqid_to_centroid=seqid_to_centroid,
-                          outdir=temp_dir,
-                          family_threshold=family_threshold,
-                          correct_mistranslations=False,
-                          length_outlier_support_proportion=length_outlier_support_proportion,
-                          n_cpu=n_cpu,
-                          quiet=(not verbose),
-                          distances_bwtn_centroids=distances_bwtn_centroids,
-                          centroid_to_index=centroid_to_index)[0]
+        # merge again in case refinding has resolved issues
+        if verbose:
+            print("collapse gene families with refound genes...")
+        G = collapse_families(G,
+                              seqid_to_centroid=seqid_to_centroid,
+                              outdir=temp_dir,
+                              family_threshold=family_threshold,
+                              correct_mistranslations=False,
+                              length_outlier_support_proportion=length_outlier_support_proportion,
+                              n_cpu=n_cpu,
+                              quiet=(not verbose),
+                              distances_bwtn_centroids=distances_bwtn_centroids,
+                              centroid_to_index=centroid_to_index)[0]
 
     if clean_edges:
         G = clean_misassembly_edges(
