@@ -177,9 +177,8 @@ def output_aa_sequence(node_pair):
     ref_output_sequences = []
 
     # iterate over centroids to generate fasta files
-    centroid_id = 1
-    for i in range(0, len(node["protein"])):
-        name = str(node_pair[0]) + ";" + str(centroid_id)
+    for i in range(0, len(node["centroid"])):
+        name = str(node_pair[0]) + ";" + node["centroid"][i]
         ref_output_sequences.append(SeqRecord(Seq(node["protein"][i]), id=name, description=""))
 
     return ref_output_sequences
