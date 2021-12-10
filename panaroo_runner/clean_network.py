@@ -58,9 +58,10 @@ def merge_node_cluster(G,
 
     # First create a new node and combine the attributes
     # dna = iter_del_dups(gen_node_iterables(G, nodes, 'dna'))
+    # protein = iter_del_dups(gen_node_iterables(G, nodes, 'protein'))
     maxLenId = 0
     max_l = 0
-    for i, s in enumerate(dna):
+    for i, s in enumerate(centroid):
         if len(s) >= max_l:
             max_l = len(s)
             maxLenId = i

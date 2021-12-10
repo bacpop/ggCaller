@@ -145,11 +145,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose:
             print("refinding genes...")
 
-        # do first pass of cleaning edges, removing those found in only single genome
-        if clean_edges:
-            G = clean_misassembly_edges(
-                G, edge_support_threshold=2)
-
         # find genes that Prokka has missed
         G, high_scoring_ORFs = find_missing(G,
                                             shd_arr_tup,

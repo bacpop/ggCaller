@@ -100,13 +100,13 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
         with open(outfile, "w") as f:
             for node in G.nodes():
                 node_annotation = G.nodes[node]["description"]
-                centroid_sequence_ids = set(G.nodes[node]["centroid"])
                 length_centroid = G.nodes[node]['longCentroidID'][0]
-                for i in range(0, len(G.nodes[node]["centroid"])):
-                    colour = int(G.nodes[node]["centroid"][i].split("_")[0])
-                    ORF_ID = int(G.nodes[node]["centroid"][i].split("_")[-1])
+                for sid in G.nodes[node]['seqIDs']:
+                    # if sid not in centroid_sequence_ids:
+                    colour = int(sid.split("_")[0])
+                    ORF_ID = int(sid.split("_")[-1])
                     ORF_info = high_scoring_ORFs[colour][ORF_ID]
-                    gene = G.nodes[node]["dna"][i]
+                    gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
                     ORF_len = ORF_info[2]
                     gene_annotation = node_annotation
                     if ORF_len < (length_centroid * truncation_threshold) or (
@@ -119,24 +119,6 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                             5) + " " + gene_annotation + "\n" + gene + "\n")
                     else:
                         f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
-                for sid in G.nodes[node]['seqIDs']:
-                    if sid not in centroid_sequence_ids:
-                        colour = int(sid.split("_")[0])
-                        ORF_ID = int(sid.split("_")[-1])
-                        ORF_info = high_scoring_ORFs[colour][ORF_ID]
-                        gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
-                        ORF_len = ORF_info[2]
-                        gene_annotation = node_annotation
-                        if ORF_len < (length_centroid * truncation_threshold) or (
-                                ORF_ID < 0 and (ORF_info[3] is True
-                                                or ORF_info[
-                                                    2] % 3 != 0)):
-                            gene_annotation += "(potential psuedogene)"
-                        if gene_annotation != "":
-                            f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
-                                5) + " " + gene_annotation + "\n" + gene + "\n")
-                        else:
-                            f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
 
     return
 
@@ -195,8 +177,9 @@ def output_aa_sequence(node_pair):
     ref_output_sequences = []
 
     # iterate over centroids to generate fasta files
-    for i in range(0, len(node["centroid"])):
-        name = str(node_pair[0]) + ";" + node["centroid"][i]
+    centroid_id = 1
+    for i in range(0, len(node["protein"])):
+        name = str(node_pair[0]) + ";" + centroid_id
         ref_output_sequences.append(SeqRecord(Seq(node["protein"][i]), id=name, description=""))
 
     return ref_output_sequences
@@ -245,8 +228,18 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
 
     # if reference-guided alignment being done, separate centroids and other sequences
     if ref_aln:
-        ref_output_sequences = [SeqRecord(Seq(node["protein"][i]), id=node["centroid"][i], description="") for i in
-                                range(len(node["centroid"])) if node["centroid"][i] in centroid_sequence_ids]
+        ref_output_sequences = []
+        for centroid_id in node["centroid"]:
+            if centroid_id in centroid_sequence_ids:
+                colour = int(centroid_id.split('_')[0])
+                ORF_ID = int(centroid_id.split('_')[-1])
+                ORF_info = high_scoring_ORFs[colour][ORF_ID]
+                if ORF_ID < 0:
+                    protein = Seq(ORF_info[4])
+                else:
+                    protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
+                ref_output_sequences.append(SeqRecord(protein, id=centroid_id, description=""))
+
         centroid_no = len(ref_output_sequences)
         # Put gene of interest sequences in a generator, with corrected isolate names
         ref_output_sequences_gen = (x for x in ref_output_sequences)
@@ -274,14 +267,14 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         # check if reference true and seqID is centroid. Is so, pass
         if ref_aln and seq in centroid_sequence_ids:
             continue
-        member = int(seq.split('_')[0])
+        colour = int(seq.split('_')[0])
         ORF_ID = int(seq.split('_')[-1])
         # generate protein sequence. If refound, add found protein sequence from find_missing.py
-        ORFNodeVector = high_scoring_ORFs[member][ORF_ID]
+        ORF_info = high_scoring_ORFs[colour][ORF_ID]
         if ORF_ID < 0:
-            protein = ORFNodeVector[4]
+            protein = Seq(ORF_info[4])
         else:
-            protein = str(Seq(shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)).translate())
+            protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
 
         output_sequences.append(
             SeqRecord(Seq(protein), id=seq, description=""))

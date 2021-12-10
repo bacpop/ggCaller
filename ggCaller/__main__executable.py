@@ -125,7 +125,7 @@ def main():
     save_objects = False
     refind = True
 
-    num_threads = 5
+    num_threads = 6
 
     graph = ggCaller_cpp.Graph()
 
@@ -134,6 +134,7 @@ def main():
     coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.bfg_colors"
     data_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp/ggc_data"
     queryfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_test_query_unitigs.fasta"
+    list_file = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_offenders.txt"
 
     # create directory if it isn't present already
     if not os.path.exists(output_dir):
@@ -141,14 +142,14 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(output_dir, "")
 
-    # graph_tuple = graph.build(
-    #     "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.txt", 31,
-    #     stop_codons_for, stop_codons_rev,
-    #     num_threads, is_ref, write_graph, "NA")
+    graph_tuple = graph.build(
+        list_file, 31,
+        stop_codons_for, stop_codons_rev,
+        num_threads, is_ref, write_graph, "NA")
 
     # search_graph(graph, graphfile, coloursfile, queryfile, data_dir, output_dir, num_threads)
 
-    graph_tuple = graph.read(graphfile, coloursfile, stop_codons_for, stop_codons_rev, num_threads, is_ref)
+    # graph_tuple = graph.read(graphfile, coloursfile, stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -163,7 +164,7 @@ def main():
     edge_support_threshold = None
     merge_paralogs = False
     aln = "pan"
-    alr = "ref"
+    alr = "def"
     core = 0.95
     min_edge_support_sv = 1
     all_seq_in_graph = False
