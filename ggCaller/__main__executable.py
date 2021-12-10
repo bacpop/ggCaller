@@ -130,8 +130,8 @@ def main():
     graph = ggCaller_cpp.Graph()
 
     output_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp"
-    graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.gfa"
-    coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_5_list.bfg_colors"
+    graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa"
+    coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors"
     data_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp/ggc_data"
     queryfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_test_query_unitigs.fasta"
     list_file = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_offenders.txt"
@@ -142,14 +142,11 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(output_dir, "")
 
-    graph_tuple = graph.build(
-        list_file, 31,
-        stop_codons_for, stop_codons_rev,
-        num_threads, is_ref, write_graph, "NA")
+    # graph_tuple = graph.build(list_file, 31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
     # search_graph(graph, graphfile, coloursfile, queryfile, data_dir, output_dir, num_threads)
 
-    # graph_tuple = graph.read(graphfile, coloursfile, stop_codons_for, stop_codons_rev, num_threads, is_ref)
+    graph_tuple = graph.read(graphfile, coloursfile, stop_codons_for, stop_codons_rev, num_threads, is_ref)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
@@ -193,7 +190,7 @@ def main():
 
     annotation_db = "Bacteria"
     hmm_db = "default"
-    annotate = None
+    annotate = "fast"
     evalue = 0.01
     call_variants = True
     # unpack annotation database

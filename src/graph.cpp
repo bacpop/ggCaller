@@ -316,6 +316,7 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
 std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::string& graphfile,
                                                                                           const std::string& coloursfile,
                                                                                           const std::vector<std::string>& query_vec,
+                                                                                          const double& id_cutoff,
                                                                                           size_t num_threads)
 {
     // Set number of threads
@@ -340,10 +341,10 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     std::vector<MappingCoords> query_coords(query_vec.size());
 
     // go through query, determine head-kmers of each node and map to _GraphVector
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for (int i = 0; i < query_vec.size(); i++)
     {
-        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap));
+        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap, id_cutoff));
     }
 
     return {input_colours, kmer, query_coords};

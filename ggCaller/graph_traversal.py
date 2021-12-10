@@ -8,7 +8,7 @@ def range_overlapping(x, y):
         return False
     return x.start <= y.stop and y.start <= x.stop
 
-def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, num_threads):
+def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, query_id, num_threads):
     # check if objects_dir present, if not exit
     if not os.path.exists(objects_dir):
         print("Please specify a ggc_data directory")
@@ -28,7 +28,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
 
     # query the sequences in the graph
     print("Querying unitigs in graph...")
-    input_colours, kmer, query_coords = graph.search_graph(graphfile, coloursfile, query_vec, num_threads)
+    input_colours, kmer, query_coords = graph.search_graph(graphfile, coloursfile, query_vec, query_id, num_threads)
 
     # parse isolate names
     isolate_names = [

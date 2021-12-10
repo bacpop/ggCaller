@@ -100,6 +100,11 @@ def get_options():
                           default=0.98,
                           help='Minimum ratio of length between two ORFs for clustering.  '
                                '[Default = 0.98] ')
+    Settings.add_argument('--query-id',
+                          type=float,
+                          default=0.8,
+                          help='Ratio of query-kmers to required to match in graph. '
+                               '[Default = 0.8] ')
     Settings.add_argument('--save',
                           action="store_true",
                           default=False,
@@ -398,7 +403,8 @@ def main():
         if options.data is None:
             print("Please specify a ggc_data directory from a previous ggCaller run.")
             sys.exit(1)
-        search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.threads)
+        search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.query_id,
+                     options.threads)
         print("Finished.")
         sys.exit(0)
     # if refs file specified for building

@@ -22,7 +22,7 @@ subprocess.run(
 
 sys.stderr.write("Running unitig query workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --data test_dir/ggc_data --query pneumo_CL_group2_queries.fasta --out test_dir",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --data test_dir/ggc_data --query pneumo_CL_group2_queries.fasta --query-id 0.5 --out test_dir",
     shell=True,
     check=True)
 

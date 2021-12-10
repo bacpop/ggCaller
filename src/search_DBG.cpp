@@ -7,7 +7,8 @@
 MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
                         const std::string& query,
                         const int& kmer,
-                        const std::unordered_map<std::string, size_t>& kmer_map)
+                        const std::unordered_map<std::string, size_t>& kmer_map,
+                        const double& id_cutoff)
 {
     // tuple of head kmer string, strand and coordinates
     MappingCoords mapping_coords;
@@ -17,10 +18,13 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
     // counter for how many k-mers into a unitig search is
     size_t kmer_counter = 0;
 
-    // count for determining where in query sequence search is
-    size_t kmer_index = 1;
+    // count for determining all kmers in query iterated
+    size_t all_kmers = 1;
 
     const char *query_str = query.c_str();
+
+    // count number of missed k-mer
+    size_t missed_kmers = 0;
 
     for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
     {
@@ -69,7 +73,7 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
 
             // if at end of query, need to check final position
             // if at last kmer, need to determine position within unitig
-            if (kmer_index == num_kmers)
+            if (all_kmers == num_kmers)
             {
                 // if previous node is forward strand, need to add on kmer length
                 if (node_id >= 0)
@@ -82,16 +86,53 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
                 break;
             }
 
-            kmer_index++;
             kmer_counter++;
+            all_kmers++;
         } else
         {
-            break;
+            // if not matching but previous entry not updated, then add
+            if (!mapping_coords.empty())
+            {
+                const int& prev_node_id = std::get<0>(mapping_coords.back());
+                if (prev_node_id >= 0)
+                {
+                    std::get<1>(mapping_coords.back()).second = std::get<1>(mapping_coords.back()).first + kmer_counter + kmer - 1;
+                } else
+                {
+                    std::get<1>(mapping_coords.back()).first = um.dist;
+                }
+
+                // if at end, need to update final entry
+                if (all_kmers == num_kmers)
+                {
+                    // if previous node is forward strand, need to add on kmer length
+                    if (prev_node_id >= 0)
+                    {
+                        std::get<1>(mapping_coords.back()).second = std::get<1>(mapping_coords.back()).first + kmer_counter + kmer - 1;
+                    } else
+                    {
+                        std::get<1>(mapping_coords.back()).first = um.dist;
+                    }
+                    missed_kmers++;
+                    break;
+                }
+            }
+
+            // add to missed_kmers and kmer_counter
+            kmer_counter++;
+            missed_kmers++;
+            all_kmers++;
+
+            // check if missing this kmer means total kmer count falls below threshold
+            if ((num_kmers - missed_kmers) < (num_kmers * id_cutoff))
+            {
+                break;
+            }
         }
     }
 
     // check if query traversed fully
-    if (kmer_index != num_kmers)
+    if ((num_kmers - missed_kmers) < (num_kmers * id_cutoff))
     {
         return {};
     }

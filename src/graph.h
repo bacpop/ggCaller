@@ -81,6 +81,7 @@ class Graph {
     std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::string& graphfile,
                                                                                       const std::string& coloursfile,
                                                                                       const std::vector<std::string>& query_vec,
+                                                                                      const double& id_cutoff,
                                                                                       size_t num_threads);
 
     size_t node_size(const int& node_id)
