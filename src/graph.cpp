@@ -341,7 +341,7 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     std::vector<MappingCoords> query_coords(query_vec.size());
 
     // go through query, determine head-kmers of each node and map to _GraphVector
-//    #pragma omp parallel for
+    #pragma omp parallel for
     for (int i = 0; i < query_vec.size(); i++)
     {
         query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap, id_cutoff));
