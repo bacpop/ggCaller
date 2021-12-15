@@ -1,7 +1,3 @@
-//
-// Created by sth19 on 01/09/2021.
-//
-
 #include "ORF_clustering.h"
 
 ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
@@ -17,7 +13,6 @@ ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
     size_t ORF_ID = 0;
     for (const auto& colour : colour_ORF_map)
     {
-        ORF_mat_vector.reserve(ORF_mat_vector.size() + colour.second.size());
         for (const auto& ORF_map : colour.second)
         {
             // add to ORF_mat_map, initialising empty vector
@@ -96,17 +91,13 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const double& len_diff_cutoff)
 {
     // initialise temporary cluster map, first item is centroid, second is set of nodes in that cluster
-    std::unordered_map<size_t, std::unordered_set<size_t>> cluster_map;
+    robin_hood<size_t, std::unordered_set<size_t>> cluster_map;
 
     // initialise final cluster map for return
     ORFClusterMap final_clusters;
 
     // initialise length list for sorting of ORFs by length
     std::vector<std::pair<size_t, size_t>> ORF_length_list;
-    ORF_length_list.reserve(ORF_group_vector.size());
-
-    // initialise mapping from group_id to potential singleton ORFs
-    std::unordered_map<size_t, std::unordered_set<size_t>> group_singleton_map;
 
     // create set to keep track of assigned ORFs to avoid ORFs being added to other groups
     std::unordered_set<size_t> encountered_set;
@@ -291,6 +282,8 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                     }
                 }
             }
+            // delete ORF_ID from cluster_map
+            cluster_map.erase(ORF_ID);
         }
     }
 
@@ -357,10 +350,7 @@ double align_seqs(const ORFNodeVector& ORF1_info,
         const auto ORF1_sequence = generate_sequence_private(std::get<0>(ORF1_info), std::get<1>(ORF1_info), DBG_overlap, graph_vector);
         const auto ORF2_sequence = generate_sequence_private(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector);
 
-        // reserve memory for amino acids
-        ORF1_aa.reserve(ORF1_sequence.size() / 3);
-        ORF2_aa.reserve(ORF2_sequence.size() / 3);
-
+        // translate DNA sequence
         ORF1_aa = (translate(ORF1_sequence)).aa();
         ORF2_aa = (translate(ORF2_sequence)).aa();
     }

@@ -180,8 +180,6 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
-//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
             all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
@@ -217,8 +215,6 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-//            all_paths.reserve(all_paths.size() + unitig_complete_paths.size());
-//            all_paths.insert(all_paths.end(), make_move_iterator(unitig_complete_paths.begin()), make_move_iterator(unitig_complete_paths.end()));
             all_paths.push_back(std::move(unitig_complete_paths));
         }
     }
