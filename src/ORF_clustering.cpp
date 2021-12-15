@@ -91,7 +91,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const double& len_diff_cutoff)
 {
     // initialise temporary cluster map, first item is centroid, second is set of nodes in that cluster
-    robin_hood<size_t, std::unordered_set<size_t>> cluster_map;
+    robin_hood::unordered_map<size_t, std::unordered_set<size_t>> cluster_map;
 
     // initialise final cluster map for return
     ORFClusterMap final_clusters;
