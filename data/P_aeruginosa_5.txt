@@ -1,0 +1,5 @@
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/P_aeruginosa/test_genomes/GCF_001449145.1_WH-SGI-V-07060_genomic.fna
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/P_aeruginosa/test_genomes/GCF_001449155.1_WH-SGI-V-07058_genomic.fna
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/P_aeruginosa/test_genomes/GCF_001449165.1_WH-SGI-V-07057_genomic.fna
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/P_aeruginosa/test_genomes/GCF_001449175.1_WH-SGI-V-07074_genomic.fna
+/mnt/c/Users/sth19/Documents/PhD/data/genomes/P_aeruginosa/test_genomes/GCF_001449225.1_WH-SGI-V-07068_genomic.fna
