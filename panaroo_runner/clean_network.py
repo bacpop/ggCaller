@@ -1,5 +1,6 @@
 import networkx as nx
-from panaroo.cdhit import *
+# from panaroo.cdhit import *
+from .cdhit_align import *
 from panaroo.merge_nodes import *
 from panaroo.isvalid import del_dups
 from collections import defaultdict, deque, Counter

@@ -11,7 +11,8 @@ import _pickle as cPickle
 # panaroo scripts
 from panaroo.isvalid import *
 from .generate_network import *
-from panaroo.cdhit import check_cdhit_version, run_cdhit
+# from panaroo.cdhit import check_cdhit_version, run_cdhit
+from .cdhit_align import *
 from .find_missing import *
 
 # custom panaroo scripts
@@ -19,6 +20,7 @@ from .clean_network import *
 from .generate_output import *
 from .annotate import *
 from .generate_alignments import check_aligner_install
+
 
 class SmartFormatter(argparse.HelpFormatter):
     def _split_lines(self, text, width):

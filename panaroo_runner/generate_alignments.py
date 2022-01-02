@@ -20,20 +20,20 @@ def run_snpsites(file, annotation_dir, vcf_dir):
     outfile = os.path.join(vcf_dir, file.split(".")[0] + ".vcf")
     file = os.path.join(annotation_dir, file)
 
-    command = ["snp-sites", "-v", "-o", outfile, file]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-v", "-o", outfile, file]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if result.returncode != 0:
         find_err = re.search(r'No SNPs were detected', str(result))
         if find_err is None:
-            raise Exception("Snp-sites failed to run on file: " + file)
+            raise Exception("/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites failed to run on file: " + file)
 
     return
 
 
 def check_snpsites_install():
-    command = ["snp-sites", "-V"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-V"]
 
     p = str(
         subprocess.run(command,
@@ -45,7 +45,8 @@ def check_snpsites_install():
         present = True
 
     if present == False:
-        sys.stderr.write("Need snp-sites v2 or greater to be installed " + "\n")
+        sys.stderr.write(
+            "Need /home/sth19/miniconda3/envs/ggCaller/bin/snp-sites v2 or greater to be installed " + "\n")
         sys.exit(1)
 
     return present

@@ -10,7 +10,7 @@ from collections import defaultdict
 
 
 def check_diamond_install():
-    command = ["diamond", "help"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "help"]
 
     p = str(
         subprocess.run(command,
@@ -31,7 +31,7 @@ def check_diamond_install():
 
 
 def check_HMMER_install():
-    command = ["hmmscan", "-h"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan", "-h"]
 
     p = str(
         subprocess.run(command,
@@ -52,7 +52,7 @@ def check_HMMER_install():
 
 
 def generate_HMMER_index(infile):
-    command = ["hmmpress", infile]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmpress", infile]
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
         raise Exception("hmmpress failed to run on file: " + infile)
@@ -60,7 +60,7 @@ def generate_HMMER_index(infile):
 
 def generate_diamond_index(infile):
     outfile = infile.split(".")[0] + ".dmnd"
-    command = ["diamond", "makedb", "--in", infile, "-d",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "makedb", "--in", infile, "-d",
                infile.split(".")[0]]
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
@@ -85,7 +85,7 @@ def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
     all_centroid_aa = (x for x in all_centroid_aa)
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_d.fasta", 'fasta')
 
-    command = ["diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
                annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
                annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
 
@@ -123,7 +123,7 @@ def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
             genome = int(seqID.split("_")[0])
             gene_ID = int(seqID.split("_")[-1])
             high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
-            ("diamond", entry[1], entry[2], entry[3]),)
+                ("/home/sth19/miniconda3/envs/ggCaller/bin/diamond", entry[1], entry[2], entry[3]),)
 
     return G, high_scoring_ORFs
 
@@ -143,13 +143,13 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
     all_centroid_aa = (x for x in all_centroid_aa)
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_h.fasta", 'fasta')
 
-    command = ["hmmscan", "-E", str(evalue), "--tblout",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan", "-E", str(evalue), "--tblout",
                annotation_temp_dir + "aa_h.tsv",
                "--cpu", str(n_cpu), annotation_db, annotation_temp_dir + "aa_h.fasta"]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
-        raise Exception("HMMscan failed!")
+        raise Exception("/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan failed!")
         sys.exit(1)
 
     # read in file, map highest scoring annotation and bitscore to query
@@ -190,7 +190,7 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
             genome = int(seqID.split("_")[0])
             gene_ID = int(seqID.split("_")[-1])
             high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
-            ("hmmscan", entry[1], entry[2], entry[3]),)
+                ("/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan", entry[1], entry[2], entry[3]),)
 
     return G, high_scoring_ORFs
 

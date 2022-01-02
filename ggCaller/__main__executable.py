@@ -122,7 +122,8 @@ def main():
     len_diff_cutoff = 0.98
     max_orf_orf_distance = 5000
     cluster_ORFs = True
-    save_objects = False
+    save_objects = True
+    query_id = 0.8
     refind = True
 
     num_threads = 6
@@ -133,7 +134,7 @@ def main():
     graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.gfa"
     coloursfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_capsular_fa_list.bfg_colors"
     data_dir = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/panaroo_temp/ggc_data"
-    queryfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group3_test_query_unitigs.fasta"
+    queryfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/group2_test_query_unitigs.fasta"
     list_file = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/SP_PRJEB2632_offenders.txt"
 
     # create directory if it isn't present already
@@ -144,7 +145,7 @@ def main():
 
     # graph_tuple = graph.build(list_file, 31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA")
 
-    # search_graph(graph, graphfile, coloursfile, queryfile, data_dir, output_dir, num_threads)
+    search_graph(graph, graphfile, coloursfile, queryfile, data_dir, output_dir, query_id, num_threads)
 
     graph_tuple = graph.read(graphfile, coloursfile, stop_codons_for, stop_codons_rev, num_threads, is_ref)
 

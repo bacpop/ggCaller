@@ -426,13 +426,13 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
             pFile.write(' ' + ' '.join(map(str, coreDist)))
             pFile.write("\n")
 
-    # run rapidnj
-    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
+    # run /home/sth19/miniconda3/envs/ggCaller/bin/rapidnj
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
                tree_filename, "-c", str(threads)]
 
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
-        raise Exception("RapidNJ failed to run on file: " + phylip_name)
+        raise Exception("/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj failed to run on file: " + phylip_name)
         sys.exit(1)
 
     # remove phylip file
@@ -791,7 +791,7 @@ def get_core_gene_nodes(G, threshold, num_isolates):
 
 
 def check_rapidnj_install():
-    command = ["rapidnj", "-h"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", "-h"]
 
     p = str(
         subprocess.run(command,
