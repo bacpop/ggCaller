@@ -28,7 +28,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
 
     # query the sequences in the graph
     print("Querying unitigs in graph...")
-    input_colours, kmer, query_coords = graph.search_graph(graphfile, coloursfile, query_vec, query_id, num_threads)
+    input_colours, kmer, query_nodes = graph.search_graph(graphfile, coloursfile, query_vec, query_id, num_threads)
 
     # parse isolate names
     isolate_names = [
@@ -44,54 +44,24 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     outfile = output_dir + "matched_queries.fasta"
     print("Matching overlapping ORFs...")
     with open(outfile, "w") as f:
-        for i in range(len(query_coords)):
+        for i in range(len(query_nodes)):
             query_set = set()
-            for coord in query_coords[i]:
-                coord_range = range(coord[1][0], coord[1][1])
-                potential_ORFs = node_index[abs(coord[0])]
-                for ORF in potential_ORFs:
+            for node in query_nodes[i]:
+                query_set.update(node_index[node])
+                for ORF in query_set:
                     split_ID = ORF.split("_")
                     colour = int(split_ID[0])
                     ORF_ID = int(split_ID[1])
-
-                    # get ORF_info
+                    fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(5)
                     ORF_info = high_scoring_ORFs[colour][ORF_ID]
-
-                    # find index of current node coord
-                    try:
-                        index = ORF_info[0].index(abs(coord[0]))
-                    except ValueError:
-                        index = ORF_info[0].index(abs(coord[0]) * -1)
-
-                    # get ORF coords for current node
-                    ORF_start = ORF_info[1][index][0]
-                    ORF_end = ORF_info[1][index][1]
-
-                    # determine if ORF overlaps with the query node based on coordinates
-                    if (ORF_info[0][index] < 0):
-                        node_end = graph.node_size(coord[0]) - 1
-                        reversed_end = node_end - ORF_start
-                        reversed_start = node_end - ORF_end
-                        ORF_start = reversed_start
-                        ORF_end = reversed_end
-
-                    ORF_range = range(ORF_start, ORF_end)
-
-                    if range_overlapping(ORF_range, coord_range):
-                        query_set.add(ORF)
-            for ORF in query_set:
-                split_ID = ORF.split("_")
-                colour = int(split_ID[0])
-                ORF_ID = int(split_ID[1])
-                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(5)
-                ORF_info = high_scoring_ORFs[colour][ORF_ID]
-                seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
-                # add annotation if available
-                if len(ORF_info) == 8 or ORF_ID < 0:
-                    ORF_annotation = ORF_info[-1]
-                    f.write(">" + fasta_ID + " " + ORF_annotation[-1] + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
-                else:
-                    f.write(">" + fasta_ID + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
+                    seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
+                    # add annotation if available
+                    if len(ORF_info) == 8 or ORF_ID < 0:
+                        ORF_annotation = ORF_info[-1]
+                        f.write(
+                            ">" + fasta_ID + " " + ORF_annotation[-1] + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
+                    else:
+                        f.write(">" + fasta_ID + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
 
     return
 
