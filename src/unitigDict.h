@@ -85,6 +85,7 @@ class unitigDict {
     void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
     bool ORFs_empty (const size_t& colour_ID) const {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());};
     const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
+    void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
 
     private:
     std::string _head_kmer;

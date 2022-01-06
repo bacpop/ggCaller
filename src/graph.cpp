@@ -219,6 +219,9 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t& colour_
     new_connections = pair_ORF_nodes(_GraphVector, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
+    // remove traversing ORF information
+    remove_ORF_info(_GraphVector, colour_ID, target_ORFs, ORF_vector);
+
     return connected_ORFs;
 }
 

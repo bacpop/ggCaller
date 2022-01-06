@@ -26,6 +26,32 @@ void add_ORF_info (GraphVector& graph_vector,
     }
 }
 
+void remove_ORF_info (GraphVector& graph_vector,
+                      const size_t& colour_ID,
+                      const std::vector<size_t>& target_ORFs,
+                      const ORFVector& ORF_vector)
+{
+    for (const auto & source : target_ORFs)
+    {
+        {
+            // get graph information for source node
+            const auto & ORF_info = ORF_vector.at(source);
+
+            // get start node IDs (-1 as graph is zero-based). Only add 5 prime node.
+            const auto source_node_id = abs(std::get<0>(ORF_info).at(0)) - 1;
+            const auto sink_node_id = abs(std::get<0>(ORF_info).back()) - 1;
+
+            // add ORF information to graph
+            graph_vector.at(source_node_id).clear_ORFs(colour_ID);
+            // check if ORF is present only on single node
+            if (source_node_id != sink_node_id)
+            {
+                graph_vector.at(sink_node_id).clear_ORFs(colour_ID);
+            }
+        }
+    }
+}
+
 std::vector<size_t> order_ORFs_in_node(const GraphVector& graph_vector,
                                        const std::unordered_set<size_t>& node_ORFs,
                                        const int& node_id,
