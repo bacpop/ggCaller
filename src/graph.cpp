@@ -25,33 +25,26 @@ GraphTuple Graph::build (const std::string& infile1,
     omp_set_num_threads(num_threads);
 
     // initialise persistent variables
-    GraphPair graph_pair;
     int overlap = kmer - 1;
-    size_t nb_colours;
-    std::vector<std::string> input_colours;
-    NodeColourVector node_colour_vector;
 
     if (infile2 != "NA") {
         is_ref = 0;
     }
 
-    // scope for ccdbg
-    {
-        // generate graph, writing if write_graph == true
-        size_t lastindex = infile1.find_last_of(".");
-        std::string outgraph = infile1.substr(0, lastindex);
-        ColoredCDBG<> ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, write_graph, outgraph);
+    // generate graph, writing if write_graph == true
+    size_t lastindex = infile1.find_last_of(".");
+    std::string outgraph = infile1.substr(0, lastindex);
+    _ccdbg = buildGraph(infile1, infile2, is_ref, kmer, num_threads, false, write_graph, outgraph);
 
-        // get the number of colours
-        nb_colours = ccdbg.getNbColors();
+    // get the number of colours
+    size_t nb_colours = _ccdbg.getNbColors();
 
-        // get colour names
-        input_colours = ccdbg.getColorNames();
+    // get colour names
+    std::vector<std::string> input_colours = _ccdbg.getColorNames();
 
-        // generate codon index for graph
-        cout << "Generating graph stop codon index..." << endl;
-        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
-    }
+    // generate codon index for graph
+    cout << "Generating graph stop codon index..." << endl;
+    NodeColourVector node_colour_vector = std::move(_index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
 
     // make tuple containing all information needed in python back-end
     GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
@@ -79,33 +72,22 @@ GraphTuple Graph::read (const std::string& graphfile,
     // set OMP number of threads
     omp_set_num_threads(num_threads);
 
-    // initialise persistent variables
-    int kmer;
-    int overlap;
-    size_t nb_colours;
-    std::vector<std::string> input_colours;
-    NodeColourVector node_colour_vector;
+    // read in graph
+    _ccdbg.read(graphfile, coloursfile, num_threads);
 
-    // scope for ccdbg
-    {
-        // read in graph
-        ColoredCDBG<> ccdbg;
-        ccdbg.read(graphfile, coloursfile, num_threads);
+    //set local variables
+    int kmer = _ccdbg.getK();
+    int overlap = kmer - 1;
 
-        //set local variables
-        kmer = ccdbg.getK();
-        overlap = kmer - 1;
+    // get the number of colours
+    size_t nb_colours = _ccdbg.getNbColors();
 
-        // get the number of colours
-        nb_colours = ccdbg.getNbColors();
+    // get colour names
+    std::vector<std::string> input_colours = _ccdbg.getColorNames();
 
-        // get colour names
-        input_colours = ccdbg.getColorNames();
-
-        // generate codon index for graph
-        cout << "Generating graph stop codon index..." << endl;
-        node_colour_vector = std::move(_index_graph(ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
-    }
+    // generate codon index for graph
+    cout << "Generating graph stop codon index..." << endl;
+    NodeColourVector node_colour_vector = std::move(_index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
 
     // make tuple containing all information needed in python back-end
     GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
@@ -113,7 +95,10 @@ GraphTuple Graph::read (const std::string& graphfile,
     return graph_tuple;
 }
 
-void Graph::in(std::string infile)
+void Graph::in(const std::string& infile,
+               const std::string& graphfile,
+               const std::string& coloursfile,
+               const size_t num_threads)
 {
     GraphVector newg;
     std::ifstream ifs(infile);
@@ -122,13 +107,15 @@ void Graph::in(std::string infile)
 
     _GraphVector = newg;
 
+    _ccdbg.read(graphfile, coloursfile, num_threads);
+
     for (const auto& node : _GraphVector)
     {
         _KmerMap[node.head_kmer()] = node.id;
     }
 }
 
-void Graph::out(std::string outfile)
+void Graph::out(const std::string& outfile)
 {
     std::ofstream ofs(outfile);
     boost::archive::text_oarchive oa(ofs);
@@ -181,7 +168,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t& colour_ID,
 
         // generate ORF calls
 //        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-        ORF_vector = call_ORFs(colour_ID, all_paths, _GraphVector, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
+        ORF_vector = call_ORFs(colour_ID, all_paths, _GraphVector, _ccdbg, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
     }
 
     // if no filtering required, do not calculate overlaps
@@ -239,7 +226,7 @@ std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourO
     auto& centroid_vector = std::get<2>(ORF_group_tuple);
 
     // generate clusters for ORFs based on identity
-    auto cluster_map = produce_clusters(colour_ORF_map, _GraphVector, overlap, ORF_mat_vector,
+    auto cluster_map = produce_clusters(colour_ORF_map, _GraphVector, _ccdbg, overlap, ORF_mat_vector,
                                                    ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
 
     // generate return pair of mappings of ORF IDs and clusters
@@ -266,7 +253,7 @@ RefindMap Graph::refind_gene(const size_t& colour_ID,
         }
     }
 
-    return refind_in_nodes(_GraphVector, colour_ID, node_search_dict, radius, is_ref,
+    return refind_in_nodes(_GraphVector, _ccdbg, colour_ID, node_search_dict, radius, is_ref,
                             kmer, fm_idx, repeat);
 }
 
@@ -278,26 +265,19 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     for (size_t i = 0; i < nodelist.size(); i++)
     {
         // initialise sequence items
-        std::string unitig_seq;
         std::string substring;
 
         // parse information
         const auto& id = nodelist[i];
         const auto& coords = node_coords[i];
-        bool strand = (id >= 0) ? true : false;
 
-        if (strand)
-        {
-            unitig_seq = _GraphVector.at(abs(id) - 1).seq();
-        } else {
-            unitig_seq = reverse_complement(_GraphVector.at(abs(id) - 1).seq());
-        }
+        const std::string seq = unitig_seq(id, _GraphVector, _ccdbg);
 
         if (sequence.empty())
         {
             // get node_seq_len, add one as zero indexed
             int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
-            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
+            substring = seq.substr(std::get<0>(coords), node_seq_len);
         } else
         {
             // get node_seq_len, add one as zero indexed
@@ -305,7 +285,7 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
             // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
             if (node_seq_len > 0)
             {
-                substring = unitig_seq.substr(overlap, node_seq_len);
+                substring = seq.substr(overlap, node_seq_len);
             } else
             {
                 break;
@@ -332,14 +312,13 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     omp_set_num_threads(num_threads);
 
     // read in graph
-    ColoredCDBG<> ccdbg;
-    ccdbg.read(graphfile, coloursfile, num_threads);
+    _ccdbg.read(graphfile, coloursfile, num_threads);
 
     // get input colours
-    std::vector<std::string> input_colours = ccdbg.getColorNames();
+    std::vector<std::string> input_colours = _ccdbg.getColorNames();
 
     //set local variables
-    const int kmer = ccdbg.getK();
+    const int kmer = _ccdbg.getK();
 
     std::vector<MappingCoords> query_coords(query_vec.size());
 
@@ -347,21 +326,20 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     #pragma omp parallel for
     for (int i = 0; i < query_vec.size(); i++)
     {
-        query_coords[i] = std::move(query_DBG(ccdbg, query_vec.at(i), kmer, _KmerMap, id_cutoff));
+        query_coords[i] = std::move(query_DBG(_ccdbg, query_vec.at(i), kmer, _KmerMap, id_cutoff));
     }
 
     return {input_colours, kmer, query_coords};
 }
 
-NodeColourVector Graph::_index_graph (const ColoredCDBG<>& ccdbg,
-                                     const std::vector<std::string>& stop_codons_for,
+NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                                      const std::vector<std::string>& stop_codons_rev,
                                      const int& kmer,
                                      const size_t& nb_colours,
                                      const bool is_ref,
                                      const std::vector<std::string>& input_colours)
 {
-    auto node_colour_vector = index_graph(_GraphVector, _KmerMap, ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
+    auto node_colour_vector = index_graph(_GraphVector, _KmerMap, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
 
     // return node_colour vector
     return node_colour_vector;

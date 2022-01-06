@@ -11,6 +11,7 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
 
 std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t& colour_ID,
                                                                    const GraphVector& graph_vector,
+                                                                   const ColoredCDBG<>& ccdbg,
                                                                    const PathVector& unitig_complete_paths,
                                                                    const int kmer,
                                                                    const bool is_ref,
@@ -28,16 +29,17 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const fm_index_coll& fm_idx);
 
 RefindTuple traverse_outward(const GraphVector& graph_vector,
+                             const ColoredCDBG<>& ccdbg,
                              const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
                              const bool is_ref,
                              const int kmer,
                              const fm_index_coll& fm_idx,
-                             const std::vector<size_t>& contig_locs,
                              const bool repeat);
 
 RefindMap refind_in_nodes(const GraphVector& graph_vector,
+                          const ColoredCDBG<>& ccdbg,
                           const size_t& colour_ID,
                           const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
                           const size_t& radius,

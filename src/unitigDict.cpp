@@ -89,3 +89,68 @@ void unitigDict::add_neighbour_colour (bool strand, int neighbour_ID, size_t col
         mtx2.unlock();
     }
 }
+
+// non-member function for generating unitig sequence
+std::string unitig_seq(const int& node_id,
+                       const GraphVector& graph_vector,
+                       const ColoredCDBG<>& ccdbg)
+{
+    std::string head_kmer = graph_vector.at(abs(node_id) - 1).head_kmer();
+
+    const Kmer km = Kmer(head_kmer.c_str());
+
+    auto um = ccdbg.find(km, true);
+
+    std::string seq;
+
+    if (node_id < 0)
+    {
+        seq = reverse_complement(um.referenceUnitigToString());
+    } else
+    {
+        seq = um.referenceUnitigToString();
+    }
+
+    return seq;
+}
+
+// non-member function for generating sequence from DBG
+std::string generate_sequence_nm(const std::vector<int>& nodelist,
+                                 const std::vector<indexPair>& node_coords,
+                                 const size_t& overlap,
+                                 const GraphVector& graph_vector,
+                                 const ColoredCDBG<>& ccdbg)
+{
+    std::string sequence;
+    for (size_t i = 0; i < nodelist.size(); i++)
+    {
+        // parse information
+        const auto& id = nodelist[i];
+        const auto& coords = node_coords[i];
+
+        // initialise sequence items
+        std::string substring;
+        const std::string seq = unitig_seq(id, graph_vector, ccdbg);
+
+        if (sequence.empty())
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
+            substring = seq.substr(std::get<0>(coords), node_seq_len);
+        } else
+        {
+            // get node_seq_len, add one as zero indexed
+            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
+            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
+            if (node_seq_len > 0)
+            {
+                substring = seq.substr(overlap, node_seq_len);
+            } else
+            {
+                break;
+            }
+        }
+        sequence += substring;
+    }
+    return sequence;
+}
