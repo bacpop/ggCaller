@@ -4,20 +4,21 @@
 #include "definitions.h"
 #include <boost/serialization/access.hpp>
 
+
 // unitigDict class declaration
-class unitigDict {
+class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     public:
 
-    // serialisation protocol
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
-        ar & id & _head_kmer & _full_codon & _part_codon & _unitig_size & _unitig_full_colour & _unitig_head_colour &
-                _unitig_tail_colour & _head_tail_colours_equal & _end_contig & _forward_stop_defined &
-                _reverse_stop_defined & _forward_stop & _reverse_stop & _succ_heads & _pred_heads & _neighbours &
-                _traversing_ORFs & _contigcoords;
-    }
+//    // serialisation protocol
+//    friend class boost::serialization::access;
+//    template<class Archive>
+//    void serialize(Archive & ar, const unsigned int version)
+//    {
+//        ar & id & _head_kmer & _full_codon & _part_codon & _unitig_size & _unitig_full_colour & _unitig_head_colour &
+//                _unitig_tail_colour & _head_tail_colours_equal & _end_contig & _forward_stop_defined &
+//                _reverse_stop_defined & _forward_stop & _reverse_stop & _succ_heads & _pred_heads & _neighbours &
+//                _traversing_ORFs & _contigcoords;
+//    }
 
     // add and return untig kmers and ids
     void add_head(const std::string& head) {_head_kmer = head;};
@@ -126,11 +127,20 @@ class unitigDict {
     std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>> _contigcoords;
 };
 
-// unitigDict typedefs
-// mapping of unitig IDs (size_t) to unitigDict class for each unitig
-typedef std::vector<unitigDict> GraphVector;
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
+
+// function to get pointer to unitig map data
+MyUnitigMap* get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                         const std::vector<Kmer>& head_kmer_arr,
+                         const int& id);
+
+UnitigColorMap<MyUnitigMap> get_um (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                    const std::vector<Kmer>& head_kmer_arr,
+                                    const int& id);
+
+size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
+               const Kmer& head_kmer);
 
 // non-member functions for generating sequence from graph
 std::string unitig_seq(const int& node_id,

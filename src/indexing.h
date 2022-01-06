@@ -29,18 +29,18 @@ boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataSt
                                          const size_t position);
 
 template<class T>
-std::vector<std::pair<std::string, bool>> get_neighbours (const T& neighbour_iterator);
+std::vector<std::pair<Kmer, bool>> get_neighbours (const T& neighbour_iterator);
 
 template <class T, class U, bool is_const>
-unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
-                                   UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
-                                   const std::vector<std::string>& codon_for,
-                                   const std::vector<std::string>& codon_rev,
-                                   const int& kmer,
-                                   const size_t& nb_colours);
+void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
+                             UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
+                             const std::vector<std::string>& codon_for,
+                             const std::vector<std::string>& codon_rev,
+                             const int& kmer,
+                             const size_t& nb_colours);
 
-void update_neighbour_index(GraphVector& graph_vector,
-                            const std::unordered_map<std::string, size_t>& head_kmer_map);
+void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
+                            const std::vector<Kmer>& head_kmer_arr);
 
 NodeContigMapping calculate_genome_paths(GraphVector& graph_vector,
                                          const std::unordered_map<std::string, size_t>& head_kmer_map,

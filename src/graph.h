@@ -112,7 +112,7 @@ class Graph {
     ColoredCDBG<> _ccdbg;
 
     // mapping of head kmers to nodes
-    std::unordered_map<std::string, size_t> _KmerMap;
+    std::vector<Kmer> _KmerArray;
 };
 
 #endif //GRAPH_H

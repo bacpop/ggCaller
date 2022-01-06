@@ -90,6 +90,42 @@ void unitigDict::add_neighbour_colour (bool strand, int neighbour_ID, size_t col
     }
 }
 
+// function to get unitig data from an ID number
+MyUnitigMap* get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                     const std::vector<Kmer>& head_kmer_arr,
+                     const int& id)
+{
+    const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
+    auto um = ccdbg.find(head_kmer, true);
+
+    DataAccessor<MyUnitigMap>* da = um.getData();
+    MyUnitigMap* unitig_map = da->getData(um);
+
+    return unitig_map;
+}
+
+UnitigColorMap<MyUnitigMap> get_um (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                    const std::vector<Kmer>& head_kmer_arr,
+                                    const int& id)
+{
+    const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
+    UnitigColorMap<MyUnitigMap> um = ccdbg.find(head_kmer, true);
+
+    return um;
+}
+
+// retrieve id from k-mer mapping
+size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
+               const Kmer& head_kmer)
+{
+    auto um = ccdbg.find(head_kmer, true);
+    auto da = um.getData(); // Get DataAccessor from unitig
+    const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
+
+    return data->id;
+}
+
+
 // non-member function for generating unitig sequence
 std::string unitig_seq(const int& node_id,
                        const GraphVector& graph_vector,
