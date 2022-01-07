@@ -41,8 +41,8 @@
 #include <serialize_tuple.h>
 
 // pybind11 headers
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
 
 // Eigen header
 #include <Eigen/Sparse>
@@ -54,7 +54,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-namespace py = pybind11;
+//namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, map of stop codon frames and set of colours in which edge is found in

@@ -198,9 +198,6 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     const std::string head_kmer = head_kmer_binary.toString();
     unitig_map->add_head(head_kmer);
 
-    // calculate unitig sizes
-    unitig_map->add_size(unitig_len, unitig_len - (kmer-1));
-
     // calculate colours for unitig
     boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
     unitig_map->add_head_colour(std::move(unitig_colours));
@@ -293,11 +290,10 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
         #pragma omp for nowait
         for (int i = 0; i < head_kmer_arr_size; i++)
         {
-            // get a reference to the unitig_Dict object
-            const Kmer head_kmer = head_kmer_arr.at(i);
-            UnitigColorMap<MyUnitigMap> um = ccdbg.find(head_kmer, true);
-            DataAccessor<MyUnitigMap>* da = um.getData();
-            MyUnitigMap* um_data = da->getData(um);
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, i);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
 
             // get copy of unitig_dict.unitig_full_colour to determine whether unitig gains a new colour not present in
             // gains a new colour not present in predecessors/successors
@@ -306,15 +302,13 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             // iterate over the connected nodes in successors
             for (const auto& succ : get_neighbours(um.getSuccessors()))
             {
-                // get numerical successor ID
-                const size_t succ_id = get_id(ccdbg, succ.first);
-
-                // get copy of successor unitig_ID
+                // get copy of successor unitig
                 mtx1.lock();
-                UnitigColorMap<MyUnitigMap> adj_ucm_tmp = get_um(ccdbg, head_kmer_arr, succ_id);
+                const auto adj_um_pair = get_um_data(ccdbg, succ.first);
                 mtx1.unlock();
-                DataAccessor<MyUnitigMap>* adj_da = adj_ucm_tmp.getData();
-                MyUnitigMap* adj_um_tmp_data = adj_da->getData(adj_ucm_tmp);
+                const auto& adj_um = adj_um_pair.first;
+                const auto& adj_um_data = adj_um_pair.second;
+                const int succ_id = adj_um_data->id;
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate tail, as this portion will overlap with next unitig
@@ -322,15 +316,15 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 if (succ.second)
                 {
                     colours = um_data->tail_colour();
-                    colours &= adj_um_tmp_data->head_colour();
+                    colours &= adj_um_data->head_colour();
                 } else
                 {
                     colours = um_data->tail_colour();
-                    colours &= adj_um_tmp_data->tail_colour();
+                    colours &= adj_um_data->tail_colour();
                 }
 
                 // negate adjacent full colours from full colours
-                auto adj_unitig_dict_full = adj_um_tmp_data->full_colour();
+                auto adj_unitig_dict_full = adj_um_data->full_colour();
                 adj_unitig_dict_full.flip();
                 full_colours &= adj_unitig_dict_full;
 
@@ -339,7 +333,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
-                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (succ_id_int, adj_um_tmp_data->get_codon_dict(false, succ.second), {});
+                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (succ_id_int, adj_um_data->get_codon_dict(false, succ.second), {});
                     um_data->add_neighbour(true, neighbour);
                 }
             }
@@ -356,16 +350,13 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             // iterate over the connected nodes in predecessors
             for (const auto& pred : get_neighbours(um.getPredecessors()))
             {
-                // get numerical successor ID
-                // get numerical successor ID
-                const size_t pred_id = get_id(ccdbg, pred.first);
-
-                // get copy of predesscor unitig_ID
+                // get copy of predecessor unitig_ID
                 mtx1.lock();
-                UnitigColorMap<MyUnitigMap> adj_ucm_tmp = get_um(ccdbg, head_kmer_arr, pred_id);
+                const auto adj_um_pair = get_um_data(ccdbg, pred.first);
                 mtx1.unlock();
-                DataAccessor<MyUnitigMap>* adj_da = adj_ucm_tmp.getData();
-                MyUnitigMap* adj_um_tmp_data = adj_da->getData(adj_ucm_tmp);
+                const auto& adj_um = adj_um_pair.first;
+                const auto& adj_um_data = adj_um_pair.second;
+                const auto pred_id = adj_um_data->id;
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate head, as this portion will overlap with next unitig
@@ -374,15 +365,15 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     //colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.head_colour()));
                     colours = um_data->head_colour();
-                    colours &= adj_um_tmp_data->head_colour();
+                    colours &= adj_um_data->head_colour();
                 } else
                 {
                     //colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.tail_colour()));
                     colours = um_data->head_colour();
-                    colours &= adj_um_tmp_data->tail_colour();
+                    colours &= adj_um_data->tail_colour();
                 }
 
-                auto adj_unitig_dict_full = adj_um_tmp_data->full_colour();
+                auto adj_unitig_dict_full = adj_um_data->full_colour();
                 adj_unitig_dict_full.flip();
                 full_colours &= adj_unitig_dict_full;
 
@@ -391,7 +382,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     //generate integer value of successor ID, if negative strand ID will be negative etc.
                     int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
-                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (pred_id_int, adj_um_tmp_data->get_codon_dict(false, pred.second), {});
+                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (pred_id_int, adj_um_data->get_codon_dict(false, pred.second), {});
                     um_data->add_neighbour(false, neighbour);
                 }
             }
@@ -423,11 +414,11 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
     }
 }
 
-NodeContigMapping calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
-                                         ColoredCDBG<MyUnitigMap>& ccdbg,
-                                         const std::string& fasta_file,
-                                         const int& kmer,
-                                         const int& colour_ID)
+void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
+                            ColoredCDBG<MyUnitigMap>& ccdbg,
+                            const std::string& fasta_file,
+                            const int& kmer,
+                            const int& colour_ID)
 {
     // generate the index
     fm_index_coll ref_index;
@@ -487,9 +478,6 @@ NodeContigMapping calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     if (prev_head != node_ID) {
                         if (prev_head != 0)
                         {
-                            // if moving to new node, need to update previous node distance
-                            std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
-
                             // add edge to graph_vector in forward and reverse
                             const bool prev_strand = prev_head >= 0 ? true : false;
                             const bool current_strand = node_ID >= 0 ? true : false;
@@ -503,6 +491,10 @@ NodeContigMapping calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
                             prev_unitig_map->add_neighbour_colour(prev_strand, node_ID, colour_ID);
                             unitig_map->add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
+
+                            // if moving to new node, need to update previous node distance
+                            std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
+                            prev_unitig_map->add_contig_coords(colour_ID, node_contig_mappings.back().second);
                         }
                         prev_head = node_ID;
 
@@ -519,6 +511,7 @@ NodeContigMapping calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     if (kmer_index == num_kmers)
                     {
                         std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
+                        unitig_map->add_contig_coords(colour_ID, node_contig_mappings.back().second);
                     }
                 }
                 kmer_counter++;
@@ -538,8 +531,6 @@ NodeContigMapping calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
     sdsl::construct_im(ref_index, genome_path, 1); // generate index
     store_to_file(ref_index, idx_file_name); // save it
-
-    return node_contig_mappings;
 }
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
@@ -599,10 +590,9 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
     }
 
     // update neighbour index in place within graph_vector
-    update_neighbour_index(graph_vector_private, head_kmer_arr);
+    update_neighbour_index(ccdbg, head_kmer_arr);
 
     // generate FM-indexes of all fastas in node-space
-    std::vector<NodeContigMapping> colour_contig_mappings(nb_colours);
     if (is_ref)
     {
         cout << "Mapping contigs to graph..." << endl;
@@ -611,17 +601,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             #pragma omp for nowait
             for (int i = 0; i < nb_colours; i++)
             {
-                colour_contig_mappings[i] = std::move(calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[i], kmer, i));
-            }
-        }
-
-        // add contig locations to graph_vector
-        for (size_t i = 0; i < nb_colours; i++)
-        {
-            const auto& contig_mappings = colour_contig_mappings.at(i);
-            for (const auto& node_entry : contig_mappings)
-            {
-                graph_vector[node_entry.first].add_contig_coords(i, node_entry.second);
+                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[i], kmer, i);
             }
         }
     }

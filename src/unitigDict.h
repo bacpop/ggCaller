@@ -38,9 +38,9 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
 
     // add size information
-    void add_size(const size_t& full_len, const size_t& part_len);
-    void add_size(size_t& full_len, size_t& part_len);
-    std::pair<std::size_t, std::size_t> size() const {return _unitig_size;};
+//    void add_size(const size_t& full_len, const size_t& part_len);
+//    void add_size(size_t& full_len, size_t& part_len);
+//    std::pair<std::size_t, std::size_t> size() const {return _unitig_size;};
 
 //    // add and return unitig seqs
 //    void add_seq(const std::string& seq) {_unitig_seq = seq;};
@@ -64,12 +64,12 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool end_contig() const {return _end_contig;};
 
     //assign and return neighbours
-    void set_succ (std::vector<std::pair<std::string, bool>> vect) {_succ_heads = vect;};
-    void clear_succ() {_succ_heads.clear(); _succ_heads.shrink_to_fit();}
-    const std::vector<std::pair<std::string, bool>> & get_succs () {return _succ_heads;};
-    void set_pred (std::vector<std::pair<std::string, bool>> vect) {_pred_heads = vect;};
-    void clear_pred() {_pred_heads.clear(); _pred_heads.shrink_to_fit();}
-    const std::vector<std::pair<std::string, bool>> & get_preds () const {return _pred_heads;};
+//    void set_succ (std::vector<std::pair<std::string, bool>> vect) {_succ_heads = vect;};
+//    void clear_succ() {_succ_heads.clear(); _succ_heads.shrink_to_fit();}
+//    const std::vector<std::pair<std::string, bool>> & get_succs () {return _succ_heads;};
+//    void set_pred (std::vector<std::pair<std::string, bool>> vect) {_pred_heads = vect;};
+//    void clear_pred() {_pred_heads.clear(); _pred_heads.shrink_to_fit();}
+//    const std::vector<std::pair<std::string, bool>> & get_preds () const {return _pred_heads;};
     void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
     void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
 
@@ -130,14 +130,30 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
 
-// function to get pointer to unitig map data
-MyUnitigMap* get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
-                         const std::vector<Kmer>& head_kmer_arr,
-                         const int& id);
+// function to get um and pointer to unitig map data
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const std::vector<Kmer>& head_kmer_arr,
+                                                                  const int& id);
+
+// const qualified function to get pointer to unitig map data
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const std::vector<Kmer>& head_kmer_arr,
+                                                                                                           const int& id);
 
 UnitigColorMap<MyUnitigMap> get_um (ColoredCDBG<MyUnitigMap>& ccdbg,
                                     const std::vector<Kmer>& head_kmer_arr,
                                     const int& id);
+
+const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>> get_um (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                             const std::vector<Kmer>& head_kmer_arr,
+                                                                             const int& id);
+
+// get unitig data from head-kmer
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const Kmer& head_kmer);
+
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const Kmer& head_kmer);
 
 size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
                const Kmer& head_kmer);

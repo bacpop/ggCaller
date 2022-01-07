@@ -90,28 +90,56 @@ void unitigDict::add_neighbour_colour (bool strand, int neighbour_ID, size_t col
     }
 }
 
-// function to get unitig data from an ID number
-MyUnitigMap* get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
-                     const std::vector<Kmer>& head_kmer_arr,
-                     const int& id)
+// function to get unitig data from an ID number, returning pointer to data
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const std::vector<Kmer>& head_kmer_arr,
+                                                                  const int& id)
 {
     const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
     auto um = ccdbg.find(head_kmer, true);
 
     DataAccessor<MyUnitigMap>* da = um.getData();
-    MyUnitigMap* unitig_map = da->getData(um);
+    MyUnitigMap* um_data = da->getData(um);
 
-    return unitig_map;
+    return {um, um_data};
 }
 
-UnitigColorMap<MyUnitigMap> get_um (ColoredCDBG<MyUnitigMap>& ccdbg,
-                                    const std::vector<Kmer>& head_kmer_arr,
-                                    const int& id)
+// const qualified get_um_data, returning copy of data
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const std::vector<Kmer>& head_kmer_arr,
+                                                                                                           const int& id)
 {
     const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
-    UnitigColorMap<MyUnitigMap> um = ccdbg.find(head_kmer, true);
+    auto um = ccdbg.find(head_kmer, true);
 
-    return um;
+    const DataAccessor<MyUnitigMap>* da = um.getData();
+    const MyUnitigMap* unitig_map = da->getData(um);
+
+    return {um, const_cast<MyUnitigMap *>(unitig_map)};
+}
+
+// function to get unitig data from an head_kmer, returning pointer to data
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const Kmer& head_kmer)
+{
+    auto um = ccdbg.find(head_kmer, true);
+
+    DataAccessor<MyUnitigMap>* da = um.getData();
+    MyUnitigMap* um_data = da->getData(um);
+
+    return {um, um_data};
+}
+
+// const qualified get_um_data, returning copy of data
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const Kmer& head_kmer)
+{
+    auto um = ccdbg.find(head_kmer, true);
+
+    const DataAccessor<MyUnitigMap>* da = um.getData();
+    const MyUnitigMap* unitig_map = da->getData(um);
+
+    return {um, const_cast<MyUnitigMap *>(unitig_map)};
 }
 
 // retrieve id from k-mer mapping
