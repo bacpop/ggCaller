@@ -8,6 +8,7 @@ void generate_ORFs(const int& colour_ID,
                    ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
                    const GraphVector& graph_vector,
+                   const ColoredCDBG<>& ccdbg,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,
                    const std::vector<int>& unitig_path,
@@ -62,27 +63,19 @@ void generate_ORFs(const int& colour_ID,
 
     // generate path sequence by merging nodes in sequence
     for (const auto &node : unitig_path) {
-        // parse out information from node integer value
-        bool strand = (node >= 0) ? true : false;
-
         // add node to node list for path coordinates
         nodelist.push_back(node);
         // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd is node end, 3rd entry is node length.
         std::vector<size_t> node_range(3);
 
-        // if strand is negative, calculate reverse complement
-        std::string unitig_seq;
-        if (strand) {
-            unitig_seq = graph_vector.at(abs(node) - 1).seq();
-        } else {
-            unitig_seq = reverse_complement(graph_vector.at(abs(node) - 1).seq());
-        }
+        // get strand of object
+        std::string seq = unitig_seq(node, graph_vector, ccdbg);
 
         // calculate length of unitig and get end coordinates
-        size_t node_end = unitig_seq.size();
+        size_t node_end = seq.size();
 
         if (path_sequence.empty()) {
-            path_sequence = unitig_seq;
+            path_sequence = seq;
             // start index of node in path
             node_range[0] = node_start;
             // start index of next node (one past the end index)
@@ -91,7 +84,7 @@ void generate_ORFs(const int& colour_ID,
             node_range[2] = node_end - 1;
             node_start = node_end;
         } else {
-            path_sequence.append(unitig_seq.begin() + overlap, unitig_seq.end());
+            path_sequence.append(seq.begin() + overlap, seq.end());
             // start index of node in path
             node_range[0] = node_start - overlap;
             // absolute end index of node
@@ -754,13 +747,14 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
 
 ORFVector call_ORFs(const int& colour_ID,
                     const std::vector<PathVector>& all_paths,
-                     const GraphVector& graph_vector,
-                     const std::vector<std::string>& stop_codons_for,
-                     const std::vector<std::string>& start_codons_for,
-                     const int overlap,
-                     const size_t min_ORF_length,
-                     const bool is_ref,
-                     const fm_index_coll& fm_idx)
+                    const GraphVector& graph_vector,
+                    const ColoredCDBG<>& ccdbg,
+                    const std::vector<std::string>& stop_codons_for,
+                    const std::vector<std::string>& start_codons_for,
+                    const int overlap,
+                    const size_t min_ORF_length,
+                    const bool is_ref,
+                    const fm_index_coll& fm_idx)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -772,7 +766,7 @@ ORFVector call_ORFs(const int& colour_ID,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, graph_vector, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, graph_vector, ccdbg, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
         }
     }
 

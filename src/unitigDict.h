@@ -4,10 +4,6 @@
 #include "definitions.h"
 #include <boost/serialization/access.hpp>
 
-// UnitigDict typedefs and functions
-// Vector of neighbouring nodes by ID, orientation and map of stop codon frames
-//typedef std::vector<std::pair<std::unordered_set<size_t>, std::pair<int, std::vector<uint8_t>>>> NeighbourVector;
-
 // unitigDict class declaration
 class unitigDict {
     public:
@@ -18,7 +14,7 @@ class unitigDict {
     void serialize(Archive & ar, const unsigned int version)
     {
         ar & id & _head_kmer & _full_codon & _part_codon & _unitig_size & _unitig_full_colour & _unitig_head_colour &
-                _unitig_tail_colour & _head_tail_colours_equal & _unitig_seq & _end_contig & _forward_stop_defined &
+                _unitig_tail_colour & _head_tail_colours_equal & _end_contig & _forward_stop_defined &
                 _reverse_stop_defined & _forward_stop & _reverse_stop & _succ_heads & _pred_heads & _neighbours &
                 _traversing_ORFs & _contigcoords;
     }
@@ -27,8 +23,6 @@ class unitigDict {
     void add_head(const std::string& head) {_head_kmer = head;};
     const std::string& head_kmer() const {return _head_kmer;};
     size_t id;
-//    void set_id (size_t id) {_unitig_id = id};
-//    size_t id () {return _unitig_id};
 
     // add codon information
     void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
@@ -47,9 +41,9 @@ class unitigDict {
     void add_size(size_t& full_len, size_t& part_len);
     std::pair<std::size_t, std::size_t> size() const {return _unitig_size;};
 
-    // add and return unitig seqs
-    void add_seq(const std::string& seq) {_unitig_seq = seq;};
-    std::string seq() const {return _unitig_seq;};
+//    // add and return unitig seqs
+//    void add_seq(const std::string& seq) {_unitig_seq = seq;};
+//    std::string seq() const {return _unitig_seq;};
 
     // add contig mapping information
     void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
@@ -106,8 +100,8 @@ class unitigDict {
     // check head and tail colours equal
     void _check_head_tail_equal();
 
-    // unitig sequence
-    std::string _unitig_seq;
+//    // unitig sequence
+//    std::string _unitig_seq;
 
     // bool to determine if unitig is end of a contig/assembly
     bool _end_contig = false;
@@ -135,9 +129,18 @@ class unitigDict {
 // unitigDict typedefs
 // mapping of unitig IDs (size_t) to unitigDict class for each unitig
 typedef std::vector<unitigDict> GraphVector;
-// a tuple of GraphVector, unitigs that contain stop codons in forward/reverse, and mappings of head-kmers to node IDs
-typedef std::pair<GraphVector, NodeColourVector> GraphPair;
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
 typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> GraphTuple;
+
+// non-member functions for generating sequence from graph
+std::string unitig_seq(const int& node_id,
+                       const GraphVector& graph_vector,
+                       const ColoredCDBG<>& ccdbg);
+
+std::string generate_sequence_nm(const std::vector<int>& nodelist,
+                                 const std::vector<indexPair>& node_coords,
+                                 const size_t& overlap,
+                                 const GraphVector& graph_vector,
+                                 const ColoredCDBG<>& ccdbg);
 
 #endif //UNITIG_DICT_H

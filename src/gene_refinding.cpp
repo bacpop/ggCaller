@@ -44,14 +44,15 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
 }
 
 std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t& colour_ID,
-                                                                    const GraphVector& graph_vector,
-                                                                    const PathVector& unitig_complete_paths,
-                                                                    const int kmer,
-                                                                    const bool is_ref,
-                                                                    const fm_index_coll& fm_idx,
-                                                                    std::string& stream_seq,
-                                                                    const size_t& ORF_end,
-                                                                    const std::string& ORF_seq)
+                                                                   const GraphVector& graph_vector,
+                                                                   const ColoredCDBG<>& ccdbg,
+                                                                   const PathVector& unitig_complete_paths,
+                                                                   const int kmer,
+                                                                   const bool is_ref,
+                                                                   const fm_index_coll& fm_idx,
+                                                                   std::string& stream_seq,
+                                                                   const size_t& ORF_end,
+                                                                   const std::string& ORF_seq)
 {
     // initialise path of nodes to return
     std::vector<int> nodelist;
@@ -80,24 +81,17 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
         // generate the path sequence
         for (int i = 0; i < unitig_path.size(); i++)
         {
-            std::string unitig_seq;
             const auto& node = unitig_path.at(i);
 
-            // parse out information from node integer value
-            const bool strand = (node >= 0) ? true : false;
-
-            if (strand) {
-                unitig_seq = graph_vector.at(abs(node) - 1).seq();
-            } else {
-                unitig_seq = reverse_complement(graph_vector.at(abs(node) - 1).seq());
-            }
+            // get sequence of node
+            const std::string seq = unitig_seq(node, graph_vector, ccdbg);
 
             if (i == 0)
             {
-                path_sequence.append(unitig_seq.begin() + ORF_end + 1, unitig_seq.end());
+                path_sequence.append(seq.begin() + ORF_end + 1, seq.end());
             } else
             {
-                path_sequence.append(unitig_seq.begin() + kmer - 1, unitig_seq.end());
+                path_sequence.append(seq.begin() + kmer - 1, seq.end());
             }
         }
 
@@ -342,6 +336,7 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
 }
 
 RefindTuple traverse_outward(const GraphVector& graph_vector,
+                             const ColoredCDBG<>& ccdbg,
                              const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
@@ -361,8 +356,8 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
     std::pair<ContigLoc, bool> full_contig_loc;
 
     // generate a string of the ORF to check against FM-index
-    std::string ORF_seq = generate_sequence_private(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector);
-    ORF_seq += generate_sequence_private(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, graph_vector);
+    std::string ORF_seq = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector, ccdbg);
+    ORF_seq += generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1,graph_vector, ccdbg);
 
     const auto original_ORF = ORF_seq;
 
@@ -422,7 +417,8 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto upstream_pair = std::move(assign_seq(colour_ID, graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+            auto upstream_pair = std::move(assign_seq(colour_ID, graph_vector, ccdbg, unitig_complete_paths, kmer,
+                                                      is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
             full_contig_loc = upstream_pair.second;
 
             // reverse upstream_nodelist
@@ -510,7 +506,8 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
         if (!unitig_complete_paths.empty())
         {
-            auto downstream_pair = std::move(assign_seq(colour_ID, graph_vector, unitig_complete_paths, kmer, is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
+            auto downstream_pair = std::move(assign_seq(colour_ID, graph_vector, ccdbg, unitig_complete_paths, kmer,
+                                             is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
             if (downstream_pair.first.size() > 1)
             {
                 full_nodelist.insert(full_nodelist.end(), downstream_pair.first.begin() + 1, downstream_pair.first.end());
@@ -536,13 +533,14 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 }
 
 RefindMap refind_in_nodes(const GraphVector& graph_vector,
-                         const size_t& colour_ID,
-                         const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                         const size_t& radius,
-                         const bool is_ref,
-                         const int kmer,
-                         const fm_index_coll& fm_idx,
-                         const bool repeat)
+                          const ColoredCDBG<>& ccdbg,
+                          const size_t& colour_ID,
+                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                          const size_t& radius,
+                          const bool is_ref,
+                          const int kmer,
+                          const fm_index_coll& fm_idx,
+                          const bool repeat)
 {
     RefindMap refind_map;
 
@@ -557,7 +555,7 @@ RefindMap refind_in_nodes(const GraphVector& graph_vector,
             const auto& search = seq_search.first;
             const auto& ORF_info = seq_search.second;
 
-            refind_map[node][search] = traverse_outward(graph_vector, colour_ID, ORF_info, radius, is_ref,
+            refind_map[node][search] = traverse_outward(graph_vector, ccdbg, colour_ID, ORF_info, radius, is_ref,
                                                          kmer, fm_idx, repeat);
         }
     }

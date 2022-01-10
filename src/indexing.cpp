@@ -189,8 +189,8 @@ unitigDict analyse_unitigs_binary (const ColoredCDBG<>& ccdbg,
     const std::string unitig = um.referenceUnitigToString();
     const size_t unitig_len = unitig.size();
 
-    // add unitig sequence to unitig_dict
-    unitig_dict.add_seq(unitig);
+//    // add unitig sequence to unitig_dict
+//    unitig_dict.add_seq(unitig);
 
     // get head kmer for unitig, add to kmer dictionary
     const Kmer head_kmer_binary = um.getUnitigHead();

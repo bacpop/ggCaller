@@ -33,10 +33,13 @@ class Graph {
                      const bool is_ref);
 
     // get graph object from serialised file
-    void in(std::string infile);
+    void in(const std::string& infile,
+            const std::string& graphfile,
+            const std::string& coloursfile,
+            const size_t num_threads);
 
     // generate serialised file from graph object
-    void out(std::string outfile);
+    void out(const std::string& outfile);
 
     // find ORFs
     std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
@@ -94,16 +97,19 @@ class Graph {
 
     private:
     // index graph
-    NodeColourVector _index_graph (const ColoredCDBG<>& ccdbg,
-                                   const std::vector<std::string>& stop_codons_for,
-                                   const std::vector<std::string>& stop_codons_rev,
-                                   const int& kmer,
-                                   const size_t& nb_colours,
-                                   const bool is_ref,
-                                   const std::vector<std::string>& input_colours);
+    NodeColourVector _index_graph (const std::vector<std::string>& stop_codons_for,
+                                     const std::vector<std::string>& stop_codons_rev,
+                                     const int& kmer,
+                                     const size_t& nb_colours,
+                                     const bool is_ref,
+                                     const std::vector<std::string>& input_colours);
+
 
     // stored unitigDict objects
     GraphVector _GraphVector;
+    
+    // stored bifrost DBG
+    ColoredCDBG<> _ccdbg;
 
     // mapping of head kmers to nodes
     std::unordered_map<std::string, size_t> _KmerMap;
