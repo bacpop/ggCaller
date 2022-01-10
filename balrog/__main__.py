@@ -1,4 +1,5 @@
 import os
+import gc
 import tarfile
 import time
 import pickle
@@ -17,9 +18,6 @@ model_dir = os.path.join(module_dir, "balrog_models")
 """ Print what the program is doing."""
 verbose = True
 
-""" Use kmer prefilter to increase gene sensitivity. 
-May not play nice with very high GC genomes."""
-protein_kmer_filter = False
 
 """ Nucleotide to amino acid translation table. 11 for most bacteria/archaea.
 4 for Mycoplasma/Spiroplasma."""
@@ -125,7 +123,7 @@ def get_ORF_info(ORF_vector, graph, overlap):
     return ORF_seq_enc, TIS_seqs
 
 
-#@profile
+# @profile
 def predict(model, X):
     model.eval()
     with torch.no_grad():
@@ -141,7 +139,7 @@ def predict(model, X):
     return probs
 
 
-#@profile
+# @profile
 def predict_tis(model_tis, X):
     model_tis.eval()
     with torch.no_grad():
@@ -184,7 +182,7 @@ def load_gene_models():
     return (model, model_tis)
 
 
-#@profile
+@profile
 def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis):
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")
@@ -197,7 +195,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
     ORF_seq_sorted = [ORF_seq_enc[i] for i in length_idx]
 
     # pad to allow creation of batch matrix
-    prob_list = []
+    ORF_gene_score = np.zeros(len(ORF_seq_enc), dtype=float)
     for i in range(0, len(ORF_seq_sorted), gene_batch_size):
         batch = ORF_seq_sorted[i:i + gene_batch_size]
         seq_lengths = torch.LongTensor(list(map(len, batch)))
@@ -208,32 +206,20 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
 
         pred_all = predict(model, seq_tensor)
 
-        pred = []
+        pred = np.zeros(len(seq_lengths), dtype=float)
         for j, length in enumerate(seq_lengths):
             subseq = pred_all[j, 0, 0:int(length)]
             predprob = float(expit(torch.mean(logit(subseq))))
-            pred.append(predprob)
+            pred[j] = predprob
 
-        prob_list.extend(pred)
-    prob_arr = np.asarray(prob_list, dtype=float)
-
-    # unsort
-    unsort_idx = np.argsort(length_idx)
-    ORF_prob = prob_arr[unsort_idx]
-
-    # recombine ORFs
-    idx = 0
-    ORF_gene_score = [None] * len(ORF_seq_enc)
-    for k, coord in enumerate(ORF_gene_score):
-        ORF_gene_score[k] = float(ORF_prob[idx])
-        idx += 1
+        ORF_gene_score[i:i + gene_batch_size] = pred
 
     # print("Scoring translation initiation sites...")
 
     # extract nucleotide sequence surrounding potential start codons
     ORF_TIS_seq_flat = []
     ORF_TIS_seq_idx = []
-    ORF_TIS_prob = [None] * len(TIS_seqs)
+    ORF_TIS_prob = np.zeros(len(ORF_seq_enc), dtype=float)
     ORF_start_codon = [None] * len(ORF_seq_enc)
 
     for i, TIS in enumerate(TIS_seqs):
@@ -252,78 +238,45 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
         ORF_start_codon[i] = start_codon
 
     # batch score TIS
-    TIS_prob_list = []
+    TIS_prob_list = np.zeros(len(ORF_TIS_seq_flat), dtype=float)
     for i in range(0, len(ORF_TIS_seq_flat), TIS_batch_size):
         batch = ORF_TIS_seq_flat[i:i + TIS_batch_size]
         TIS_stacked = torch.stack(batch)
         pred = predict_tis(model_tis, TIS_stacked)
 
-        TIS_prob_list.extend(pred)
-    TIS_prob_list = [x.item() for x in TIS_prob_list]
+        TIS_prob_list[i:i + TIS_batch_size] = pred[:, 0]
 
     # reindex batched scores
-    for i, prob in enumerate(TIS_prob_list):
-        idx = ORF_TIS_seq_idx[i]
-        ORF_TIS_prob[idx] = float(prob)
+    ORF_TIS_seq_idx = np.asarray(ORF_TIS_seq_idx)
+    ORF_TIS_prob[ORF_TIS_seq_idx] = TIS_prob_list
 
     # combine all info into single score for each ORF
-    if protein_kmer_filter:
-        ORF_score_flat = []
-        for i, geneprob in enumerate(ORF_gene_score):
-            if not geneprob:
-                ORF_score_flat.append(None)
-                continue
-            seengene_idx = 0
-            # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
-            length = (len(ORF_seq_enc[i]) * 3) + 6
-            TIS_prob = ORF_TIS_prob[i]
-            start_codon = ORF_start_codon[i]
-            ATG = start_codon == 0
-            GTG = start_codon == 1
-            TTG = start_codon == 2
-
-            combprob = geneprob * weight_gene_prob \
-                       + TIS_prob * weight_TIS_prob \
-                       + ATG * weight_ATG \
-                       + GTG * weight_GTG \
-                       + TTG * weight_TTG
-            maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
-            probthresh = score_threshold * maxprob
-            score = (combprob - probthresh) * length + 1e6 * seengene[seengene_idx]
-            seengene_idx += 1
-
-            ORF_score_flat.append(score)
-
-    else:
-        ORF_score_flat = []
-        for i, geneprob in enumerate(ORF_gene_score):
-            if not geneprob:
-                ORF_score_flat.append(None)
-                continue
-
-            # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
-            length = len(ORF_seq_enc[i]) * 3
-            TIS_prob = ORF_TIS_prob[i]
-            start_codon = ORF_start_codon[i]
-            ATG = start_codon == 0
-            GTG = start_codon == 1
-            TTG = start_codon == 2
-
-            combprob = geneprob * weight_gene_prob \
-                       + TIS_prob * weight_TIS_prob \
-                       + ATG * weight_ATG \
-                       + GTG * weight_GTG \
-                       + TTG * weight_TTG
-            maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
-            probthresh = score_threshold * maxprob
-            score = (combprob - probthresh) * length
-
-            ORF_score_flat.append(score)
-
-    # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
     ORF_score_dict = {}
-    for i, score in enumerate(ORF_score_flat):
-        # if score greater than minimum, add to the ORF_score_dict
+    for index, geneprob in np.ndenumerate(ORF_gene_score):
+        if geneprob == 0:
+            continue
+
+        # unpack numpy index
+        i = index[0]
+
+        # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
+        length = len(ORF_seq_enc[i]) * 3
+        TIS_prob = ORF_TIS_prob[i]
+        start_codon = ORF_start_codon[i]
+        ATG = start_codon == 0
+        GTG = start_codon == 1
+        TTG = start_codon == 2
+
+        combprob = geneprob * weight_gene_prob \
+                   + TIS_prob * weight_TIS_prob \
+                   + ATG * weight_ATG \
+                   + GTG * weight_GTG \
+                   + TTG * weight_TTG
+        maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
+        probthresh = score_threshold * maxprob
+        score = (combprob - probthresh) * length
+
+        # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
         if score >= minimum_ORF_score:
             ORF_score_dict[i] = score
 
