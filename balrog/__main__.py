@@ -11,13 +11,14 @@ from scipy.special import logit
 import torch
 import torch.nn.functional as F
 
+import psutil
+
 """ Get directories for model and seengenes """
 module_dir = os.path.dirname(os.path.realpath(__file__))
 model_dir = os.path.join(module_dir, "balrog_models")
 
 """ Print what the program is doing."""
 verbose = True
-
 
 """ Nucleotide to amino acid translation table. 11 for most bacteria/archaea.
 4 for Mycoplasma/Spiroplasma."""
@@ -183,36 +184,19 @@ def load_gene_models():
 
 
 @profile
-def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, model_tis):
+def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis):
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")
 
-    ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph_vector, overlap)
+    p = psutil.Process()
+
+    ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph, overlap)
+    print("post-get_ORF_info: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # sort by length to minimize impact of batch padding
     ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
     length_idx = np.argsort(ORF_lengths)
     ORF_seq_sorted = [ORF_seq_enc[i] for i in length_idx]
-
-    # pad to allow creation of batch matrix
-    ORF_gene_score = np.zeros(len(ORF_seq_enc), dtype=float)
-    for i in range(0, len(ORF_seq_sorted), gene_batch_size):
-        batch = ORF_seq_sorted[i:i + gene_batch_size]
-        seq_lengths = torch.LongTensor(list(map(len, batch)))
-        seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
-
-        for idx, (seq, seqlen) in enumerate(zip(batch, seq_lengths)):
-            seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
-
-        pred_all = predict(model, seq_tensor)
-
-        pred = np.zeros(len(seq_lengths), dtype=float)
-        for j, length in enumerate(seq_lengths):
-            subseq = pred_all[j, 0, 0:int(length)]
-            predprob = float(expit(torch.mean(logit(subseq))))
-            pred[j] = predprob
-
-        ORF_gene_score[i:i + gene_batch_size] = pred
 
     # print("Scoring translation initiation sites...")
 
@@ -222,6 +206,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
     ORF_TIS_prob = np.zeros(len(ORF_seq_enc), dtype=float)
     ORF_start_codon = [None] * len(ORF_seq_enc)
 
+    print("pre-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     for i, TIS in enumerate(TIS_seqs):
         # unpack tuple. Note, downsteam includes start codon, which needs to be removed
         upstream, downstream = TIS
@@ -238,6 +223,7 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
         ORF_start_codon[i] = start_codon
 
     # batch score TIS
+    print("mid-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     TIS_prob_list = np.zeros(len(ORF_TIS_seq_flat), dtype=float)
     for i in range(0, len(ORF_TIS_seq_flat), TIS_batch_size):
         batch = ORF_TIS_seq_flat[i:i + TIS_batch_size]
@@ -250,34 +236,53 @@ def score_genes(ORF_vector, graph_vector, minimum_ORF_score, overlap, model, mod
     ORF_TIS_seq_idx = np.asarray(ORF_TIS_seq_idx)
     ORF_TIS_prob[ORF_TIS_seq_idx] = TIS_prob_list
 
-    # combine all info into single score for each ORF
-    ORF_score_dict = {}
-    for index, geneprob in np.ndenumerate(ORF_gene_score):
-        if geneprob == 0:
-            continue
+    print("post-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
-        # unpack numpy index
-        i = index[0]
+    # pad to allow creation of batch matrix
+    print("pre-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # ORF_gene_score = np.zeros(len(ORF_seq_enc), dtype=float)
+    ORF_score_array = np.zeros(len(ORF_seq_sorted), dtype=float)
+    for i in range(0, len(ORF_seq_sorted), gene_batch_size):
+        batch = ORF_seq_sorted[i:i + gene_batch_size]
+        seq_lengths = torch.LongTensor(list(map(len, batch)))
+        seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
 
-        # calculate length by multiplying number of amino acids by 3, then adding 6 for start and stop
-        length = len(ORF_seq_enc[i]) * 3
-        TIS_prob = ORF_TIS_prob[i]
-        start_codon = ORF_start_codon[i]
-        ATG = start_codon == 0
-        GTG = start_codon == 1
-        TTG = start_codon == 2
+        for idx, (seq, seqlen) in enumerate(zip(batch, seq_lengths)):
+            seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
 
-        combprob = geneprob * weight_gene_prob \
-                   + TIS_prob * weight_TIS_prob \
-                   + ATG * weight_ATG \
-                   + GTG * weight_GTG \
-                   + TTG * weight_TTG
-        maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
-        probthresh = score_threshold * maxprob
-        score = (combprob - probthresh) * length
+        pred_all = predict(model, seq_tensor)
 
-        # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
-        if score >= minimum_ORF_score:
-            ORF_score_dict[i] = score
+        print(str(i) + " mid-ORF-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
-    return ORF_score_dict
+        for j, length in enumerate(seq_lengths):
+            subseq = pred_all[j, 0, 0:int(length)]
+            geneprob = float(expit(torch.mean(logit(subseq))))
+
+            # map scores back to ORF_ID and calculate score
+            ORF_id = length_idx[i + j]
+            length = len(ORF_seq_enc[ORF_id]) * 3
+            TIS_prob = ORF_TIS_prob[ORF_id]
+            start_codon = ORF_start_codon[ORF_id]
+            ATG = start_codon == 0
+            GTG = start_codon == 1
+            TTG = start_codon == 2
+
+            combprob = geneprob * weight_gene_prob \
+                       + TIS_prob * weight_TIS_prob \
+                       + ATG * weight_ATG \
+                       + GTG * weight_GTG \
+                       + TTG * weight_TTG
+            maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
+            probthresh = score_threshold * maxprob
+            score = (combprob - probthresh) * length
+
+            # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
+            if score >= minimum_ORF_score:
+                ORF_score_array[ORF_id] = score
+
+        print(str(i) + " post-ORF-score addition: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+
+    print("post-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+
+    print("post-ORF consolidation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    return ORF_score_array
