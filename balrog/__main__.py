@@ -28,7 +28,7 @@ translation_table = 11
 """ Batch size for the temporal convolutional network used to score genes.
 Small batches and big batches slow down the model. Very big batches may crash the 
 GPU. """
-gene_batch_size = 200
+gene_batch_size = 12000
 TIS_batch_size = 1000
 
 """ All following are internal parameters. Change at your own risk."""
@@ -136,8 +136,58 @@ def predict(model, X):
         else:
             X_enc = F.one_hot(X, 21).permute(0, 2, 1).float()
             probs = expit(model(X_enc).cpu())
-
     return probs
+
+
+# @profile
+def run_ORF_predict(batch_idx_array, ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob, ORF_start_codon,
+                    minimum_ORF_score):
+    p = psutil.Process()
+    ORF_score_array = np.zeros(len(ORF_seq_sorted), dtype=float)
+    prev_i = 0
+    for i in batch_idx_array:
+        batch = ORF_seq_sorted[prev_i:i + 1]
+        seq_lengths = torch.LongTensor(list(map(len, batch)))
+        seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
+
+        for idx, (seq, seqlen) in enumerate(zip(batch, seq_lengths)):
+            seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
+
+        pred_all = predict(model, seq_tensor)
+
+        print(str(i) + " mid-ORF-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+
+        for j, length in enumerate(seq_lengths):
+            subseq = pred_all[j, 0, 0:int(length)]
+            geneprob = float(expit(torch.mean(logit(subseq))))
+
+            # map scores back to ORF_ID and calculate score
+            ORF_id = length_idx[prev_i + j]
+            length = len(ORF_seq_enc[ORF_id]) * 3
+            TIS_prob = ORF_TIS_prob[ORF_id]
+            start_codon = ORF_start_codon[ORF_id]
+            ATG = start_codon == 0
+            GTG = start_codon == 1
+            TTG = start_codon == 2
+
+            combprob = geneprob * weight_gene_prob \
+                       + TIS_prob * weight_TIS_prob \
+                       + ATG * weight_ATG \
+                       + GTG * weight_GTG \
+                       + TTG * weight_TTG
+            maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
+            probthresh = score_threshold * maxprob
+            score = (combprob - probthresh) * length
+
+            # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
+            if score >= minimum_ORF_score:
+                ORF_score_array[ORF_id] = score
+
+        prev_i = i + 1
+
+        print(str(i) + " post-ORF-score addition: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+
+    return ORF_score_array
 
 
 # @profile
@@ -146,60 +196,18 @@ def predict_tis(model_tis, X):
     with torch.no_grad():
         if torch.cuda.device_count() > 0:
             X_enc = F.one_hot(X, 4).permute(0, 2, 1).float().cuda()
+            probs = expit(model_tis(X_enc).cpu())
+            del X_enc
+            torch.cuda.empty_cache()
         else:
             X_enc = F.one_hot(X, 4).permute(0, 2, 1).float()
-        probs = expit(model_tis(X_enc).cpu())
+            probs = expit(model_tis(X_enc).cpu())
     return probs
 
 
-#@profile
-def kmerize(seq, k):
-    kmerset = set()
-    for i in range(len(seq) - k + 1):
-        kmer = tuple(seq[i: i + k].tolist())
-        kmerset.add(kmer)
-    return kmerset
-
-def load_gene_models():
-    # check if directory exists. If not, unzip file
-    if not os.path.exists(model_dir):
-        tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
-        tar.extractall(module_dir)
-        tar.close()
-
-    torch.hub.set_dir(model_dir)
-    # print("Loading convolutional model...")
-    if torch.cuda.device_count() > 0:
-        # print("GPU detected...")
-        model = torch.hub.load(model_dir, "geneTCN", source='local').cuda()
-        model_tis = torch.hub.load(model_dir, "tisTCN", source='local').cuda()
-        time.sleep(0.5)
-    else:
-        # print("No GPU detected, using CPU...")
-        model = torch.hub.load(model_dir, "geneTCN", source='local')
-        model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
-        time.sleep(0.5)
-
-    return (model, model_tis)
-
-
-@profile
-def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis):
-    # get sequences and coordinates of ORFs
-    # print("Finding and translating open reading frames...")
-
+# @profile
+def run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis):
     p = psutil.Process()
-
-    ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph, overlap)
-    print("post-get_ORF_info: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
-    # sort by length to minimize impact of batch padding
-    ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
-    length_idx = np.argsort(ORF_lengths)
-    ORF_seq_sorted = [ORF_seq_enc[i] for i in length_idx]
-
-    # print("Scoring translation initiation sites...")
-
     # extract nucleotide sequence surrounding potential start codons
     ORF_TIS_seq_flat = []
     ORF_TIS_seq_idx = []
@@ -236,51 +244,92 @@ def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis)
     ORF_TIS_seq_idx = np.asarray(ORF_TIS_seq_idx)
     ORF_TIS_prob[ORF_TIS_seq_idx] = TIS_prob_list
 
+    return ORF_start_codon, ORF_TIS_prob
+
+
+# @profile
+def kmerize(seq, k):
+    kmerset = set()
+    for i in range(len(seq) - k + 1):
+        kmer = tuple(seq[i: i + k].tolist())
+        kmerset.add(kmer)
+    return kmerset
+
+
+def load_gene_models():
+    # check if directory exists. If not, unzip file
+    if not os.path.exists(model_dir):
+        tar = tarfile.open(model_dir + ".tar.gz", mode="r:gz")
+        tar.extractall(module_dir)
+        tar.close()
+
+    torch.hub.set_dir(model_dir)
+    # print("Loading convolutional model...")
+    if torch.cuda.device_count() > 0:
+        # print("GPU detected...")
+        model = torch.hub.load(model_dir, "geneTCN", source='local').cuda()
+        model_tis = torch.hub.load(model_dir, "tisTCN", source='local').cuda()
+        time.sleep(0.5)
+    else:
+        # print("No GPU detected, using CPU...")
+        model = torch.hub.load(model_dir, "geneTCN", source='local')
+        model_tis = torch.hub.load(model_dir, "tisTCN", source='local')
+        time.sleep(0.5)
+
+    return (model, model_tis)
+
+
+# @profile
+def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis):
+    # get sequences and coordinates of ORFs
+    # print("Finding and translating open reading frames...")
+
+    p = psutil.Process()
+
+    ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph, overlap)
+    print("post-get_ORF_info: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+
+    # sort by length to minimize impact of batch padding
+    ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
+    length_idx = np.argsort(ORF_lengths)
+    ORF_seq_sorted = [ORF_seq_enc[i] for i in length_idx]
+
+    # generate a batch array, setting size to ~gene_batch_size
+    batch_idx_array = []
+    prev_index = 0
+    for array_idx, seq_idx in np.ndenumerate(length_idx):
+        index = array_idx[0]
+        tensor_size = ((index - prev_index) + 1) * ORF_lengths[seq_idx]
+        if tensor_size >= gene_batch_size:
+            batch_idx_array.append(index)
+            prev_index = index
+        elif index == (length_idx.size - 1):
+            batch_idx_array.append(index)
+
+    # for array_idx, seq_idx in np.ndenumerate(length_idx):
+    #     i = array_idx[0]
+    #     length = ORF_lengths[seq_idx]
+    #     array_size = ((i - batch_idx) + 1) * length
+    #     if array_size > gene_batch_size and i > 0:
+    #         batch_idx = i - 1
+    #         batch_idx_array.append(batch_idx)
+    #         # if at end, need to add the final entry
+    #         if i == (length_idx.size - 1):
+    #             batch_idx_array.append(i)
+    #     elif (array_size == gene_batch_size) or (array_size > gene_batch_size and i == 0):
+    #         batch_idx = i
+    #         batch_idx_array.append(batch_idx)
+
+    # print("Scoring translation initiation sites...")
+    ORF_start_codon, ORF_TIS_prob = run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis)
+
     print("post-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # pad to allow creation of batch matrix
     print("pre-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-    # ORF_gene_score = np.zeros(len(ORF_seq_enc), dtype=float)
-    ORF_score_array = np.zeros(len(ORF_seq_sorted), dtype=float)
-    for i in range(0, len(ORF_seq_sorted), gene_batch_size):
-        batch = ORF_seq_sorted[i:i + gene_batch_size]
-        seq_lengths = torch.LongTensor(list(map(len, batch)))
-        seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
-
-        for idx, (seq, seqlen) in enumerate(zip(batch, seq_lengths)):
-            seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
-
-        pred_all = predict(model, seq_tensor)
-
-        print(str(i) + " mid-ORF-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
-        for j, length in enumerate(seq_lengths):
-            subseq = pred_all[j, 0, 0:int(length)]
-            geneprob = float(expit(torch.mean(logit(subseq))))
-
-            # map scores back to ORF_ID and calculate score
-            ORF_id = length_idx[i + j]
-            length = len(ORF_seq_enc[ORF_id]) * 3
-            TIS_prob = ORF_TIS_prob[ORF_id]
-            start_codon = ORF_start_codon[ORF_id]
-            ATG = start_codon == 0
-            GTG = start_codon == 1
-            TTG = start_codon == 2
-
-            combprob = geneprob * weight_gene_prob \
-                       + TIS_prob * weight_TIS_prob \
-                       + ATG * weight_ATG \
-                       + GTG * weight_GTG \
-                       + TTG * weight_TTG
-            maxprob = weight_gene_prob + weight_TIS_prob + max(weight_ATG, weight_TTG, weight_GTG)
-            probthresh = score_threshold * maxprob
-            score = (combprob - probthresh) * length
-
-            # update initial dictionary, removing low scoring ORFs and create score mapping score within a tuple
-            if score >= minimum_ORF_score:
-                ORF_score_array[ORF_id] = score
-
-        print(str(i) + " post-ORF-score addition: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    ORF_score_array = run_ORF_predict(batch_idx_array, ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob,
+                                      ORF_start_codon,
+                                      minimum_ORF_score)
 
     print("post-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
