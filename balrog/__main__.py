@@ -28,7 +28,7 @@ translation_table = 11
 """ Batch size for the temporal convolutional network used to score genes.
 Small batches and big batches slow down the model. Very big batches may crash the 
 GPU. """
-gene_batch_size = 12000
+gene_batch_size = 200
 TIS_batch_size = 1000
 
 """ All following are internal parameters. Change at your own risk."""
@@ -136,33 +136,38 @@ def predict(model, X):
         else:
             X_enc = F.one_hot(X, 21).permute(0, 2, 1).float()
             probs = expit(model(X_enc).cpu())
+            del X_enc
+            torch.cuda.empty_cache()
     return probs
 
 
 # @profile
-def run_ORF_predict(batch_idx_array, ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob, ORF_start_codon,
+def run_ORF_predict(ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob, ORF_start_codon,
                     minimum_ORF_score):
-    p = psutil.Process()
+    # p = psutil.Process()
     ORF_score_array = np.zeros(len(ORF_seq_sorted), dtype=float)
-    prev_i = 0
-    for i in batch_idx_array:
-        batch = ORF_seq_sorted[prev_i:i + 1]
+    seq_tensor = torch.zeros((gene_batch_size, len(ORF_seq_sorted[-1]))).long()
+    for i in range(0, len(ORF_seq_sorted), gene_batch_size):
+        batch = ORF_seq_sorted[i:i + gene_batch_size]
         seq_lengths = torch.LongTensor(list(map(len, batch)))
-        seq_tensor = torch.zeros((len(batch), seq_lengths.max())).long()
 
         for idx, (seq, seqlen) in enumerate(zip(batch, seq_lengths)):
             seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
 
-        pred_all = predict(model, seq_tensor)
+        # create view of seq_tensor to reduce processing size
+        col_idx = torch.LongTensor([*range(0, seq_lengths.max())])
+        seq_tensor_view = seq_tensor[:, col_idx]
 
-        print(str(i) + " mid-ORF-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+        pred_all = predict(model, seq_tensor_view)
+
+        # print(str(i) + " mid-ORF-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
         for j, length in enumerate(seq_lengths):
             subseq = pred_all[j, 0, 0:int(length)]
             geneprob = float(expit(torch.mean(logit(subseq))))
 
             # map scores back to ORF_ID and calculate score
-            ORF_id = length_idx[prev_i + j]
+            ORF_id = length_idx[i + j]
             length = len(ORF_seq_enc[ORF_id]) * 3
             TIS_prob = ORF_TIS_prob[ORF_id]
             start_codon = ORF_start_codon[ORF_id]
@@ -183,9 +188,9 @@ def run_ORF_predict(batch_idx_array, ORF_seq_sorted, model, length_idx, ORF_seq_
             if score >= minimum_ORF_score:
                 ORF_score_array[ORF_id] = score
 
-        prev_i = i + 1
+        # print(str(i) + " post-ORF-score addition: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
-        print(str(i) + " post-ORF-score addition: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    del seq_tensor
 
     return ORF_score_array
 
@@ -202,19 +207,22 @@ def predict_tis(model_tis, X):
         else:
             X_enc = F.one_hot(X, 4).permute(0, 2, 1).float()
             probs = expit(model_tis(X_enc).cpu())
+            del X_enc
+            torch.cuda.empty_cache()
     return probs
 
 
 # @profile
 def run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis):
-    p = psutil.Process()
+    # p = psutil.Process()
+
     # extract nucleotide sequence surrounding potential start codons
     ORF_TIS_seq_flat = []
     ORF_TIS_seq_idx = []
     ORF_TIS_prob = np.zeros(len(ORF_seq_enc), dtype=float)
     ORF_start_codon = [None] * len(ORF_seq_enc)
 
-    print("pre-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("pre-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     for i, TIS in enumerate(TIS_seqs):
         # unpack tuple. Note, downsteam includes start codon, which needs to be removed
         upstream, downstream = TIS
@@ -231,7 +239,7 @@ def run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis):
         ORF_start_codon[i] = start_codon
 
     # batch score TIS
-    print("mid-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("mid-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     TIS_prob_list = np.zeros(len(ORF_TIS_seq_flat), dtype=float)
     for i in range(0, len(ORF_TIS_seq_flat), TIS_batch_size):
         batch = ORF_TIS_seq_flat[i:i + TIS_batch_size]
@@ -243,6 +251,10 @@ def run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis):
     # reindex batched scores
     ORF_TIS_seq_idx = np.asarray(ORF_TIS_seq_idx)
     ORF_TIS_prob[ORF_TIS_seq_idx] = TIS_prob_list
+
+    del TIS_stacked
+    del pred
+    torch.cuda.empty_cache()
 
     return ORF_start_codon, ORF_TIS_prob
 
@@ -294,44 +306,18 @@ def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis)
     length_idx = np.argsort(ORF_lengths)
     ORF_seq_sorted = [ORF_seq_enc[i] for i in length_idx]
 
-    # generate a batch array, setting size to ~gene_batch_size
-    batch_idx_array = []
-    prev_index = 0
-    for array_idx, seq_idx in np.ndenumerate(length_idx):
-        index = array_idx[0]
-        tensor_size = ((index - prev_index) + 1) * ORF_lengths[seq_idx]
-        if tensor_size >= gene_batch_size:
-            batch_idx_array.append(index)
-            prev_index = index
-        elif index == (length_idx.size - 1):
-            batch_idx_array.append(index)
-
-    # for array_idx, seq_idx in np.ndenumerate(length_idx):
-    #     i = array_idx[0]
-    #     length = ORF_lengths[seq_idx]
-    #     array_size = ((i - batch_idx) + 1) * length
-    #     if array_size > gene_batch_size and i > 0:
-    #         batch_idx = i - 1
-    #         batch_idx_array.append(batch_idx)
-    #         # if at end, need to add the final entry
-    #         if i == (length_idx.size - 1):
-    #             batch_idx_array.append(i)
-    #     elif (array_size == gene_batch_size) or (array_size > gene_batch_size and i == 0):
-    #         batch_idx = i
-    #         batch_idx_array.append(batch_idx)
-
     # print("Scoring translation initiation sites...")
     ORF_start_codon, ORF_TIS_prob = run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis)
 
     print("post-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # pad to allow creation of batch matrix
-    print("pre-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-    ORF_score_array = run_ORF_predict(batch_idx_array, ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob,
+    # print("pre-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    ORF_score_array = run_ORF_predict(ORF_seq_sorted, model, length_idx, ORF_seq_enc, ORF_TIS_prob,
                                       ORF_start_codon,
                                       minimum_ORF_score)
 
     print("post-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
-    print("post-ORF consolidation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("post-ORF consolidation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     return ORF_score_array
