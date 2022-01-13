@@ -137,8 +137,7 @@ def traverse_components(component, tc, component_list, edge_weights, minimum_pat
 
 
 #@profile
-def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
-
+def call_true_genes(ORF_score_array, ORF_overlap_dict, minimum_path_score):
     # initilise high scoring ORF set to return
     high_scoring_ORFs_all = set()
 
@@ -149,9 +148,11 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     ORF_index = {}
 
     # add vertexes to graph, store ORF information in ORF_index
-    for ORF_ID in ORF_score_dict.keys():
-        v = g.add_vertex()
-        ORF_index[ORF_ID] = int(v)
+    for index, score in np.ndenumerate(ORF_score_array):
+        if score != 0:
+            ORF_ID = index[0]
+            v = g.add_vertex()
+            ORF_index[ORF_ID] = int(v)
 
     # add edges and edge weights between connected ORFs using ORF_overlap_dict. ORF1 is sink, ORF2 is source
     for ORF1, overlap_dict in ORF_overlap_dict.items():
@@ -194,7 +195,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     vertex_score = tc.new_vertex_property("double")
     for ORF_ID, index in ORF_index.items():
         vertex_ID[tc.vertex(index)] = ORF_ID
-        vertex_score[tc.vertex(index)] = ORF_score_dict[ORF_ID]
+        vertex_score[tc.vertex(index)] = ORF_score_array[ORF_ID]
 
     # add vertex IDs and scores as internal property of graph
     tc.vertex_properties["ID"] = vertex_ID
@@ -213,7 +214,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
         ORF2 = tc.vertex_properties["ID"][e.source()]
 
         # parse sink ORF score calculated by Balrog
-        ORF_score = ORF_score_dict[ORF1]
+        ORF_score = ORF_score_array[ORF1]
 
         # check if edges are present by overlap detection. If not, set edge weight as ORF1 score
         if ORF1 not in ORF_overlap_dict:
@@ -254,7 +255,7 @@ def call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score):
     return high_scoring_ORFs_all
 
 
-#@profile
+# @profile
 def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_length, is_ref, no_filter,
                        stop_codons_for, start_codons, min_ORF_length, max_ORF_overlap, minimum_ORF_score,
                        minimum_path_score, write_idx, input_colours, max_orf_orf_distance):
@@ -291,14 +292,14 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # print("Scoring ORFs: " + str(colour_ID))
 
         # calculate scores for genes
-        ORF_score_dict = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
+        ORF_score_array = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
         print(p_id + " post-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
         # print("Finding highest scoring paths: " + str(colour_ID))
 
         # determine highest scoring genes, stored in list of lists
-        edge_list = call_true_genes(ORF_score_dict, ORF_overlap_dict, minimum_path_score)
+        edge_list = call_true_genes(ORF_score_array, ORF_overlap_dict, minimum_path_score)
 
         print(p_id + " post-high-scoring determination: Perc: " + str(p.memory_percent()) + " full: " + str(
             p.memory_info()))
