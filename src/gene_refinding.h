@@ -24,8 +24,8 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                               const size_t& current_colour,
                               const size_t& radius,
-                              const bool& repeat,
-                              const bool& is_ref,
+                              const bool repeat,
+                              const bool is_ref,
                               const fm_index_coll& fm_idx);
 
 RefindTuple traverse_outward(const GraphVector& graph_vector,

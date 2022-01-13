@@ -335,8 +335,8 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
             bool overlap_complete = false;
 
             // work out strand of 3p node
-            const bool& ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
-            const bool& ORF2_3p_strand = (ORF2_nodes.first.back() >= 0) ? true : false;
+            const bool ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
+            const bool ORF2_3p_strand = (ORF2_nodes.first.back() >= 0) ? true : false;
 
             //get ORF1 and ORF2 5' and 3' ends in pair <node_head_kmer, position>. ORF1 can be references, ORF2 cannot as can change
             const std::pair<int, size_t> ORF1_5p(std::get<0>(ORF1_nodes)[0], std::get<0>(std::get<1>(ORF1_nodes)[0]));

@@ -7,8 +7,8 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                                const size_t& current_colour,
                                const size_t& length_max,
-                               const bool& repeat,
-                               const bool& is_ref)
+                               const bool repeat,
+                               const bool is_ref)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;

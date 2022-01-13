@@ -6,7 +6,7 @@
 
 // match_strings
 std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
-                                                          const bool& write_idx);
+                                                          const bool write_idx);
 
 std::pair<int, bool> seq_search(const std::string& query,
                                 const fm_index_coll& ref_idx);

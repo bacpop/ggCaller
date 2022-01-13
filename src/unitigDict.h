@@ -25,8 +25,8 @@ class unitigDict {
     size_t id;
 
     // add codon information
-    void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
-    //void add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array);
+    void add_codon (const bool full, const bool forward, const int& frame, const uint8_t& array);
+    //void add_codon (const bool full, const bool forward, const int& frame, uint8_t& array);
     void set_forward_stop (bool choice) {_forward_stop = choice;};
     void set_reverse_stop (bool choice) {_reverse_stop = choice;};
     bool forward_stop () const {return _forward_stop;};

@@ -10,8 +10,8 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
                               const NodeTuple& head_node_tuple,
                               const size_t& current_colour,
                               const size_t& length_max,
-                              const bool& repeat,
-                              const bool& is_ref);
+                              const bool repeat,
+                              const bool is_ref);
 
 std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
                                       const size_t& colour_ID,

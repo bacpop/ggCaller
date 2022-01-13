@@ -5,7 +5,7 @@
 std::mutex mtx2;
 
 // add codon, copy semantics
-void unitigDict::add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array) {
+void unitigDict::add_codon (const bool full, const bool forward, const int& frame, const uint8_t& array) {
     if (full)
     {
         _full_codon[forward][frame] = array;
