@@ -296,10 +296,10 @@ def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis)
     # get sequences and coordinates of ORFs
     # print("Finding and translating open reading frames...")
 
-    p = psutil.Process()
+    # p = psutil.Process()
 
     ORF_seq_enc, TIS_seqs = get_ORF_info(ORF_vector, graph, overlap)
-    print("post-get_ORF_info: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("post-get_ORF_info: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # sort by length to minimize impact of batch padding
     ORF_lengths = np.asarray([len(x) for x in ORF_seq_enc])
@@ -309,7 +309,7 @@ def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis)
     # print("Scoring translation initiation sites...")
     ORF_start_codon, ORF_TIS_prob = run_tis_predict(ORF_seq_enc, TIS_seqs, model_tis)
 
-    print("post-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("post-TIS scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # pad to allow creation of batch matrix
     # print("pre-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
@@ -317,7 +317,7 @@ def score_genes(ORF_vector, graph, minimum_ORF_score, overlap, model, model_tis)
                                       ORF_start_codon,
                                       minimum_ORF_score)
 
-    print("post-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    # print("post-ORF scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # print("post-ORF consolidation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
     return ORF_score_array
