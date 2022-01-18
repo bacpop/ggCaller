@@ -519,7 +519,7 @@ def main():
         array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # run run_calculate_ORFs with multithreading
-        with Pool(processes=options.threads, maxtasksperchild=1) as pool:
+        with Pool(processes=options.threads, maxtasksperchild=2) as pool:
             for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.max_path_length, is_ref=is_ref,
