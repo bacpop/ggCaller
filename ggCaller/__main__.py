@@ -15,7 +15,7 @@ from panaroo_runner.annotate import *
 import ast
 import tempfile
 import json
-import psutil
+# import psutil
 
 
 def get_options():
@@ -384,7 +384,7 @@ def main():
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
     # initialise graph
-    graph = ggCaller_cpp.Graph()
+    graph = ggCaller_cpp.create_graph()
 
     # create directory if it isn't present already
     if not os.path.exists(options.out):
@@ -393,9 +393,9 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(options.out, "")
 
-    p0 = psutil.Process()
+    # p0 = psutil.Process()
 
-    print("pre-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+    # print("pre-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
@@ -440,7 +440,7 @@ def main():
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
 
-    print("post-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+    # print("post-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -513,7 +513,7 @@ def main():
 
     torch.set_num_threads(1)
 
-    print("pre-graph traversal: Perc: " + str(p0.memory_percent()) + "  full: " + str(p0.memory_info()))
+    # print("pre-graph traversal: Perc: " + str(p0.memory_percent()) + "  full: " + str(p0.memory_info()))
 
     with SharedMemoryManager() as smm:
         # generate shared numpy arrays
@@ -521,7 +521,7 @@ def main():
         array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # run run_calculate_ORFs with multithreading
-        with Pool(processes=options.threads) as pool:
+        with Pool(processes=options.threads, maxtasksperchild=1) as pool:
             for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.max_path_length, is_ref=is_ref,
@@ -535,7 +535,7 @@ def main():
                 high_scoring_ORFs[colour_ID] = gene_dict
                 high_scoring_ORF_edges[colour_ID] = ORF_edges
 
-            print("post-graph traversal: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+            # print("post-graph traversal: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
             # generate ORF clusters
             if not options.no_clustering:
@@ -545,7 +545,7 @@ def main():
                                                                         options.identity_cutoff,
                                                                         options.len_diff_cutoff)
 
-                print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+                # print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
                             cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
@@ -559,7 +559,7 @@ def main():
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
                             options.truncation_threshold, options.save, options.refind)
 
-                print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+                # print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
             else:
                 print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                                 input_colours, overlap, graph)

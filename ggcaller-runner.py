@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # vim: set fileencoding=<utf-8> :
-# Copyright 2018-2020 John Lees and Nick Croucher
+# Copyright 2021 Samuel Horsfield
 
-"""Convenience wrapper for running PopPUNK directly from source tree."""
+"""Convenience wrapper for running ggCaller directly from source tree."""
 
 from ggCaller.__main__ import main
 

@@ -201,14 +201,11 @@ def predict_tis(model_tis, X):
     with torch.no_grad():
         if torch.cuda.device_count() > 0:
             X_enc = F.one_hot(X, 4).permute(0, 2, 1).float().cuda()
-            probs = expit(model_tis(X_enc).cpu())
-            del X_enc
-            torch.cuda.empty_cache()
         else:
             X_enc = F.one_hot(X, 4).permute(0, 2, 1).float()
-            probs = expit(model_tis(X_enc).cpu())
-            del X_enc
-            torch.cuda.empty_cache()
+        probs = expit(model_tis(X_enc).cpu())
+        del X_enc
+        torch.cuda.empty_cache()
     return probs
 
 
