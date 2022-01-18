@@ -11,8 +11,6 @@ from scipy.special import logit
 import torch
 import torch.nn.functional as F
 
-import psutil
-
 """ Get directories for model and seengenes """
 module_dir = os.path.dirname(os.path.realpath(__file__))
 model_dir = os.path.join(module_dir, "balrog_models")

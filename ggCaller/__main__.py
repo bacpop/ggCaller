@@ -15,8 +15,6 @@ from panaroo_runner.annotate import *
 import ast
 import tempfile
 import json
-# import psutil
-
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'

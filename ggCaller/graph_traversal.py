@@ -2,7 +2,6 @@ import graph_tool.all as gt
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 import _pickle as cPickle
-import psutil
 
 def range_overlapping(x, y):
     if x.start == x.stop or y.start == y.stop:
