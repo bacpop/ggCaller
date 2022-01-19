@@ -88,10 +88,14 @@ class Graph {
                                                                                       const double& id_cutoff,
                                                                                       size_t num_threads);
 
-//    size_t node_size(const int& node_id)
-//    {
-//        return _GraphVector.at(abs(node_id) - 1).size().first;
-//    };
+    size_t node_size(const int& node_id)
+    {
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(_ccdbg, _KmerArray, node_id);
+        auto& um = um_pair.first;
+
+        return um.size;
+    };
 
     // clear graph object
     void clear() {_ccdbg.clear(); _KmerArray.clear();};
@@ -106,9 +110,7 @@ class Graph {
                                      const std::vector<std::string>& input_colours);
 
 
-//    // stored unitigDict objects
-//    GraphVector _GraphVector;
-    
+
     // stored bifrost DBG
     ColoredCDBG<MyUnitigMap> _ccdbg;
 

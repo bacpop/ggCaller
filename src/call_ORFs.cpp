@@ -37,18 +37,18 @@ void generate_ORFs(const int& colour_ID,
     size_t node_start = 0;
 
     // identify the frames of the stop codons in path
-    const int start_node = unitig_path[0];
-    const int end_node = unitig_path.back();
+    const int source_node = unitig_path.at(0);
+    const int sink_node = unitig_path.back();
 
     // create vector with each frame
     std::vector<bool> stop_frames(3, 0);
 
     // get a reference to the unitig map object
-    auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+    auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node);
     auto& start_um = start_um_pair.first;
     auto& start_um_data = start_um_pair.second;
 
-    auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+    auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node);
     auto& end_um = end_um_pair.first;
     auto& end_um_data = end_um_pair.second;
 
@@ -59,7 +59,7 @@ void generate_ORFs(const int& colour_ID,
         stop_frames[2] = 1;
     } else {
         // get codon_arr from start_node
-        const uint8_t &codon_arr = (start_node >= 0) ? start_um_data->get_codon_arr(true, true, 0)
+        const uint8_t &codon_arr = (source_node >= 0) ? start_um_data->get_codon_arr(true, true, 0)
                                                      : start_um_data->get_codon_arr(true, false, 0);
 
         // check if each bit is set, starting from 0 and add to stop_frames
@@ -78,7 +78,7 @@ void generate_ORFs(const int& colour_ID,
         std::vector<size_t> node_range(3);
 
         // get a reference to the unitig map object
-        auto um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node);
         auto& um = um_pair.first;
         auto& um_data = um_pair.second;
 
@@ -316,11 +316,9 @@ void generate_ORFs(const int& colour_ID,
                             // get a reference to the unitig map object
                             start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
                             start_um = start_um_pair.first;
-                            start_um_data = start_um_pair.second;
 
                             end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
                             end_um = end_um_pair.first;
-                            end_um_data = end_um_pair.second;
 
                             start_coords = std::get<1>(ORF_coords).back();
                             end_coords = std::get<1>(ORF_coords).at(0);
@@ -555,11 +553,9 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
                 // get a reference to the unitig map object
                 auto curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_first);
-                auto& curr_um = curr_um_pair.first;
                 auto& curr_um_data = curr_um_pair.second;
 
                 auto new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_first);
-                auto& new_um = new_um_pair.first;
                 auto& new_um_data = new_um_pair.second;
 
                 // get hashes of first nodes to ensure stable assignment across runs
@@ -574,11 +570,9 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     // get a reference to the unitig map object
                     curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_last);
-                    curr_um = curr_um_pair.first;
                     curr_um_data = curr_um_pair.second;
 
                     new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_last);
-                    new_um = new_um_pair.first;
                     new_um_data = new_um_pair.second;
 
                     // if no clear winner, check last nodes

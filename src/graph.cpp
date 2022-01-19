@@ -95,33 +95,54 @@ GraphTuple Graph::read (const std::string& graphfile,
     return graph_tuple;
 }
 
-//void Graph::in(const std::string& infile,
-//               const std::string& graphfile,
-//               const std::string& coloursfile,
-//               const size_t num_threads)
-//{
-//    GraphVector newg;
-//    std::ifstream ifs(infile);
-//    boost::archive::text_iarchive ia(ifs);
-//    ia >> newg;
-//
-//    _GraphVector = newg;
-//
-//    _ccdbg.read(graphfile, coloursfile, num_threads);
-//
-//    for (const auto& node : _GraphVector)
-//    {
-//        _KmerMap[node.head_kmer()] = node.id;
-//    }
-//}
-//
-//void Graph::out(const std::string& outfile)
-//{
-//    std::ofstream ofs(outfile);
-//    boost::archive::text_oarchive oa(ofs);
-//    // write class instance to archive
-//    oa << _GraphVector;
-//}
+void Graph::in(const std::string& infile,
+               const std::string& graphfile,
+               const std::string& coloursfile,
+               const size_t num_threads)
+{
+    std::vector<std::string> kmer_array;
+
+    std::ifstream ifs(infile);
+    boost::archive::text_iarchive ia(ifs);
+    ia >> kmer_array;
+
+    ColoredCDBG<MyUnitigMap> new_ccdbg;
+
+    new_ccdbg.read(graphfile, coloursfile, num_threads);
+
+    _ccdbg = std::move(new_ccdbg);
+
+    _KmerArray.resize(kmer_array.size());
+
+    for (int i = 0; i < kmer_array.size(); i++)
+    {
+        _KmerArray[i] = Kmer(kmer_array[i].c_str());
+
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(_ccdbg, _KmerArray[i]);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
+
+        um_data->id = i;
+    }
+}
+
+void Graph::out(const std::string& outfile)
+{
+    std::ofstream ofs(outfile);
+    boost::archive::text_oarchive oa(ofs);
+    // write class instance to archive
+
+    std::vector<std::string> kmer_array(_KmerArray.size());
+
+    // add all Kmers as strings into kmer_array
+    for (int i = 0; i < _KmerArray.size(); i++)
+    {
+        kmer_array[i] = _KmerArray[i].toString();
+    }
+
+    oa << kmer_array;
+}
 
 
 std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t colour_ID,

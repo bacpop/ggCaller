@@ -195,6 +195,8 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
         auto um_pair = get_um_data(ccdbg, head_kmer_arr, id);
         auto& um = um_pair.first;
 
+        const std::string kmer = head_kmer_arr[abs(id) - 1].toString();
+
         // reverse sequence if strand is negative
         std::string seq;
         if (id >= 0)
