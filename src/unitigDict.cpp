@@ -4,23 +4,24 @@
 
 std::mutex mtx2;
 
-// Clear method for CompactedDBG
-void MyUnitigMap::clear(const UnitigMap<MyUnitigMap>& um_dest){
 
-}
+void MyUnitigMap::clear(const UnitigColorMap<MyUnitigMap>& um_dest)
+{
+    if (!um_dest.isEmpty && (um_dest.getGraph() != nullptr)){
 
-// Clear method for CompactedDBG
-void MyUnitigMap::clear(const UnitigColorMap<MyUnitigMap>& um_dest){
-    return;
+        DataStorage<MyUnitigMap>* ds = um_dest.getGraph()->getData();
+
+        if (ds != nullptr){
+
+            ds->remove(um_dest);
+
+            da_id = 0;
+        }
+    }
 }
 
 // Concatenation method for ColoredCDBG
 void MyUnitigMap::concat(const UnitigColorMap<MyUnitigMap>& um_dest, const UnitigColorMap<MyUnitigMap>& um_src){
-    return;
-}
-
-// Concatenation method for ColoredCDBG
-void MyUnitigMap::concat(const UnitigMap<MyUnitigMap>& um_dest, const UnitigMap<MyUnitigMap>& um_src){
     return;
 }
 
@@ -29,9 +30,8 @@ void MyUnitigMap::extract(const UnitigColors* uc_dest, const UnitigColorMap<MyUn
     return;
 }
 
-// Extraction method for ColoredCDBG
-void MyUnitigMap::extract(const UnitigMap<MyUnitigMap>& um_src, bool last_extraction){
-    return;
+string MyUnitigMap::serialize(const const_UnitigColorMap<MyUnitigMap>& um_src) const {
+    return "";
 }
 
 // add codon, copy semantics
@@ -60,17 +60,6 @@ void MyUnitigMap::add_codon (const bool& full, const bool& forward, const int& f
         _part_codon[forward][frame] = array;
     }
 }
-
-//// add size, copy semantics
-//void MyUnitigMap::add_size(const size_t& full_len, const size_t& part_len) {
-//    std::pair pair(full_len, part_len);
-//    _unitig_size = pair;
-//}
-//
-//// add size, move semantics
-//void MyUnitigMap::add_size(size_t& full_len, size_t& part_len) {
-//    _unitig_size = make_pair(full_len, part_len);
-//}
 
 // check if head and tail colours are the same
 void MyUnitigMap::_check_head_tail_equal() {
@@ -111,11 +100,11 @@ std::vector<uint8_t> MyUnitigMap::get_codon_dict (bool full, bool forward) const
 void MyUnitigMap::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
 {
     // search for neighbour in _neighbours, add colour_ID to colour set
-    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return get< 0 >(item) == neighbour_ID;});
+    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return std::get< 0 >(item) == neighbour_ID;});
     if (it != _neighbours[strand].end())
     {
         mtx2.lock();
-        get<2>(*it).insert(colour_ID);
+        std::get<2>(*it).insert(colour_ID);
         mtx2.unlock();
     }
 }

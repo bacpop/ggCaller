@@ -10,33 +10,16 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     public:
 
     // Clear method for CompactedDBG
-    void clear(const UnitigMap<MyUnitigMap>& um_dest);
-
-    // Clear method for CompactedDBG
     void clear(const UnitigColorMap<MyUnitigMap>& um_dest);
 
     // Concatenation method for ColoredCDBG
     void concat(const UnitigColorMap<MyUnitigMap>& um_dest, const UnitigColorMap<MyUnitigMap>& um_src);
 
-    // Concatenation method for ColoredCDBG
-    void concat(const UnitigMap<MyUnitigMap>& um_dest, const UnitigMap<MyUnitigMap>& um_src);
-
     // Extraction method for ColoredCDBG
     void extract(const UnitigColors* uc_dest, const UnitigColorMap<MyUnitigMap>& um_src, const bool last_extraction);
 
-    // Extraction method for ColoredCDBG
-    void extract(const UnitigMap<MyUnitigMap>& um_src, bool last_extraction);
-
-    //    // serialisation protocol
-//    friend class boost::serialization::access;
-//    template<class Archive>
-//    void serialize(Archive & ar, const unsigned int version)
-//    {
-//        ar & id & _head_kmer & _full_codon & _part_codon & _unitig_size & _unitig_full_colour & _unitig_head_colour &
-//                _unitig_tail_colour & _head_tail_colours_equal & _end_contig & _forward_stop_defined &
-//                _reverse_stop_defined & _forward_stop & _reverse_stop & _succ_heads & _pred_heads & _neighbours &
-//                _traversing_ORFs & _contigcoords;
-//    }
+    // serialisation method
+    string serialize(const const_UnitigColorMap<MyUnitigMap>& um_src) const;
 
     // add and return untig kmers and ids
     void add_head(const std::string& head) {_head_kmer = head;};
@@ -45,7 +28,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // add codon information
     void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
-    //void add_codon (const bool& full, const bool& forward, const int& frame, uint8_t& array);
     void set_forward_stop (bool choice) {_forward_stop = choice;};
     void set_reverse_stop (bool choice) {_reverse_stop = choice;};
     bool forward_stop () const {return _forward_stop;};
@@ -54,15 +36,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // get codon information
     uint8_t get_codon_arr (bool full, bool forward, bool frame) const;
     std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
-
-    // add size information
-//    void add_size(const size_t& full_len, const size_t& part_len);
-//    void add_size(size_t& full_len, size_t& part_len);
-//    std::pair<std::size_t, std::size_t> size() const {return _unitig_size;};
-
-//    // add and return unitig seqs
-//    void add_seq(const std::string& seq) {_unitig_seq = seq;};
-//    std::string seq() const {return _unitig_seq;};
 
     // add contig mapping information
     void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
@@ -82,12 +55,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool end_contig() const {return _end_contig;};
 
     //assign and return neighbours
-//    void set_succ (std::vector<std::pair<std::string, bool>> vect) {_succ_heads = vect;};
-//    void clear_succ() {_succ_heads.clear(); _succ_heads.shrink_to_fit();}
-//    const std::vector<std::pair<std::string, bool>> & get_succs () {return _succ_heads;};
-//    void set_pred (std::vector<std::pair<std::string, bool>> vect) {_pred_heads = vect;};
-//    void clear_pred() {_pred_heads.clear(); _pred_heads.shrink_to_fit();}
-//    const std::vector<std::pair<std::string, bool>> & get_preds () const {return _pred_heads;};
     void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
     void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
 
@@ -100,7 +67,15 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
     void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
 
+
+
     private:
+    // Bifrost data accessor methods
+    inline uint8_t get() const { return da_id; };
+    inline void set(const uint8_t id) { da_id = id; };
+    // Bifrost data accessor ID
+    uint8_t da_id = 0;
+
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
