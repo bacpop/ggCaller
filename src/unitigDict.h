@@ -9,7 +9,25 @@
 class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     public:
 
-//    // serialisation protocol
+    // Clear method for CompactedDBG
+    void clear(const UnitigMap<MyUnitigMap>& um_dest);
+
+    // Clear method for CompactedDBG
+    void clear(const UnitigColorMap<MyUnitigMap>& um_dest);
+
+    // Concatenation method for ColoredCDBG
+    void concat(const UnitigColorMap<MyUnitigMap>& um_dest, const UnitigColorMap<MyUnitigMap>& um_src);
+
+    // Concatenation method for ColoredCDBG
+    void concat(const UnitigMap<MyUnitigMap>& um_dest, const UnitigMap<MyUnitigMap>& um_src);
+
+    // Extraction method for ColoredCDBG
+    void extract(const UnitigColors* uc_dest, const UnitigColorMap<MyUnitigMap>& um_src, const bool last_extraction);
+
+    // Extraction method for ColoredCDBG
+    void extract(const UnitigMap<MyUnitigMap>& um_src, bool last_extraction);
+
+    //    // serialisation protocol
 //    friend class boost::serialization::access;
 //    template<class Archive>
 //    void serialize(Archive & ar, const unsigned int version)
@@ -133,25 +151,19 @@ typedef std::tuple<NodeColourVector, std::vector<std::string>, size_t, int> Grap
 // function to get um and pointer to unitig map data
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                   const std::vector<Kmer>& head_kmer_arr,
-                                                                  const int& id);
+                                                                  const int id);
+
 
 // const qualified function to get pointer to unitig map data
 std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                                                            const std::vector<Kmer>& head_kmer_arr,
-                                                                                                           const int& id);
-
-UnitigColorMap<MyUnitigMap> get_um (ColoredCDBG<MyUnitigMap>& ccdbg,
-                                    const std::vector<Kmer>& head_kmer_arr,
-                                    const int& id);
-
-const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>> get_um (const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                                                             const std::vector<Kmer>& head_kmer_arr,
-                                                                             const int& id);
+                                                                                                           const int id);
 
 // get unitig data from head-kmer
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                   const Kmer& head_kmer);
 
+// const qualified function to get unitig data from head-kmer
 std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                                                            const Kmer& head_kmer);
 
@@ -159,14 +171,10 @@ size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
                const Kmer& head_kmer);
 
 // non-member functions for generating sequence from graph
-std::string unitig_seq(const int& node_id,
-                       const GraphVector& graph_vector,
-                       const ColoredCDBG<>& ccdbg);
-
 std::string generate_sequence_nm(const std::vector<int>& nodelist,
                                  const std::vector<indexPair>& node_coords,
                                  const size_t& overlap,
-                                 const GraphVector& graph_vector,
-                                 const ColoredCDBG<>& ccdbg);
+                                 const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                 const std::vector<Kmer>& head_kmer_arr);
 
 #endif //UNITIG_DICT_H

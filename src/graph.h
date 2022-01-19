@@ -42,13 +42,13 @@ class Graph {
     void out(const std::string& outfile);
 
     // find ORFs
-    std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
+    std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t colour_ID,
                                                   const std::vector<size_t>& node_ids,
-                                                  const bool& repeat,
-                                                  const size_t& overlap,
-                                                  const size_t& max_path_length,
-                                                  bool& is_ref,
-                                                  const bool& no_filter,
+                                                  const bool repeat,
+                                                  const size_t overlap,
+                                                  const size_t max_path_length,
+                                                  bool is_ref,
+                                                  const bool no_filter,
                                                   const std::vector<std::string>& stop_codons_for,
                                                   const std::vector<std::string>& start_codons_for,
                                                   const size_t min_ORF_length,
@@ -57,11 +57,12 @@ class Graph {
                                                   const std::string& FM_fasta_file);
 
     // search orientated paths and DBG to connect ORFs
-    std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t& colour_ID,
-                                                       const ORFVector& ORF_vector,
-                                                       const std::vector<size_t>& target_ORFs,
-                                                       const size_t& max_ORF_path_length,
-                                                       const bool is_ref);
+    std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t colour_ID,
+                                                        const ORFVector& ORF_vector,
+                                                        const std::vector<size_t>& target_ORFs,
+                                                        const size_t max_ORF_path_length,
+                                                        const bool is_ref,
+                                                        const int overlap);
 
     std::pair<ORFMatrixVector, ORFClusterMap> generate_clusters(const ColourORFMap& colour_ORF_map,
                                                                 const size_t& overlap,
@@ -70,7 +71,7 @@ class Graph {
 
     RefindMap refind_gene(const size_t& colour_ID,
                           const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                          const size_t& radius,
+                          const size_t radius,
                           bool is_ref,
                           const int kmer,
                           const std::string& FM_fasta_file,
@@ -87,13 +88,13 @@ class Graph {
                                                                                       const double& id_cutoff,
                                                                                       size_t num_threads);
 
-    size_t node_size(const int& node_id)
-    {
-        return _GraphVector.at(abs(node_id) - 1).size().first;
-    };
+//    size_t node_size(const int& node_id)
+//    {
+//        return _GraphVector.at(abs(node_id) - 1).size().first;
+//    };
 
     // clear graph object
-    void clear() {_GraphVector.clear(); _KmerMap.clear();};
+    void clear() {_ccdbg.clear(); _KmerArray.clear();};
 
     private:
     // index graph
@@ -105,11 +106,11 @@ class Graph {
                                      const std::vector<std::string>& input_colours);
 
 
-    // stored unitigDict objects
-    GraphVector _GraphVector;
+//    // stored unitigDict objects
+//    GraphVector _GraphVector;
     
     // stored bifrost DBG
-    ColoredCDBG<> _ccdbg;
+    ColoredCDBG<MyUnitigMap> _ccdbg;
 
     // mapping of head kmers to nodes
     std::vector<Kmer> _KmerArray;

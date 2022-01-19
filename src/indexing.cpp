@@ -4,14 +4,14 @@
 // define mutex for safe addition to maps
 std::mutex mtx1;
 
-ColoredCDBG<> buildGraph (const std::string& infile_1,
-                          const std::string& infile_2,
-                          const bool is_ref,
-                          const int kmer,
-                          const int threads,
-                          const bool verb,
-                          const bool write_graph,
-                          const std::string& output_prefix)
+ColoredCDBG<MyUnitigMap> buildGraph (const std::string& infile_1,
+                                      const std::string& infile_2,
+                                      const bool is_ref,
+                                      const int kmer,
+                                      const int threads,
+                                      const bool verb,
+                                      const bool write_graph,
+                                      const std::string& output_prefix)
 {
     std::ifstream infile1(infile_1);
     std::ifstream infile2(infile_2);
@@ -46,7 +46,7 @@ ColoredCDBG<> buildGraph (const std::string& infile_1,
         }
     }
 
-    ColoredCDBG<> ccdbg(opt.k);
+    ColoredCDBG<MyUnitigMap> ccdbg(opt.k);
     ccdbg.buildGraph(opt);
     ccdbg.simplify(opt.deleteIsolated, opt.clipTips, opt.verbose);
     ccdbg.buildColors(opt);
@@ -105,7 +105,7 @@ uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list)
 }
 
 // switch codon reading frames depending on partial reading frame used
-uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame)
+uint8_t switchFrame_binary (const uint8_t binary_array, const int frame)
 {
     uint8_t codon_binary = binary_array;
 
@@ -134,7 +134,7 @@ uint8_t switchFrame_binary (const uint8_t& binary_array, const int& frame)
 
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
-                                           const size_t& nb_colours,
+                                           const size_t nb_colours,
                                            const size_t position)
 {
     // get colours information for unitig
@@ -288,7 +288,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
     #pragma omp parallel
     {
         #pragma omp for nowait
-        for (int i = 0; i < head_kmer_arr_size; i++)
+        for (int i = 1; i < head_kmer_arr_size + 1; i++)
         {
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, i);
@@ -417,8 +417,8 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
 void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             ColoredCDBG<MyUnitigMap>& ccdbg,
                             const std::string& fasta_file,
-                            const int& kmer,
-                            const int& colour_ID)
+                            const int kmer,
+                            const int colour_ID)
 {
     // generate the index
     fm_index_coll ref_index;

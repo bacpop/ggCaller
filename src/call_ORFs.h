@@ -9,8 +9,8 @@
 void generate_ORFs(const int& colour_ID,
                    ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
-                   const GraphVector& graph_vector,
-                   const ColoredCDBG<>& ccdbg,
+                   const ColoredCDBG<MyUnitigMap>& ccdbg,
+                   const std::vector<Kmer>& head_kmer_arr,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,
                    const std::vector<int>& unitig_path,
@@ -22,12 +22,12 @@ void generate_ORFs(const int& colour_ID,
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,
                            const std::vector<std::vector<size_t>>& node_ranges,
-                           const int& overlap);
+                           const int overlap);
 
-ORFVector call_ORFs(const int& colour_ID,
+ORFVector call_ORFs(const int colour_ID,
                     const std::vector<PathVector>& all_paths,
-                    const GraphVector& graph_vector,
-                    const ColoredCDBG<>& ccdbg,
+                    const ColoredCDBG<MyUnitigMap>& ccdbg,
+                    const std::vector<Kmer>& head_kmer_arr,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& start_codons_for,
                     const int overlap,
@@ -37,12 +37,15 @@ ORFVector call_ORFs(const int& colour_ID,
 
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
-                           const GraphVector& graph_vector);
+                           const ColoredCDBG<MyUnitigMap>& ccdbg,
+                           const std::vector<Kmer>& head_kmer_arr);
 
-NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
+NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                   const std::vector<Kmer>& head_kmer_arr,
                                    const ORFNodeMap& ORF_node_map);
 
-void update_ORF_node_map (const GraphVector& graph_vector,
+void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                          const std::vector<Kmer>& head_kmer_arr,
                           const size_t& ORF_hash,
                           ORFNodeVector& ORF_node_vector,
                           ORFNodeMap& ORF_node_map);

@@ -4,10 +4,9 @@
 
 #include "search_DBG.h"
 
-MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
+MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         const std::string& query,
                         const int& kmer,
-                        const std::unordered_map<std::string, size_t>& kmer_map,
                         const double& id_cutoff)
 {
     // tuple of head kmer string, strand and coordinates
@@ -28,10 +27,12 @@ MappingCoords query_DBG(const ColoredCDBG<>& ccdbg,
         // if found, add to mapping coords
         if (!um.isEmpty)
         {
+            auto da = um.getData(); // Get DataAccessor from unitig
+            const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
+
             const std::string head_kmer = um.getUnitigHead().toString();
             const int strand = um.strand ? 1 : -1;
-            const int node_id = kmer_map.at(head_kmer) * strand;
-
+            const int node_id = data->id * strand;
 
             if (mapping_coords.empty())
             {

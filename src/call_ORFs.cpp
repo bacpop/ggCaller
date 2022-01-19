@@ -7,8 +7,8 @@
 void generate_ORFs(const int& colour_ID,
                    ORFNodeMap& ORF_node_map,
                    std::unordered_set<size_t>& hashes_to_remove,
-                   const GraphVector& graph_vector,
-                   const ColoredCDBG<>& ccdbg,
+                   const ColoredCDBG<MyUnitigMap>& ccdbg,
+                   const std::vector<Kmer>& head_kmer_arr,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,
                    const std::vector<int>& unitig_path,
@@ -37,21 +37,30 @@ void generate_ORFs(const int& colour_ID,
     size_t node_start = 0;
 
     // identify the frames of the stop codons in path
-    const int &start_node = unitig_path[0];
-    const int &end_node = unitig_path.back();
+    const int start_node = unitig_path[0];
+    const int end_node = unitig_path.back();
 
     // create vector with each frame
     std::vector<bool> stop_frames(3, 0);
 
+    // get a reference to the unitig map object
+    auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+    auto& start_um = start_um_pair.first;
+    auto& start_um_data = start_um_pair.second;
+
+    auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+    auto& end_um = end_um_pair.first;
+    auto& end_um_data = end_um_pair.second;
+
     // determine if start or end of the path has a end-unitig. If so, set all frames to true, else calculate correct frames
-    if (graph_vector.at(abs(start_node) - 1).end_contig() || graph_vector.at(abs(end_node) - 1).end_contig()) {
+    if (start_um_data->end_contig() || end_um_data->end_contig()) {
         stop_frames[0] = 1;
         stop_frames[1] = 1;
         stop_frames[2] = 1;
     } else {
         // get codon_arr from start_node
-        const uint8_t &codon_arr = (start_node >= 0) ? graph_vector.at(abs(start_node) - 1).get_codon_arr(true, true, 0)
-                                                     : graph_vector.at(abs(start_node) - 1).get_codon_arr(true, false, 0);
+        const uint8_t &codon_arr = (start_node >= 0) ? start_um_data->get_codon_arr(true, true, 0)
+                                                     : start_um_data->get_codon_arr(true, false, 0);
 
         // check if each bit is set, starting from 0 and add to stop_frames
         for (size_t i = 0; i < 3; i++) {
@@ -68,8 +77,20 @@ void generate_ORFs(const int& colour_ID,
         // 0th entry is start index of node within the unitig, 1st entry is end index of node within unitig, 2nd is node end, 3rd entry is node length.
         std::vector<size_t> node_range(3);
 
-        // get strand of object
-        std::string seq = unitig_seq(node, graph_vector, ccdbg);
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
+
+        // reverse sequence if strand is negative
+        std::string seq;
+        if (node >= 0)
+        {
+            seq = um.referenceUnitigToString();
+        } else
+        {
+            seq = reverse_complement(um.referenceUnitigToString());
+        }
 
         // calculate length of unitig and get end coordinates
         size_t node_end = seq.size();
@@ -292,20 +313,26 @@ void generate_ORFs(const int& colour_ID,
                             start_node = std::get<0>(ORF_coords).back();
                             end_node = std::get<0>(ORF_coords).at(0);
 
-                            const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
-                            const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
+                            // get a reference to the unitig map object
+                            start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+                            start_um = start_um_pair.first;
+                            start_um_data = start_um_pair.second;
+
+                            end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+                            end_um = end_um_pair.first;
+                            end_um_data = end_um_pair.second;
 
                             start_coords = std::get<1>(ORF_coords).back();
                             end_coords = std::get<1>(ORF_coords).at(0);
 
                             // reverse start_coords
-                            size_t node_end = start_node_info.size().first - 1;
+                            size_t node_end = start_um.size - 1;
                             size_t reversed_end = node_end - std::get<0>(start_coords);
                             size_t reversed_start = node_end - std::get<1>(start_coords);
                             start_coords = std::make_pair(reversed_start, reversed_end);
 
                             // reverse end coords
-                            node_end = end_node_info.size().first - 1;
+                            node_end = end_um.size - 1;
                             reversed_end = node_end - std::get<0>(end_coords);
                             reversed_start = node_end - std::get<1>(end_coords);
                             end_coords = std::make_pair(reversed_start, reversed_end);
@@ -317,11 +344,17 @@ void generate_ORFs(const int& colour_ID,
                             end_coords = std::get<1>(ORF_coords).back();
                         }
 
-                        const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
-                        const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
+                        // get a reference to the unitig map object
+                        start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+                        start_um = start_um_pair.first;
+                        start_um_data = start_um_pair.second;
 
-                        auto start_coords_vec = start_node_info.get_contig_coords(colour_ID);
-                        auto end_coords_vec = end_node_info.get_contig_coords(colour_ID);
+                        end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+                        end_um = end_um_pair.first;
+                        end_um_data = end_um_pair.second;
+
+                        auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
+                        auto end_coords_vec = end_um_data->get_contig_coords(colour_ID);
 
                         // iterate over the start and end vectors, finding match of contig
                         std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
@@ -396,7 +429,7 @@ void generate_ORFs(const int& colour_ID,
                     ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true, contig_pair);
 
                     // think about if there is no TIS, then can ignore ORF?
-                    update_ORF_node_map(graph_vector, ORF_hash, ORF_node_vector, ORF_node_map);
+                    update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
 
                     // once known that ORF is correct, add stop to set
                     prev_stops.insert(codon_pair.second);
@@ -414,7 +447,7 @@ void generate_ORFs(const int& colour_ID,
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                             const std::vector<int>& nodelist,
                             const std::vector<std::vector<size_t>>& node_ranges,
-                            const int& overlap)
+                            const int overlap)
 {
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
     std::vector<int> ORF_node_id;
@@ -471,7 +504,8 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 }
 
 // updates ORF_node_map if identical ORFs with different node sets detected
-void update_ORF_node_map (const GraphVector& graph_vector,
+void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                          const std::vector<Kmer>& head_kmer_arr,
                           const size_t& ORF_hash,
                           ORFNodeVector& ORF_node_vector,
                           ORFNodeMap& ORF_node_map)
@@ -519,9 +553,18 @@ void update_ORF_node_map (const GraphVector& graph_vector,
                     return;
                 }
 
+                // get a reference to the unitig map object
+                auto curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_first);
+                auto& curr_um = curr_um_pair.first;
+                auto& curr_um_data = curr_um_pair.second;
+
+                auto new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_first);
+                auto& new_um = new_um_pair.first;
+                auto& new_um_data = new_um_pair.second;
+
                 // get hashes of first nodes to ensure stable assignment across runs
-                const size_t current_first_hash = hasher{}(graph_vector.at(abs(current_first) - 1).head_kmer());
-                const size_t new_first_hash = hasher{}(graph_vector.at(abs(new_first) - 1).head_kmer());
+                const size_t current_first_hash = hasher{}(curr_um_data->head_kmer());
+                const size_t new_first_hash = hasher{}(new_um_data->head_kmer());
 
                 // compare first/last entries. Assign the new ORF entry to that with the highest ID
                 if (new_first_hash > current_first_hash)
@@ -529,9 +572,18 @@ void update_ORF_node_map (const GraphVector& graph_vector,
                     current_entry = std::move(ORF_node_vector);
                 } else if (new_first_hash == current_first_hash)
                 {
+                    // get a reference to the unitig map object
+                    curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_last);
+                    curr_um = curr_um_pair.first;
+                    curr_um_data = curr_um_pair.second;
+
+                    new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_last);
+                    new_um = new_um_pair.first;
+                    new_um_data = new_um_pair.second;
+
                     // if no clear winner, check last nodes
-                    const size_t current_last_hash = hasher{}(graph_vector.at(abs(current_last) - 1).head_kmer());
-                    const size_t new_last_hash = hasher{}(graph_vector.at(abs(new_last) - 1).head_kmer());
+                    const size_t current_last_hash = hasher{}(curr_um_data->head_kmer());
+                    const size_t new_last_hash = hasher{}(new_um_data->head_kmer());
 
                     if (new_last_hash > current_last_hash)
                     {
@@ -546,7 +598,8 @@ void update_ORF_node_map (const GraphVector& graph_vector,
 // converts ORF entries into a vector and assigns relative strand
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
-                           const GraphVector& graph_vector)
+                           const ColoredCDBG<MyUnitigMap>& ccdbg,
+                           const std::vector<Kmer>& head_kmer_arr)
 {
     ORFVector ORF_vector(ORF_node_map.size());
 
@@ -561,7 +614,13 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<0>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
+
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
+
+            const size_t node_hash = hasher{}(um_data->head_kmer());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -574,7 +633,13 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         for (const auto& node_id : std::get<3>(ORF.second))
         {
             const bool strand = (node_id > 0) ? true : false;
-            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
+
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
+
+            const size_t node_hash = hasher{}(um_data->head_kmer());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -604,7 +669,8 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 }
 
 // calculate the relative strand of each node traversed in an ORF
-NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
+NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                   const std::vector<Kmer>& head_kmer_arr,
                                    const ORFNodeMap& ORF_node_map)
 {
     // initialise map to store orientation of nodes (colour is an ID, not a string
@@ -618,14 +684,24 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
         // iterate over TIS nodes, getting hash for head_kmer for stable node stranding
         for (const auto& node_id : std::get<3>(ORF.second))
         {
-            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
+
+            const size_t node_hash = hasher{}(um_data->head_kmer());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }
         // repeat for ORF nodes
         for (const auto& node_id : std::get<0>(ORF.second))
         {
-            const size_t node_hash = hasher{}(graph_vector.at(abs(node_id) - 1).head_kmer());
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
+
+            const size_t node_hash = hasher{}(um_data->head_kmer());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }
@@ -745,10 +821,10 @@ NodeStrandMap calculate_pos_strand(const GraphVector& graph_vector,
     }
 }
 
-ORFVector call_ORFs(const int& colour_ID,
+ORFVector call_ORFs(const int colour_ID,
                     const std::vector<PathVector>& all_paths,
-                    const GraphVector& graph_vector,
-                    const ColoredCDBG<>& ccdbg,
+                    const ColoredCDBG<MyUnitigMap>& ccdbg,
+                    const std::vector<Kmer>& head_kmer_arr,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& start_codons_for,
                     const int overlap,
@@ -766,7 +842,7 @@ ORFVector call_ORFs(const int& colour_ID,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, graph_vector, ccdbg, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
         }
     }
 
@@ -781,10 +857,10 @@ ORFVector call_ORFs(const int& colour_ID,
     }
 
     // generate pos_strand_map to determine relative strands of each node for each colour
-    auto pos_strand_map = std::move(calculate_pos_strand(graph_vector, ORF_node_map));
+    auto pos_strand_map = std::move(calculate_pos_strand(ccdbg, head_kmer_arr, ORF_node_map));
 
     // group colours of ORFs together
-    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, graph_vector));
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr));
 
     return ORF_vector;
 }
