@@ -2,6 +2,7 @@ import graph_tool.all as gt
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 import _pickle as cPickle
+import psutil
 
 def range_overlapping(x, y):
     if x.start == x.stop or y.start == y.stop:
@@ -261,10 +262,10 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
     # unpack tuple
     colour_ID, node_set = node_set_tuple
 
-    # p_id = "p" + str(colour_ID)
-    # p = psutil.Process()
+    p_id = "p" + str(colour_ID)
+    p = psutil.Process()
 
-    # print(p_id + " pre-traversal: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    print(p_id + " pre-traversal: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -278,7 +279,7 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                                                        stop_codons_for, start_codons, min_ORF_length,
                                                        max_ORF_overlap, write_idx, input_colours[colour_ID])
 
-    # print(p_id + " post-traversal: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    print(p_id + " post-traversal: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # initialise return dictionaries
     gene_dict = {}
@@ -293,15 +294,15 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
         # calculate scores for genes
         ORF_score_array = score_genes(ORF_vector, shd_arr[0], minimum_ORF_score, overlap, shd_arr[1], shd_arr[2])
 
-        # print(p_id + " post-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+        print(p_id + " post-scoring: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
         # print("Finding highest scoring paths: " + str(colour_ID))
 
         # determine highest scoring genes, stored in list of lists
         edge_list = call_true_genes(ORF_score_array, ORF_overlap_dict, minimum_path_score)
 
-        # print(p_id + " post-high-scoring determination: Perc: " + str(p.memory_percent()) + " full: " + str(
-        #     p.memory_info()))
+        print(p_id + " post-high-scoring determination: Perc: " + str(p.memory_percent()) + " full: " + str(
+            p.memory_info()))
 
         # generate a dictionary of all true gene info
         for entry in edge_list:
@@ -343,6 +344,6 @@ def run_calculate_ORFs(node_set_tuple, shd_arr_tup, repeat, overlap, max_path_le
                 high_scoring_ORF_edges[ORF].add(entry[i + 1])
 
     # print("Finished:  " + str(colour_ID))
-    # print(p_id + " post-ORF-calling: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
+    print(p_id + " post-ORF-calling: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     return colour_ID, gene_dict, high_scoring_ORF_edges
