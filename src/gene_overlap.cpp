@@ -64,7 +64,7 @@ void reverse_ORFNodeVector(const ColoredCDBG<MyUnitigMap>& ccdbg,
     for (int i = 0; i < ORF2_nodes.second.size(); i++)
     {
         // get a reference to the unitig map object
-        auto um_pair = get_um_data(ccdbg, head_kmer_arr, i);
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF2_nodes.first.at(i));
         auto& um = um_pair.first;
         auto& um_data = um_pair.second;
 

@@ -384,7 +384,7 @@ def main():
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
     # initialise graph
-    graph = ggCaller_cpp.Graph()
+    graph = ggCaller_cpp.create_graph()
 
     # create directory if it isn't present already
     if not os.path.exists(options.out):
@@ -501,8 +501,6 @@ def main():
     # intiialise results dictionaries and lists
     high_scoring_ORFs = {}
     high_scoring_ORF_edges = {}
-    cluster_id_list = None
-    cluster_dict = None
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls per colour...")
