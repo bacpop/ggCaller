@@ -19,9 +19,9 @@ std::vector<std::size_t> findIndex(const std::string& seq,
                                    const int overlap,
                                    const bool reverse);
 
-uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list);
+std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list);
 
-uint8_t switchFrame_binary (const uint8_t binary_array, const int frame);
+//std::bitset<3> switchFrame_binary (const std::bitset<3> binary_array, const int frame);
 
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,

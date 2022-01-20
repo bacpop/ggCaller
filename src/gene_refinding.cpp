@@ -302,7 +302,6 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
-            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
 //            const auto& colour_set = std::get<2>(neighbour);
 //
 //            // if is_ref, determine if edge is correct
@@ -413,7 +412,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const auto& um_data = um_pair.second;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = 0;
+        const std::bitset<3> codon_arr;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path
@@ -529,7 +528,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
 
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = 0;
+        const std::bitset<3> codon_arr;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path

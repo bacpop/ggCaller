@@ -33,7 +33,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
         // unpack tuple
         const size_t & pos_idx = std::get<0>(node_tuple);
         const int & node_id = std::get<1>(node_tuple);
-        const uint8_t & codon_arr = std::get<2>(node_tuple);
+        const auto & codon_arr = std::get<2>(node_tuple);
         const boost::dynamic_bitset<>& colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
@@ -72,7 +72,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
-            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
+//            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
 //            const auto& colour_set = std::get<2>(neighbour);
 //
 //            // if is_ref, determine if edge is correct
@@ -122,10 +122,10 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // calculate modulus for path and updated cached path reading frame
             int modulus = path_length % 3;
-            uint8_t updated_codon_arr = (codon_arr & ~(frame.at(modulus)));
+            std::bitset<3> updated_codon_arr = (codon_arr & ~(neighbour_um_data->get_codon_arr(false, neighbour_strand, modulus)));
 
             // return path if end of contig found or if stop indexes paired
-            if (neighbour_um_data->end_contig() || updated_codon_arr == 0)
+            if (neighbour_um_data->end_contig() || updated_codon_arr.none())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -181,7 +181,7 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const int head_id = (int) node_id;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = um_data->get_codon_arr(true, true, 0);
+        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
@@ -215,7 +215,7 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const int head_id = ((int) node_id) * -1;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = um_data->get_codon_arr(true, false, 0);
+        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 

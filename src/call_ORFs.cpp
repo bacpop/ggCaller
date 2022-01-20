@@ -59,12 +59,12 @@ void generate_ORFs(const int& colour_ID,
         stop_frames[2] = 1;
     } else {
         // get codon_arr from start_node
-        const uint8_t &codon_arr = (source_node >= 0) ? start_um_data->get_codon_arr(true, true, 0)
+        const std::bitset<3> codon_arr = (source_node >= 0) ? start_um_data->get_codon_arr(true, true, 0)
                                                      : start_um_data->get_codon_arr(true, false, 0);
 
         // check if each bit is set, starting from 0 and add to stop_frames
         for (size_t i = 0; i < 3; i++) {
-            if (codon_arr & (1 << i)) {
+            if (codon_arr[i]) {
                 stop_frames[i] = 1;
             }
         }

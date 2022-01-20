@@ -90,47 +90,60 @@ std::vector<std::size_t> findIndex(const std::string& seq,
 }
 
 // calculate stop codon frames for each reading frame
-uint8_t calculateFrame_binary (const std::vector<std::size_t>& index_list)
+std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list)
 {
-    uint8_t codon_binary = 0;
+    std::bitset<3> binary_array;
 
     for (const auto& index : index_list)
     {
-        uint8_t modulus = index % 3;
-        codon_binary |= 1UL << modulus;
+        size_t modulus = index % 3;
+        binary_array[modulus] = 1;
     }
 
+    std::bitset<9> full_binary;
 
-    return codon_binary;
+    bool bit0 = binary_array[0];
+    bool bit1 = binary_array[1];
+    bool bit2 = binary_array[2];
+
+    // go through binary_array, setting for each frame
+    full_binary[0] = bit0;
+    full_binary[1] = bit1;
+    full_binary[2] = bit2;
+    full_binary[3] = bit2;
+    full_binary[4] = bit0;
+    full_binary[5] = bit1;
+    full_binary[6] = bit1;
+    full_binary[7] = bit2;
+    full_binary[8] = bit0;
+
+    return full_binary;
 }
 
-// switch codon reading frames depending on partial reading frame used
-uint8_t switchFrame_binary (const uint8_t binary_array, const int frame)
-{
-    uint8_t codon_binary = binary_array;
-
-    bool bit0 = codon_binary & (1 << 0);
-    bool bit1 = codon_binary & (1 << 1);
-    bool bit2 = codon_binary & (1 << 2);
-
-    if (frame == 1)
-    {
-        codon_binary ^= (-bit2 ^ codon_binary) & (1UL << 0);
-        codon_binary ^= (-bit0 ^ codon_binary) & (1UL << 1);
-        codon_binary ^= (-bit1 ^ codon_binary) & (1UL << 2);
-
-    } else if (frame == 2)
-    {
-        codon_binary ^= (-bit1 ^ codon_binary) & (1UL << 0);
-        codon_binary ^= (-bit2 ^ codon_binary) & (1UL << 1);
-        codon_binary ^= (-bit0 ^ codon_binary) & (1UL << 2);
-    }
-    bit0 = codon_binary & (1 << 0);
-    bit1 = codon_binary & (1 << 1);
-    bit2 = codon_binary & (1 << 2);
-
-    return codon_binary;
-}
+//// switch codon reading frames depending on partial reading frame used
+//std::bitset<3> switchFrame_binary (const std::bitset<3> binary_array, const int frame)
+//{
+//    std::bitset<3> codon_binary = binary_array;
+//
+//    bool bit0 = codon_binary[0];
+//    bool bit1 = codon_binary[1];
+//    bool bit2 = codon_binary[2];
+//
+//    if (frame == 1)
+//    {
+//        codon_binary[0] = bit2;
+//        codon_binary[1] = bit0;
+//        codon_binary[2] = bit1;
+//
+//    } else if (frame == 2)
+//    {
+//        codon_binary[0] = bit1;
+//        codon_binary[1] = bit2;
+//        codon_binary[2] = bit0;
+//    }
+//
+//    return codon_binary;
+//}
 
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
@@ -252,23 +265,18 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
 
     // insert frame mapping into unitig dictionaries, using head-kmer as the identifier
     // full unitig dictionary
-    const uint8_t full_binary_pos = calculateFrame_binary(full_indices_pos);
-    const uint8_t full_binary_neg = calculateFrame_binary(full_indices_neg);
+    const auto full_binary_pos = calculateFrame_binary(full_indices_pos);
+    const auto full_binary_neg = calculateFrame_binary(full_indices_neg);
 
-    um_data->add_codon(true, true, 0, full_binary_pos);
-    um_data->add_codon(true, false, 0, full_binary_neg);
+    um_data->add_codon(true, true, full_binary_pos);
+    um_data->add_codon(true, false, full_binary_neg);
 
     // part unitig dictionary
-    const uint8_t part_binary_pos = calculateFrame_binary(part_indices_pos);
-    const uint8_t part_binary_neg = calculateFrame_binary(part_indices_neg);
+    const auto part_binary_pos = calculateFrame_binary(part_indices_pos);
+    const auto part_binary_neg = calculateFrame_binary(part_indices_neg);
 
-    um_data->add_codon(false, true, 0, part_binary_pos);
-    um_data->add_codon(false, true, 1, switchFrame_binary(part_binary_pos, 1));
-    um_data->add_codon(false, true, 2, switchFrame_binary(part_binary_pos, 2));
-
-    um_data->add_codon(false, false, 0, part_binary_neg);
-    um_data->add_codon(false, false, 1, switchFrame_binary(part_binary_neg, 1));
-    um_data->add_codon(false, false, 2, switchFrame_binary(part_binary_neg, 2));
+    um_data->add_codon(false, true, part_binary_pos);
+    um_data->add_codon(false, false, part_binary_neg);
 }
 
 void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -395,12 +403,13 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             // update full codon array to be 3 frame stop index to enable complete traversal
             if (num_succ == 0 || num_pred == 0 || !um_data->head_tail_colours_equal() || um_data->end_contig())
             {
-                // set first three bits to 1
-                uint8_t full_binary = 7;
+                // set all bits to 1
+                std::bitset<9> full_binary;
+                full_binary.set();
 
                 // update full codon indexes
-                um_data->add_codon(true, true, 0, full_binary);
-                um_data->add_codon(true, false, 0, full_binary);
+                um_data->add_codon(true, true, full_binary);
+                um_data->add_codon(true, false, full_binary);
 
                 um_data->set_forward_stop(true);
                 um_data->set_reverse_stop(true);

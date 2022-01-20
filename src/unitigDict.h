@@ -28,15 +28,15 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     size_t get_id () const {return _id;};
 
     // add codon information
-    void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
+    void add_codon (const bool& full, const bool& forward, const std::bitset<9>& array);
     void set_forward_stop (bool choice) {_forward_stop = choice;};
     void set_reverse_stop (bool choice) {_reverse_stop = choice;};
     bool forward_stop () const {return _forward_stop;};
     bool reverse_stop () const {return _reverse_stop;};
 
     // get codon information
-    uint8_t get_codon_arr (bool full, bool forward, bool frame) const;
-    std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
+    std::bitset<3> get_codon_arr (const bool full, const bool forward, const int frame) const;
+//    std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
 
     // add contig mapping information
 //    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
@@ -80,9 +80,13 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
-    // TODO change this to a static bitset for each full and part codon, which looks at ranges of the bitset to see if they are equal to 0
-    std::vector<std::vector<uint8_t>> _full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
-    std::vector<std::vector<uint8_t>> _part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
+    // TODO remove 9-bit long full_codon as not used, place only first 3
+    // for codons from 0th position - first 9 are forward strand, second 9 are reverse.
+    // Of each 9, first 3 = 0th frame, second 3 = 1st frame, third 3 = 2nd frame
+    std::bitset<18> _full_codon;
+    std::bitset<18> _part_codon;
+//    std::vector<std::vector<uint8_t>> _full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
+//    std::vector<std::vector<uint8_t>> _part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
 
     // unitig colours
     boost::dynamic_bitset<> _unitig_full_colour;
@@ -95,9 +99,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // bool to determine if unitig is end of a contig/assembly
     bool _end_contig = false;
-
-    bool _forward_stop_defined = false;
-    bool _reverse_stop_defined = false;
 
     // forward_stop presence/absence
     bool _forward_stop = false;

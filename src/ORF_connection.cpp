@@ -285,7 +285,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
-            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
 //            const auto& colour_set = std::get<2>(neighbour);
 //
 //            // if is_ref, determine if edge is correct

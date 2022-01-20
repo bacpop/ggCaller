@@ -87,7 +87,7 @@ typedef std::map<size_t, std::map<size_t, ORFNodeVector>> ColourORFMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
-typedef std::tuple<size_t, int, uint8_t, boost::dynamic_bitset<>, size_t> NodeTuple;
+typedef std::tuple<size_t, int, std::bitset<3>, boost::dynamic_bitset<>, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
 // stack for holding node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
