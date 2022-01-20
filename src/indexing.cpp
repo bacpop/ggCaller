@@ -338,8 +338,9 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             // reset full_colours to repeat with predecessors
             full_colours = um_data->full_colour();
 
-            // iterate over the connected nodes in predecessors
-            for (const auto& pred : get_neighbours(um.getPredecessors()))
+            // iterate over the connected nodes in predecessors, flipping sign to get successors in reverse strand
+            um.strand = !um.strand;
+            for (const auto& pred : get_neighbours(um.getSuccessors()))
             {
                 // get copy of predecessor unitig_ID
                 mtx1.lock();
@@ -477,7 +478,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             const Kmer prev_head_Kmer = head_kmer_arr.at(abs(prev_head) - 1);
                             auto prev_um = ccdbg.find(prev_head_Kmer, true);
 
-                            DataAccessor<MyUnitigMap>* prev_da = um.getData();
+                            DataAccessor<MyUnitigMap>* prev_da = prev_um.getData();
                             MyUnitigMap* prev_um_data = prev_da->getData(prev_um);
 
                             prev_um_data->add_neighbour_colour(prev_strand, node_ID, colour_ID);
