@@ -24,7 +24,8 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // add and return untig kmers and ids
     void add_head(const std::string& head) {_head_kmer = head;};
     const std::string& head_kmer() const {return _head_kmer;};
-    size_t id;
+    void set_id (size_t new_id) {_id = new_id;};
+    size_t get_id () const {return _id;};
 
     // add codon information
     void add_codon (const bool& full, const bool& forward, const int& frame, const uint8_t& array);
@@ -67,8 +68,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
     void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
 
-
-
     private:
     // Bifrost data accessor methods
     inline uint8_t get() const { return da_id; };
@@ -76,6 +75,8 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // Bifrost data accessor ID
     uint8_t da_id = 0;
 
+    // custom unitig IDs
+    int _id;
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
@@ -94,9 +95,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // check head and tail colours equal
     void _check_head_tail_equal();
 
-//    // unitig sequence
-//    std::string _unitig_seq;
-
     // bool to determine if unitig is end of a contig/assembly
     bool _end_contig = false;
 
@@ -108,8 +106,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool _reverse_stop = false;
 
     // node neighbours. Neighbours map contains successors (true) and predecessors (false)
-    std::vector<std::pair<std::string, bool>> _succ_heads;
-    std::vector<std::pair<std::string, bool>> _pred_heads;
     std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 
     // traversing ORFs (key is colour_ID, entry is traversing ORF)
@@ -142,8 +138,8 @@ std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<My
 std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                                                            const Kmer& head_kmer);
 
-size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
-               const Kmer& head_kmer);
+//size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
+//               const Kmer& head_kmer);
 
 // non-member functions for generating sequence from graph
 std::string generate_sequence_nm(const std::vector<int>& nodelist,

@@ -135,11 +135,9 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t 
 
             // get a reference to the unitig map object
             auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
-            auto& start_um = start_um_pair.first;
             auto& start_um_data = start_um_pair.second;
 
             auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
-            auto& end_um = end_um_pair.first;
             auto& end_um_data = end_um_pair.second;
 
             auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
@@ -314,7 +312,7 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
 
             // get reference to unitig_dict object for neighbour
-            const auto neighbour_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            const auto neighbour_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
             const auto& neighbour_um = neighbour_pair.first;
             const auto& neighbour_um_data = neighbour_pair.second;
 
@@ -398,12 +396,9 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const bool TIS_present = (!std::get<3>(ORF_info).empty()) ? true : false;
         const int head_id = ((TIS_present) ? std::get<3>(ORF_info).at(0) : std::get<0>(ORF_info).at(0)) * -1;
 
-        // get unitig_ID Zero based, so take absolute value and take 1
-        const auto unitig_id = abs(head_id) - 1;
-
         // get reference to unitig_dict object
         // get unitig data
-        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, unitig_id);
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
         const auto& um = um_pair.first;
         const auto& um_data = um_pair.second;
 
@@ -517,11 +512,8 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // get the node id to traverse from
         const int& head_id = std::get<0>(ORF_info).back();
 
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = abs(head_id) - 1;
-
         // get reference to unitig_dict object
-        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, unitig_id);
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
         const auto& um = um_pair.first;
         const auto& um_data = um_pair.second;
 

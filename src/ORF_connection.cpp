@@ -18,11 +18,9 @@ void add_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
             // get start node ID, Only add 5 prime node.
             // get a reference to the unitig map object
             auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
-            auto& start_um = start_um_pair.first;
             auto& start_um_data = start_um_pair.second;
 
             auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
-            auto& end_um = end_um_pair.first;
             auto& end_um_data = end_um_pair.second;
 
             // add ORF information to graph
@@ -53,11 +51,9 @@ void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // get a reference to the unitig map object
             auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
-            auto& start_um = start_um_pair.first;
             auto& start_um_data = start_um_pair.second;
 
             auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
-            auto& end_um = end_um_pair.first;
             auto& end_um_data = end_um_pair.second;
 
             // add ORF information to graph
@@ -263,7 +259,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
         ORF_stack.pop();
 
         // get unitig_dict entry in graph_vector
-        um_pair = get_um_data(ccdbg, head_kmer_arr, head_node);
+        um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
         um = um_pair.first;
         um_data = um_pair.second;
 

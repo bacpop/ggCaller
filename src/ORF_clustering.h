@@ -22,11 +22,6 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const double& id_cutoff,
                                const double& len_diff_cutoff);
 
-//std::string generate_sequence_private(const std::vector<int>& nodelist,
-//                                      const std::vector<indexPair>& node_coords,
-//                                      const size_t& overlap,
-//                                      const GraphVector& _GraphVector);
-
 double align_seqs(const ORFNodeVector& ORF1_info,
                   const ORFNodeVector& ORF2_info,
                   const ColoredCDBG<MyUnitigMap>& ccdbg,

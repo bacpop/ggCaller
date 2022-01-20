@@ -123,7 +123,7 @@ void Graph::in(const std::string& infile,
         auto& um = um_pair.first;
         auto& um_data = um_pair.second;
 
-        um_data->id = i;
+        um_data->set_id(i + 1);
     }
 }
 
@@ -323,11 +323,11 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
 }
 
 NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
-                                     const std::vector<std::string>& stop_codons_rev,
-                                     const int& kmer,
-                                     const size_t& nb_colours,
-                                     const bool is_ref,
-                                     const std::vector<std::string>& input_colours)
+                                      const std::vector<std::string>& stop_codons_rev,
+                                      const int& kmer,
+                                      const size_t& nb_colours,
+                                      const bool is_ref,
+                                      const std::vector<std::string>& input_colours)
 {
     auto node_colour_vector = index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
 

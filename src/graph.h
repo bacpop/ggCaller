@@ -103,11 +103,11 @@ class Graph {
     private:
     // index graph
     NodeColourVector _index_graph (const std::vector<std::string>& stop_codons_for,
-                                     const std::vector<std::string>& stop_codons_rev,
-                                     const int& kmer,
-                                     const size_t& nb_colours,
-                                     const bool is_ref,
-                                     const std::vector<std::string>& input_colours);
+                                   const std::vector<std::string>& stop_codons_rev,
+                                   const int& kmer,
+                                   const size_t& nb_colours,
+                                   const bool is_ref,
+                                   const std::vector<std::string>& input_colours);
 
 
 

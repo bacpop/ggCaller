@@ -82,7 +82,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
 
             // get reference to unitig_dict object for neighbour
-            const auto neighbour_um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            const auto neighbour_um_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
             const auto& neighbour_um = neighbour_um_pair.first;
             const auto& neighbour_um_data = neighbour_um_pair.second;
 

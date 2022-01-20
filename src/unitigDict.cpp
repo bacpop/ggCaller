@@ -163,16 +163,16 @@ std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, 
     return {um, const_cast<MyUnitigMap *>(unitig_map)};
 }
 
-// retrieve id from k-mer mapping
-size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
-               const Kmer& head_kmer)
-{
-    auto um = ccdbg.find(head_kmer, true);
-    auto da = um.getData(); // Get DataAccessor from unitig
-    const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
-
-    return data->id;
-}
+//// retrieve id from k-mer mapping
+//size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
+//               const Kmer& head_kmer)
+//{
+//    auto um = ccdbg.find(head_kmer, true);
+//    auto da = um.getData(); // Get DataAccessor from unitig
+//    const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
+//
+//    return data->get_id();
+//}
 
 // non-member function for generating sequence from DBG
 std::string generate_sequence_nm(const std::vector<int>& nodelist,

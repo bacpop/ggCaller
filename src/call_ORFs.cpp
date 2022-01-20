@@ -611,7 +611,6 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
             auto& um_data = um_pair.second;
 
             const size_t node_hash = hasher{}(um_data->head_kmer());
@@ -630,7 +629,6 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
             auto& um_data = um_pair.second;
 
             const size_t node_hash = hasher{}(um_data->head_kmer());
@@ -680,7 +678,6 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         {
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
             auto& um_data = um_pair.second;
 
             const size_t node_hash = hasher{}(um_data->head_kmer());
@@ -692,7 +689,6 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         {
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
             auto& um_data = um_pair.second;
 
             const size_t node_hash = hasher{}(um_data->head_kmer());

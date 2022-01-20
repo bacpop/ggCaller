@@ -66,7 +66,6 @@ void reverse_ORFNodeVector(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // get a reference to the unitig map object
         auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF2_nodes.first.at(i));
         auto& um = um_pair.first;
-        auto& um_data = um_pair.second;
 
         // get absolute last node index (same as unitig length minus 1 as zero indexed)
         size_t node_end = um.size - 1;

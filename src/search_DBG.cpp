@@ -27,12 +27,12 @@ MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // if found, add to mapping coords
         if (!um.isEmpty)
         {
-            auto da = um.getData(); // Get DataAccessor from unitig
-            const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
+            auto da = um.getData();
+            const MyUnitigMap* um_data = da->getData(um);
 
             const std::string head_kmer = um.getUnitigHead().toString();
             const int strand = um.strand ? 1 : -1;
-            const int node_id = data->id * strand;
+            const int node_id = um_data->get_id() * strand;
 
             if (mapping_coords.empty())
             {

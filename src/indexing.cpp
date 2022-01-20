@@ -184,37 +184,28 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
 {
     // initialise unitig_dict
     DataAccessor<MyUnitigMap>* da = um.getData();
-    MyUnitigMap* unitig_map = da->getData(um);
+    MyUnitigMap* um_data = da->getData(um);
 
     // generate string from unitig
     const std::string unitig = um.referenceUnitigToString();
     const size_t unitig_len = unitig.size();
 
-//    // add unitig sequence to unitig_dict
-//    unitig_dict.add_seq(unitig);
-
     // get head kmer for unitig, add to kmer dictionary
     const Kmer head_kmer_binary = um.getUnitigHead();
     const std::string head_kmer = head_kmer_binary.toString();
-    unitig_map->add_head(head_kmer);
+    um_data->add_head(head_kmer);
 
     // calculate colours for unitig
     boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
-    unitig_map->add_head_colour(std::move(unitig_colours));
+    um_data->add_head_colour(std::move(unitig_colours));
 
     // generate colours for tail also
     const Kmer tail_kmer = um.getUnitigTail();
     const auto um_tail = ccdbg.find(tail_kmer, true);
     const size_t tail_pos = unitig_len - kmer;
     unitig_colours = generate_colours(um_tail, nb_colours, tail_pos);
-    unitig_map->add_tail_colour(std::move(unitig_colours));
+    um_data->add_tail_colour(std::move(unitig_colours));
     
-    // generate successor head kmers (need to flip sign to get successors in reverse strand)
-//    unitig_map->set_succ(std::move(get_neighbours(um.getSuccessors())));
-    um.strand = !um.strand;
-//    unitig_map->set_pred(std::move(get_neighbours(um.getSuccessors())));
-
-
     // analyse codon presence/absence
     //initialise codon search vectors
     std::vector<std::size_t> full_indices_pos;
@@ -264,20 +255,20 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     const uint8_t full_binary_pos = calculateFrame_binary(full_indices_pos);
     const uint8_t full_binary_neg = calculateFrame_binary(full_indices_neg);
 
-    unitig_map->add_codon(true, true, 0, full_binary_pos);
-    unitig_map->add_codon(true, false, 0, full_binary_neg);
+    um_data->add_codon(true, true, 0, full_binary_pos);
+    um_data->add_codon(true, false, 0, full_binary_neg);
 
     // part unitig dictionary
     const uint8_t part_binary_pos = calculateFrame_binary(part_indices_pos);
     const uint8_t part_binary_neg = calculateFrame_binary(part_indices_neg);
 
-    unitig_map->add_codon(false, true, 0, part_binary_pos);
-    unitig_map->add_codon(false, true, 1, switchFrame_binary(part_binary_pos, 1));
-    unitig_map->add_codon(false, true, 2, switchFrame_binary(part_binary_pos, 2));
+    um_data->add_codon(false, true, 0, part_binary_pos);
+    um_data->add_codon(false, true, 1, switchFrame_binary(part_binary_pos, 1));
+    um_data->add_codon(false, true, 2, switchFrame_binary(part_binary_pos, 2));
 
-    unitig_map->add_codon(false, false, 0, part_binary_neg);
-    unitig_map->add_codon(false, false, 1, switchFrame_binary(part_binary_neg, 1));
-    unitig_map->add_codon(false, false, 2, switchFrame_binary(part_binary_neg, 2));
+    um_data->add_codon(false, false, 0, part_binary_neg);
+    um_data->add_codon(false, false, 1, switchFrame_binary(part_binary_neg, 1));
+    um_data->add_codon(false, false, 2, switchFrame_binary(part_binary_neg, 2));
 }
 
 void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -308,7 +299,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 mtx1.unlock();
                 const auto& adj_um = adj_um_pair.first;
                 const auto& adj_um_data = adj_um_pair.second;
-                const int succ_id = adj_um_data->id;
+                const int succ_id = adj_um_data->get_id();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate tail, as this portion will overlap with next unitig
@@ -356,7 +347,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 mtx1.unlock();
                 const auto& adj_um = adj_um_pair.first;
                 const auto& adj_um_data = adj_um_pair.second;
-                const auto pred_id = adj_um_data->id;
+                const auto pred_id = adj_um_data->get_id();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate head, as this portion will overlap with next unitig
@@ -470,10 +461,10 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     int strand = um.strand ? 1 : -1;
 
                     DataAccessor<MyUnitigMap>* da = um.getData();
-                    MyUnitigMap* unitig_map = da->getData(um);
+                    MyUnitigMap* um_data = da->getData(um);
 
                     // look for the head in the graph, determine node ID and add to genome_path
-                    int node_ID = unitig_map->id * strand;
+                    int node_ID = um_data->get_id() * strand;
 
                     if (prev_head != node_ID) {
                         if (prev_head != 0)
@@ -487,14 +478,14 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             auto prev_um = ccdbg.find(prev_head_Kmer, true);
 
                             DataAccessor<MyUnitigMap>* prev_da = um.getData();
-                            MyUnitigMap* prev_unitig_map = prev_da->getData(prev_um);
+                            MyUnitigMap* prev_um_data = prev_da->getData(prev_um);
 
-                            prev_unitig_map->add_neighbour_colour(prev_strand, node_ID, colour_ID);
-                            unitig_map->add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
+                            prev_um_data->add_neighbour_colour(prev_strand, node_ID, colour_ID);
+                            um_data->add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
 
                             // if moving to new node, need to update previous node distance
                             std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
-                            prev_unitig_map->add_contig_coords(colour_ID, node_contig_mappings.back().second);
+                            prev_um_data->add_contig_coords(colour_ID, node_contig_mappings.back().second);
                         }
                         prev_head = node_ID;
 
@@ -511,7 +502,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     if (kmer_index == num_kmers)
                     {
                         std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
-                        unitig_map->add_contig_coords(colour_ID, node_contig_mappings.back().second);
+                        um_data->add_contig_coords(colour_ID, node_contig_mappings.back().second);
                     }
                 }
                 kmer_counter++;
@@ -548,8 +539,8 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
     {
         head_kmer_arr.push_back(um.getUnitigHead());
         DataAccessor<MyUnitigMap>* da = um.getData();
-        MyUnitigMap* unitig_map = da->getData(um);
-        unitig_map->id = unitig_id++;
+        MyUnitigMap* um_data = da->getData(um);
+        um_data->set_id(unitig_id++);
     }
 
     NodeColourVector node_colour_vector(nb_colours);
@@ -568,14 +559,14 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             // generate results per unitig
             analyse_unitigs_binary(ccdbg, um, stop_codons_for, stop_codons_rev, kmer, nb_colours);
             DataAccessor<MyUnitigMap>* da = um.getData();
-            MyUnitigMap* unitig_map = da->getData(um);
+            MyUnitigMap* um_data = da->getData(um);
 
             // add to node_colour_map_private
-            for (size_t i = 0; i < unitig_map->full_colour().size(); i++)
+            for (size_t i = 0; i < um_data->full_colour().size(); i++)
             {
-                if (unitig_map->full_colour()[i])
+                if (um_data->full_colour()[i])
                 {
-                    node_colour_vector_private[i].push_back(unitig_map->id);
+                    node_colour_vector_private[i].push_back(um_data->get_id());
                 }
             }
         }
