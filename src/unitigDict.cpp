@@ -97,17 +97,17 @@ std::vector<uint8_t> MyUnitigMap::get_codon_dict (bool full, bool forward) const
     }
 }
 
-void MyUnitigMap::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
-{
-    // search for neighbour in _neighbours, add colour_ID to colour set
-    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return std::get< 0 >(item) == neighbour_ID;});
-    if (it != _neighbours[strand].end())
-    {
-        mtx2.lock();
-        std::get<2>(*it).insert(colour_ID);
-        mtx2.unlock();
-    }
-}
+//void MyUnitigMap::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
+//{
+//    // search for neighbour in _neighbours, add colour_ID to colour set
+//    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return std::get< 0 >(item) == neighbour_ID;});
+//    if (it != _neighbours[strand].end())
+//    {
+//        mtx2.lock();
+//        std::get<2>(*it).insert(colour_ID);
+//        mtx2.unlock();
+//    }
+//}
 
 // function to get unitig data from an ID number, returning pointer to data
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,

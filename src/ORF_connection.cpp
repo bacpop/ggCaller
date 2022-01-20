@@ -266,24 +266,36 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
 
-        // iterate over neighbours
-        for (const auto& neighbour : um_data->get_neighbours(strand))
+        // reverse the strand of the unitig
+        if (!strand)
+        {
+            um.strand = !um.strand;
+        }
+
+        // iterate over neighbours, recurring through incomplete paths
+        for (auto& neighbour_um : um.getSuccessors())
         {
             // make copy of path_length
             auto temp_path_length = path_length;
 
-            // parse neighbour information.
-            const auto& neighbour_id = std::get<0>(neighbour);
-            const auto& colour_set = std::get<2>(neighbour);
+            auto neighbour_da = neighbour_um.getData();
+            auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+            const bool neighbour_strand = neighbour_um.strand;
 
-            // if is_ref, determine if edge is correct
-            if (is_ref)
-            {
-                if (colour_set.find(current_colour) == colour_set.end())
-                {
-                    continue;
-                }
-            }
+
+            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
+            const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
+            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
+//            const auto& colour_set = std::get<2>(neighbour);
+//
+//            // if is_ref, determine if edge is correct
+//            if (is_ref)
+//            {
+//                if (colour_set.find(current_colour) == colour_set.end())
+//                {
+//                    continue;
+//                }
+//            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -292,10 +304,10 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                 continue;
             }
 
-            // get reference to unitig_dict object for neighbour
-            auto neighbour_um_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
-            auto& neighbour_um = neighbour_um_pair.first;
-            auto& neighbour_um_data = neighbour_um_pair.second;
+//            // get reference to unitig_dict object for neighbour
+//            auto neighbour_um_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
+//            auto& neighbour_um = neighbour_um_pair.first;
+//            auto& neighbour_um_data = neighbour_um_pair.second;
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;

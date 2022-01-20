@@ -116,83 +116,83 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t 
 
         // check if check against fm_index necessary
         std::pair<ContigLoc, bool> contig_pair_temp;
-        if (is_ref)
-        {
-            int start_node;
-            int end_node;
-
-            // think about reverse complement
-            if (present.second)
-            {
-                // get ORF node information
-                start_node = unitig_path.back();
-                end_node = unitig_path.at(0);
-            } else
-            {
-                start_node = unitig_path.at(0);
-                end_node = unitig_path.back();
-            }
-
-            // get a reference to the unitig map object
-            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
-            auto& start_um_data = start_um_pair.second;
-
-            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
-            auto& end_um_data = end_um_pair.second;
-
-            auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
-            auto end_coords_vec = end_um_data->get_contig_coords(colour_ID);
-
-            // iterate over the start and end vectors, finding match of contig
-            std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
-            std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
-            bool found_match = false;
-            for (const auto& i : start_coords_vec)
-            {
-                for (const auto& j : end_coords_vec)
-                {
-                    // check if in same contig and end is after start and that the coordinates match up to the ORF length
-                    if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= path_sequence.size()))
-                    {
-                        start_contig_coords = i;
-                        end_contig_coords = j;
-                        found_match = true;
-                        break;
-                    }
-                }
-                if (found_match)
-                {
-                    break;
-                }
-            }
-
-            // if match not found, then ignore ORF as cannot determine correct orientation
-            if (!found_match)
-            {
-                continue;
-            }
-
-            // determine start and end coordinates for the nodes
-            int start_contig_begin = std::get<2>(start_contig_coords);
-            int end_contig_begin = std::get<2>(end_contig_coords);
-            int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + kmer - 2;
-
-            // contig ID
-            contig_pair_temp.first.first = std::get<0>(start_contig_coords);
-
-            // rev_comp
-            contig_pair_temp.second = present.second;
-
-            // first location within contig
-            contig_pair_temp.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin;
-
-            // get substring of path_seq to avoid over-running source contig
-            path_sequence = path_sequence.substr(start_contig_begin, path_sequence.size() - end_contig_end);
-
-            // second location within contig
-//            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
-            contig_pair_temp.first.second.second = contig_pair_temp.first.second.first + path_sequence.size();
-        }
+//        if (is_ref)
+//        {
+//            int start_node;
+//            int end_node;
+//
+//            // think about reverse complement
+//            if (present.second)
+//            {
+//                // get ORF node information
+//                start_node = unitig_path.back();
+//                end_node = unitig_path.at(0);
+//            } else
+//            {
+//                start_node = unitig_path.at(0);
+//                end_node = unitig_path.back();
+//            }
+//
+//            // get a reference to the unitig map object
+//            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+//            auto& start_um_data = start_um_pair.second;
+//
+//            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+//            auto& end_um_data = end_um_pair.second;
+//
+//            auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
+//            auto end_coords_vec = end_um_data->get_contig_coords(colour_ID);
+//
+//            // iterate over the start and end vectors, finding match of contig
+//            std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
+//            std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
+//            bool found_match = false;
+//            for (const auto& i : start_coords_vec)
+//            {
+//                for (const auto& j : end_coords_vec)
+//                {
+//                    // check if in same contig and end is after start and that the coordinates match up to the ORF length
+//                    if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= path_sequence.size()))
+//                    {
+//                        start_contig_coords = i;
+//                        end_contig_coords = j;
+//                        found_match = true;
+//                        break;
+//                    }
+//                }
+//                if (found_match)
+//                {
+//                    break;
+//                }
+//            }
+//
+//            // if match not found, then ignore ORF as cannot determine correct orientation
+//            if (!found_match)
+//            {
+//                continue;
+//            }
+//
+//            // determine start and end coordinates for the nodes
+//            int start_contig_begin = std::get<2>(start_contig_coords);
+//            int end_contig_begin = std::get<2>(end_contig_coords);
+//            int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + kmer - 2;
+//
+//            // contig ID
+//            contig_pair_temp.first.first = std::get<0>(start_contig_coords);
+//
+//            // rev_comp
+//            contig_pair_temp.second = present.second;
+//
+//            // first location within contig
+//            contig_pair_temp.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin;
+//
+//            // get substring of path_seq to avoid over-running source contig
+//            path_sequence = path_sequence.substr(start_contig_begin, path_sequence.size() - end_contig_end);
+//
+//            // second location within contig
+////            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
+//            contig_pair_temp.first.second.second = contig_pair_temp.first.second.first + path_sequence.size();
+//        }
 
         // add ORF seq to path_seq
         path_sequence = ORF_seq + path_sequence;
@@ -277,9 +277,9 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
         const size_t new_pos_idx = node_vector.size();
 
         // get unitig_dict entry in graph_vector
-        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-        const auto& um = um_pair.first;
-        const auto& um_data = um_pair.second;
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
 
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
@@ -287,22 +287,32 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
         // initialise bool to determine if valid neigbour found
         bool neighbour_found = false;
 
-        // iterate over neighbours, recurring through incomplete paths
-        for (const auto& neighbour : um_data->get_neighbours(strand))
+        // reverse the strand of the unitig
+        if (!strand)
         {
-            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = std::get<0>(neighbour);
-            const auto& frame = std::get<1>(neighbour);
-            const auto& colour_set = std::get<2>(neighbour);
+            um.strand = !um.strand;
+        }
 
-            // if is_ref, determine if edge is correct
-            if (is_ref)
-            {
-                if (colour_set.find(current_colour) == colour_set.end())
-                {
-                    continue;
-                }
-            }
+        // iterate over neighbours, recurring through incomplete paths
+        for (auto& neighbour_um : um.getSuccessors())
+        {
+            auto neighbour_da = neighbour_um.getData();
+            auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+            const bool neighbour_strand = neighbour_um.strand;
+
+            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
+            const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
+            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
+//            const auto& colour_set = std::get<2>(neighbour);
+//
+//            // if is_ref, determine if edge is correct
+//            if (is_ref)
+//            {
+//                if (colour_set.find(current_colour) == colour_set.end())
+//                {
+//                    continue;
+//                }
+//            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -311,10 +321,10 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 continue;
             }
 
-            // get reference to unitig_dict object for neighbour
-            const auto neighbour_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
-            const auto& neighbour_um = neighbour_pair.first;
-            const auto& neighbour_um_data = neighbour_pair.second;
+//            // get reference to unitig_dict object for neighbour
+//            const auto neighbour_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
+//            const auto& neighbour_um = neighbour_pair.first;
+//            const auto& neighbour_um_data = neighbour_pair.second;
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;

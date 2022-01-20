@@ -39,8 +39,8 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
 
     // add contig mapping information
-    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
-    const std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>& get_contig_coords(const size_t& colour_ID) const {return _contigcoords.at(colour_ID);};
+//    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
+//    const std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>& get_contig_coords(const size_t& colour_ID) const {return _contigcoords.at(colour_ID);};
 
     // add and return unitig colours
     void add_head_colour(boost::dynamic_bitset<> colours) {_unitig_head_colour = colours;};
@@ -56,11 +56,11 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool end_contig() const {return _end_contig;};
 
     //assign and return neighbours
-    void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
-    void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
+//    void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
+//    void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
 
     // get neighbouring nodes
-    const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
+//    const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
 
     // assign traversing ORFs
     void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
@@ -80,11 +80,9 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
+    // TODO change this to a static bitset for each full and part codon, which looks at ranges of the bitset to see if they are equal to 0
     std::vector<std::vector<uint8_t>> _full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
     std::vector<std::vector<uint8_t>> _part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
-
-    // unitig properties
-    std::pair<std::size_t, std::size_t> _unitig_size;
 
     // unitig colours
     boost::dynamic_bitset<> _unitig_full_colour;
@@ -106,14 +104,16 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool _reverse_stop = false;
 
     // node neighbours. Neighbours map contains successors (true) and predecessors (false)
-    std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
+    // TODO remove this, fall back on getsuccessors for Bifrost
+//    std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 
     // traversing ORFs (key is colour_ID, entry is traversing ORF)
     std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 
     // mapping of colour (key) to tuple of contig ID, mapping position within contig
     // and mapping position within node (start and length in k-mers) and boolean of strand (1 if same strand, 0 if reversed)
-    std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>> _contigcoords;
+    // TODO remove, replace with mapping of all ORFs to FM-indexes if required for GFF
+//    std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>> _contigcoords;
 };
 
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap

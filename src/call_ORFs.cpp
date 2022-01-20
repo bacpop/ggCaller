@@ -299,115 +299,115 @@ void generate_ORFs(const int& colour_ID,
 
                     // check if check against fm_index necessary
                     std::pair<ContigLoc, bool> contig_pair;
-                    if (is_ref)
-                    {
-                        int start_node;
-                        indexPair start_coords;
-                        int end_node;
-                        indexPair end_coords;
-
-                        // think about reverse complement
-                        if (present.second)
-                        {
-                            // get ORF node information
-                            start_node = std::get<0>(ORF_coords).back();
-                            end_node = std::get<0>(ORF_coords).at(0);
-
-                            // get a reference to the unitig map object
-                            start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
-                            start_um = start_um_pair.first;
-
-                            end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
-                            end_um = end_um_pair.first;
-
-                            start_coords = std::get<1>(ORF_coords).back();
-                            end_coords = std::get<1>(ORF_coords).at(0);
-
-                            // reverse start_coords
-                            size_t node_end = start_um.size - 1;
-                            size_t reversed_end = node_end - std::get<0>(start_coords);
-                            size_t reversed_start = node_end - std::get<1>(start_coords);
-                            start_coords = std::make_pair(reversed_start, reversed_end);
-
-                            // reverse end coords
-                            node_end = end_um.size - 1;
-                            reversed_end = node_end - std::get<0>(end_coords);
-                            reversed_start = node_end - std::get<1>(end_coords);
-                            end_coords = std::make_pair(reversed_start, reversed_end);
-                        } else
-                        {
-                            start_node = std::get<0>(ORF_coords).at(0);
-                            start_coords = std::get<1>(ORF_coords).at(0);
-                            end_node = std::get<0>(ORF_coords).back();
-                            end_coords = std::get<1>(ORF_coords).back();
-                        }
-
-                        // get a reference to the unitig map object
-                        start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
-                        start_um = start_um_pair.first;
-                        start_um_data = start_um_pair.second;
-
-                        end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
-                        end_um = end_um_pair.first;
-                        end_um_data = end_um_pair.second;
-
-                        auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
-                        auto end_coords_vec = end_um_data->get_contig_coords(colour_ID);
-
-                        // iterate over the start and end vectors, finding match of contig
-                        std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
-                        std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
-                        bool found_match = false;
-                        for (const auto& i : start_coords_vec)
-                        {
-                            for (const auto& j : end_coords_vec)
-                            {
-                                // check if in same contig and end is after start and that the coordinates match up to the ORF length
-                                if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) <= std::get<1>(j)))
-                                {
-                                    start_contig_coords = i;
-                                    end_contig_coords = j;
-                                    found_match = true;
-                                    break;
-                                }
-                            }
-                            if (found_match)
-                            {
-                                break;
-                            }
-                        }
-
-                        // if match not found, then ignore ORF as cannot determine correct orientation
-                        if (!found_match)
-                        {
-                            continue;
-                        }
-
-                        // determine start and end coordinates for the nodes
-                        int start_contig_begin = std::get<2>(start_contig_coords);
-                        int start_contig_end = start_contig_begin + std::get<3>(start_contig_coords) + overlap - 1;
-                        int end_contig_begin = std::get<2>(end_contig_coords);
-                        int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + overlap - 1;
-
-                        // contig ID
-                        contig_pair.first.first = std::get<0>(start_contig_coords);
-
-                        // rev_comp
-                        contig_pair.second = present.second;
-
-                        // first location within contig
-                        contig_pair.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin + start_coords.first;
-
-                        // second location within contig
-//                        contig_pair.first.second.second = std::get<1>(end_contig_coords) + end_contig_begin + end_coords.second;
-                        contig_pair.first.second.second = contig_pair.first.second.first + ORF_len;
-
-                        // check for artifical ORFs i.e. those that whose ends go over the viable end of the node.
-                        if ((end_contig_begin + end_coords.second) > end_contig_end)
-                        {
-                            continue;
-                        }
-                    }
+//                    if (is_ref)
+//                    {
+//                        int start_node;
+//                        indexPair start_coords;
+//                        int end_node;
+//                        indexPair end_coords;
+//
+//                        // think about reverse complement
+//                        if (present.second)
+//                        {
+//                            // get ORF node information
+//                            start_node = std::get<0>(ORF_coords).back();
+//                            end_node = std::get<0>(ORF_coords).at(0);
+//
+//                            // get a reference to the unitig map object
+//                            start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+//                            start_um = start_um_pair.first;
+//
+//                            end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+//                            end_um = end_um_pair.first;
+//
+//                            start_coords = std::get<1>(ORF_coords).back();
+//                            end_coords = std::get<1>(ORF_coords).at(0);
+//
+//                            // reverse start_coords
+//                            size_t node_end = start_um.size - 1;
+//                            size_t reversed_end = node_end - std::get<0>(start_coords);
+//                            size_t reversed_start = node_end - std::get<1>(start_coords);
+//                            start_coords = std::make_pair(reversed_start, reversed_end);
+//
+//                            // reverse end coords
+//                            node_end = end_um.size - 1;
+//                            reversed_end = node_end - std::get<0>(end_coords);
+//                            reversed_start = node_end - std::get<1>(end_coords);
+//                            end_coords = std::make_pair(reversed_start, reversed_end);
+//                        } else
+//                        {
+//                            start_node = std::get<0>(ORF_coords).at(0);
+//                            start_coords = std::get<1>(ORF_coords).at(0);
+//                            end_node = std::get<0>(ORF_coords).back();
+//                            end_coords = std::get<1>(ORF_coords).back();
+//                        }
+//
+//                        // get a reference to the unitig map object
+//                        start_um_pair = get_um_data(ccdbg, head_kmer_arr, start_node);
+//                        start_um = start_um_pair.first;
+//                        start_um_data = start_um_pair.second;
+//
+//                        end_um_pair = get_um_data(ccdbg, head_kmer_arr, end_node);
+//                        end_um = end_um_pair.first;
+//                        end_um_data = end_um_pair.second;
+//
+//                        auto start_coords_vec = start_um_data->get_contig_coords(colour_ID);
+//                        auto end_coords_vec = end_um_data->get_contig_coords(colour_ID);
+//
+//                        // iterate over the start and end vectors, finding match of contig
+//                        std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
+//                        std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
+//                        bool found_match = false;
+//                        for (const auto& i : start_coords_vec)
+//                        {
+//                            for (const auto& j : end_coords_vec)
+//                            {
+//                                // check if in same contig and end is after start and that the coordinates match up to the ORF length
+//                                if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) <= std::get<1>(j)))
+//                                {
+//                                    start_contig_coords = i;
+//                                    end_contig_coords = j;
+//                                    found_match = true;
+//                                    break;
+//                                }
+//                            }
+//                            if (found_match)
+//                            {
+//                                break;
+//                            }
+//                        }
+//
+//                        // if match not found, then ignore ORF as cannot determine correct orientation
+//                        if (!found_match)
+//                        {
+//                            continue;
+//                        }
+//
+//                        // determine start and end coordinates for the nodes
+//                        int start_contig_begin = std::get<2>(start_contig_coords);
+//                        int start_contig_end = start_contig_begin + std::get<3>(start_contig_coords) + overlap - 1;
+//                        int end_contig_begin = std::get<2>(end_contig_coords);
+//                        int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + overlap - 1;
+//
+//                        // contig ID
+//                        contig_pair.first.first = std::get<0>(start_contig_coords);
+//
+//                        // rev_comp
+//                        contig_pair.second = present.second;
+//
+//                        // first location within contig
+//                        contig_pair.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin + start_coords.first;
+//
+//                        // second location within contig
+////                        contig_pair.first.second.second = std::get<1>(end_contig_coords) + end_contig_begin + end_coords.second;
+//                        contig_pair.first.second.second = contig_pair.first.second.first + ORF_len;
+//
+//                        // check for artifical ORFs i.e. those that whose ends go over the viable end of the node.
+//                        if ((end_contig_begin + end_coords.second) > end_contig_end)
+//                        {
+//                            continue;
+//                        }
+//                    }
 
                     // work coordinates for TIS in node space
                     ORFCoords TIS_coords;
