@@ -3,26 +3,25 @@
 
 #include "unitigDict.h"
 
-void add_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
-                   const std::vector<Kmer>& head_kmer_arr,
-                   const size_t& colour_ID,
-                   const std::vector<size_t>& target_ORFs,
-                   const ORFVector& ORF_vector);
+std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
+                                                             const std::vector<size_t>& target_ORFs,
+                                                             const ORFVector& ORF_vector);
 
-void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
-                      const std::vector<Kmer>& head_kmer_arr,
-                      const size_t& colour_ID,
-                      const std::vector<size_t>& target_ORFs,
-                      const ORFVector& ORF_vector);
+//void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
+//                      const std::vector<Kmer>& head_kmer_arr,
+//                      const size_t& colour_ID,
+//                      const std::vector<size_t>& target_ORFs,
+//                      const ORFVector& ORF_vector);
 
 std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const std::vector<Kmer>& head_kmer_arr,
-                                       const std::unordered_set<size_t>& node_ORFs,
+                                       const robin_hood::unordered_set<size_t>& node_ORFs,
                                        const int node_id,
                                        const ORFVector& ORF_vector);
 
 std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                        const std::vector<Kmer>& head_kmer_arr,
+                                                       const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                        const size_t colour_ID,
                                                        const std::vector<size_t>& target_ORFs,
                                                        const ORFVector& ORF_vector,
@@ -34,6 +33,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
 
 std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                         const std::vector<Kmer>& head_kmer_arr,
+                                                        const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                         const int& head_node,
                                                         const size_t stream_source,
                                                         const size_t current_colour,

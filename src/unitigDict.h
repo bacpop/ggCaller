@@ -64,10 +64,10 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 //    const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
 
     // assign traversing ORFs
-    void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
-    bool ORFs_empty (const size_t& colour_ID) const {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());};
-    const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
-    void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
+//    void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
+//    bool ORFs_empty (const size_t& colour_ID) const {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());};
+//    const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
+//    void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
 
     private:
     // Bifrost data accessor methods
@@ -81,14 +81,11 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
-    // TODO remove 9-bit long full_codon as not used, place only first 3
     // for full codon, only require 6 bits, 3 for forward, 3 for reverse in 0th frame
     // for part codons from 0th position - first 9 are forward strand, second 9 are reverse.
     // Of each 9, first 3 = 0th frame, second 3 = 1st frame, third 3 = 2nd frame
     std::bitset<6> _full_codon;
     std::bitset<18> _part_codon;
-//    std::vector<std::vector<uint8_t>> _full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
-//    std::vector<std::vector<uint8_t>> _part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
 
     // unitig colours
     boost::dynamic_bitset<> _unitig_full_colour;
@@ -106,13 +103,9 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     bool _forward_stop = false;
     bool _reverse_stop = false;
 
-    // node neighbours. Neighbours map contains successors (true) and predecessors (false)
-    // TODO remove this, fall back on getsuccessors for Bifrost
-//    std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
-
     // traversing ORFs (key is colour_ID, entry is traversing ORF)
     // TODO remove this, create map which IDs are checked against
-    std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
+//    std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 
     // mapping of colour (key) to tuple of contig ID, mapping position within contig
     // and mapping position within node (start and length in k-mers) and boolean of strand (1 if same strand, 0 if reversed)

@@ -215,21 +215,21 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t colour_I
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
 
     // add ORF info for colour to graph
-    add_ORF_info(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector);
+    const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, ORF_vector);
 
     // initialise prev_node_set to avoid same ORFs being traversed from again
     std::unordered_set<int> prev_node_set;
 
     // conduct DBG traversal for upstream...
-    auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set, is_ref, overlap);
+    auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set, is_ref, overlap);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
     // ... and downstream
-    new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref, overlap);
+    new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref, overlap);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
-    // remove traversing ORF information
-    remove_ORF_info(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector);
+//    // remove traversing ORF information
+//    remove_ORF_info(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector);
 
     return connected_ORFs;
 }

@@ -1,11 +1,10 @@
 #include "ORF_connection.h"
-
-void add_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
-                   const std::vector<Kmer>& head_kmer_arr,
-                   const size_t& colour_ID,
-                   const std::vector<size_t>& target_ORFs,
-                   const ORFVector& ORF_vector)
+std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
+                                                             const std::vector<size_t>& target_ORFs,
+                                                             const ORFVector& ORF_vector)
 {
+    std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs(head_kmer_arr.size());
+
     for (const auto & source : target_ORFs)
     {
         {
@@ -15,61 +14,51 @@ void add_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
             const auto source_node_id = std::get<0>(ORF_info).at(0);
             const auto sink_node_id = std::get<0>(ORF_info).back();
 
-            // get start node ID, Only add 5 prime node.
-            // get a reference to the unitig map object
-            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
-            auto& start_um_data = start_um_pair.second;
-
-            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
-            auto& end_um_data = end_um_pair.second;
-
-            // add ORF information to graph
-            start_um_data->set_ORFs(colour_ID, source);
-            // check if ORF is present only on single node
-            if (abs(source_node_id) != abs(sink_node_id))
-            {
-                end_um_data->set_ORFs(colour_ID, source);
-            }
+            // add the ORF ID to node_to_ORFs
+            node_to_ORFs[abs(source_node_id) - 1].insert(source);
+            node_to_ORFs[abs(sink_node_id) - 1].insert(source);
         }
     }
+
+    return node_to_ORFs;
 }
 
-void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
-                      const std::vector<Kmer>& head_kmer_arr,
-                      const size_t& colour_ID,
-                      const std::vector<size_t>& target_ORFs,
-                      const ORFVector& ORF_vector)
-{
-    for (const auto & source : target_ORFs)
-    {
-        {
-            // get graph information for source node
-            const auto & ORF_info = ORF_vector.at(source);
-
-            const auto source_node_id = std::get<0>(ORF_info).at(0);
-            const auto sink_node_id = std::get<0>(ORF_info).back();
-
-            // get a reference to the unitig map object
-            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
-            auto& start_um_data = start_um_pair.second;
-
-            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
-            auto& end_um_data = end_um_pair.second;
-
-            // add ORF information to graph
-            start_um_data->clear_ORFs(colour_ID);
-            // check if ORF is present only on single node
-            if (abs(source_node_id) != abs(sink_node_id))
-            {
-                end_um_data->clear_ORFs(colour_ID);
-            }
-        }
-    }
-}
+//void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
+//                      const std::vector<Kmer>& head_kmer_arr,
+//                      const size_t& colour_ID,
+//                      const std::vector<size_t>& target_ORFs,
+//                      const ORFVector& ORF_vector)
+//{
+//    for (const auto & source : target_ORFs)
+//    {
+//        {
+//            // get graph information for source node
+//            const auto & ORF_info = ORF_vector.at(source);
+//
+//            const auto source_node_id = std::get<0>(ORF_info).at(0);
+//            const auto sink_node_id = std::get<0>(ORF_info).back();
+//
+//            // get a reference to the unitig map object
+//            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
+//            auto& start_um_data = start_um_pair.second;
+//
+//            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
+//            auto& end_um_data = end_um_pair.second;
+//
+//            // add ORF information to graph
+//            start_um_data->clear_ORFs(colour_ID);
+//            // check if ORF is present only on single node
+//            if (abs(source_node_id) != abs(sink_node_id))
+//            {
+//                end_um_data->clear_ORFs(colour_ID);
+//            }
+//        }
+//    }
+//}
 
 std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const std::vector<Kmer>& head_kmer_arr,
-                                       const std::unordered_set<size_t>& node_ORFs,
+                                       const robin_hood::unordered_set<size_t>& node_ORFs,
                                        const int node_id,
                                        const ORFVector& ORF_vector)
 {
@@ -151,6 +140,7 @@ std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
 
 std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                        const std::vector<Kmer>& head_kmer_arr,
+                                                       const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                        const size_t colour_ID,
                                                        const std::vector<size_t>& target_ORFs,
                                                        const ORFVector& ORF_vector,
@@ -186,9 +176,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
             auto& start_um_data = start_um_pair.second;
 
             // check if there are any overlapping ORFs on current node and order...
-            const auto& start_node_ORFs = start_um_data->get_ORFs(colour_ID);
-//            const auto& sink_node_ORFs = sink_node_info.get_ORFs(colour_ID);
-
+            const auto& start_node_ORFs = node_to_ORFs.at(abs(start_node) - 1);
 
             // check if there are overlapping ORFs on the source and sink node, as these will not be picked up
             std::vector<size_t> ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, start_node_ORFs, start_node, ORF_vector);
@@ -207,7 +195,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
             if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
             {
-                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, start_node, source, colour_ID, stream, ORF_vector, max_ORF_path_length, prev_node_set, is_ref, overlap);
+                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, ORF_vector, max_ORF_path_length, prev_node_set, is_ref, overlap);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
 
@@ -219,6 +207,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
 
 std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                         const std::vector<Kmer>& head_kmer_arr,
+                                                        const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                         const int& head_node,
                                                         const size_t stream_source,
                                                         const size_t current_colour,
@@ -322,10 +311,10 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
             node_set.insert(neighbour_id);
 
             // check if node is traversed by end of an ORF
-            if (!neighbour_um_data->ORFs_empty(current_colour))
+            if (!node_to_ORFs.at(abs(neighbour_id) - 1).empty())
             {
                 // pull out next ORFs and order them
-                const auto& next_ORFs = neighbour_um_data->get_ORFs(current_colour);
+                const auto& next_ORFs = node_to_ORFs.at(abs(neighbour_id) - 1);
                 const auto ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, next_ORFs, neighbour_id, ORF_vector);
 
                 // add first entry and stream_source
