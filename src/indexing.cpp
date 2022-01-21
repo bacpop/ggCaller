@@ -90,7 +90,7 @@ std::vector<std::size_t> findIndex(const std::string& seq,
 }
 
 // calculate stop codon frames for each reading frame
-std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list)
+std::bitset<3> calculateFrame_binary_full (const std::vector<std::size_t>& index_list)
 {
     std::bitset<3> binary_array;
 
@@ -99,6 +99,13 @@ std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list
         size_t modulus = index % 3;
         binary_array[modulus] = 1;
     }
+
+    return binary_array;
+}
+
+std::bitset<9> calculateFrame_binary_part (const std::vector<std::size_t>& index_list)
+{
+    std::bitset<3> binary_array = calculateFrame_binary_full(index_list);
 
     std::bitset<9> full_binary;
 
@@ -265,18 +272,18 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
 
     // insert frame mapping into unitig dictionaries, using head-kmer as the identifier
     // full unitig dictionary
-    const auto full_binary_pos = calculateFrame_binary(full_indices_pos);
-    const auto full_binary_neg = calculateFrame_binary(full_indices_neg);
+    const auto full_binary_pos = calculateFrame_binary_full(full_indices_pos);
+    const auto full_binary_neg = calculateFrame_binary_full(full_indices_neg);
 
-    um_data->add_codon(true, true, full_binary_pos);
-    um_data->add_codon(true, false, full_binary_neg);
+    um_data->add_codon(true, full_binary_pos);
+    um_data->add_codon(false, full_binary_neg);
 
     // part unitig dictionary
-    const auto part_binary_pos = calculateFrame_binary(part_indices_pos);
-    const auto part_binary_neg = calculateFrame_binary(part_indices_neg);
+    const auto part_binary_pos = calculateFrame_binary_part(part_indices_pos);
+    const auto part_binary_neg = calculateFrame_binary_part(part_indices_neg);
 
-    um_data->add_codon(false, true, part_binary_pos);
-    um_data->add_codon(false, false, part_binary_neg);
+    um_data->add_codon(true, part_binary_pos);
+    um_data->add_codon(false, part_binary_neg);
 }
 
 void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -404,12 +411,12 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             if (num_succ == 0 || num_pred == 0 || !um_data->head_tail_colours_equal() || um_data->end_contig())
             {
                 // set all bits to 1
-                std::bitset<9> full_binary;
+                std::bitset<3> full_binary;
                 full_binary.set();
 
                 // update full codon indexes
-                um_data->add_codon(true, true, full_binary);
-                um_data->add_codon(true, false, full_binary);
+                um_data->add_codon(true, full_binary);
+                um_data->add_codon(false, full_binary);
 
                 um_data->set_forward_stop(true);
                 um_data->set_reverse_stop(true);

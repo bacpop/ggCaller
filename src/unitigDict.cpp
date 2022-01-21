@@ -35,7 +35,7 @@ string MyUnitigMap::serialize(const const_UnitigColorMap<MyUnitigMap>& um_src) c
 }
 
 // add codon, copy semantics
-void MyUnitigMap::add_codon (const bool& full, const bool& forward, const std::bitset<9>& array) {
+void MyUnitigMap::add_codon (const bool forward, const std::bitset<3>& array) {
     // skip if no stop detected
     if (array.none())
     {
@@ -45,7 +45,41 @@ void MyUnitigMap::add_codon (const bool& full, const bool& forward, const std::b
     // set first position of bits
     size_t a = 0;
 
-    // if reverse, then setting second 9
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
+    if (!forward)
+    {
+        a = 3;
+    }
+
+    // add to a for the remaining bits
+    size_t b = a + 1;
+    size_t c = a + 2;
+
+    _full_codon[a] = array[0];
+    _full_codon[b] = array[1];
+    _full_codon[c] = array[2];
+
+    // update forward/reverse stop codon presence
+    if (forward && !_forward_stop)
+    {
+        _forward_stop = true;
+    } else if (!forward && !_reverse_stop)
+    {
+        _reverse_stop = true;
+    }
+}
+
+void MyUnitigMap::add_codon (const bool forward, const std::bitset<9>& array) {
+    // skip if no stop detected
+    if (array.none())
+    {
+        return;
+    }
+
+    // set first position of bits
+    size_t a = 0;
+
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
     if (!forward)
     {
         a = 9;
@@ -61,37 +95,15 @@ void MyUnitigMap::add_codon (const bool& full, const bool& forward, const std::b
     size_t h = a + 7;
     size_t i = a + 8;
 
-    if (full)
-    {
-        _full_codon[a] = array[0];
-        _full_codon[b] = array[1];
-        _full_codon[c] = array[2];
-        _full_codon[d] = array[3];
-        _full_codon[e] = array[4];
-        _full_codon[f] = array[5];
-        _full_codon[g] = array[6];
-        _full_codon[h] = array[7];
-        _full_codon[i] = array[8];
-
-        // update forward/reverse stop codon presence
-        if (forward && !_forward_stop)
-        {
-            _forward_stop = true;
-        } else if (!forward && !_reverse_stop)
-        {
-            _reverse_stop = true;
-        }
-    } else {
-        _part_codon[a] = array[0];
-        _part_codon[b] = array[1];
-        _part_codon[c] = array[2];
-        _part_codon[d] = array[3];
-        _part_codon[e] = array[4];
-        _part_codon[f] = array[5];
-        _part_codon[g] = array[6];
-        _part_codon[h] = array[7];
-        _part_codon[i] = array[8];
-    }
+    _part_codon[a] = array[0];
+    _part_codon[b] = array[1];
+    _part_codon[c] = array[2];
+    _part_codon[d] = array[3];
+    _part_codon[e] = array[4];
+    _part_codon[f] = array[5];
+    _part_codon[g] = array[6];
+    _part_codon[h] = array[7];
+    _part_codon[i] = array[8];
 }
 
 // check if head and tail colours are the same
@@ -114,10 +126,16 @@ std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, 
     // set first position of bits
     size_t a = 0;
 
-    // if reverse, then setting second 9
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
     if (!forward)
     {
-        a = 9;
+        if (full)
+        {
+            a = 3;
+        } else
+        {
+            a = 9;
+        }
     }
 
     // determine the frame of the bits

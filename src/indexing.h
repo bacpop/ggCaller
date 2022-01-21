@@ -19,6 +19,8 @@ std::vector<std::size_t> findIndex(const std::string& seq,
                                    const int overlap,
                                    const bool reverse);
 
+std::bitset<3> calculateFrame_binary_full (const std::vector<std::size_t>& index_list);
+
 std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list);
 
 //std::bitset<3> switchFrame_binary (const std::bitset<3> binary_array, const int frame);

@@ -28,7 +28,8 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     size_t get_id () const {return _id;};
 
     // add codon information
-    void add_codon (const bool& full, const bool& forward, const std::bitset<9>& array);
+    void add_codon (const bool forward, const std::bitset<3>& array);
+    void add_codon (const bool forward, const std::bitset<9>& array);
     void set_forward_stop (bool choice) {_forward_stop = choice;};
     void set_reverse_stop (bool choice) {_reverse_stop = choice;};
     bool forward_stop () const {return _forward_stop;};
@@ -81,9 +82,10 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
     // TODO remove 9-bit long full_codon as not used, place only first 3
-    // for codons from 0th position - first 9 are forward strand, second 9 are reverse.
+    // for full codon, only require 6 bits, 3 for forward, 3 for reverse in 0th frame
+    // for part codons from 0th position - first 9 are forward strand, second 9 are reverse.
     // Of each 9, first 3 = 0th frame, second 3 = 1st frame, third 3 = 2nd frame
-    std::bitset<18> _full_codon;
+    std::bitset<6> _full_codon;
     std::bitset<18> _part_codon;
 //    std::vector<std::vector<uint8_t>> _full_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
 //    std::vector<std::vector<uint8_t>> _part_codon{std::vector<uint8_t>(3, 0), std::vector<uint8_t>(3, 0)};
@@ -109,6 +111,7 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 //    std::vector<NeighbourVector> _neighbours{NeighbourVector(), NeighbourVector()};
 
     // traversing ORFs (key is colour_ID, entry is traversing ORF)
+    // TODO remove this, create map which IDs are checked against
     std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
 
     // mapping of colour (key) to tuple of contig ID, mapping position within contig
