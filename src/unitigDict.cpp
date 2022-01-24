@@ -167,27 +167,6 @@ std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, 
     return array;
 }
 
-//std::vector<uint8_t> MyUnitigMap::get_codon_dict (bool full, bool forward) const {
-//    if (full)
-//    {
-//        return _full_codon.at(forward);
-//    } else
-//    {
-//        return _part_codon.at(forward);
-//    }
-//}
-
-//void MyUnitigMap::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
-//{
-//    // search for neighbour in _neighbours, add colour_ID to colour set
-//    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return std::get< 0 >(item) == neighbour_ID;});
-//    if (it != _neighbours[strand].end())
-//    {
-//        mtx2.lock();
-//        std::get<2>(*it).insert(colour_ID);
-//        mtx2.unlock();
-//    }
-//}
 
 // function to get unitig data from an ID number, returning pointer to data
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -242,17 +221,6 @@ std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, 
 
     return {um, const_cast<MyUnitigMap *>(unitig_map)};
 }
-
-//// retrieve id from k-mer mapping
-//size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
-//               const Kmer& head_kmer)
-//{
-//    auto um = ccdbg.find(head_kmer, true);
-//    auto da = um.getData(); // Get DataAccessor from unitig
-//    const MyUnitigMap* data = da->getData(um); // Get boolean from DataAccessor
-//
-//    return data->get_id();
-//}
 
 // non-member function for generating sequence from DBG
 std::string generate_sequence_nm(const std::vector<int>& nodelist,

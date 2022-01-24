@@ -553,14 +553,14 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
                 // get a reference to the unitig map object
                 auto curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_first);
-                auto& curr_um_data = curr_um_pair.second;
+                auto& curr_um = curr_um_pair.first;
 
                 auto new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_first);
-                auto& new_um_data = new_um_pair.second;
+                auto& new_um = new_um_pair.first;
 
                 // get hashes of first nodes to ensure stable assignment across runs
-                const size_t current_first_hash = hasher{}(curr_um_data->head_kmer());
-                const size_t new_first_hash = hasher{}(new_um_data->head_kmer());
+                const size_t current_first_hash = hasher{}(curr_um.getUnitigHead().toString());
+                const size_t new_first_hash = hasher{}(new_um.getUnitigHead().toString());
 
                 // compare first/last entries. Assign the new ORF entry to that with the highest ID
                 if (new_first_hash > current_first_hash)
@@ -570,14 +570,14 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     // get a reference to the unitig map object
                     curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_last);
-                    curr_um_data = curr_um_pair.second;
+                    curr_um = curr_um_pair.first;
 
                     new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_last);
-                    new_um_data = new_um_pair.second;
+                    new_um = new_um_pair.first;
 
                     // if no clear winner, check last nodes
-                    const size_t current_last_hash = hasher{}(curr_um_data->head_kmer());
-                    const size_t new_last_hash = hasher{}(new_um_data->head_kmer());
+                    const size_t current_last_hash = hasher{}(curr_um.getUnitigHead().toString());
+                    const size_t new_last_hash = hasher{}(new_um.getUnitigHead().toString());
 
                     if (new_last_hash > current_last_hash)
                     {
@@ -611,9 +611,9 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um_data = um_pair.second;
+            auto& um = um_pair.first;
 
-            const size_t node_hash = hasher{}(um_data->head_kmer());
+            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -629,9 +629,9 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
 
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um_data = um_pair.second;
+            auto& um = um_pair.first;
 
-            const size_t node_hash = hasher{}(um_data->head_kmer());
+            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
             if (strand != pos_strand_map.at(node_hash))
             {
                 num_neg++;
@@ -678,9 +678,9 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         {
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um_data = um_pair.second;
+            auto& um = um_pair.first;
 
-            const size_t node_hash = hasher{}(um_data->head_kmer());
+            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }
@@ -689,9 +689,9 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         {
             // get a reference to the unitig map object
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um_data = um_pair.second;
+            auto& um = um_pair.first;
 
-            const size_t node_hash = hasher{}(um_data->head_kmer());
+            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }

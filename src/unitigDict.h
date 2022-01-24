@@ -22,8 +22,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     string serialize(const const_UnitigColorMap<MyUnitigMap>& um_src) const;
 
     // add and return untig kmers and ids
-    void add_head(const std::string& head) {_head_kmer = head;};
-    const std::string& head_kmer() const {return _head_kmer;};
     void set_id (size_t new_id) {_id = new_id;};
     size_t get_id () const {return _id;};
 
@@ -37,11 +35,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // get codon information
     std::bitset<3> get_codon_arr (const bool full, const bool forward, const int frame) const;
-//    std::vector<uint8_t> get_codon_dict (bool full, bool forward) const;
-
-    // add contig mapping information
-//    void add_contig_coords(const size_t& colour_ID, const std::tuple<size_t, size_t, size_t, size_t, bool>& contig_coords) {_contigcoords[colour_ID].push_back(contig_coords);};
-//    const std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>& get_contig_coords(const size_t& colour_ID) const {return _contigcoords.at(colour_ID);};
 
     // add and return unitig colours
     void add_head_colour(boost::dynamic_bitset<> colours) {_unitig_head_colour = colours;};
@@ -56,19 +49,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     void set_end_contig (bool choice) {_end_contig = choice;};
     bool end_contig() const {return _end_contig;};
 
-    //assign and return neighbours
-//    void add_neighbour (bool strand, std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour) {_neighbours[strand].push_back(std::move(neighbour));};
-//    void add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID);
-
-    // get neighbouring nodes
-//    const NeighbourVector & get_neighbours (bool strand) const {return _neighbours[strand];};
-
-    // assign traversing ORFs
-//    void set_ORFs (const size_t& colour_ID, const size_t& ORF_ID) {_traversing_ORFs[colour_ID].insert(ORF_ID);};
-//    bool ORFs_empty (const size_t& colour_ID) const {return (_traversing_ORFs.find(colour_ID) == _traversing_ORFs.end());};
-//    const std::unordered_set<size_t> & get_ORFs(const size_t& colour_ID) const {return _traversing_ORFs.at(colour_ID);};
-//    void clear_ORFs (const size_t& colour_ID) {_traversing_ORFs.erase(colour_ID);};
-
     private:
     // Bifrost data accessor methods
     inline uint8_t get() const { return da_id; };
@@ -76,10 +56,8 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // Bifrost data accessor ID
     uint8_t da_id = 0;
 
-    // custom unitig IDs
+    // custom unitig ID
     int _id;
-    // TODO remove this
-    std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)
     // for full codon, only require 6 bits, 3 for forward, 3 for reverse in 0th frame
@@ -103,15 +81,6 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     // forward_stop presence/absence
     bool _forward_stop = false;
     bool _reverse_stop = false;
-
-    // traversing ORFs (key is colour_ID, entry is traversing ORF)
-    // TODO remove this, create map which IDs are checked against
-//    std::unordered_map<size_t, std::unordered_set<size_t>> _traversing_ORFs;
-
-    // mapping of colour (key) to tuple of contig ID, mapping position within contig
-    // and mapping position within node (start and length in k-mers) and boolean of strand (1 if same strand, 0 if reversed)
-    // TODO remove, replace with mapping of all ORFs to FM-indexes if required for GFF
-//    std::unordered_map<size_t, std::vector<std::tuple<size_t, size_t, size_t, size_t, bool>>> _contigcoords;
 };
 
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
@@ -135,9 +104,6 @@ std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<My
 // const qualified function to get unitig data from head-kmer
 std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                                                            const Kmer& head_kmer);
-
-//size_t get_id (const ColoredCDBG<MyUnitigMap>& ccdbg,
-//               const Kmer& head_kmer);
 
 // non-member functions for generating sequence from graph
 std::string generate_sequence_nm(const std::vector<int>& nodelist,

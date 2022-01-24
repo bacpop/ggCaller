@@ -213,7 +213,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     // get head kmer for unitig, add to kmer dictionary
     const Kmer head_kmer_binary = um.getUnitigHead();
     const std::string head_kmer = head_kmer_binary.toString();
-    um_data->add_head(head_kmer);
+//    um_data->add_head(head_kmer);
 
     // calculate colours for unitig
     boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);

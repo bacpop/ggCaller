@@ -88,8 +88,7 @@ class Graph {
                                                                                       const double& id_cutoff,
                                                                                       size_t num_threads);
 
-    std::vector<std::pair<ContigLoc, bool>> ORF_location(const int colour_ID,
-                                                         const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
+    std::vector<std::pair<ContigLoc, bool>> ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
                                                          const std::string& fasta_file,
                                                          const int overlap,
                                                          const bool write_idx,
