@@ -185,7 +185,7 @@ def find_missing(G,
             G.nodes[node]['protein'].append(hit_protein)
             G.nodes[node]['seqIDs'] |= set([str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
-            nodelist, node_coords, total_overlap = all_node_locs[member][node][0]
+            nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
             if G.nodes[node]['bitscore'] != 0:
                 annotation = ("refound", G.nodes[node]['annotation'],
