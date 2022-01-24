@@ -78,6 +78,7 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // custom unitig IDs
     int _id;
+    // TODO remove this
     std::string _head_kmer;
 
     // codon arrays, initialise with two strands and 3 frames for each (6 reading frames total)

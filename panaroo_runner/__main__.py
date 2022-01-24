@@ -204,7 +204,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # not an internal stop codon is present
     orig_ids = {}
     ids_len_stop = {}
-    contig_annotation = defaultdict(lambda: defaultdict(list))
+    contig_annotation = defaultdict(list)
     for node in G.nodes():
         length_centroid = G.nodes[node]['longCentroidID'][0]
         for sid in G.nodes[node]['seqIDs']:
@@ -215,33 +215,30 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             ORF_len = ORF_info[2]
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORF_info[2] / 3, ORF_info[3])
+                ids_len_stop[sid] = (ORF_len / 3, ORF_info[3])
             else:
-                ids_len_stop[sid] = (ORF_info[2] / 3, False)
+                ids_len_stop[sid] = (ORF_len / 3, False)
             if annotate is not None and is_ref:
                 # annotated genes
-                if len(ORF_info) == 8 or ORF_ID < 0:
+                if len(ORF_info) == 7 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
-                    contig_coords = ORF_info[-2]
                     annotation = ORF_info[-1]
-                    if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
-                                                                                              or ORF_info[
-                                                                                                  2] % 3 != 0)):
-                        description = annotation[-1] + ", potential psuedogene"
-                        annotation = annotation[0:3] + (description,)
                 else:
-                    contig_coords = ORF_info[-1]
                     annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")
-                    if ORF_len < (length_centroid * truncation_threshold):
-                        description = annotation[-1] + ", potential psuedogene"
-                        annotation = annotation[0:3] + (description,)
-                contig_annotation[mem][contig_coords[0][0]].append((ORF_ID, contig_coords, annotation))
+
+                # annotate potential pseudogene if fits criteria of length, premature stop codon or length not multiple of 3
+                if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
+                                                                                          or ORF_len % 3 != 0)):
+                    description = annotation[-1] + ", potential psuedogene"
+                    annotation = annotation[0:3] + (description,)
+                contig_annotation[mem].append((ORF_ID, annotation))
 
     # write output GFF
     if annotate is not None and is_ref:
         if verbose:
             print("writing GFF files...")
-        generate_GFF(input_colours, isolate_names, contig_annotation, output_dir)
+        generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
+                     overlap, write_idx, n_cpu)
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,

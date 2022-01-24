@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from collections import defaultdict
 from Bio import AlignIO
 import itertools as iter
 from intbitset import intbitset
@@ -123,7 +124,8 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
     return
 
 
-def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
+def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir, overlap,
+                 write_idx, num_threads):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
     if not os.path.exists(GFF_dir):
@@ -133,17 +135,30 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
 
     # iterate over colours in contig_annotation, writing output file
     for colour in range(len(input_colours)):
+        # get coordinates for each ORF
+        ORF_IDs = [(high_scoring_ORFs[colour][i[0]][0], high_scoring_ORFs[colour][i[0]][1]) for i in
+                   contig_annotation[colour]]
+        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads)
+
+        # create data structure for each GFF entry
+        GFF_entries = defaultdict(list)
+        for i in range(len(contig_annotation[colour])):
+            GFF_entries[ORF_coords[i][0][0]].append((contig_annotation[colour][i][0],
+                                                     (ORF_coords[i][0][1], ORF_coords[i][1]),
+                                                     contig_annotation[colour][i][1]))
+
         # iterate over the entries in input_colors
         with open(input_colours[colour]) as handle:
             gff_record_list = []
             record_id = 1
             for record in SeqIO.parse(handle, "fasta"):
                 # sort records based on first position
-                contig_annotation[colour][record_id].sort(key=lambda x: x[1][0][1][0])
+                GFF_entries[record_id].sort(key=lambda x: x[1][0][0])
                 gff_record = record
                 gff_record.features = []
                 entry_ID = 1
-                for entry in contig_annotation[colour][record_id]:
+                for entry in GFF_entries[record_id]:
+                    strand = 1 if entry[1][1] else -1
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
                         "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
@@ -153,8 +168,8 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
                                            .replace("=", "-").replace("(", "").replace(")", "")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][1][0], entry[1][0][1][1]),
-                        type="gene", strand=int(entry[1][1]), qualifiers=qualifiers
+                        FeatureLocation(entry[1][0][0], entry[1][0][1]),
+                        type="CDS", strand=strand, qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
                     entry_ID += 1

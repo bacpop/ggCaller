@@ -16,7 +16,8 @@ PYBIND11_MODULE(ggCaller_cpp, m)
             .def("generate_clusters", &Graph::generate_clusters)
             .def("refind_gene", &Graph::refind_gene)
             .def("search_graph", &Graph::search_graph)
-            .def("node_size", &Graph::node_size);
+            .def("node_size", &Graph::node_size)
+            .def("ORF_location", &Graph::ORF_location);
 
     m.def("create_graph", []() { return std::make_shared<Graph>(); });
 

@@ -235,9 +235,9 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t colour_I
 }
 
 std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourORFMap& colour_ORF_map,
-                                                                  const size_t& overlap,
-                                                                  const double& id_cutoff,
-                                                                  const double& len_diff_cutoff)
+                                                                   const size_t& overlap,
+                                                                   const double& id_cutoff,
+                                                                   const double& len_diff_cutoff)
 {
     // group ORFs together based on single shared k-mer
     auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
@@ -320,6 +320,40 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     }
 
     return {input_colours, kmer, query_coords};
+}
+
+std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
+                                                            const std::string& fasta_file,
+                                                            const int overlap,
+                                                            const bool write_idx,
+                                                            size_t num_threads)
+{
+    // Set number of threads
+    if (num_threads < 1)
+    {
+        num_threads = 1;
+    }
+
+    // set OMP number of threads
+    omp_set_num_threads(num_threads);
+
+    // initialise return vector
+    std::vector<std::pair<ContigLoc, bool>> ORF_coords(ORF_IDs.size());
+
+    // get the FM_index
+    const auto fm_index = index_fasta(fasta_file, write_idx);
+
+    #pragma omp parallel for
+    for (int i = 0; i < ORF_IDs.size(); i++)
+    {
+        const auto& ORF_info = ORF_IDs.at(i);
+        const auto ORF_sequence = generate_sequence_nm(ORF_info.first, ORF_info.second, overlap, _ccdbg, _KmerArray);
+
+        // get the coordinates of the ORF
+        ORF_coords[i] = get_ORF_coords(ORF_sequence, fm_index.first, fm_index.second);
+    }
+
+    return ORF_coords;
 }
 
 NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,

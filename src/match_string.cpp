@@ -8,7 +8,7 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
     fm_index_coll ref_index;
 
     // create fm index file name
-    std::string idx_file_name = fasta_file + ".fm";
+    std::string idx_file_name = fasta_file + ".fms";
 
     // create entry for start and end of contigs within fm_index
     std::vector<size_t> contig_locs;
@@ -65,14 +65,14 @@ std::pair<int, bool> seq_search(const std::string& query,
     auto locations = sdsl::locate(ref_idx, query.begin(), query.end());
 
     // determine if sequence reversed
-    bool rev_comp = false;
+    bool strand = true;
 
     // if not found, check reverse strand
     if (locations.empty())
     {
         const std::string rev_query = reverse_complement(query);
         locations = sdsl::locate(ref_idx, rev_query.begin(), rev_query.end());
-        rev_comp = true;
+        strand = false;
     }
 
     // take first entry from locations
@@ -82,20 +82,20 @@ std::pair<int, bool> seq_search(const std::string& query,
         sort(locations.begin(), locations.end());
         query_loc = locations[0];
     }
-    return {query_loc, rev_comp};
+    return {query_loc, strand};
 }
 
 // determine true colours of sequence
-std::pair<ContigLoc, bool> check_colours(const std::string& query,
-                                         const fm_index_coll& fm_idx,
-                                         const std::vector<size_t>& contig_locs)
+std::pair<ContigLoc, bool> get_ORF_coords(const std::string& query,
+                                          const fm_index_coll& fm_idx,
+                                          const std::vector<size_t>& contig_locs)
 {
     // initialise location pair
     ContigLoc contig_loc;
 
     const auto query_pair = seq_search(query, fm_idx);
     const int& query_loc = std::get<0>(query_pair);
-    const int& rev_comp = std::get<1>(query_pair);
+    const bool strand = std::get<1>(query_pair);
 
     //if sequence present then determine contig coordinates
     if (query_loc > 0)
@@ -107,18 +107,18 @@ std::pair<ContigLoc, bool> check_colours(const std::string& query,
             {
                 if (i == 0)
                 {
-                    contig_loc = {1, {query_loc + 1, query_loc + query.size()}};
+                    contig_loc = {1, {query_loc, query_loc + query.size()}};
                 } else
                 {
                     size_t relative_loc = (query_loc - contig_locs.at(i - 1));
-                    contig_loc = {i + 1, {relative_loc, relative_loc + query.size() - 1}};
+                    contig_loc = {i + 1, {relative_loc, relative_loc + (query.size() - 1)}};
                 }
                 break;
             }
         }
     }
 
-    return {contig_loc, rev_comp};
+    return {contig_loc, strand};
 }
 
 std::vector<int> reverse_unitig_path(const std::vector<int>& unitig_path)
