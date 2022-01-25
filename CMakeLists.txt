@@ -22,6 +22,12 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
 ENDIF()
 
+# add torch libraries
+FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
+MESSAGE(${PYTHON_SITE_PACKAGES})
+list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
+find_package(Torch REQUIRED)
+
 #Find include dirs for z, bifrost
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
@@ -44,7 +50,7 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES})
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
 
 #find OpenMP library
 find_package(OpenMP)
