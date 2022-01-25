@@ -49,18 +49,19 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const ColoredCDBG<MyUniti
     return node_ranges;
 }
 
-std::vector<int> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                           const std::vector<Kmer>& head_kmer_arr,
-                           const PathVector& unitig_complete_paths,
-                           const int kmer,
-                           const bool is_ref,
-                           const fm_index_coll& fm_idx,
-                           std::string& stream_seq,
-                           const size_t& ORF_end,
-                           const std::string& ORF_seq)
+std::pair<std::vector<int>, bool> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                             const std::vector<Kmer>& head_kmer_arr,
+                                             const PathVector& unitig_complete_paths,
+                                             const int kmer,
+                                             const bool is_ref,
+                                             const fm_index_coll& fm_idx,
+                                             std::string& stream_seq,
+                                             const size_t& ORF_end,
+                                             const std::string& ORF_seq)
 {
     // initialise path of nodes to return
     std::vector<int> nodelist;
+    bool rev_comp = false;
 
     // iterate over all the paths, determine which is the longest and real.
     // If multiple, choose from that with the lowest hash for first kmer
@@ -75,6 +76,7 @@ std::vector<int> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
             {
                 continue;
             }
+            rev_comp = present.second;
         }
 
         // initilise path_sequence
@@ -131,7 +133,7 @@ std::vector<int> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
         }
     }
-    return nodelist;
+    return {nodelist, rev_comp};
 }
 
 PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -286,9 +288,9 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
     std::string upstream_seq;
     std::string downstream_seq;
 
-    // initialise path of nodes to use for coordinate generation
+    // initialise path of nodes to use for coordinate generation and strand of path
     std::vector<int> full_nodelist;
-
+    bool path_rev_comp = true;
 
     // generate a string of the ORF to check against FM-index
     std::string ORF_seq = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
@@ -358,12 +360,17 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
 
         if (!unitig_complete_paths.empty())
         {
-            auto upstream_nodes = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
+            auto upstream_pair = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
                                                        is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+
+            auto& upstream_nodes = upstream_pair.first;
 
             // reverse upstream_nodelist
             if (!upstream_seq.empty())
             {
+                // set path strand as rev_comp output
+                path_rev_comp = upstream_pair.second;
+
                 // Reverse ORF2 node vector
                 std::reverse(upstream_nodes.begin(), upstream_nodes.end());
 
@@ -445,10 +452,16 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
 
         if (!unitig_complete_paths.empty())
         {
-            auto downstream_nodes = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
+            auto downstream_pair = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
                                                         is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
+
+            auto downstream_nodes = downstream_pair.first;
+
             if (downstream_nodes.size() > 1)
             {
+                // if downstream nodes has extended path, update the path_rev_comp
+                path_rev_comp = downstream_pair.second;
+
                 full_nodelist.insert(full_nodelist.end(), downstream_nodes.begin() + 1, downstream_nodes.end());
             }
         }
@@ -463,7 +476,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // calculate the positions of each node within the path
         const auto full_node_ranges = calculate_node_ranges(ccdbg, head_kmer_arr, kmer - 1, full_nodelist);
 
-        return {ORF_seq, full_nodelist, full_node_ranges};
+        return {ORF_seq, full_nodelist, full_node_ranges, path_rev_comp};
     } else
     {
         return {};

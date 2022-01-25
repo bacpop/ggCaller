@@ -246,13 +246,11 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, search_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, contig_pair = search_info
+            db_seq, nodelist, node_ranges, path_rev_comp = search_info
 
             # check if no sequence found
             if db_seq == "":
                 pass
-
-            contig_coords, path_rev_comp = contig_pair
 
             hit, loc, rev_comp = search_dna(db_seq,
                                             search,
@@ -260,8 +258,8 @@ def search_graph(search_pair,
                                             pairwise_id_thresh,
                                             refind=True)
 
-            # work out how ORF is orientated with respect to original sequence
-            if rev_comp and path_rev_comp:
+            # work out how ORF is orientated with respect to original sequence (only if FM-index used)
+            if rev_comp and path_rev_comp and is_ref:
                 rev_comp = False
 
             # convert linear coordinates into node coordinates
