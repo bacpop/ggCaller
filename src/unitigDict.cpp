@@ -120,10 +120,6 @@ void MyUnitigMap::_check_head_tail_equal() {
         _unitig_full_colour = _unitig_head_colour;
         _unitig_full_colour |= _unitig_tail_colour;
     }
-
-    // clear the head and tail colours
-    _unitig_head_colour.clear();
-    _unitig_tail_colour.clear();
 }
 
 std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, const int frame) const {

@@ -44,6 +44,7 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     void add_tail_colour(boost::dynamic_bitset<> colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
     boost::dynamic_bitset<> tail_colour() const {return _unitig_tail_colour;};
     bool head_tail_colours_equal() const {return _head_tail_colours_equal;};
+    void clear_colours() {_unitig_head_colour.clear(); _unitig_tail_colour.clear();};
 
     // access end_contig
     void set_end_contig (bool choice) {_end_contig = choice;};
@@ -70,7 +71,7 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     boost::dynamic_bitset<> _unitig_full_colour;
     boost::dynamic_bitset<> _unitig_head_colour;
     boost::dynamic_bitset<> _unitig_tail_colour;
-    bool _head_tail_colours_equal;
+    bool _head_tail_colours_equal = false;
 
     // check head and tail colours equal
     void _check_head_tail_equal();

@@ -127,31 +127,6 @@ std::bitset<9> calculateFrame_binary_part (const std::vector<std::size_t>& index
     return full_binary;
 }
 
-//// switch codon reading frames depending on partial reading frame used
-//std::bitset<3> switchFrame_binary (const std::bitset<3> binary_array, const int frame)
-//{
-//    std::bitset<3> codon_binary = binary_array;
-//
-//    bool bit0 = codon_binary[0];
-//    bool bit1 = codon_binary[1];
-//    bool bit2 = codon_binary[2];
-//
-//    if (frame == 1)
-//    {
-//        codon_binary[0] = bit2;
-//        codon_binary[1] = bit0;
-//        codon_binary[2] = bit1;
-//
-//    } else if (frame == 2)
-//    {
-//        codon_binary[0] = bit1;
-//        codon_binary[1] = bit2;
-//        codon_binary[2] = bit0;
-//    }
-//
-//    return codon_binary;
-//}
-
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
                                            const size_t nb_colours,
@@ -213,18 +188,17 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     // get head kmer for unitig, add to kmer dictionary
     const Kmer head_kmer_binary = um.getUnitigHead();
     const std::string head_kmer = head_kmer_binary.toString();
-//    um_data->add_head(head_kmer);
 
     // calculate colours for unitig
     boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
-    um_data->add_head_colour(std::move(unitig_colours));
+    um_data->add_head_colour(unitig_colours);
 
     // generate colours for tail also
     const Kmer tail_kmer = um.getUnitigTail();
     const auto um_tail = ccdbg.find(tail_kmer, true);
     const size_t tail_pos = unitig_len - kmer;
     unitig_colours = generate_colours(um_tail, nb_colours, tail_pos);
-    um_data->add_tail_colour(std::move(unitig_colours));
+    um_data->add_tail_colour(unitig_colours);
     
     // analyse codon presence/absence
     //initialise codon search vectors
@@ -316,9 +290,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 mtx1.lock();
                 const auto adj_um_pair = get_um_data(ccdbg, succ.first);
                 mtx1.unlock();
-                const auto& adj_um = adj_um_pair.first;
                 const auto& adj_um_data = adj_um_pair.second;
-                const int succ_id = adj_um_data->get_id();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate tail, as this portion will overlap with next unitig
@@ -341,11 +313,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 // if colours are viable, add successor information to current unitig
                 if (!colours.none())
                 {
-                    //generate integer value of successor ID, if negative strand ID will be negative etc.
-                    int succ_id_int = (succ.second) ? succ_id : succ_id * -1;
                     num_succ++;
-//                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (succ_id_int, adj_um_data->get_codon_dict(false, succ.second), {});
-//                    um_data->add_neighbour(true, neighbour);
                 }
             }
 
@@ -366,25 +334,22 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 mtx1.lock();
                 const auto adj_um_pair = get_um_data(ccdbg, pred.first);
                 mtx1.unlock();
-                const auto& adj_um = adj_um_pair.first;
                 const auto& adj_um_data = adj_um_pair.second;
-                const auto pred_id = adj_um_data->get_id();
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
                 // for current untiig, should negate head, as this portion will overlap with next unitig
                 boost::dynamic_bitset<> colours;
                 if (pred.second)
                 {
-                    //colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.head_colour()));
                     colours = um_data->head_colour();
                     colours &= adj_um_data->head_colour();
                 } else
                 {
-                    //colours = std::move(bool_and(unitig_dict.head_colour(), adj_unitig_dict.tail_colour()));
                     colours = um_data->head_colour();
                     colours &= adj_um_data->tail_colour();
                 }
 
+                // negate adjacent full colours from full colours
                 auto adj_unitig_dict_full = adj_um_data->full_colour();
                 adj_unitig_dict_full.flip();
                 full_colours &= adj_unitig_dict_full;
@@ -392,10 +357,6 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
                 // if colours are viable, add successor information to current unitig
                 if (!colours.none())
                 {
-                    //generate integer value of successor ID, if negative strand ID will be negative etc.
-                    int pred_id_int = (pred.second) ? pred_id : pred_id * -1;
-//                    std::tuple<int, std::vector<uint8_t>, std::unordered_set<size_t>> neighbour (pred_id_int, adj_um_data->get_codon_dict(false, pred.second), {});
-//                    um_data->add_neighbour(false, neighbour);
                     num_pred++;
                 }
             }
@@ -490,42 +451,18 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     int node_ID = um_data->get_id() * strand;
 
                     if (prev_head != node_ID) {
-                        if (prev_head != 0)
-                        {
-                            // add edge to graph_vector in forward and reverse
-                            const bool prev_strand = prev_head >= 0 ? true : false;
-                            const bool current_strand = node_ID >= 0 ? true : false;
-
-                            // get previous head unitig map
-                            const Kmer prev_head_Kmer = head_kmer_arr.at(abs(prev_head) - 1);
-                            auto prev_um = ccdbg.find(prev_head_Kmer, true);
-
-                            DataAccessor<MyUnitigMap>* prev_da = prev_um.getData();
-                            MyUnitigMap* prev_um_data = prev_da->getData(prev_um);
-
-//                            prev_um_data->add_neighbour_colour(prev_strand, node_ID, colour_ID);
-//                            um_data->add_neighbour_colour(!current_strand, prev_head * -1, colour_ID);
-
-                            // if moving to new node, need to update previous node distance
-                            std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
-//                            prev_um_data->add_contig_coords(colour_ID, node_contig_mappings.back().second);
-                        }
+                        // set prev_head to new node
                         prev_head = node_ID;
+
+                        // clear unitig colours
+                        um_data->clear_colours();
 
                         // add new node
                         const std::string node_entry = std::to_string(node_ID);
                         contig_path += node_entry + ",";
-                        node_contig_mappings.push_back({abs(node_ID) - 1, {contig_ID, kmer_index, um.dist, 0, um.strand}});
 
                         // reset kmer counter
                         kmer_counter = 0;
-                    }
-
-                    // if at last kmer, need to determine position within unitig
-                    if (kmer_index == num_kmers)
-                    {
-                        std::get<3>(node_contig_mappings.back().second) = std::get<2>(node_contig_mappings.back().second) + kmer_counter;
-//                        um_data->add_contig_coords(colour_ID, node_contig_mappings.back().second);
                     }
                 }
                 kmer_counter++;

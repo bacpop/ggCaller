@@ -179,7 +179,7 @@ std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t colour_ID,
         if (is_ref)
         {
 //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
-            const auto idx_file_name = FM_fasta_file + ".fm";
+            const auto idx_file_name = FM_fasta_file + ".fmp";
             if (!load_from_file(fm_idx, idx_file_name))
             {
                 cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -228,9 +228,6 @@ std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t colour_I
     new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref, overlap);
     connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
 
-//    // remove traversing ORF information
-//    remove_ORF_info(_ccdbg, _KmerArray, colour_ID, target_ORFs, ORF_vector);
-
     return connected_ORFs;
 }
 
@@ -267,7 +264,7 @@ RefindMap Graph::refind_gene(const size_t& colour_ID,
     fm_index_coll fm_idx;
     if (is_ref)
     {
-        const auto idx_file_name = FM_fasta_file + ".fm";
+        const auto idx_file_name = FM_fasta_file + ".fmp";
         if (!load_from_file(fm_idx, idx_file_name))
         {
             cout << "FM-Index not available for " << FM_fasta_file << endl;
