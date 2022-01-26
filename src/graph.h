@@ -82,11 +82,9 @@ class Graph {
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
-    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::string& graphfile,
-                                                                                      const std::string& coloursfile,
-                                                                                      const std::vector<std::string>& query_vec,
-                                                                                      const double& id_cutoff,
-                                                                                      size_t num_threads);
+    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::vector<std::string>& query_vec,
+                                                                                       const double& id_cutoff,
+                                                                                       size_t num_threads);
 
     std::vector<std::pair<ContigLoc, bool>> ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
                                                          const std::string& fasta_file,

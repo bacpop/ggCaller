@@ -283,9 +283,7 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return generate_sequence_nm(nodelist, node_coords, overlap, _ccdbg, _KmerArray);
 }
 
-std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::string& graphfile,
-                                                                                          const std::string& coloursfile,
-                                                                                          const std::vector<std::string>& query_vec,
+std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::vector<std::string>& query_vec,
                                                                                           const double& id_cutoff,
                                                                                           size_t num_threads)
 {
@@ -297,9 +295,6 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
 
     // set OMP number of threads
     omp_set_num_threads(num_threads);
-
-    // read in graph
-    _ccdbg.read(graphfile, coloursfile, num_threads);
 
     // get input colours
     std::vector<std::string> input_colours = _ccdbg.getColorNames();
