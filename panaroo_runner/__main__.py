@@ -34,7 +34,7 @@ class SmartFormatter(argparse.HelpFormatter):
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 
-def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
+def run_panaroo(shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
@@ -117,7 +117,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # generate annotations
         G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
-                                                           hmm_db, evalue, annotate, n_cpu, pool)
+                                                           hmm_db, evalue, annotate, n_cpu)
 
     if verbose:
         print("collapse gene families...")
@@ -159,7 +159,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             prop_match=refind_prop_match,
                                             pairwise_id_thresh=identity_cutoff,
                                             merge_id_thresh=max(0.8, family_threshold),
-                                            pool=pool,
                                             n_cpu=n_cpu,
                                             verbose=verbose)
 
@@ -270,7 +269,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
+                                      high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
                                       ignore_pseduogenes, truncation_threshold)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         core_gene_names = [G.nodes[x[0]]["name"] for x in core_nodes]
@@ -279,7 +278,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
+                                       high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
                                        ignore_pseduogenes, truncation_threshold)
 
     # add helpful attributes and write out graph in GML format

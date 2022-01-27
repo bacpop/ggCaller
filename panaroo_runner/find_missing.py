@@ -29,7 +29,6 @@ def find_missing(G,
                  search_radius,
                  prop_match,
                  pairwise_id_thresh,
-                 pool,
                  n_cpu,
                  remove_by_consensus=False,
                  verbose=True):
@@ -70,18 +69,19 @@ def find_missing(G,
     all_hits = [None] * len(isolate_names)
     all_node_locs = [None] * len(isolate_names)
 
-    for member, hits, node_locs in pool.map(partial(search_graph,
-                                                    graph_shd_arr_tup=graph_shd_arr_tup,
-                                                    isolate_names=isolate_names,
-                                                    search_radius=search_radius,
-                                                    prop_match=prop_match,
-                                                    pairwise_id_thresh=pairwise_id_thresh,
-                                                    is_ref=is_ref,
-                                                    kmer=kmer,
-                                                    repeat=repeat),
-                                            search_dict.items()):
-        all_hits[member] = hits
-        all_node_locs[member] = node_locs
+    with Pool(processes=n_cpu, maxtasksperchild=1) as pool:
+        for member, hits, node_locs in pool.map(partial(search_graph,
+                                                        graph_shd_arr_tup=graph_shd_arr_tup,
+                                                        isolate_names=isolate_names,
+                                                        search_radius=search_radius,
+                                                        prop_match=prop_match,
+                                                        pairwise_id_thresh=pairwise_id_thresh,
+                                                        is_ref=is_ref,
+                                                        kmer=kmer,
+                                                        repeat=repeat),
+                                                search_dict.items()):
+            all_hits[member] = hits
+            all_node_locs[member] = node_locs
 
     if verbose:
         print("translating hits...")

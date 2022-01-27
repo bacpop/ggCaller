@@ -519,7 +519,7 @@ def main():
         array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
 
         # run run_calculate_ORFs with multithreading
-        with Pool(processes=options.threads) as pool:
+        with Pool(processes=options.threads, maxtasksperchild=1) as pool:
             for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
                     partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
                             max_path_length=options.max_path_length, is_ref=is_ref,
@@ -535,32 +535,32 @@ def main():
 
             print("post-graph traversal: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
-            # generate ORF clusters
-            if not options.no_clustering:
-                print("Generating clusters of high-scoring ORFs...")
-                cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs,
-                                                                        overlap,
-                                                                        options.identity_cutoff,
-                                                                        options.len_diff_cutoff)
+        # generate ORF clusters
+        if not options.no_clustering:
+            print("Generating clusters of high-scoring ORFs...")
+            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs,
+                                                                    overlap,
+                                                                    options.identity_cutoff,
+                                                                    options.len_diff_cutoff)
 
-                print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+            print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
-                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
-                            cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
-                            options.threads,
-                            options.length_outlier_support_proportion, options.identity_cutoff,
-                            options.family_threshold, options.min_trailing_support, options.trailing_recursive,
-                            options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
-                            options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
-                            options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                            annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save, options.refind)
+            run_panaroo(array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
+                        cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
+                        options.threads,
+                        options.length_outlier_support_proportion, options.identity_cutoff,
+                        options.family_threshold, options.min_trailing_support, options.trailing_recursive,
+                        options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
+                        options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
+                        options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
+                        options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
+                        annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
+                        options.truncation_threshold, options.save, options.refind)
 
-                print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-            else:
-                print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
-                                input_colours, overlap, graph)
+            print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
+        else:
+            print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+                            input_colours, overlap, graph)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
