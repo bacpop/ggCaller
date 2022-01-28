@@ -44,9 +44,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-// torch header
-#include <torch/torch.h>
-
 // Eigen header
 #include <Eigen/Sparse>
 

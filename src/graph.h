@@ -1,6 +1,7 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include <torch/script.h>
 #include "unitigDict.h"
 #include "indexing.h"
 #include "traversal.h"
@@ -11,6 +12,7 @@
 #include "ORF_clustering.h"
 #include "gene_refinding.h"
 #include "search_DBG.h"
+#include "ORF_scoring.h"
 
 class Graph {
     public:
@@ -82,11 +84,9 @@ class Graph {
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
-    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::string& graphfile,
-                                                                                      const std::string& coloursfile,
-                                                                                      const std::vector<std::string>& query_vec,
-                                                                                      const double& id_cutoff,
-                                                                                      size_t num_threads);
+    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::vector<std::string>& query_vec,
+                                                                                       const double& id_cutoff,
+                                                                                       size_t num_threads);
 
     std::vector<std::pair<ContigLoc, bool>> ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
                                                          const std::string& fasta_file,
@@ -105,6 +105,15 @@ class Graph {
 
     // clear graph object
     void clear() {_ccdbg.clear(); _KmerArray.clear();};
+
+    // scoring using BALROG models
+    std::unordered_map<size_t, double> score_ORFs(const ORFVector& ORF_vector,
+                                                 const std::string& ORF_model_file,
+                                                 const std::string& TIS_model_file,
+                                                 const int overlap,
+                                                 const float minimum_ORF_score,
+                                                 const int ORF_batch_size,
+                                                 const int TIS_batch_size);
 
     private:
     // index graph

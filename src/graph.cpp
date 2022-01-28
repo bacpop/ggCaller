@@ -283,9 +283,7 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return generate_sequence_nm(nodelist, node_coords, overlap, _ccdbg, _KmerArray);
 }
 
-std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::string& graphfile,
-                                                                                          const std::string& coloursfile,
-                                                                                          const std::vector<std::string>& query_vec,
+std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::vector<std::string>& query_vec,
                                                                                           const double& id_cutoff,
                                                                                           size_t num_threads)
 {
@@ -297,9 +295,6 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
 
     // set OMP number of threads
     omp_set_num_threads(num_threads);
-
-    // read in graph
-    _ccdbg.read(graphfile, coloursfile, num_threads);
 
     // get input colours
     std::vector<std::string> input_colours = _ccdbg.getColorNames();
@@ -351,6 +346,46 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
     }
 
     return ORF_coords;
+}
+
+std::unordered_map<size_t, double> Graph::score_ORFs(const ORFVector& ORF_vector,
+                                                     const std::string& ORF_model_file,
+                                                     const std::string& TIS_model_file,
+                                                     const int overlap,
+                                                     const float minimum_ORF_score,
+                                                     const int ORF_batch_size,
+                                                     const int TIS_batch_size)
+{
+    std::unordered_map<size_t, double> score_map;
+
+    // load models
+    torch::jit::script::Module ORF_model;
+    torch::jit::script::Module TIS_model;
+    bool error = false;
+
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        ORF_model = torch::jit::load(ORF_model_file);
+    }
+    catch (const c10::Error& e) {
+        std::cerr << "error loading the ORF model\n";
+        error = true;
+    }
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        TIS_model = torch::jit::load(TIS_model_file);
+    }
+    catch (const c10::Error& e) {
+        std::cerr << "error loading the TIS model\n";
+        error = true;
+    }
+
+    if (!error)
+    {
+        score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
+                minimum_ORF_score, ORF_batch_size, TIS_batch_size));
+    }
+    return score_map;
 }
 
 NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
