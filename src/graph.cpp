@@ -146,18 +146,18 @@ void Graph::out(const std::string& outfile)
 
 
 std::pair<ORFOverlapMap, ORFVector> Graph::findORFs (const size_t colour_ID,
-                                                     const std::vector<size_t>& node_ids,
-                                                     const bool repeat,
-                                                     const size_t overlap,
-                                                     const size_t max_path_length,
-                                                     bool is_ref,
-                                                     const bool no_filter,
-                                                     const std::vector<std::string>& stop_codons_for,
-                                                     const std::vector<std::string>& start_codons_for,
-                                                     const size_t min_ORF_length,
-                                                     const size_t max_overlap,
-                                                     const bool write_idx,
-                                                     const std::string& FM_fasta_file)
+                                                      const std::vector<size_t>& node_ids,
+                                                      const bool repeat,
+                                                      const size_t overlap,
+                                                      const size_t max_path_length,
+                                                      bool is_ref,
+                                                      const bool no_filter,
+                                                      const std::vector<std::string>& stop_codons_for,
+                                                      const std::vector<std::string>& start_codons_for,
+                                                      const size_t min_ORF_length,
+                                                      const size_t max_overlap,
+                                                      const bool write_idx,
+                                                      const std::string& FM_fasta_file)
 {
     ORFVector ORF_vector;
 
@@ -352,7 +352,7 @@ std::unordered_map<size_t, double> Graph::score_ORFs(const ORFVector& ORF_vector
                                                      const std::string& ORF_model_file,
                                                      const std::string& TIS_model_file,
                                                      const int overlap,
-                                                     const float minimum_ORF_score,
+                                                     const double& minimum_ORF_score,
                                                      const int ORF_batch_size,
                                                      const int TIS_batch_size)
 {

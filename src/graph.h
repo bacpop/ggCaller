@@ -111,7 +111,7 @@ class Graph {
                                                  const std::string& ORF_model_file,
                                                  const std::string& TIS_model_file,
                                                  const int overlap,
-                                                 const float minimum_ORF_score,
+                                                 const double& minimum_ORF_score,
                                                  const int ORF_batch_size,
                                                  const int TIS_batch_size);
 

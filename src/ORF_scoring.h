@@ -17,9 +17,6 @@ const double weight_GTG = 0.7083689705744909;
 const double weight_TTG = 0.7512400826652517;
 const double maxprob = weight_gene_prob + weight_TIS_prob + weight_ATG;
 const double probthresh = score_threshold * maxprob;
-const double unidirectional_penalty_per_base = 3.895921717182765;  // 3' 5' overlap
-const double convergent_penalty_per_base = 4.603432608883688;  // 3' 3' overlap
-const double divergent_penalty_per_base = 3.3830814940689975;  // 5' 5' overlap
 
 vector<size_t> sort_indexes(vector<torch::Tensor> &v);
 
