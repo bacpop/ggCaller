@@ -86,7 +86,8 @@ std::vector<VertexDescriptor> getPath(
         const std::vector<double>& distances,
         const VertexDescriptor& source,
         const VertexDescriptor& destination,
-        double& path_score)
+        double& path_score,
+        const std::vector<size_t>& vertex_mapping)
 {
     std::vector<VertexDescriptor> path;
 
@@ -101,11 +102,12 @@ std::vector<VertexDescriptor> getPath(
     VertexDescriptor current = destination;
     while (current != source)
     {
-        path.push_back(current);
+
+        path.push_back(vertex_mapping.at(current));
         current = pMap.at(current);
         path_score += distances.at(current);
     }
-    path.push_back(source);
+    path.push_back(vertex_mapping.at(source));
 
     // reverse as works back from beginning
     std::reverse(path.begin(), path.end());
@@ -113,6 +115,7 @@ std::vector<VertexDescriptor> getPath(
 }
 
 std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_t, double>& score_map,
+                                                  const std::vector<size_t>& vertex_mapping,
                                                   const std::unordered_set<size_t>& vertex_list,
                                                   const GeneGraph& g,
                                                   const double& minimum_path_score,
@@ -150,12 +153,12 @@ std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_
     for (const auto& start : start_vertices)
     {
         // get start score
-        const double start_score = -score_map.at(start);
+        const double start_score = -score_map.at(vertex_mapping.at(start));
 
         // check if start is also end vertex
         if (std::find(end_vertices.begin(), end_vertices.end(), start) != end_vertices.end())
         {
-            if (start_score > high_score)
+            if (start_score < high_score)
             {
                 high_score = start_score;
                 gene_path = {start};
@@ -193,7 +196,7 @@ std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_
 //                }
 //                catch (stop_search&) {}
 
-                auto path = getPath(g, pMap, distances, start, end, path_score);
+                auto path = getPath(g, pMap, distances, start, end, path_score, vertex_mapping);
 
                 if (path_score < high_score)
                 {
@@ -225,36 +228,49 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
     std::unordered_map<size_t, size_t> ORF_ID_mapping;
     // scope for graph objects
     {
+        // initialise graph
+        GeneGraph g;
+
         // create edge vector
         std::vector<Edge> edgeVec;
         // create IDs for vertex mappings
         int vertex_id = 0;
         for (const auto& target : overlap_map)
         {
-            if (score_map.find(target.first) != score_map.end())
+            for (const auto& source : target.second)
             {
-                for (const auto& source : target.second)
+                bool target_found = score_map.find(target.first) != score_map.end();
+                auto source_found = score_map.find(source.first) != score_map.end();
+                // if only source found, add singly
+                if (target_found)
                 {
-                    if (score_map.find(source.first) != score_map.end())
+                    if (ORF_ID_mapping.find(target.first) == ORF_ID_mapping.end())
                     {
-                        if (ORF_ID_mapping.find(target.first) == ORF_ID_mapping.end())
-                        {
-                            vertex_mapping[vertex_id] = target.first;
-                            ORF_ID_mapping[target.first] = vertex_id++;
-                        }
-                        if (ORF_ID_mapping.find(source.first) == ORF_ID_mapping.end())
-                        {
-                            vertex_mapping[vertex_id] = source.first;
-                            ORF_ID_mapping[source.first] = vertex_id++;
-                        }
-                        edgeVec.push_back({ORF_ID_mapping.at(source.first), ORF_ID_mapping.at(target.first)});
+                        vertex_mapping[vertex_id] = target.first;
+                        ORF_ID_mapping[target.first] = vertex_id++;
+                        add_vertex(g);
                     }
+                }
+                // if only source found, add singly
+                if (source_found)
+                {
+                    if (ORF_ID_mapping.find(source.first) == ORF_ID_mapping.end())
+                    {
+                        vertex_mapping[vertex_id] = source.first;
+                        ORF_ID_mapping[source.first] = vertex_id++;
+                        add_vertex(g);
+                    }
+                }
+                // if both found, add edge between them
+                if (target_found && source_found)
+                {
+                    add_edge(ORF_ID_mapping.at(source.first), ORF_ID_mapping.at(target.first), g);
                 }
             }
         }
 
         // generate graph
-        GeneGraph g(edgeVec.begin(), edgeVec.end(), score_map.size());
+//        GeneGraph g(edgeVec.begin(), edgeVec.end(), score_map.size());
 
         // check for cycles
         bool has_cycle = false;
@@ -337,8 +353,12 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
 
     for (const auto& component : components)
     {
-        gene_paths.push_back(std::move(traverse_components(score_map, component, tc, minimum_path_score, numVertices)));
+        auto path = traverse_components(score_map, vertex_mapping, component, tc, minimum_path_score, numVertices);
+        // ensure path is not empty
+        if (!path.empty())
+        {
+            gene_paths.push_back(std::move(path));
+        }
     }
-
     return gene_paths;
 }

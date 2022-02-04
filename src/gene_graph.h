@@ -73,34 +73,14 @@ private:
 };
 
 
-//
-//// this doesn't work for stopping when finding a target
-//class bellman_max_visitor:
-//        public boost::bellman_visitor<null_visitor>
-//{
-//public:
-//    bellman_max_visitor(size_t target)
-//            : _target(target) {}
-//
-//    template <class Graph>
-//    void examine_edge(EdgeDescriptor u,
-//                        Graph& g)
-//    {
-//        if (target(u, g) == _target)
-//            throw stop_search();
-//    }
-//
-//private:
-//    size_t _target;
-//};
-
 std::vector<VertexDescriptor> getPath(
         const GeneGraph& graph,
         const std::vector<VertexDescriptor>& pMap,
         const std::vector<double>& distances,
         const VertexDescriptor& source,
         const VertexDescriptor& destination,
-        double& path_score);
+        double& path_score,
+        const std::vector<size_t>& vertex_mapping);
 
 std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_t, double>& score_map,
                                                   const std::unordered_set<size_t>& vertex_list,

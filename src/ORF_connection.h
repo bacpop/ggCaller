@@ -4,7 +4,7 @@
 #include "unitigDict.h"
 
 std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
-                                                             const std::vector<size_t>& target_ORFs,
+                                                             const std::set<size_t>& target_ORFs,
                                                              const ORFVector& ORF_vector);
 
 //void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -23,7 +23,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
                                                        const std::vector<Kmer>& head_kmer_arr,
                                                        const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                        const size_t colour_ID,
-                                                       const std::vector<size_t>& target_ORFs,
+                                                       const std::set<size_t>& target_ORFs,
                                                        const ORFVector& ORF_vector,
                                                        const size_t& max_ORF_path_length,
                                                        const int stream,

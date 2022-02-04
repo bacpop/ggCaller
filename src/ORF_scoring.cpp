@@ -11,7 +11,7 @@ vector<size_t> sort_indexes(vector<torch::Tensor> &v) {
                 [&v](size_t i1, size_t i2) {return v[i1].size(0) < v[i2].size(0);});
 
     // then sort the tensor vector in place
-    std::sort(v.begin(), v.end(), []
+    std::stable_sort(v.begin(), v.end(), []
             (const torch::Tensor& i1, const torch::Tensor& i2){
         return i1.size(0) < i2.size(0);
     });
@@ -23,7 +23,7 @@ torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
 {
     std::vector<int> tokens = (tokenise(aa_seq).out());
 
-    torch::Tensor t = torch::from_blob(tokens.data(), {static_cast<long>(tokens.size())}).to(torch::kInt64);;
+    torch::Tensor t = torch::tensor(tokens, {torch::kInt64});
 
     return t;
 }
@@ -41,12 +41,22 @@ std::pair<std::vector<torch::Tensor>, std::vector<std::pair<std::string, std::st
         const auto& ORF_info = ORF_vector.at(i);
         const auto ORF_DNA = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, ccdbg, head_kmer_arr);
         const auto upstream_TIS = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), overlap, ccdbg, head_kmer_arr);
-        const auto downstream_TIS = ORF_DNA.substr (0,18);
+        const auto downstream_TIS = ORF_DNA.substr (0,19);
 
-        const auto ORF_aa = (translate(ORF_DNA)).aa();
+        // get aa sequence, remove start and end codon
+        const auto ORF_aa = (translate(ORF_DNA)).aa().substr(1,(ORF_DNA.size() / 3) - 2);
 
         TIS_seqs[i] = {upstream_TIS, downstream_TIS};
         ORF_seq_enc[i] = tokenized_aa_seq(ORF_aa);
+
+//        auto tokens = ORF_seq_enc[i];
+//        std::vector<int> token_vec;
+//        int* ptr = (int*)tokens.data_ptr();
+//        for (int j = 0; j < tokens.numel(); j++)
+//        {
+//            token_vec.push_back(*ptr++);
+//        }
+//        int test = 0;
     }
 
     return {ORF_seq_enc, TIS_seqs};
@@ -77,10 +87,22 @@ torch::Tensor predict(torch::jit::script::Module& module,
         num_classes = 4;
     }
 
-    std::vector<torch::jit::IValue> inputs;
-    torch::Tensor X_enc = torch::nn::functional::one_hot(seq_tensor, num_classes).permute(c10::IntArrayRef{0, 2, 1}).to(torch::kFloat32);
-    inputs.push_back(std::move(X_enc));
-    torch::Tensor output = torch::special::expit(module.forward(inputs).toTensor());
+    module.eval();
+    torch::NoGradGuard nograd;
+
+//    std::cout << "seqs: " << seq_tensor.index({ torch::indexing::Slice(torch::indexing::None,35), torch::indexing::Slice(torch::indexing::None,104) })<< std::endl;
+
+
+//    torch::Tensor output = torch::special::expit(module.forward(inputs).toTensor());
+    auto X_enc = torch::nn::functional::one_hot(seq_tensor, num_classes)
+            .permute({0, 2, 1}).to(torch::kFloat32);
+
+//    std::cout << X_enc.index({ torch::indexing::Slice(torch::indexing::None,torch::indexing::None), torch::indexing::Slice(torch::indexing::None,torch::indexing::None), torch::indexing::Slice(torch::indexing::None,torch::indexing::None) })<< std::endl;
+
+    auto size = X_enc.sizes();
+    auto output = torch::special::expit(module.forward({ X_enc }).toTensor());
+//    std::cout << output.index({ torch::indexing::Slice(torch::indexing::None,torch::indexing::None), torch::indexing::Slice(torch::indexing::None,torch::indexing::None)})<< std::endl;
+
 
     return output;
 }
@@ -122,7 +144,7 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
             if (upstream.size() == 16)
             {
                 // reverse and encode the combined upstream + downstream sequences for scoring
-                std::string combined = upstream + downstream;
+                std::string combined = upstream + downstream.substr(3, downstream.size() - 3);
                 std::reverse(combined.begin(), combined.end());
                 std::vector<int> encoded;
 
@@ -130,7 +152,7 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
                 {
                     encoded.push_back(nuc_encode(c).out());
                 }
-                torch::Tensor t = torch::from_blob(encoded.data(), {static_cast<long>(encoded.size())}).to(torch::kInt64);
+                torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
 
                 // add to TIS_tensor and keep track of indices added
                 TIS_tensor.push_back(std::move(t));
@@ -166,11 +188,10 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
             torch::Tensor pred_all = predict(TIS_model, seq_tensor, false);
 
             // add all to list
-            double* ptr = (double*)pred_all.data_ptr();
             for (int j = 0; j < pred_all.numel(); j++)
             {
                 const int& idx = TIS_idx.at(i + j);
-                TIS_prob_list[idx] = *ptr++;
+                TIS_prob_list[idx] = pred_all[j].item<double>();
             }
         }
     }
@@ -213,9 +234,12 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
         std::vector<double> pred(seq_lens.size());
         for (int j = 0; j < seq_lens.size(); j++)
         {
+            // slice tensor to get gene score
             auto sub_seq = pred_all.index({j, 0, torch::indexing::Slice(torch::indexing::None, seq_lens.at(j))});
-            double gene_prob = torch::special::expit(sub_seq.mean()).item<double>();
-            const int ORF_ID = i + j;
+            double gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
+
+            // pull info from ORF_ID
+            const int ORF_ID = length_idx.at(i + j);
             const int& ORF_len = std::get<2>(ORF_vector.at(ORF_ID));
             const auto& TIS_prob = TIS_prob_list.at(ORF_ID);
             const auto& start_codon = start_codon_list.at(ORF_ID);

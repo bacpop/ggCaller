@@ -1,6 +1,6 @@
 #include "ORF_connection.h"
 std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
-                                                             const std::vector<size_t>& target_ORFs,
+                                                             const std::set<size_t>& target_ORFs,
                                                              const ORFVector& ORF_vector)
 {
     std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs(head_kmer_arr.size());
@@ -22,39 +22,6 @@ std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<K
 
     return node_to_ORFs;
 }
-
-//void remove_ORF_info (ColoredCDBG<MyUnitigMap>& ccdbg,
-//                      const std::vector<Kmer>& head_kmer_arr,
-//                      const size_t& colour_ID,
-//                      const std::vector<size_t>& target_ORFs,
-//                      const ORFVector& ORF_vector)
-//{
-//    for (const auto & source : target_ORFs)
-//    {
-//        {
-//            // get graph information for source node
-//            const auto & ORF_info = ORF_vector.at(source);
-//
-//            const auto source_node_id = std::get<0>(ORF_info).at(0);
-//            const auto sink_node_id = std::get<0>(ORF_info).back();
-//
-//            // get a reference to the unitig map object
-//            auto start_um_pair = get_um_data(ccdbg, head_kmer_arr, source_node_id);
-//            auto& start_um_data = start_um_pair.second;
-//
-//            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, sink_node_id);
-//            auto& end_um_data = end_um_pair.second;
-//
-//            // add ORF information to graph
-//            start_um_data->clear_ORFs(colour_ID);
-//            // check if ORF is present only on single node
-//            if (abs(source_node_id) != abs(sink_node_id))
-//            {
-//                end_um_data->clear_ORFs(colour_ID);
-//            }
-//        }
-//    }
-//}
 
 std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const std::vector<Kmer>& head_kmer_arr,
@@ -142,7 +109,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
                                                        const std::vector<Kmer>& head_kmer_arr,
                                                        const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                        const size_t colour_ID,
-                                                       const std::vector<size_t>& target_ORFs,
+                                                       const std::set<size_t>& target_ORFs,
                                                        const ORFVector& ORF_vector,
                                                        const size_t& max_ORF_path_length,
                                                        const int stream,
