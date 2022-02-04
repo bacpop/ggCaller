@@ -145,13 +145,18 @@ boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataSt
     {
         if (it_uc.getKmerPosition() == position)
         {
-            colours_arr[it_uc.getColorID()] = 1;
+            // check here, seems to be issue where colours are greater than nb_colours for given kmer
+            const auto col = it_uc.getColorID();
+            if (col < nb_colours)
+            {
+                colours_arr[col] = 1;
+            }
         } else if (it_uc.getKmerPosition() > position)
         {
            break;
         }
     }
-    
+
     return colours_arr;
 }
 

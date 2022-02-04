@@ -136,7 +136,6 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
         std::vector<int> TIS_idx;
         std::vector<torch::Tensor> TIS_tensor;
 
-        const int vec_size = static_cast<int>(TIS_seqs.size());
         for (int i = 0; i < TIS_seqs.size(); i++)
         {
             const auto &upstream = TIS_seqs.at(i).first;
@@ -168,6 +167,7 @@ std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& cc
         }
 
         // batch score TIS_seqs
+        const int vec_size = static_cast<int>(TIS_tensor.size());
         for (int i = 0; i < vec_size; i += TIS_batch_size)
         {
             std::vector<torch::Tensor> batch;

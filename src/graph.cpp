@@ -359,6 +359,8 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     ORFMatrixVector ORF_mat_vector;
     if (clustering)
     {
+        cout << "Generating clusters of high-scoring ORFs..." << endl;
+
         // group ORFs together based on single shared k-mer
         auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
 
