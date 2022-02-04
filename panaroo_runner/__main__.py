@@ -150,7 +150,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             shd_arr_tup,
                                             high_scoring_ORFs,
                                             is_ref=is_ref,
-                                            write_idx=write_idx,
                                             kmer=kmer,
                                             repeat=repeat,
                                             isolate_names=input_colours,
@@ -158,7 +157,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             search_radius=search_radius,
                                             prop_match=refind_prop_match,
                                             pairwise_id_thresh=identity_cutoff,
-                                            merge_id_thresh=max(0.8, family_threshold),
                                             pool=pool,
                                             n_cpu=n_cpu,
                                             verbose=verbose)
