@@ -256,6 +256,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
             std::unordered_map<size_t, double> score_map;
 
+            cout << "Started scoring: " << colour_ID << endl;
             if (!error)
             {
                 score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
@@ -270,6 +271,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                     gene_paths.push_back({i});
                 }
             }
+            cout << "Finished scoring: " << colour_ID << endl;
         } else
         {
             // return unfiltered genes
@@ -352,6 +354,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         // update colour_ORF_map and colour_edge_map
         colour_ORF_map[colour_ID] = std::move(gene_map);
         colour_edge_map[colour_ID] = std::move(gene_edges);
+        cout << "Finished: " << colour_ID << endl;
     }
 
     // generate clusters if required
@@ -377,53 +380,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     return {colour_ORF_map, colour_edge_map, cluster_map, ORF_mat_vector};
 }
 
-//std::vector<std::pair<size_t, size_t>> Graph::connect_ORFs(const size_t colour_ID,
-//                                                           const ORFVector& ORF_vector,
-//                                                           const std::vector<size_t>& target_ORFs,
-//                                                           const size_t max_ORF_path_length,
-//                                                           const bool is_ref,
-//                                                           const int overlap)
-//{
-//    std::vector<std::pair<size_t, size_t>> connected_ORFs;
-//
-//    // add ORF info for colour to graph
-//    const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, ORF_vector);
-//
-//    // initialise prev_node_set to avoid same ORFs being traversed from again
-//    std::unordered_set<int> prev_node_set;
-//
-//    // conduct DBG traversal for upstream...
-//    auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, -1, prev_node_set, is_ref, overlap);
-//    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
-//
-//    // ... and downstream
-//    new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, ORF_vector, max_ORF_path_length, 1, prev_node_set, is_ref, overlap);
-//    connected_ORFs.insert(connected_ORFs.end(), make_move_iterator(new_connections.begin()), make_move_iterator(new_connections.end()));
-//
-//    return connected_ORFs;
-//}
-
-//std::pair<ORFMatrixVector, ORFClusterMap> Graph::generate_clusters(const ColourORFMap& colour_ORF_map,
-//                                                                   const size_t& overlap,
-//                                                                   const double& id_cutoff,
-//                                                                   const double& len_diff_cutoff)
-//{
-//    // group ORFs together based on single shared k-mer
-//    auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
-//
-//    //unpack ORF_group_tuple
-//    auto& ORF_mat_vector = std::get<0>(ORF_group_tuple);
-//    auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
-//    auto& centroid_vector = std::get<2>(ORF_group_tuple);
-//
-//    // generate clusters for ORFs based on identity
-//    auto cluster_map = produce_clusters(colour_ORF_map, _ccdbg, _KmerArray, overlap, ORF_mat_vector,
-//                                                   ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
-//
-//    // generate return pair of mappings of ORF IDs and clusters
-//    const auto return_pair = std::make_pair(ORF_mat_vector, cluster_map);
-//    return return_pair;
-//}
 
 RefindMap Graph::refind_gene(const size_t& colour_ID,
                              const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
@@ -519,46 +475,6 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
 
     return ORF_coords;
 }
-
-//std::unordered_map<size_t, double> Graph::score_ORFs(const ORFVector& ORF_vector,
-//                                                     const std::string& ORF_model_file,
-//                                                     const std::string& TIS_model_file,
-//                                                     const int overlap,
-//                                                     const double& minimum_ORF_score,
-//                                                     const int ORF_batch_size,
-//                                                     const int TIS_batch_size)
-//{
-//    std::unordered_map<size_t, double> score_map;
-//
-//    // load models
-//    torch::jit::script::Module ORF_model;
-//    torch::jit::script::Module TIS_model;
-//    bool error = false;
-//
-//    try {
-//        // Deserialize the ScriptModule from a file using torch::jit::load().
-//        ORF_model = torch::jit::load(ORF_model_file);
-//    }
-//    catch (const c10::Error& e) {
-//        std::cerr << "error loading the ORF model\n";
-//        error = true;
-//    }
-//    try {
-//        // Deserialize the ScriptModule from a file using torch::jit::load().
-//        TIS_model = torch::jit::load(TIS_model_file);
-//    }
-//    catch (const c10::Error& e) {
-//        std::cerr << "error loading the TIS model\n";
-//        error = true;
-//    }
-//
-//    if (!error)
-//    {
-//        score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
-//                minimum_ORF_score, ORF_batch_size, TIS_batch_size));
-//    }
-//    return score_map;
-//}
 
 NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                                       const std::vector<std::string>& stop_codons_rev,

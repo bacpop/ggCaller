@@ -506,8 +506,6 @@ def main():
 
     high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict, cluster_id_list = gene_tuple
 
-    print("pre-graph traversal: Perc: " + str(p0.memory_percent()) + "  full: " + str(p0.memory_info()))
-
     # generate ORF clusters
     if not options.no_clustering:
         with SharedMemoryManager() as smm:

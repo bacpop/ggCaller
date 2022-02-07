@@ -22,12 +22,18 @@ vector<size_t> sort_indexes(vector<torch::Tensor> &v);
 
 torch::Tensor tokenized_aa_seq(const std::string& aa_seq);
 
-std::pair<std::vector<torch::Tensor>, std::vector<std::pair<std::string, std::string>>> get_ORF_info (const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                                                                                      const std::vector<Kmer>& head_kmer_arr,
-                                                                                                      const ORFVector& ORF_vector,
-                                                                                                      const int overlap);
+torch::Tensor predict(torch::jit::script::Module& module,
+                      const torch::Tensor& seq_tensor,
+                      const bool gene);
 
-torch::jit::script::Module load_model(const std::string& model_file);
+//std::unordered_map<size_t, double> score_ORFs (const ColoredCDBG<MyUnitigMap>& ccdbg,
+//                                               const std::vector<Kmer>& head_kmer_arr,
+//                                               const ORFVector& ORF_vector,
+//                                               const int overlap,
+//                                               torch::jit::script::Module& gene_module,
+//                                               torch::jit::script::Module& TIS_module,
+//                                               const float& minimum_ORF_score);
+
 
 std::unordered_map<size_t, double> run_BALROG(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                               const std::vector<Kmer>& head_kmer_arr,
