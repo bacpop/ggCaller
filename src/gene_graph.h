@@ -8,11 +8,8 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_utility.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include <boost/graph/connected_components.hpp>
-#include <boost/graph/strong_components.hpp>
 #include <boost/graph/bellman_ford_shortest_paths.hpp>
 #include "definitions.h"
 
@@ -49,29 +46,6 @@ protected:
     bool& _has_cycle;
     EdgeDescriptor& _cycle_e;
 };
-
-
-struct stop_search {};
-
-class djk_max_visitor:
-        public boost::dijkstra_visitor<null_visitor>
-{
-public:
-    djk_max_visitor(size_t target)
-            : _target(target) {}
-
-    template <class Graph>
-    void examine_vertex(typename graph_traits<Graph>::vertex_descriptor u,
-                        Graph&)
-    {
-        if (u == _target)
-            throw stop_search();
-    }
-
-private:
-    size_t _target;
-};
-
 
 std::vector<VertexDescriptor> getPath(
         const GeneGraph& graph,

@@ -165,36 +165,22 @@ std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_
             }
         } else
         {
+            const auto weight_pmap = get(boost::edge_weight_t(), g);
+
+            std::vector<double> distances(numVertices);
+            std::vector<VertexDescriptor> pMap(numVertices);
+
+            // call to the algorithm, searching all paths from start
+            bellman_ford_shortest_paths(g, numVertices,
+                                        weight_map(weight_pmap).
+                                                root_vertex(start).
+                                                predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
+                                                distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))));
+
+            // determine shortest path to each end
             for (const auto& end : end_vertices)
             {
                 double path_score = start_score;
-
-                const auto weight_pmap = get(boost::edge_weight_t(), g);
-
-                std::vector<double> distances(numVertices);
-                std::vector<VertexDescriptor> pMap(numVertices);
-
-                // call to the algorithm, catching stop search
-                bellman_ford_shortest_paths(g, numVertices,
-                            weight_map(weight_pmap).
-                                    root_vertex(start).
-                                    predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
-                                    distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))));
-//                try
-//                {
-//                    bellman_ford_shortest_paths(g, numVertices,
-//                                                weight_map(weight_pmap).
-//                                                        root_vertex(start).
-//                                                        predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
-//                                                        distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))).
-//                                                        visitor(bellman_max_visitor(end)));
-//                    dijkstra_shortest_paths(g, start,
-//                                            weight_map(weight_pmap).
-//                                                    predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
-//                                                    distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))).
-//                                                    visitor(djk_max_visitor(end)));
-//                }
-//                catch (stop_search&) {}
 
                 auto path = getPath(g, pMap, distances, start, end, path_score, vertex_mapping);
 
@@ -231,8 +217,6 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
         // initialise graph
         GeneGraph g;
 
-        // create edge vector
-        std::vector<Edge> edgeVec;
         // create IDs for vertex mappings
         int vertex_id = 0;
         for (const auto& target : overlap_map)
@@ -269,9 +253,6 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
             }
         }
 
-        // generate graph
-//        GeneGraph g(edgeVec.begin(), edgeVec.end(), score_map.size());
-
         // check for cycles
         bool has_cycle = false;
         EdgeDescriptor cycle_edge;
@@ -282,6 +263,7 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
         while (has_cycle)
         {
             remove_edge(cycle_edge, g);
+            has_cycle = false;
             depth_first_search(g, visitor(vis));
         }
 
