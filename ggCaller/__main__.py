@@ -14,8 +14,6 @@ from panaroo_runner.annotate import *
 import ast
 import tempfile
 import json
-import psutil
-
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -392,10 +390,6 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(options.out, "")
 
-    p0 = psutil.Process()
-
-    print("pre-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
             options.reads is None) and (options.query is None):
@@ -438,8 +432,6 @@ def main():
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
-
-    print("post-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -512,7 +504,6 @@ def main():
             # generate shared numpy arrays
             total_arr = np.array([graph])
             array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
-            print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
             with Pool(processes=options.threads) as pool:
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
                             cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
@@ -526,7 +517,6 @@ def main():
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
                             options.truncation_threshold, options.save, options.refind)
 
-        print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
     else:
         print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                         input_colours, overlap, graph)

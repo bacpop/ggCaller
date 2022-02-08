@@ -1,6 +1,5 @@
 import os, sys
 import _pickle as cPickle
-import psutil
 
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, query_id, num_threads):
     # check if objects_dir present, if not exit
@@ -17,14 +16,8 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
             if line[0] != ">":
                 query_vec.append(line.strip())
 
-    p0 = psutil.Process()
-
-    print("pre-graph read-in: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
     # read in graph object and high_scoring ORFs and node_index
     graph.data_in(objects_dir + "ggc_graph.dat", graphfile, coloursfile, num_threads)
-
-    print("post-graph read-in: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     # query the sequences in the graph
     print("Querying unitigs in graph...")
@@ -38,12 +31,8 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     with open(objects_dir + "high_scoring_orfs.dat", "rb") as input_file:
         high_scoring_ORFs = cPickle.load(input_file)
 
-    print("post-ORFs read-in: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
     with open(objects_dir + "node_index.dat", "rb") as input_file:
         node_index = cPickle.load(input_file)
-
-    print("post-kmers read-in: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     outfile = output_dir + "matched_queries.fasta"
     print("Matching overlapping ORFs...")
