@@ -9,18 +9,24 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-find_package(Boost REQUIRED system serialization)
+find_package(Boost REQUIRED system serialization graph)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # find pybind and create python module
 find_package(pybind11 REQUIRED)
-pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp)
+pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp src/ORF_scoring.cpp src/gene_graph.cpp)
 
 # check for conda environment
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
 ENDIF()
+
+# add torch libraries
+FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
+MESSAGE(${PYTHON_SITE_PACKAGES})
+list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
+find_package(Torch REQUIRED)
 
 #Find include dirs for z, bifrost
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
@@ -44,7 +50,7 @@ SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES})
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
 
 #find OpenMP library
 find_package(OpenMP)

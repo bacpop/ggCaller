@@ -2,12 +2,11 @@
 import argparse
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
-from functools import partial
 import shutil
 # from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
-import tqdm
+from Bio import Seq
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
 from panaroo_runner.generate_output import print_ORF_calls
@@ -15,8 +14,6 @@ from panaroo_runner.annotate import *
 import ast
 import tempfile
 import json
-import psutil
-
 
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
@@ -393,10 +390,6 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(options.out, "")
 
-    p0 = psutil.Process()
-
-    print("pre-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
             options.reads is None) and (options.query is None):
@@ -439,8 +432,6 @@ def main():
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
-
-    print("post-graph build: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -487,80 +478,48 @@ def main():
     # Create temporary directory
     temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
-    # create numpy arrays for shared memory
-    total_arr = np.array([graph])
-
     # load balrog models if required
     if not options.no_filter:
         print("Loading gene models...")
-        model, model_tis = load_gene_models()
+        ORF_model_file, TIS_model_file = load_gene_models()
 
     else:
-        model, model_tis = None, None
-
-    # intiialise results dictionaries and lists
-    high_scoring_ORFs = {}
-    high_scoring_ORF_edges = {}
+        ORF_model_file, TIS_model_file = "NA", "NA"
 
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls per colour...")
 
-    # set number of threads for graphtool and pytorch to 1
-    if gt.openmp_enabled():
-        gt.openmp_set_num_threads(1)
+    gene_tuple = graph.findGenes(node_colour_vector, options.repeat, overlap, options.max_path_length, is_ref,
+                                 options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
+                                 options.max_ORF_overlap, options.no_write_idx, input_colours, ORF_model_file,
+                                 TIS_model_file, options.min_orf_score, options.min_path_score, ORF_batch_size,
+                                 TIS_batch_size, options.max_orf_orf_distance, not options.no_clustering,
+                                 options.identity_cutoff, options.len_diff_cutoff, options.threads)
 
-    torch.set_num_threads(1)
+    high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict, cluster_id_list = gene_tuple
 
-    print("pre-graph traversal: Perc: " + str(p0.memory_percent()) + "  full: " + str(p0.memory_info()))
+    # generate ORF clusters
+    if not options.no_clustering:
+        with SharedMemoryManager() as smm:
+            # generate shared numpy arrays
+            total_arr = np.array([graph])
+            array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
+            with Pool(processes=options.threads) as pool:
+                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
+                            cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
+                            options.threads,
+                            options.length_outlier_support_proportion, options.identity_cutoff,
+                            options.family_threshold, options.min_trailing_support, options.trailing_recursive,
+                            options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
+                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
+                            options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
+                            options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
+                            annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
+                            options.truncation_threshold, options.save, options.refind)
 
-    with SharedMemoryManager() as smm:
-        # generate shared numpy arrays
-        total_arr = np.append(total_arr, [[model], [model_tis]])
-        array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
-
-        # run run_calculate_ORFs with multithreading
-        with Pool(processes=options.threads, maxtasksperchild=1) as pool:
-            for colour_ID, gene_dict, ORF_edges in tqdm.tqdm(pool.imap(
-                    partial(run_calculate_ORFs, shd_arr_tup=array_shd_tup, repeat=options.repeat, overlap=overlap,
-                            max_path_length=options.max_path_length, is_ref=is_ref,
-                            no_filter=options.no_filter,
-                            stop_codons_for=stop_codons_for, start_codons=start_codons,
-                            min_ORF_length=options.min_orf_length,
-                            max_ORF_overlap=options.max_ORF_overlap, minimum_ORF_score=options.min_orf_score,
-                            minimum_path_score=options.min_path_score, write_idx=options.no_write_idx,
-                            input_colours=input_colours, max_orf_orf_distance=options.max_orf_orf_distance),
-                    enumerate(node_colour_vector)), total=nb_colours):
-                high_scoring_ORFs[colour_ID] = gene_dict
-                high_scoring_ORF_edges[colour_ID] = ORF_edges
-
-            print("post-graph traversal: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
-        # generate ORF clusters
-        if not options.no_clustering:
-            print("Generating clusters of high-scoring ORFs...")
-            cluster_id_list, cluster_dict = graph.generate_clusters(high_scoring_ORFs,
-                                                                    overlap,
-                                                                    options.identity_cutoff,
-                                                                    options.len_diff_cutoff)
-
-            print("pre-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-
-            run_panaroo(array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
-                        cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
-                        options.threads,
-                        options.length_outlier_support_proportion, options.identity_cutoff,
-                        options.family_threshold, options.min_trailing_support, options.trailing_recursive,
-                        options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                        options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
-                        options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
-                        options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                        annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                        options.truncation_threshold, options.save, options.refind)
-
-            print("post-panaroo: Perc: " + str(p0.memory_percent()) + " full: " + str(p0.memory_info()))
-        else:
-            print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
-                            input_colours, overlap, graph)
+    else:
+        print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+                        input_colours, overlap, graph)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
