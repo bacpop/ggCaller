@@ -317,8 +317,6 @@ double align_seqs(const ORFNodeVector& ORF1_info,
     size_t edit_distance = result.editDistance;
     edlibFreeAlignResult(result);
 
-    edlibFreeAlignResult(result);
-
     // convert edit distance into percent identity
     double perc_id = 1 - ((double)edit_distance / (double)ORF2_aa.size());
     return perc_id;
