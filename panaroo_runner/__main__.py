@@ -7,7 +7,6 @@ import textwrap
 import ast
 from collections import defaultdict
 import _pickle as cPickle
-import psutil
 
 # panaroo scripts
 from panaroo.isvalid import *
@@ -41,7 +40,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
                 call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
-    p = psutil.Process()
 
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -66,13 +64,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if verbose:
         print("Generating initial network...")
 
-    print(" pre-panaroo graph generation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
     # generate network from clusters and adjacency information
     G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], high_scoring_ORFs, high_scoring_ORF_edges,
                                                                cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
 
-    print(" post-panaroo graph generation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # check if G is empty before proceeding
     if G.number_of_nodes() == 0:
@@ -111,8 +106,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           n_cpu=n_cpu,
                           quiet=(not verbose))[0]
 
-    print(" post-translation errors: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
     if annotate is not None:
         if verbose:
             print("annotating gene families...")
@@ -128,8 +121,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
                                                            hmm_db, evalue, annotate, n_cpu, pool)
 
-    print(" post-annotation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
     if verbose:
         print("collapse gene families...")
 
@@ -143,8 +134,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         length_outlier_support_proportion=length_outlier_support_proportion,
         n_cpu=n_cpu,
         quiet=(not verbose))
-
-    print(" post-collapse gene families: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     if verbose:
         print("trimming contig ends...")
@@ -174,8 +163,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             n_cpu=n_cpu,
                                             verbose=verbose)
 
-        print(" post- gene refinding: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
         # remove edges that are likely due to misassemblies (by consensus)
 
         # merge again in case refinding has resolved issues
@@ -192,7 +179,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                               distances_bwtn_centroids=distances_bwtn_centroids,
                               centroid_to_index=centroid_to_index)[0]
 
-        print(" post-collapse families 2: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     if clean_edges:
         G = clean_misassembly_edges(
@@ -248,8 +234,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     annotation = annotation[0:3] + (description,)
                 contig_annotation[mem].append((ORF_ID, annotation))
 
-    print(" post-annotation compilation: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
-
     # write output GFF
     if annotate is not None and is_ref:
         if verbose:
@@ -299,7 +283,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                        high_scoring_ORFs, overlap, pool, ref_aln, call_variants, verbose,
                                        ignore_pseduogenes, truncation_threshold)
 
-    print(" post-alignment: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     # add helpful attributes and write out graph in GML format
     for node in G.nodes():
@@ -351,7 +334,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         with open(objects_dir + "node_index.dat", "wb") as o:
             cPickle.dump(node_index, o)
 
-    print(" post-data writing: Perc: " + str(p.memory_percent()) + " full: " + str(p.memory_info()))
 
     return
 
