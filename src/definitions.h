@@ -79,15 +79,17 @@ typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, TIS coordinate information, relative strand and location in contigs
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, std::pair<ContigLoc, bool>> ORFNodeVector;
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
-typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
-// maps an map of ORFNodeVector sequence to its colour
-typedef std::map<size_t, std::map<size_t, ORFNodeVector>> ColourORFMap;
+typedef std::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
+// maps an map of ORFNodeMap to its colour
+typedef std::unordered_map<size_t, ORFNodeMap> ColourORFMap;
+// maps colours to the edges for every ORF in that colour
+typedef std::unordered_map<size_t, std::unordered_map<size_t, std::unordered_set<size_t>>> ColourEdgeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
-typedef std::tuple<size_t, int, uint8_t, boost::dynamic_bitset<>, size_t> NodeTuple;
+typedef std::tuple<size_t, int, std::bitset<3>, boost::dynamic_bitset<>, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
 // stack for holding node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
@@ -105,7 +107,7 @@ typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std
 // map of ORFs to clusters, with centroid as key
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
-typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, std::pair<ContigLoc, bool>> RefindTuple;
+typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, bool> RefindTuple;
 // map containing nodeID, search sequence and refind tuple
 typedef std::map<int, std::map<std::string, RefindTuple>> RefindMap;
 // vector of unitig coordinates from mapping of sequence to graph

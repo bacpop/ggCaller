@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from collections import defaultdict
 from Bio import AlignIO
 import itertools as iter
 from intbitset import intbitset
@@ -23,11 +24,12 @@ from uncertainties import ufloat
 from .generate_alignments import *
 
 
-def back_translate_dir(high_scoring_ORFs, isolate_names, annotation_dir, overlap, shd_arr_tup, pool):
+def back_translate_dir(high_scoring_ORFs, isolate_names, annotation_dir, overlap, shd_arr_tup, n_cpus):
     # iterate over all files in annotation directory multithreaded
-    pool.map(partial(back_translate, isolate_names=isolate_names, shd_arr_tup=shd_arr_tup,
-                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, annotation_dir=annotation_dir),
-             os.listdir(annotation_dir))
+    with Pool(processes=n_cpus, maxtasksperchild=1) as pool:
+        pool.map(partial(back_translate, isolate_names=isolate_names, shd_arr_tup=shd_arr_tup,
+                         high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, annotation_dir=annotation_dir),
+                 os.listdir(annotation_dir))
 
     return True
 
@@ -53,14 +55,6 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                 dna = ORFNodeVector[5]
             else:
                 dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-
-            # # determine if Ns have been added into alignment. If so, need to account for unaligned stop codon
-            # if dna[-1] == "N":
-            #     dna += "---"
-            #
-            # # add on stop codon if not present in aa sequence
-            # if protein[-1] != "*":
-            #     protein += "*"
 
             # back translate sequence
             aligned_dna = ""
@@ -111,8 +105,7 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                     gene_annotation = node_annotation
                     if ORF_len < (length_centroid * truncation_threshold) or (
                             ORF_ID < 0 and (ORF_info[3] is True
-                                            or ORF_info[
-                                                2] % 3 != 0)):
+                                            or ORF_len % 3 != 0)):
                         gene_annotation += "(potential psuedogene)"
                     if gene_annotation != "":
                         f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
@@ -123,7 +116,8 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
     return
 
 
-def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
+def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir, overlap,
+                 write_idx, num_threads):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
     if not os.path.exists(GFF_dir):
@@ -133,17 +127,30 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
 
     # iterate over colours in contig_annotation, writing output file
     for colour in range(len(input_colours)):
+        # get coordinates for each ORF
+        ORF_IDs = [(high_scoring_ORFs[colour][i[0]][0], high_scoring_ORFs[colour][i[0]][1]) for i in
+                   contig_annotation[colour]]
+        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads)
+
+        # create data structure for each GFF entry
+        GFF_entries = defaultdict(list)
+        for i in range(len(contig_annotation[colour])):
+            GFF_entries[ORF_coords[i][0][0]].append((contig_annotation[colour][i][0],
+                                                     (ORF_coords[i][0][1], ORF_coords[i][1]),
+                                                     contig_annotation[colour][i][1]))
+
         # iterate over the entries in input_colors
         with open(input_colours[colour]) as handle:
             gff_record_list = []
             record_id = 1
             for record in SeqIO.parse(handle, "fasta"):
                 # sort records based on first position
-                contig_annotation[colour][record_id].sort(key=lambda x: x[1][0][1][0])
+                GFF_entries[record_id].sort(key=lambda x: x[1][0][0])
                 gff_record = record
                 gff_record.features = []
                 entry_ID = 1
-                for entry in contig_annotation[colour][record_id]:
+                for entry in GFF_entries[record_id]:
+                    strand = 1 if entry[1][1] else -1
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
                         "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
@@ -153,8 +160,8 @@ def generate_GFF(input_colours, isolate_names, contig_annotation, output_dir):
                                            .replace("=", "-").replace("(", "").replace(")", "")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][1][0], entry[1][0][1][1]),
-                        type="gene", strand=int(entry[1][1]), qualifiers=qualifiers
+                        FeatureLocation(entry[1][0][0], entry[1][0][1]),
+                        type="CDS", strand=strand, qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
                     entry_ID += 1
@@ -683,8 +690,8 @@ def generate_common_struct_presence_absence(G,
     return
 
 
-def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
-                                  isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, pool, ref_aln,
+def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
+                                  isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, ref_aln,
                                   call_variants, verbose, ignore_pseduogenes, truncation_threshold):
     unaligned_sequence_files = []
     unaligned_reference_files = []
@@ -696,14 +703,17 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         os.mkdir(output_dir + "aligned_gene_sequences")
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
-                                                 ignore_pseduogenes=ignore_pseduogenes,
-                                                 truncation_threshold=truncation_threshold),
-                                         G.nodes(data=True)):
-        unaligned_sequence_files.append(outname)
-        unaligned_reference_files.append(ref_outname)
+    with Pool(processes=n_cpus, maxtasksperchild=1) as pool:
+        for outname, ref_outname in pool.map(partial(output_alignment_sequence,
+                                                     temp_directory=temp_dir, outdir=output_dir,
+                                                     shd_arr_tup=shd_arr_tup,
+                                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap,
+                                                     ref_aln=ref_aln,
+                                                     ignore_pseduogenes=ignore_pseduogenes,
+                                                     truncation_threshold=truncation_threshold),
+                                             G.nodes(data=True)):
+            unaligned_sequence_files.append(outname)
+            unaligned_reference_files.append(ref_outname)
     if ref_aln:
         # centroid files with paired sequence files
         ref_seq_pairs = [
@@ -747,7 +757,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, "ref", not verbose)
+                              n_cpus, "ref", not verbose)
     else:
         commands = [
             get_alignment_commands(fastafile, output_dir, "def")
@@ -755,11 +765,11 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         ]
         # Run these commands in a multi-threaded way
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, "def", not verbose)
+                              n_cpus, "def", not verbose)
 
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
-                       pool)
+                       n_cpus)
 
     # call variants using snp-sites
     if call_variants:
@@ -767,7 +777,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
             os.mkdir(output_dir + "VCF")
         except FileExistsError:
             None
-        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
+        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, n_cpus)
 
     return
 
@@ -858,9 +868,9 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
     return core_filenames
 
 
-def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
+def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
                                    isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
-                                   overlap, pool, ref_aln, call_variants, verbose,
+                                   overlap, ref_aln, call_variants, verbose,
                                    ignore_pseduogenes, truncation_threshold):
     unaligned_sequence_files = []
     unaligned_reference_files = []
@@ -876,14 +886,17 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
-                                                 ignore_pseduogenes=ignore_pseduogenes,
-                                                 truncation_threshold=truncation_threshold),
-                                         core_genes):
-        unaligned_sequence_files.append(outname)
-        unaligned_reference_files.append(ref_outname)
+    with Pool(processes=n_cpus, maxtasksperchild=1) as pool:
+        for outname, ref_outname in pool.map(partial(output_alignment_sequence,
+                                                     temp_directory=temp_dir, outdir=output_dir,
+                                                     shd_arr_tup=shd_arr_tup,
+                                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap,
+                                                     ref_aln=ref_aln,
+                                                     ignore_pseduogenes=ignore_pseduogenes,
+                                                     truncation_threshold=truncation_threshold),
+                                             core_genes):
+            unaligned_sequence_files.append(outname)
+            unaligned_reference_files.append(ref_outname)
 
     if ref_aln:
         # centroid files with paired sequence files
@@ -915,7 +928,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir, threads, "def", not verbose)
+        multi_align_sequences(commands, temp_dir, n_cpus, "def", not verbose)
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
@@ -928,7 +941,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, "ref", not verbose)
+                              n_cpus, "ref", not verbose)
     else:
         # Get alignment commands
         commands = [
@@ -937,10 +950,10 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         ]
         # Run alignment commands
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              threads, "def", not verbose)
+                              n_cpus, "def", not verbose)
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
-                       pool)
+                       n_cpus)
 
     # call variants using snp-sites
     if call_variants:
@@ -948,10 +961,10 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
             os.mkdir(output_dir + "VCF")
         except FileExistsError:
             None
-        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
+        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, n_cpus)
 
     # Concatenate them together to produce the two output files
-    concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, threads)
+    concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpus)
 
     return
 

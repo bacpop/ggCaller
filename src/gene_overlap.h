@@ -8,7 +8,8 @@ inline std::pair<std::vector<int>, std::vector<indexPair>> combine_nodes(const s
                                                                          const std::vector<int>& TIS_nodes,
                                                                          const std::vector<indexPair>& TIS_coords);
 
-void reverse_ORFNodeVector(const GraphVector& graph_vector,
+void reverse_ORFNodeVector(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                           const std::vector<Kmer>& head_kmer_arr,
                            std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
                            int& ORF2_start_node,
                            int& ORF2_end_node,
@@ -20,7 +21,8 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
                                                                                const int& ORF2_start_node,
                                                                                const int& ORF2_end_node);
 
-ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
+ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                 const std::vector<Kmer>& head_kmer_arr,
                                  const ORFVector& ORF_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap);

@@ -1,6 +1,7 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include <torch/script.h>
 #include "unitigDict.h"
 #include "indexing.h"
 #include "traversal.h"
@@ -11,56 +12,12 @@
 #include "ORF_clustering.h"
 #include "gene_refinding.h"
 #include "search_DBG.h"
+#include "ORF_scoring.h"
+#include "gene_graph.h"
+#include "progressbar.h"
 
 class Graph {
     public:
-        // constructors
-    // default constructor
-    Graph()
-    {
-        cout << "Graph default constructor" << endl;
-    };
-
-    // copy
-    Graph(const Graph & rhs)
-    {
-          std::cout << "Graph copy constructor" << std::endl;
-          _GraphVector = rhs._GraphVector;
-    };
-    // copy operator
-    Graph & operator = (const Graph & rhs)
-    {
-          std::cout << "Graph copy operator" << std::endl;
-          if(this != &rhs)
-          {
-            _GraphVector = rhs._GraphVector;
-          }
-          return *this;
-    };
-
-    // move
-    Graph(const Graph && rhs) noexcept
-    {
-          std::cout << "Graph move constructor" << std::endl;
-          _GraphVector = std::move(rhs._GraphVector);
-    };
-    // move operator
-    Graph & operator = (const Graph && rhs) noexcept
-    {
-          std::cout << "Graph move operator" << std::endl;
-          if(this != &rhs)
-          {
-            _GraphVector = std::move(rhs._GraphVector);
-          }
-          return *this;
-    };
-
-    // destructor
-    ~Graph()
-    {
-        std::cout << "Graph destructor" << std::endl;
-    };
-
     // build new bifrost graph and index
     GraphTuple build (const std::string& infile1,
                     const int kmer,
@@ -89,35 +46,34 @@ class Graph {
     void out(const std::string& outfile);
 
     // find ORFs
-    std::pair<ORFOverlapMap, ORFVector> findORFs (const size_t& colour_ID,
-                                                  const std::vector<size_t>& node_ids,
-                                                  const bool repeat,
-                                                  const size_t& overlap,
-                                                  const size_t& max_path_length,
-                                                  bool is_ref,
-                                                  const bool no_filter,
-                                                  const std::vector<std::string>& stop_codons_for,
-                                                  const std::vector<std::string>& start_codons_for,
-                                                  const size_t min_ORF_length,
-                                                  const size_t max_overlap,
-                                                  const bool write_idx,
-                                                  const std::string& FM_fasta_file);
+    std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const NodeColourVector& node_colour_vector,
+                                                                                       const bool repeat,
+                                                                                       const size_t overlap,
+                                                                                       const size_t max_path_length,
+                                                                                       bool is_ref,
+                                                                                       const bool no_filter,
+                                                                                       const std::vector<std::string>& stop_codons_for,
+                                                                                       const std::vector<std::string>& start_codons_for,
+                                                                                       const size_t min_ORF_length,
+                                                                                       const size_t max_overlap,
+                                                                                       const bool write_idx,
+                                                                                       const std::vector<std::string>& input_colours,
+                                                                                       const std::string& ORF_model_file,
+                                                                                       const std::string& TIS_model_file,
+                                                                                       const double& minimum_ORF_score,
+                                                                                       const double& minimum_path_score,
+                                                                                       const int ORF_batch_size,
+                                                                                       const int TIS_batch_size,
+                                                                                       const size_t max_ORF_path_length,
+                                                                                       const bool clustering,
+                                                                                       const double& id_cutoff,
+                                                                                       const double& len_diff_cutoff,
+                                                                                       size_t num_threads);
 
-    // search orientated paths and DBG to connect ORFs
-    std::vector<std::pair<size_t, size_t>> connect_ORFs(const size_t& colour_ID,
-                                                       const ORFVector& ORF_vector,
-                                                       const std::vector<size_t>& target_ORFs,
-                                                       const size_t& max_ORF_path_length,
-                                                       const bool is_ref);
-
-    std::pair<ORFMatrixVector, ORFClusterMap> generate_clusters(const ColourORFMap& colour_ORF_map,
-                                                                const size_t& overlap,
-                                                                const double& id_cutoff,
-                                                                const double& len_diff_cutoff);
 
     RefindMap refind_gene(const size_t& colour_ID,
                           const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                          const size_t& radius,
+                          const size_t radius,
                           bool is_ref,
                           const int kmer,
                           const std::string& FM_fasta_file,
@@ -128,38 +84,45 @@ class Graph {
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
-    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::string& graphfile,
-                                                                                      const std::string& coloursfile,
-                                                                                      const std::vector<std::string>& query_vec,
-                                                                                      const double& id_cutoff,
-                                                                                      size_t num_threads);
+    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::vector<std::string>& query_vec,
+                                                                                       const double& id_cutoff,
+                                                                                       size_t num_threads);
+
+    std::vector<std::pair<ContigLoc, bool>> ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,
+                                                         const std::string& fasta_file,
+                                                         const int overlap,
+                                                         const bool write_idx,
+                                                         size_t num_threads);
 
     size_t node_size(const int& node_id)
     {
-        return _GraphVector.at(abs(node_id) - 1).size().first;
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(_ccdbg, _KmerArray, node_id);
+        auto& um = um_pair.first;
+
+        return um.size;
     };
 
     // clear graph object
-    void clear() {_GraphVector.clear(); _KmerMap.clear();};
+    void clear() {_ccdbg.clear(); _KmerArray.clear();};
+
 
     private:
     // index graph
     NodeColourVector _index_graph (const std::vector<std::string>& stop_codons_for,
-                                     const std::vector<std::string>& stop_codons_rev,
-                                     const int& kmer,
-                                     const size_t& nb_colours,
-                                     const bool is_ref,
-                                     const std::vector<std::string>& input_colours);
+                                   const std::vector<std::string>& stop_codons_rev,
+                                   const int& kmer,
+                                   const size_t& nb_colours,
+                                   const bool is_ref,
+                                   const std::vector<std::string>& input_colours);
 
 
-    // stored unitigDict objects
-    GraphVector _GraphVector;
-    
+
     // stored bifrost DBG
-    ColoredCDBG<> _ccdbg;
+    ColoredCDBG<MyUnitigMap> _ccdbg;
 
     // mapping of head kmers to nodes
-    std::unordered_map<std::string, size_t> _KmerMap;
+    std::vector<Kmer> _KmerArray;
 };
 
 #endif //GRAPH_H

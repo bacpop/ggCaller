@@ -3,12 +3,14 @@
 // define mutex for safe addition to robinhood_maps
 //std::mutex mtx2;
 
-PathVector iter_nodes_binary (const GraphVector& graph_vector,
+PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                              const std::vector<Kmer>& head_kmer_arr,
                               const NodeTuple& head_node_tuple,
-                               const size_t& current_colour,
-                               const size_t& length_max,
-                               const bool repeat,
-                               const bool is_ref)
+                              const size_t current_colour,
+                              const size_t length_max,
+                              const size_t overlap,
+                              const bool repeat,
+                              const bool is_ref)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -31,7 +33,7 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
         // unpack tuple
         const size_t & pos_idx = std::get<0>(node_tuple);
         const int & node_id = std::get<1>(node_tuple);
-        const uint8_t & codon_arr = std::get<2>(node_tuple);
+        const auto & codon_arr = std::get<2>(node_tuple);
         const boost::dynamic_bitset<>& colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
@@ -47,28 +49,40 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
         // get length of vector for new pos_idx
         const size_t new_pos_idx = node_vector.size();
 
-        // get unitig_dict entry in graph_vector
-        const auto& node_dict = graph_vector.at(abs(node_id) - 1);
+        // get unitig data
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
 
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
 
-        // iterate over neighbours, recurring through incomplete paths
-        for (const auto& neighbour : node_dict.get_neighbours(strand))
+        // reverse the strand of the unitig
+        if (!strand)
         {
-            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = std::get<0>(neighbour);
-            const auto& frame = std::get<1>(neighbour);
-            const auto& colour_set = std::get<2>(neighbour);
+            um.strand = !um.strand;
+        }
 
-            // if is_ref, determine if edge is correct
-            if (is_ref)
-            {
-                if (colour_set.find(current_colour) == colour_set.end())
-                {
-                    continue;
-                }
-            }
+        // iterate over neighbours, recurring through incomplete paths
+        for (auto& neighbour_um : um.getSuccessors())
+        {
+            auto neighbour_da = neighbour_um.getData();
+            auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+            const bool neighbour_strand = neighbour_um.strand;
+
+            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
+            const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
+//            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
+//            const auto& colour_set = std::get<2>(neighbour);
+//
+//            // if is_ref, determine if edge is correct
+//            if (is_ref)
+//            {
+//                if (colour_set.find(current_colour) == colour_set.end())
+//                {
+//                    continue;
+//                }
+//            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -77,12 +91,10 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
                 continue;
             }
 
-            // get reference to unitig_dict object for neighbour
-            const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
-            updated_colours_arr &= neighbour_dict.full_colour();
+            updated_colours_arr &= neighbour_um_data->full_colour();
 
             // determine if neighbour is in same colour as iteration, if not pass
             if (!updated_colours_arr[current_colour])
@@ -91,7 +103,7 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
             }
 
             // check path length, if too long continue
-            const size_t updated_path_length = path_length + neighbour_dict.size().second;
+            const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
 
             if (updated_path_length > length_max)
             {
@@ -110,10 +122,10 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
 
             // calculate modulus for path and updated cached path reading frame
             int modulus = path_length % 3;
-            uint8_t updated_codon_arr = (codon_arr & ~(frame.at(modulus)));
+            std::bitset<3> updated_codon_arr = (codon_arr & ~(neighbour_um_data->get_codon_arr(false, neighbour_strand, modulus)));
 
             // return path if end of contig found or if stop indexes paired
-            if (neighbour_dict.end_contig() || updated_codon_arr == 0)
+            if (neighbour_um_data->end_contig() || updated_codon_arr.none())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -139,12 +151,14 @@ PathVector iter_nodes_binary (const GraphVector& graph_vector,
     return path_list;
 }
 
-std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
-                                         const size_t& colour_ID,
-                                         const std::vector<size_t>& node_ids,
-                                         const bool repeat,
-                                         const size_t max_path_length,
-                                         const bool is_ref)
+std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                       const std::vector<Kmer>& head_kmer_arr,
+                                       const size_t colour_ID,
+                                       const std::vector<size_t>& node_ids,
+                                       const bool repeat,
+                                       const size_t max_path_length,
+                                       const size_t overlap,
+                                       const bool is_ref)
 {
     // initialise all_paths
     std::vector<PathVector> all_paths;
@@ -152,14 +166,13 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
     {
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = node_id - 1;
-
-        // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
+        // get unitig data
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        const auto& um = um_pair.first;
+        const auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
-        if (!unitig_dict.forward_stop())
+        if (!um_data->forward_stop())
         {
             continue;
         }
@@ -168,15 +181,15 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
         const int head_id = (int) node_id;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, true, 0);
-        const size_t unitig_len = unitig_dict.size().first;
-        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
+        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
+        const size_t unitig_len = um.size;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat, is_ref);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref);
 
         if (!unitig_complete_paths.empty())
         {
@@ -187,14 +200,13 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
     // traverse nodes in reverse direction
     for (const auto& node_id : node_ids)
     {
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = node_id - 1;
-
-        // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
+        // get unitig data
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        const auto& um = um_pair.first;
+        const auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
-        if (!unitig_dict.reverse_stop())
+        if (!um_data->reverse_stop())
         {
             continue;
         }
@@ -203,15 +215,15 @@ std::vector<PathVector> traverse_graph(const GraphVector& graph_vector,
         const int head_id = ((int) node_id) * -1;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = unitig_dict.get_codon_arr(true, false, 0);
-        const size_t unitig_len = unitig_dict.size().first;
-        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
+        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
+        const size_t unitig_len = um.size;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(graph_vector, head_node_tuple, colour_ID, max_path_length, repeat, is_ref);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref);
 
         if (!unitig_complete_paths.empty())
         {

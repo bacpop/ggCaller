@@ -1,6 +1,7 @@
 #include "gene_refinding.h"
 
-std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_vector,
+std::vector<std::vector<size_t>> calculate_node_ranges(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                       const std::vector<Kmer>& head_kmer_arr,
                                                        const int& overlap,
                                                        const std::vector<int>& full_nodelist)
 {
@@ -17,7 +18,12 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
         std::vector<size_t> node_range(3);
 
         // calculate length of unitig and get end coordinates
-        size_t node_end = graph_vector.at(abs(node) - 1).size().first;
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
+
+        size_t node_end = um.size;
 
         if (i == 0) {
             // start index of node in path
@@ -43,22 +49,19 @@ std::vector<std::vector<size_t>> calculate_node_ranges(const GraphVector& graph_
     return node_ranges;
 }
 
-std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t& colour_ID,
-                                                                   const GraphVector& graph_vector,
-                                                                   const ColoredCDBG<>& ccdbg,
-                                                                   const PathVector& unitig_complete_paths,
-                                                                   const int kmer,
-                                                                   const bool is_ref,
-                                                                   const fm_index_coll& fm_idx,
-                                                                   std::string& stream_seq,
-                                                                   const size_t& ORF_end,
-                                                                   const std::string& ORF_seq)
+std::pair<std::vector<int>, bool> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                             const std::vector<Kmer>& head_kmer_arr,
+                                             const PathVector& unitig_complete_paths,
+                                             const int kmer,
+                                             const bool is_ref,
+                                             const fm_index_coll& fm_idx,
+                                             std::string& stream_seq,
+                                             const size_t& ORF_end,
+                                             const std::string& ORF_seq)
 {
     // initialise path of nodes to return
     std::vector<int> nodelist;
-
-    // initialise coordinates if using fm-index
-    std::pair<ContigLoc, bool> contig_pair;
+    bool rev_comp = false;
 
     // iterate over all the paths, determine which is the longest and real.
     // If multiple, choose from that with the lowest hash for first kmer
@@ -73,6 +76,7 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
             {
                 continue;
             }
+            rev_comp = present.second;
         }
 
         // initilise path_sequence
@@ -84,7 +88,20 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
             const auto& node = unitig_path.at(i);
 
             // get sequence of node
-            const std::string seq = unitig_seq(node, graph_vector, ccdbg);
+            // get a reference to the unitig map object
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node);
+            auto& um = um_pair.first;
+            auto& um_data = um_pair.second;
+
+            // reverse sequence if strand is negative
+            std::string seq;
+            if (node >= 0)
+            {
+                seq = um.referenceUnitigToString();
+            } else
+            {
+                seq = reverse_complement(um.referenceUnitigToString());
+            }
 
             if (i == 0)
             {
@@ -95,82 +112,6 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
             }
         }
 
-        // check if check against fm_index necessary
-        std::pair<ContigLoc, bool> contig_pair_temp;
-        if (is_ref)
-        {
-            int start_node;
-            int end_node;
-
-            // think about reverse complement
-            if (present.second)
-            {
-                // get ORF node information
-                start_node = unitig_path.back();
-                end_node = unitig_path.at(0);
-            } else
-            {
-                start_node = unitig_path.at(0);
-                end_node = unitig_path.back();
-            }
-
-            const auto& start_node_info = graph_vector.at(abs(start_node) - 1);
-            const auto& end_node_info = graph_vector.at(abs(end_node) - 1);
-
-            auto start_coords_vec = start_node_info.get_contig_coords(colour_ID);
-            auto end_coords_vec = end_node_info.get_contig_coords(colour_ID);
-
-            // iterate over the start and end vectors, finding match of contig
-            std::tuple<size_t, size_t, size_t, size_t, bool> start_contig_coords;
-            std::tuple<size_t, size_t, size_t, size_t, bool> end_contig_coords;
-            bool found_match = false;
-            for (const auto& i : start_coords_vec)
-            {
-                for (const auto& j : end_coords_vec)
-                {
-                    // check if in same contig and end is after start and that the coordinates match up to the ORF length
-                    if ((std::get<0>(i) == std::get<0>(j)) && (std::get<1>(i) < std::get<1>(j)) && (std::get<1>(j) - (std::get<1>(i) + std::get<3>(i)) <= path_sequence.size()))
-                    {
-                        start_contig_coords = i;
-                        end_contig_coords = j;
-                        found_match = true;
-                        break;
-                    }
-                }
-                if (found_match)
-                {
-                    break;
-                }
-            }
-
-            // if match not found, then ignore ORF as cannot determine correct orientation
-            if (!found_match)
-            {
-                continue;
-            }
-
-            // determine start and end coordinates for the nodes
-            int start_contig_begin = std::get<2>(start_contig_coords);
-            int end_contig_begin = std::get<2>(end_contig_coords);
-            int end_contig_end = end_contig_begin + std::get<3>(end_contig_coords) + kmer - 2;
-
-            // contig ID
-            contig_pair_temp.first.first = std::get<0>(start_contig_coords);
-
-            // rev_comp
-            contig_pair_temp.second = present.second;
-
-            // first location within contig
-            contig_pair_temp.first.second.first = std::get<1>(start_contig_coords) + start_contig_begin;
-
-            // get substring of path_seq to avoid over-running source contig
-            path_sequence = path_sequence.substr(start_contig_begin, path_sequence.size() - end_contig_end);
-
-            // second location within contig
-//            contig_pair_temp.first.second.second = std::get<1>(end_contig_coords) + end_contig_end;
-            contig_pair_temp.first.second.second = contig_pair_temp.first.second.first + path_sequence.size();
-        }
-
         // add ORF seq to path_seq
         path_sequence = ORF_seq + path_sequence;
 
@@ -179,7 +120,6 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
         {
             stream_seq = path_sequence;
             nodelist = unitig_path;
-            contig_pair = contig_pair_temp;
         } else if (path_sequence.size() == stream_seq.size() && path_sequence != stream_seq)
         {
             // if equal size, get the hash of the last kmer in each and assign to highest
@@ -190,20 +130,21 @@ std::pair<std::vector<int>, std::pair<ContigLoc, bool>> assign_seq(const size_t&
             {
                 stream_seq = path_sequence;
                 nodelist = unitig_path;
-                contig_pair = contig_pair_temp;
             }
         }
     }
-    return {nodelist, contig_pair};
+    return {nodelist, rev_comp};
 }
 
-PathVector iter_nodes_length (const GraphVector& graph_vector,
+PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                              const std::vector<Kmer>& head_kmer_arr,
                               const NodeTuple& head_node_tuple,
                               const size_t& current_colour,
                               const size_t& radius,
-                              const bool repeat,
-                              const bool is_ref,
-                              const fm_index_coll& fm_idx)
+                              const bool& repeat,
+                              const bool& is_ref,
+                              const fm_index_coll& fm_idx,
+                              const int overlap)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -252,7 +193,9 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         const size_t new_pos_idx = node_vector.size();
 
         // get unitig_dict entry in graph_vector
-        const auto& node_dict = graph_vector.at(abs(node_id) - 1);
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
 
         // determine strand of unitig
         const bool strand = (node_id >= 0) ? true : false;
@@ -260,22 +203,21 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
         // initialise bool to determine if valid neigbour found
         bool neighbour_found = false;
 
-        // iterate over neighbours, recurring through incomplete paths
-        for (const auto& neighbour : node_dict.get_neighbours(strand))
+        // reverse the strand of the unitig
+        if (!strand)
         {
-            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
-            const auto& neighbour_id = std::get<0>(neighbour);
-            const auto& frame = std::get<1>(neighbour);
-            const auto& colour_set = std::get<2>(neighbour);
+            um.strand = !um.strand;
+        }
 
-            // if is_ref, determine if edge is correct
-            if (is_ref)
-            {
-                if (colour_set.find(current_colour) == colour_set.end())
-                {
-                    continue;
-                }
-            }
+        // iterate over neighbours, recurring through incomplete paths
+        for (auto& neighbour_um : um.getSuccessors())
+        {
+            auto neighbour_da = neighbour_um.getData();
+            auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+            const bool neighbour_strand = neighbour_um.strand;
+
+            // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
+            const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -284,12 +226,9 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
                 continue;
             }
 
-            // get reference to unitig_dict object for neighbour
-            const auto& neighbour_dict = graph_vector.at(abs(neighbour_id) - 1);
-
             // calculate colours array
             auto updated_colours_arr = colour_arr;
-            updated_colours_arr &= neighbour_dict.full_colour();
+            updated_colours_arr &= neighbour_um_data->full_colour();
 
             // determine if neighbour is in same colour as iteration, if not return and pass
             if (!updated_colours_arr[current_colour])
@@ -301,10 +240,10 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
             }
 
             // check path length, if too long continue
-            const size_t updated_path_length = path_length + neighbour_dict.size().second;
+            const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
 
             // if adding new node pushes path length over radius or neighbour is end contig, add neighbour and return
-            if (updated_path_length >= radius || neighbour_dict.end_contig())
+            if (updated_path_length >= radius || neighbour_um_data->end_contig())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -335,8 +274,8 @@ PathVector iter_nodes_length (const GraphVector& graph_vector,
     return path_list;
 }
 
-RefindTuple traverse_outward(const GraphVector& graph_vector,
-                             const ColoredCDBG<>& ccdbg,
+RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                             const std::vector<Kmer>& head_kmer_arr,
                              const size_t& colour_ID,
                              const ORFNodeVector& ORF_info,
                              const size_t& radius,
@@ -349,15 +288,13 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
     std::string upstream_seq;
     std::string downstream_seq;
 
-    // initialise path of nodes to use for coordinate generation
+    // initialise path of nodes to use for coordinate generation and strand of path
     std::vector<int> full_nodelist;
-
-    // initialise full set of contig locations if using fm_index
-    std::pair<ContigLoc, bool> full_contig_loc;
+    bool path_rev_comp = true;
 
     // generate a string of the ORF to check against FM-index
-    std::string ORF_seq = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, graph_vector, ccdbg);
-    ORF_seq += generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1,graph_vector, ccdbg);
+    std::string ORF_seq = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
+    ORF_seq += generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
 
     const auto original_ORF = ORF_seq;
 
@@ -367,15 +304,15 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
         const bool TIS_present = (!std::get<3>(ORF_info).empty()) ? true : false;
         const int head_id = ((TIS_present) ? std::get<3>(ORF_info).at(0) : std::get<0>(ORF_info).at(0)) * -1;
 
-        // get unitig_ID Zero based, so take absolute value and take 1
-        const auto unitig_id = abs(head_id) - 1;
-
         // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
+        // get unitig data
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
+        const auto& um = um_pair.first;
+        const auto& um_data = um_pair.second;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = 0;
-        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
+        const std::bitset<3> codon_arr;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path
         size_t path_length;
@@ -387,7 +324,10 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
             // reverse the ORF end
             // get absolute last node index (same as unitig length minus 1 as zero indexed)
-            size_t node_end = graph_vector.at(abs(std::get<3>(ORF_info).at(0)) - 1).size().first - 1;
+            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, std::get<3>(ORF_info).at(0));
+            const auto& end_um = end_um_pair.first;
+            const size_t node_end = end_um.size - 1;
+
             // get difference from original start to absolute last node index
             ORF_end = node_end - std::get<4>(ORF_info).at(0).first;
         } else
@@ -396,7 +336,10 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
 
             // reverse the ORF end
             // get absolute last node index (same as unitig length minus 1 as zero indexed)
-            size_t node_end = graph_vector.at(abs(std::get<0>(ORF_info).at(0)) - 1).size().first - 1;
+            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, std::get<0>(ORF_info).at(0));
+            const auto& end_um = end_um_pair.first;
+            const size_t node_end = end_um.size - 1;
+
             // get difference from original start to absolute last node index
             ORF_end = node_end - std::get<1>(ORF_info).at(0).first;
         }
@@ -412,30 +355,34 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx);
+            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1);
         }
 
         if (!unitig_complete_paths.empty())
         {
-            auto upstream_pair = std::move(assign_seq(colour_ID, graph_vector, ccdbg, unitig_complete_paths, kmer,
-                                                      is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
-            full_contig_loc = upstream_pair.second;
+            auto upstream_pair = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
+                                                       is_ref, fm_idx, upstream_seq, ORF_end, reverse_complement(ORF_seq)));
+
+            auto& upstream_nodes = upstream_pair.first;
 
             // reverse upstream_nodelist
             if (!upstream_seq.empty())
             {
+                // set path strand as rev_comp output
+                path_rev_comp = upstream_pair.second;
+
                 // Reverse ORF2 node vector
-                std::reverse(upstream_pair.first.begin(), upstream_pair.first.end());
+                std::reverse(upstream_nodes.begin(), upstream_nodes.end());
 
                 // reverse sign on each ID in ORF2_nodes
-                for (auto & node_id : upstream_pair.first)
+                for (auto & node_id : upstream_nodes)
                 {
                     node_id = node_id * -1;
                 }
             }
 
             // assign to full_nodelist
-            full_nodelist = std::move(upstream_pair.first);
+            full_nodelist = std::move(upstream_nodes);
         }
     }
 
@@ -476,18 +423,17 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
         // get the node id to traverse from
         const int& head_id = std::get<0>(ORF_info).back();
 
-        // parse unitig_id. Zero based, so take 1
-        const auto unitig_id = abs(head_id) - 1;
-
         // get reference to unitig_dict object
-        const auto& unitig_dict = graph_vector.at(unitig_id);
+        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
+        const auto& um = um_pair.first;
+        const auto& um_data = um_pair.second;
 
         // gather unitig information from graph_vector
-        const uint8_t codon_arr = 0;
-        const boost::dynamic_bitset<> colour_arr = unitig_dict.full_colour();
+        const std::bitset<3> codon_arr;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // calculate where in unitig ORF sits, to determine initial length of path
-        size_t path_length = unitig_dict.size().first - std::get<1>(ORF_info).back().second;
+        size_t path_length = um.size - std::get<1>(ORF_info).back().second;
         size_t ORF_end = std::get<1>(ORF_info).back().second;
 
         // check if path_length already exceeds radius
@@ -501,17 +447,22 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(graph_vector, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx);
+            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1);
         }
 
         if (!unitig_complete_paths.empty())
         {
-            auto downstream_pair = std::move(assign_seq(colour_ID, graph_vector, ccdbg, unitig_complete_paths, kmer,
-                                             is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
-            if (downstream_pair.first.size() > 1)
+            auto downstream_pair = std::move(assign_seq(ccdbg, head_kmer_arr, unitig_complete_paths, kmer,
+                                                        is_ref, fm_idx, downstream_seq, ORF_end, ORF_seq));
+
+            auto downstream_nodes = downstream_pair.first;
+
+            if (downstream_nodes.size() > 1)
             {
-                full_nodelist.insert(full_nodelist.end(), downstream_pair.first.begin() + 1, downstream_pair.first.end());
-                full_contig_loc = downstream_pair.second;
+                // if downstream nodes has extended path, update the path_rev_comp
+                path_rev_comp = downstream_pair.second;
+
+                full_nodelist.insert(full_nodelist.end(), downstream_nodes.begin() + 1, downstream_nodes.end());
             }
         }
     }
@@ -523,20 +474,20 @@ RefindTuple traverse_outward(const GraphVector& graph_vector,
         ORF_seq = downstream_seq;
 
         // calculate the positions of each node within the path
-        const auto full_node_ranges = calculate_node_ranges(graph_vector, kmer - 1, full_nodelist);
+        const auto full_node_ranges = calculate_node_ranges(ccdbg, head_kmer_arr, kmer - 1, full_nodelist);
 
-        return {ORF_seq, full_nodelist, full_node_ranges, full_contig_loc};
+        return {ORF_seq, full_nodelist, full_node_ranges, path_rev_comp};
     } else
     {
         return {};
     }
 }
 
-RefindMap refind_in_nodes(const GraphVector& graph_vector,
-                          const ColoredCDBG<>& ccdbg,
-                          const size_t& colour_ID,
+RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                          const std::vector<Kmer>& head_kmer_arr,
+                          const size_t colour_ID,
                           const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                          const size_t& radius,
+                          const size_t radius,
                           const bool is_ref,
                           const int kmer,
                           const fm_index_coll& fm_idx,
@@ -555,7 +506,7 @@ RefindMap refind_in_nodes(const GraphVector& graph_vector,
             const auto& search = seq_search.first;
             const auto& ORF_info = seq_search.second;
 
-            refind_map[node][search] = traverse_outward(graph_vector, ccdbg, colour_ID, ORF_info, radius, is_ref,
+            refind_map[node][search] = traverse_outward(ccdbg, head_kmer_arr, colour_ID, ORF_info, radius, is_ref,
                                                          kmer, fm_idx, repeat);
         }
     }

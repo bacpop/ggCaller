@@ -5,19 +5,17 @@ PYBIND11_MODULE(ggCaller_cpp, m)
 {
     m.doc() = "Call ORFs in Bifrost graph.";
 
-    // make this a function that returns a pointer
     py::class_<Graph, std::shared_ptr<Graph>>(m, "Graph")
             .def("read", &Graph::read)
             .def("build", &Graph::build)
             .def("data_in", &Graph::in)
             .def("data_out", &Graph::out)
-            .def("findORFs", &Graph::findORFs, py::return_value_policy::take_ownership)
+            .def("findGenes", &Graph::findGenes)
             .def("generate_sequence", &Graph::generate_sequence)
-            .def("connect_ORFs", &Graph::connect_ORFs)
-            .def("generate_clusters", &Graph::generate_clusters)
             .def("refind_gene", &Graph::refind_gene)
             .def("search_graph", &Graph::search_graph)
-            .def("node_size", &Graph::node_size);
+            .def("node_size", &Graph::node_size)
+            .def("ORF_location", &Graph::ORF_location);
 
     m.def("create_graph", []() { return std::make_shared<Graph>(); });
 

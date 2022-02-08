@@ -1,7 +1,7 @@
 #include "ORF_clustering.h"
 
 ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
-                         const GraphVector& graph_vector)
+                         const std::vector<Kmer>& head_kmer_arr)
 {
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
@@ -34,10 +34,10 @@ ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
 
     // initialise map which holds which nodes map to which ORFs
     std::vector<std::unordered_set<size_t>> ORF_group_vector(ORF_mat_vector.size());
-    std::vector<std::vector<std::pair<size_t, size_t>>> centroid_vector(graph_vector.size());
+    std::vector<std::vector<std::pair<size_t, size_t>>> centroid_vector(head_kmer_arr.size());
 
     // initialise sparse matrix
-    Eigen::SparseMatrix<double> mat(ORF_mat_vector.size(), graph_vector.size());
+    Eigen::SparseMatrix<double> mat(ORF_mat_vector.size(), head_kmer_arr.size());
     mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
     // iterate over non-zero entries in matrix and calculate overlaps
@@ -82,8 +82,8 @@ ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
 }
 
 ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
-                               const GraphVector& graph_vector,
-                               const ColoredCDBG<>& ccdbg,
+                               const ColoredCDBG<MyUnitigMap>& ccdbg,
+                               const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,
                                const ORFMatrixVector& ORF_mat_vector,
                                const std::vector<std::unordered_set<size_t>>& ORF_group_vector,
@@ -154,7 +154,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                 }
 
                 // calculate the perc_id between the current centroid and the ORF
-                double current_perc_id = align_seqs(ORF1_info, ORF2_info, graph_vector, ccdbg, DBG_overlap);
+                double current_perc_id = align_seqs(ORF1_info, ORF2_info, ccdbg, head_kmer_arr, DBG_overlap);
 
                 if (current_perc_id > assigned_perc_id)
                 {
@@ -291,57 +291,10 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
     return final_clusters;
 }
 
-//std::string generate_sequence_private(const std::vector<int>& nodelist,
-//                                      const std::vector<indexPair>& node_coords,
-//                                      const size_t& overlap,
-//                                      const GraphVector& _GraphVector)
-//{
-//    std::string sequence;
-//    for (size_t i = 0; i < nodelist.size(); i++)
-//    {
-//        // initialise sequence items
-//        std::string unitig_seq;
-//        std::string substring;
-//
-//        // parse information
-//        const auto& id = nodelist[i];
-//        const auto& coords = node_coords[i];
-//        bool strand = (id >= 0) ? true : false;
-//
-//        if (strand)
-//        {
-//            unitig_seq = _GraphVector.at(abs(id) - 1).seq();
-//        } else {
-//            unitig_seq = reverse_complement(_GraphVector.at(abs(id) - 1).seq());
-//        }
-//
-//        if (sequence.empty())
-//        {
-//            // get node_seq_len, add one as zero indexed
-//            int node_seq_len = (std::get<1>(coords) - std::get<0>(coords)) + 1;
-//            substring = unitig_seq.substr(std::get<0>(coords), node_seq_len);
-//        } else
-//        {
-//            // get node_seq_len, add one as zero indexed
-//            int node_seq_len = (std::get<1>(coords) - overlap) + 1;
-//            // need to account for overlap, if overlap is greater than the end of the node, sequence already accounted for
-//            if (node_seq_len > 0)
-//            {
-//                substring = unitig_seq.substr(overlap, node_seq_len);
-//            } else
-//            {
-//                break;
-//            }
-//        }
-//        sequence += substring;
-//    }
-//    return sequence;
-//}
-
 double align_seqs(const ORFNodeVector& ORF1_info,
                   const ORFNodeVector& ORF2_info,
-                  const GraphVector& graph_vector,
-                  const ColoredCDBG<>& ccdbg,
+                  const ColoredCDBG<MyUnitigMap>& ccdbg,
+                  const std::vector<Kmer>& head_kmer_arr,
                   const size_t& DBG_overlap)
 {
     std::string ORF1_aa;
@@ -349,8 +302,8 @@ double align_seqs(const ORFNodeVector& ORF1_info,
 
     // scope for DNA sequences
     {
-        const auto ORF1_sequence = generate_sequence_nm(std::get<0>(ORF1_info), std::get<1>(ORF1_info), DBG_overlap, graph_vector, ccdbg);
-        const auto ORF2_sequence = generate_sequence_nm(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, graph_vector, ccdbg);
+        const auto ORF1_sequence = generate_sequence_nm(std::get<0>(ORF1_info), std::get<1>(ORF1_info), DBG_overlap, ccdbg, head_kmer_arr);
+        const auto ORF2_sequence = generate_sequence_nm(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, ccdbg, head_kmer_arr);
 
         // translate DNA sequence
         ORF1_aa = (translate(ORF1_sequence)).aa();
@@ -362,6 +315,8 @@ double align_seqs(const ORFNodeVector& ORF1_info,
     const char * seq2 = ORF2_aa.c_str();
     EdlibAlignResult result = edlibAlign(seq1, ORF1_aa.size(), seq2, ORF1_aa.size(), edlibDefaultAlignConfig());
     size_t edit_distance = result.editDistance;
+    edlibFreeAlignResult(result);
+
     edlibFreeAlignResult(result);
 
     // convert edit distance into percent identity

@@ -10,11 +10,11 @@
 #include "translation.h"
 
 ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
-                         const GraphVector& graph_vector);
+                         const std::vector<Kmer>& head_kmer_arr);
 
 ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
-                               const GraphVector& graph_vector,
-                               const ColoredCDBG<>& ccdbg,
+                               const ColoredCDBG<MyUnitigMap>& ccdbg,
+                               const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,
                                const ORFMatrixVector& ORF_mat_vector,
                                const std::vector<std::unordered_set<size_t>>& ORF_group_vector,
@@ -22,15 +22,10 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const double& id_cutoff,
                                const double& len_diff_cutoff);
 
-//std::string generate_sequence_private(const std::vector<int>& nodelist,
-//                                      const std::vector<indexPair>& node_coords,
-//                                      const size_t& overlap,
-//                                      const GraphVector& _GraphVector);
-
 double align_seqs(const ORFNodeVector& ORF1_info,
                   const ORFNodeVector& ORF2_info,
-                  const GraphVector& graph_vector,
-                  const ColoredCDBG<>& ccdbg,
+                  const ColoredCDBG<MyUnitigMap>& ccdbg,
+                  const std::vector<Kmer>& head_kmer_arr,
                   const size_t& DBG_overlap);
 
 #endif //GGCALLER_ORF_CLUSTERING_H

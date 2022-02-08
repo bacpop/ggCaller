@@ -41,7 +41,8 @@ inline std::pair<std::vector<int>, std::vector<indexPair>> combine_nodes(const s
     return {combined_nodes, combined_coords};
 }
 
-void reverse_ORFNodeVector(const GraphVector& graph_vector,
+void reverse_ORFNodeVector(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                           const std::vector<Kmer>& head_kmer_arr,
                            std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
                            int& ORF2_start_node,
                            int& ORF2_end_node,
@@ -62,8 +63,12 @@ void reverse_ORFNodeVector(const GraphVector& graph_vector,
     // iterate over ORF2_nodes coordinate vector, reversing the coordinates relative to the end index of the node
     for (int i = 0; i < ORF2_nodes.second.size(); i++)
     {
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF2_nodes.first.at(i));
+        auto& um = um_pair.first;
+
         // get absolute last node index (same as unitig length minus 1 as zero indexed)
-        size_t node_end = graph_vector.at(abs(ORF2_nodes.first.at(i)) - 1).size().first - 1;
+        size_t node_end = um.size - 1;
         // get difference from original start to absolute last node index
         size_t reversed_end = node_end - std::get<0>(ORF2_nodes.second.at(i));
         // get difference from original end to absolute last node index
@@ -229,7 +234,8 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
     return {overlap_complete, ORF_1_overlap_node_index, ORF_2_overlap_node_index};
 }
 
-ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
+ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                 const std::vector<Kmer>& head_kmer_arr,
                                  const ORFVector& ORF_vector,
                                  const int DBG_overlap,
                                  const size_t max_overlap)
@@ -258,7 +264,7 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
     }
 
     // initialise sparse matrix
-    Eigen::SparseMatrix<double> mat(ORF_vector.size(), graph_vector.size());
+    Eigen::SparseMatrix<double> mat(ORF_vector.size(), head_kmer_arr.size());
     mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
     // conduct transposition + matrix multiplication to calculate ORFs sharing nodes
@@ -396,7 +402,7 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
                 {
                     if (reversed)
                     {
-                        reverse_ORFNodeVector(graph_vector, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+                        reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
                     }
                     auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
                     overlap_complete = std::get<0>(return_tuple);
@@ -413,7 +419,7 @@ ORFOverlapMap calculate_overlaps(const GraphVector& graph_vector,
 
                     if (!overlap_complete)
                     {
-                        reverse_ORFNodeVector(graph_vector, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+                        reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
                         return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
                         overlap_complete = std::get<0>(return_tuple);
                         ORF_1_overlap_node_index = std::get<1>(return_tuple);

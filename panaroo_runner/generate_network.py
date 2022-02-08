@@ -90,11 +90,14 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
             # map ORF ID to centroid ID
             seqid_to_centroid[ORF_id] = cluster_centroids[current_cluster]
 
-            # parse neighbour information for current ORF
-            edge_set = high_scoring_ORF_edges[genome_id][local_id]
-
-            # check if current ORF is end of contig
-            has_end = True if len(edge_set) == 0 else False
+            # parse neighbour information for current ORF if present, otherwise make empty edge_set
+            if local_id in high_scoring_ORF_edges[genome_id]:
+                edge_set = high_scoring_ORF_edges[genome_id][local_id]
+                has_end = False
+            else:
+                edge_set = set()
+                # check if current ORF is end of contig
+                has_end = True
 
             # initialise cluster to add
             cluster_to_add = current_cluster
@@ -178,10 +181,10 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                 neighbour_cluster_to_add = neighbour_cluster
 
                 # parse neighbour information for current ORF
-                neighbour_edge_set = high_scoring_ORF_edges[genome_id][neighbour]
-
-                # check if current ORF is end of contig
-                neighbour_has_end = True if len(neighbour_edge_set) == 0 else False
+                if neighbour in high_scoring_ORF_edges[genome_id]:
+                    neighbour_has_end = False
+                else:
+                    neighbour_has_end = True
 
                 # add neighbour if not present in graph already
                 if add_neighbour:

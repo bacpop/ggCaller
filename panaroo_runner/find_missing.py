@@ -21,15 +21,12 @@ def find_missing(G,
                  graph_shd_arr_tup,
                  high_scoring_ORFs,
                  is_ref,
-                 write_idx,
                  kmer,
                  repeat,
                  isolate_names,
-                 merge_id_thresh,
                  search_radius,
                  prop_match,
                  pairwise_id_thresh,
-                 pool,
                  n_cpu,
                  remove_by_consensus=False,
                  verbose=True):
@@ -58,7 +55,7 @@ def find_missing(G,
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = {}
                     search_dict[member]["searches"][node][G.nodes[node]["dna"][G.nodes[node]['maxLenId']]] = ORF_info[
-                                                                                                             :7]
+                                                                                                             :6]
 
                     n_searches += 1
 
@@ -70,33 +67,19 @@ def find_missing(G,
     all_hits = [None] * len(isolate_names)
     all_node_locs = [None] * len(isolate_names)
 
-    # for isolate_pair in search_dict.items():
-    #     member, hits, node_locs = search_graph(isolate_pair,
-    #                                            graph_shd_arr_tup=graph_shd_arr_tup,
-    #                                            isolate_names=isolate_names,
-    #                                            search_radius=search_radius,
-    #                                            prop_match=prop_match,
-    #                                            pairwise_id_thresh=pairwise_id_thresh,
-    #                                            merge_id_thresh=merge_id_thresh,
-    #                                            is_ref=is_ref,
-    #                                            write_idx=write_idx,
-    #                                            kmer=kmer,
-    #                                            repeat=repeat)
-    #     all_hits[member] = hits
-    #     all_node_locs[member] = node_locs
-
-    for member, hits, node_locs in pool.map(partial(search_graph,
-                                                    graph_shd_arr_tup=graph_shd_arr_tup,
-                                                    isolate_names=isolate_names,
-                                                    search_radius=search_radius,
-                                                    prop_match=prop_match,
-                                                    pairwise_id_thresh=pairwise_id_thresh,
-                                                    is_ref=is_ref,
-                                                    kmer=kmer,
-                                                    repeat=repeat),
-                                            search_dict.items()):
-        all_hits[member] = hits
-        all_node_locs[member] = node_locs
+    with Pool(processes=n_cpu, maxtasksperchild=1) as pool:
+        for member, hits, node_locs in pool.map(partial(search_graph,
+                                                        graph_shd_arr_tup=graph_shd_arr_tup,
+                                                        isolate_names=isolate_names,
+                                                        search_radius=search_radius,
+                                                        prop_match=prop_match,
+                                                        pairwise_id_thresh=pairwise_id_thresh,
+                                                        is_ref=is_ref,
+                                                        kmer=kmer,
+                                                        repeat=repeat),
+                                                search_dict.items()):
+            all_hits[member] = hits
+            all_node_locs[member] = node_locs
 
     if verbose:
         print("translating hits...")
@@ -122,7 +105,7 @@ def find_missing(G,
             if node not in node_locs: continue
             # iterate over all the nodes present for the current ORF
             node_coverage = 0
-            for DBG_node, node_coords in zip(node_locs[node][0][0], node_locs[node][0][1]):
+            for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
                 # check if node is negative and needs reversing
                 # make copies to avoid editing in place
                 temp_DBG_node = DBG_node
@@ -137,7 +120,7 @@ def find_missing(G,
                 else:
                     node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
             # negate coverage from node overlaps in DBG
-            node_coverage -= node_locs[node][0][2]
+            node_coverage -= node_locs[node][2]
             # check if node coverage is exceeded
             if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
                 if member in G.nodes[node]['members']:
@@ -145,7 +128,7 @@ def find_missing(G,
                 bad_node_mem_pairs.add((node, member))
             else:
                 # if sequence coverage is less than threshold, iterate again and add sequence information
-                for DBG_node, node_coords in zip(node_locs[node][0][0], node_locs[node][0][1]):
+                for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
                     temp_DBG_node = DBG_node
                     if temp_DBG_node < 0:
                         temp_DBG_node *= -1
@@ -198,11 +181,9 @@ def find_missing(G,
             G.nodes[node]['size'] += 1
             G.nodes[node]['dna'].append(dna_hit)
             G.nodes[node]['protein'].append(hit_protein)
-            G.nodes[node]['seqIDs'] |= set(
-                [str(member) + "_refound_" + str(n_found * -1)])
+            G.nodes[node]['seqIDs'] |= set([str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
-            nodelist, node_coords, total_overlap = all_node_locs[member][node][0]
-            contig_coords = all_node_locs[member][node][1]
+            nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
             if G.nodes[node]['bitscore'] != 0:
                 annotation = ("refound", G.nodes[node]['annotation'],
@@ -210,7 +191,7 @@ def find_missing(G,
             else:
                 annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna, contig_coords, annotation)
+                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna, annotation)
 
     if verbose:
         print("Number of refound genes: ", n_found)
@@ -238,8 +219,6 @@ def search_graph(search_pair,
     # sort items to preserve order
     conflicts = {k: v for k, v in sorted(dicts["conflicts"].items(), key=lambda item: item[0])}
     node_search_dict = dicts["searches"]
-    # for node in dicts["searches"]:
-    #     node_search_dict[node] = {k: v for k, v in sorted(node_search_dict[node].items(), key=lambda item: item[0])}
 
     node_locs = {}
 
@@ -253,7 +232,7 @@ def search_graph(search_pair,
                     total_overlap += ((kmer - 1) - node_coords[0])
                 else:
                     total_overlap += (node_coords[1] - node_coords[0]) + 1
-        node_locs[node] = ((ORF_info[0], ORF_info[1], total_overlap), ORF_info[6])
+        node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # get sequences to search
     node_search_dict = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, is_ref,
@@ -265,13 +244,11 @@ def search_graph(search_pair,
         best_hit = ""
         best_loc = None
         for search, search_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, contig_pair = search_info
+            db_seq, nodelist, node_ranges, path_rev_comp = search_info
 
             # check if no sequence found
             if db_seq == "":
                 pass
-
-            contig_coords, path_rev_comp = contig_pair
 
             hit, loc, rev_comp = search_dna(db_seq,
                                             search,
@@ -279,16 +256,12 @@ def search_graph(search_pair,
                                             pairwise_id_thresh,
                                             refind=True)
 
-            # work out how ORF is orientated with respect to original sequence
-            if rev_comp and path_rev_comp:
+            # work out how ORF is orientated with respect to original sequence (only if FM-index used)
+            if rev_comp and path_rev_comp and is_ref:
                 rev_comp = False
 
             # convert linear coordinates into node coordinates
             ORF_graph_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
-
-            # convert linear coordinates into contig coordinates, determine strand of sequence
-            ORF_contig_loc = (
-            (contig_coords[0], (loc[0] + contig_coords[1][0], loc[1] + contig_coords[1][0])), not rev_comp)
 
             # if db_seq was reversed to align, need to reverse node coordinates
             if rev_comp and hit != "":
@@ -308,7 +281,7 @@ def search_graph(search_pair,
 
             if len(hit) > len(best_hit):
                 best_hit = hit
-                best_loc = (ORF_graph_loc, ORF_contig_loc)
+                best_loc = ORF_graph_loc
 
         hits.append((node, best_hit))
         if (best_loc is not None) and (best_hit != ""):

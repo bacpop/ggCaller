@@ -4,46 +4,110 @@
 
 std::mutex mtx2;
 
-// add codon, copy semantics
-void unitigDict::add_codon (const bool full, const bool forward, const int& frame, const uint8_t& array) {
-    if (full)
-    {
-        _full_codon[forward][frame] = array;
 
-        // update forward/reverse stop codon presence
-        if (forward && !_forward_stop_defined)
-        {
-            if (_full_codon[forward][frame] != 0)
-            {
-                _forward_stop = true;
-            }
-            _forward_stop_defined = true;
-        } else if (!forward && !_reverse_stop_defined)
-        {
-            if (_full_codon[forward][frame] != 0)
-            {
-                _reverse_stop = true;
-            }
-            _reverse_stop_defined = true;
+void MyUnitigMap::clear(const UnitigColorMap<MyUnitigMap>& um_dest)
+{
+    if (!um_dest.isEmpty && (um_dest.getGraph() != nullptr)){
+
+        DataStorage<MyUnitigMap>* ds = um_dest.getGraph()->getData();
+
+        if (ds != nullptr){
+
+            ds->remove(um_dest);
+
+            da_id = 0;
         }
-    } else {
-        _part_codon[forward][frame] = array;
     }
 }
 
-// add size, copy semantics
-void unitigDict::add_size(const size_t& full_len, const size_t& part_len) {
-    std::pair pair(full_len, part_len);
-    _unitig_size = pair;
+// Concatenation method for ColoredCDBG
+void MyUnitigMap::concat(const UnitigColorMap<MyUnitigMap>& um_dest, const UnitigColorMap<MyUnitigMap>& um_src){
+    return;
 }
 
-// add size, move semantics
-void unitigDict::add_size(size_t& full_len, size_t& part_len) {
-    _unitig_size = make_pair(full_len, part_len);
+// Extraction method for ColoredCDBG
+void MyUnitigMap::extract(const UnitigColors* uc_dest, const UnitigColorMap<MyUnitigMap>& um_src, const bool last_extraction){
+    return;
+}
+
+string MyUnitigMap::serialize(const const_UnitigColorMap<MyUnitigMap>& um_src) const {
+    return "";
+}
+
+// add codon, copy semantics
+void MyUnitigMap::add_codon (const bool forward, const std::bitset<3>& array) {
+    // skip if no stop detected
+    if (array.none())
+    {
+        return;
+    }
+
+    // set first position of bits
+    size_t a = 0;
+
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
+    if (!forward)
+    {
+        a = 3;
+    }
+
+    // add to a for the remaining bits
+    size_t b = a + 1;
+    size_t c = a + 2;
+
+    _full_codon[a] = array[0];
+    _full_codon[b] = array[1];
+    _full_codon[c] = array[2];
+
+    // update forward/reverse stop codon presence
+    if (forward && !_forward_stop)
+    {
+        _forward_stop = true;
+    } else if (!forward && !_reverse_stop)
+    {
+        _reverse_stop = true;
+    }
+}
+
+void MyUnitigMap::add_codon (const bool forward, const std::bitset<9>& array) {
+    // skip if no stop detected
+    if (array.none())
+    {
+        return;
+    }
+
+    // set first position of bits
+    size_t a = 0;
+
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
+    if (!forward)
+    {
+        a = 9;
+    }
+
+    // add to a for the remaining bits
+    size_t b = a + 1;
+    size_t c = a + 2;
+    size_t d = a + 3;
+    size_t e = a + 4;
+    size_t f = a + 5;
+    size_t g = a + 6;
+    size_t h = a + 7;
+    size_t i = a + 8;
+
+    _part_codon[a] = array[0];
+    _part_codon[b] = array[1];
+    _part_codon[c] = array[2];
+    _part_codon[d] = array[3];
+    _part_codon[e] = array[4];
+    _part_codon[f] = array[5];
+    _part_codon[g] = array[6];
+    _part_codon[h] = array[7];
+    _part_codon[i] = array[8];
 }
 
 // check if head and tail colours are the same
-void unitigDict::_check_head_tail_equal() {
+void MyUnitigMap::_check_head_tail_equal() {
     if (_unitig_head_colour == _unitig_tail_colour)
     {
         _head_tail_colours_equal = true;
@@ -58,68 +122,108 @@ void unitigDict::_check_head_tail_equal() {
     }
 }
 
-uint8_t unitigDict::get_codon_arr (bool full, bool forward, bool frame) const {
+std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, const int frame) const {
+    // set first position of bits
+    size_t a = 0;
+
+    // if reverse, then set to second half of the bitset (3 for full, 9 for part)
+    if (!forward)
+    {
+        if (full)
+        {
+            a = 3;
+        } else
+        {
+            a = 9;
+        }
+    }
+
+    // determine the frame of the bits
+    a += 3 * frame;
+
+    // add to a for the remaining bits
+    size_t b = a + 1;
+    size_t c = a + 2;
+
+    std::bitset<3> array;
+
     if (full)
     {
-        return _full_codon.at(forward).at(frame);
+        array[0] = _full_codon[a];
+        array[1] = _full_codon[b];
+        array[2] = _full_codon[c];
+
     } else
     {
-        return _part_codon.at(forward).at(frame);
+        array[0] = _part_codon[a];
+        array[1] = _part_codon[b];
+        array[2] = _part_codon[c];
     }
+
+    return array;
 }
 
-std::vector<uint8_t> unitigDict::get_codon_dict (bool full, bool forward) const {
-    if (full)
-    {
-        return _full_codon.at(forward);
-    } else
-    {
-        return _part_codon.at(forward);
-    }
-}
 
-void unitigDict::add_neighbour_colour (bool strand, int neighbour_ID, size_t colour_ID)
+// function to get unitig data from an ID number, returning pointer to data
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const std::vector<Kmer>& head_kmer_arr,
+                                                                  const int id)
 {
-    // search for neighbour in _neighbours, add colour_ID to colour set
-    auto it = find_if(_neighbours[strand].begin( ), _neighbours[strand].end( ), [=](auto item){return get< 0 >(item) == neighbour_ID;});
-    if (it != _neighbours[strand].end())
-    {
-        mtx2.lock();
-        get<2>(*it).insert(colour_ID);
-        mtx2.unlock();
-    }
+    const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
+    auto um = ccdbg.find(head_kmer, true);
+
+    DataAccessor<MyUnitigMap>* da = um.getData();
+    MyUnitigMap* um_data = da->getData(um);
+
+    return {um, um_data};
 }
 
-// non-member function for generating unitig sequence
-std::string unitig_seq(const int& node_id,
-                       const GraphVector& graph_vector,
-                       const ColoredCDBG<>& ccdbg)
+
+// const qualified get_um_data, returning copy of data
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const std::vector<Kmer>& head_kmer_arr,
+                                                                                                           const int id)
 {
-    std::string head_kmer = graph_vector.at(abs(node_id) - 1).head_kmer();
+    const Kmer head_kmer = head_kmer_arr.at(abs(id) - 1);
+    auto um = ccdbg.find(head_kmer, true);
 
-    const Kmer km = Kmer(head_kmer.c_str());
+    const DataAccessor<MyUnitigMap>* da = um.getData();
+    const MyUnitigMap* unitig_map = da->getData(um);
 
-    auto um = ccdbg.find(km, true);
+    return {um, const_cast<MyUnitigMap *>(unitig_map)};
+}
 
-    std::string seq;
 
-    if (node_id < 0)
-    {
-        seq = reverse_complement(um.referenceUnitigToString());
-    } else
-    {
-        seq = um.referenceUnitigToString();
-    }
+// function to get unitig data from an head_kmer, returning pointer to data
+std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                  const Kmer& head_kmer)
+{
+    auto um = ccdbg.find(head_kmer, true);
 
-    return seq;
+    DataAccessor<MyUnitigMap>* da = um.getData();
+    MyUnitigMap* um_data = da->getData(um);
+
+    return {um, um_data};
+}
+
+// const qualified get_um_data, returning copy of data
+std::pair<const_UnitigMap<DataAccessor<MyUnitigMap>, DataStorage<MyUnitigMap>>, MyUnitigMap*> get_um_data (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                                                           const Kmer& head_kmer)
+{
+    auto um = ccdbg.find(head_kmer, true);
+
+    const DataAccessor<MyUnitigMap>* da = um.getData();
+    const MyUnitigMap* unitig_map = da->getData(um);
+
+    return {um, const_cast<MyUnitigMap *>(unitig_map)};
 }
 
 // non-member function for generating sequence from DBG
 std::string generate_sequence_nm(const std::vector<int>& nodelist,
                                  const std::vector<indexPair>& node_coords,
                                  const size_t& overlap,
-                                 const GraphVector& graph_vector,
-                                 const ColoredCDBG<>& ccdbg)
+                                 const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                 const std::vector<Kmer>& head_kmer_arr)
 {
     std::string sequence;
     for (size_t i = 0; i < nodelist.size(); i++)
@@ -130,7 +234,22 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
 
         // initialise sequence items
         std::string substring;
-        const std::string seq = unitig_seq(id, graph_vector, ccdbg);
+
+        // get a reference to the unitig map object
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, id);
+        auto& um = um_pair.first;
+
+        const std::string kmer = head_kmer_arr[abs(id) - 1].toString();
+
+        // reverse sequence if strand is negative
+        std::string seq;
+        if (id >= 0)
+        {
+            seq = um.referenceUnitigToString();
+        } else
+        {
+            seq = reverse_complement(um.referenceUnitigToString());
+        }
 
         if (sequence.empty())
         {
