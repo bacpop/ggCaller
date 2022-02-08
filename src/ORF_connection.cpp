@@ -1,7 +1,7 @@
 #include "ORF_connection.h"
 std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
-                                                             const std::set<size_t>& target_ORFs,
-                                                             const ORFVector& ORF_vector)
+                                                             const robin_hood::unordered_set<size_t>& target_ORFs,
+                                                             const ORFNodeMap& gene_map)
 {
     std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs(head_kmer_arr.size());
 
@@ -9,7 +9,7 @@ std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<K
     {
         {
             // get graph information for source node
-            const auto & ORF_info = ORF_vector.at(source);
+            const auto & ORF_info = gene_map.at(source);
 
             const auto source_node_id = std::get<0>(ORF_info).at(0);
             const auto sink_node_id = std::get<0>(ORF_info).back();
@@ -27,7 +27,7 @@ std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const std::vector<Kmer>& head_kmer_arr,
                                        const robin_hood::unordered_set<size_t>& node_ORFs,
                                        const int node_id,
-                                       const ORFVector& ORF_vector)
+                                       const ORFNodeMap& gene_map)
 {
     std::vector<size_t> overlapping_ORF_IDs;
     std::vector<std::pair<bool, indexPair>> overlapping_ORF_coords;
@@ -37,8 +37,8 @@ std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // add to return vector overlapping ORF vector
         overlapping_ORF_IDs.push_back(ORF_ID);
 
-        // get reference to ORF_vector entry
-        const auto & ORF_info = ORF_vector.at(ORF_ID);
+        // get reference to gene_map entry
+        const auto & ORF_info = gene_map.at(ORF_ID);
 
         // get the index of the node in ORFNodeVector for that ORF
         auto it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), node_id);
@@ -109,12 +109,11 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
                                                        const std::vector<Kmer>& head_kmer_arr,
                                                        const std::vector<robin_hood::unordered_set<size_t>> node_to_ORFs,
                                                        const size_t colour_ID,
-                                                       const std::set<size_t>& target_ORFs,
-                                                       const ORFVector& ORF_vector,
+                                                       const robin_hood::unordered_set<size_t>& target_ORFs,
+                                                       const ORFNodeMap& gene_map,
                                                        const size_t& max_ORF_path_length,
                                                        const int stream,
                                                        std::unordered_set<int>& prev_node_set,
-                                                       const bool is_ref,
                                                        const int overlap)
 {
     // initialise pair of vectors (first = upstream of start_ORF, second = downstream of start_ORF)
@@ -124,7 +123,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
     for (const auto& source : target_ORFs)
     {
         // get ORF info
-        const auto & source_info = ORF_vector.at(source);
+        const auto & source_info = gene_map.at(source);
 
         // get id for source_node and sink node for ORF
         auto source_node_id = std::get<0>(source_info).at(0);
@@ -146,7 +145,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
             const auto& start_node_ORFs = node_to_ORFs.at(abs(start_node) - 1);
 
             // check if there are overlapping ORFs on the source and sink node, as these will not be picked up
-            std::vector<size_t> ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, start_node_ORFs, start_node, ORF_vector);
+            std::vector<size_t> ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, start_node_ORFs, start_node, gene_map);
             if (ordered_ORFs.size() >= 2)
             {
                 // if 2 or more ORFs overlapping, order and then add each connecting edge
@@ -162,7 +161,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
             if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
             {
-                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, ORF_vector, max_ORF_path_length, prev_node_set, is_ref, overlap);
+                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, prev_node_set, overlap);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
 
@@ -179,10 +178,9 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                                                         const size_t stream_source,
                                                         const size_t current_colour,
                                                         const int stream,
-                                                        const ORFVector& ORF_vector,
+                                                        const ORFNodeMap& gene_map,
                                                         const size_t max_ORF_path_length,
                                                         std::unordered_set<int>& prev_node_set,
-                                                        const bool is_ref,
                                                         const int overlap)
 {
     // initialise return vector of upstream ORFs (vectors will break at branches in graph)
@@ -241,16 +239,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
-//            const auto& colour_set = std::get<2>(neighbour);
-//
-//            // if is_ref, determine if edge is correct
-//            if (is_ref)
-//            {
-//                if (colour_set.find(current_colour) == colour_set.end())
-//                {
-//                    continue;
-//                }
-//            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();
@@ -259,10 +247,6 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                 continue;
             }
 
-//            // get reference to unitig_dict object for neighbour
-//            auto neighbour_um_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
-//            auto& neighbour_um = neighbour_um_pair.first;
-//            auto& neighbour_um_data = neighbour_um_pair.second;
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
@@ -282,7 +266,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
             {
                 // pull out next ORFs and order them
                 const auto& next_ORFs = node_to_ORFs.at(abs(neighbour_id) - 1);
-                const auto ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, next_ORFs, neighbour_id, ORF_vector);
+                const auto ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, next_ORFs, neighbour_id, gene_map);
 
                 // add first entry and stream_source
                 // add ORFs so that lowest ORF_ID is added first (to remove redundant edges)

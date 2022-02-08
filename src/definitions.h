@@ -81,11 +81,11 @@ typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, TIS coordinate information, relative strand and location in contigs
 typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
-typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
+typedef std::unordered_map<size_t, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeMap to its colour
-typedef std::map<size_t, ORFNodeMap> ColourORFMap;
+typedef std::unordered_map<size_t, ORFNodeMap> ColourORFMap;
 // maps colours to the edges for every ORF in that colour
-typedef std::map<size_t, std::unordered_map<size_t, std::unordered_set<size_t>>> ColourEdgeMap;
+typedef std::unordered_map<size_t, std::unordered_map<size_t, std::unordered_set<size_t>>> ColourEdgeMap;
 // vector of ORF paths through graphs
 typedef std::vector<ORFNodeVector> ORFVector;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
