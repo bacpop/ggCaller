@@ -7,13 +7,11 @@ from joblib import Parallel, delayed
 from functools import partial
 from tqdm import tqdm
 from Bio.Align.Applications import MafftCommandline
-from multiprocessing import Pool
 
 
-def run_snpsites_dir(annotation_dir, vcf_dir, no_vc_set, n_cpus):
-    with Pool(processes=n_cpus, maxtasksperchild=1) as pool:
-        pool.map(partial(run_snpsites, annotation_dir=annotation_dir, vcf_dir=vcf_dir),
-                 [file for file in os.listdir(annotation_dir) if file not in no_vc_set])
+def run_snpsites_dir(annotation_dir, vcf_dir, no_vc_set, pool):
+    pool.map(partial(run_snpsites, annotation_dir=annotation_dir, vcf_dir=vcf_dir),
+             [file for file in os.listdir(annotation_dir) if file not in no_vc_set])
 
     return True
 

@@ -7,7 +7,6 @@ from Bio import SeqIO
 import pandas as pd
 from Bio import SearchIO
 from collections import defaultdict
-from multiprocessing import Pool
 
 
 def check_diamond_install():
@@ -71,7 +70,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, n_cpu):
+def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool):
     # list of sequence records
     all_centroid_aa = []
 
@@ -79,9 +78,8 @@ def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
     unannotated_nodes = get_unannotated_nodes(G)
 
     # Multithread writing amino acid sequences to disk (temp directory)
-    with Pool(processes=n_cpu, maxtasksperchild=1) as pool:
-        for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
-            all_centroid_aa = all_centroid_aa + centroid_aa
+    for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
+        all_centroid_aa = all_centroid_aa + centroid_aa
 
     # write all sequences to single file
     all_centroid_aa = (x for x in all_centroid_aa)
@@ -130,7 +128,7 @@ def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
     return G, high_scoring_ORFs
 
 
-def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, n_cpu):
+def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool, n_cpu):
     # list of sequence records
     all_centroid_aa = []
 
@@ -138,9 +136,8 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
     unannotated_nodes = get_unannotated_nodes(G)
 
     # Multithread writing amino acid sequences to disk (temp directory)
-    with Pool(processes=n_cpu, maxtasksperchild=1) as pool:
-        for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
-            all_centroid_aa = all_centroid_aa + centroid_aa
+    for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
+        all_centroid_aa = all_centroid_aa + centroid_aa
 
     # write all sequences to single file
     all_centroid_aa = (x for x in all_centroid_aa)
@@ -199,12 +196,12 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
 
 
 def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db, evalue,
-                                annotate, n_cpu):
+                                annotate, n_cpu, pool):
     # run initial iterative search
-    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, n_cpu)
+    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool)
 
     # run ultra-sensitive search
     if annotate == "sensitive":
-        G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, hmm_db, evalue, n_cpu)
+        G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, hmm_db, evalue, pool, n_cpu)
 
     return G, high_scoring_ORFs
