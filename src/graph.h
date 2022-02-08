@@ -14,6 +14,7 @@
 #include "search_DBG.h"
 #include "ORF_scoring.h"
 #include "gene_graph.h"
+#include "progressbar.h"
 
 class Graph {
     public:

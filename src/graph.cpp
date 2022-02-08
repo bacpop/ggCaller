@@ -204,6 +204,13 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     // set OMP number of threads
     omp_set_num_threads(num_threads);
 
+    // set up progress bar
+    progressbar bar(node_colour_vector.size());
+    bar.set_todo_char(" ");
+    bar.set_done_char("█");
+    bar.set_opening_bracket_char("|");
+    bar.set_closing_bracket_char("|");
+
     #pragma omp parallel for
     for (int colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
     {
@@ -363,6 +370,12 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         // update colour_ORF_map and colour_edge_map
         colour_ORF_map[colour_ID] = std::move(gene_map);
         colour_edge_map[colour_ID] = std::move(gene_edges);
+
+        // update progress bar
+        #pragma omp critical
+        {
+            bar.update();
+        }
     }
 
     // generate clusters if required
@@ -370,7 +383,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     ORFMatrixVector ORF_mat_vector;
     if (clustering)
     {
-        cout << "Generating clusters of high-scoring ORFs..." << endl;
+        cout << "\n" << "Generating clusters of high-scoring ORFs..." << endl;
 
         // group ORFs together based on single shared k-mer
         auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
