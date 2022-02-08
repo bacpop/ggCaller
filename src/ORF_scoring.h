@@ -3,6 +3,7 @@
 
 #include <torch/torch.h>
 #include <torch/script.h>
+#include <torch/special.h>
 #include "definitions.h"
 #include "translation.h"
 #include "graph.h"
