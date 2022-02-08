@@ -43,7 +43,9 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
                                                const int overlap,
                                                const float& minimum_ORF_score,
                                                const int ORF_batch_size,
-                                               const int TIS_batch_size)
+                                               const int TIS_batch_size,
+                                               robin_hood::unordered_map<size_t, double>& all_ORF_scores,
+                                               robin_hood::unordered_map<size_t, double>& all_TIS_scores)
 {
     // initialise map to return
     std::unordered_map<size_t, double> score_map;
@@ -66,39 +68,62 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
             // reverse and encode the combined upstream + downstream sequences for scoring
             std::string combined = upstream + downstream.substr(3, downstream.size() - 3);
             std::reverse(combined.begin(), combined.end());
-            std::vector<int> encoded;
 
-            for (const auto &c : combined)
+            size_t TIS_hash = hasher{}(combined);
+
+            auto TIS_found = all_TIS_scores.find(TIS_hash);
+            if (TIS_found != all_TIS_scores.end())
             {
-                encoded.push_back(nuc_encode(c).out());
+                TIS_prob = TIS_found->second;
+            } else
+            {
+                std::vector<int> encoded;
+
+                for (const auto &c : combined)
+                {
+                    encoded.push_back(nuc_encode(c).out());
+                }
+                torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
+
+                torch::Tensor zeroes = torch::zeros({t.size(0)}, torch::kInt64);
+
+                std::vector<torch::Tensor> padded_stack;
+                padded_stack.push_back(std::move(t));
+                padded_stack.push_back(std::move(zeroes));
+
+                torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
+                TIS_prob = pred[0].item<double>();
+
+                all_TIS_scores[TIS_hash] = TIS_prob;
             }
-            torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
-
-            torch::Tensor zeroes = torch::zeros({t.size(0)}, torch::kInt64);
-
-            std::vector<torch::Tensor> padded_stack;
-            padded_stack.push_back(std::move(t));
-            padded_stack.push_back(std::move(zeroes));
-
-            torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
-            TIS_prob = pred[0].item<double>();
         }
 
         // encode start codon
         const auto start_codon = start_encode(downstream.substr(0,3)).out();
 
-        // get gene score
+        // get gene score either from stored scores or calculate it
         {
             // get aa sequence, remove start and end codon
             const auto ORF_aa = (translate(ORF_DNA)).aa().substr(1,(ORF_DNA.size() / 3) - 2);
 
-            torch::Tensor t = tokenized_aa_seq(ORF_aa);
+            size_t ORF_hash = hasher{}(ORF_aa);
 
-            torch::Tensor pred = predict(ORF_model, t, true);
+            auto ORF_found = all_ORF_scores.find(ORF_hash);
+            if (ORF_found != all_ORF_scores.end())
+            {
+                gene_prob = ORF_found->second;
+            } else
+            {
+                torch::Tensor t = tokenized_aa_seq(ORF_aa);
 
-            auto sub_seq = pred.index({0, 0, torch::indexing::Slice(torch::indexing::None, encode_len)});
+                torch::Tensor pred = predict(ORF_model, t, true);
 
-            gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
+                auto sub_seq = pred.index({0, 0, torch::indexing::Slice(torch::indexing::None, encode_len)});
+
+                gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
+
+                all_ORF_scores[ORF_hash] = gene_prob;
+            }
         }
 
         // pull info from ORF_ID

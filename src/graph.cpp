@@ -211,6 +211,10 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     bar.set_opening_bracket_char("|");
     bar.set_closing_bracket_char("|");
 
+    // initialise maps to store ORF scores across threads
+    robin_hood::unordered_map<size_t, double> all_ORF_scores;
+    robin_hood::unordered_map<size_t, double> all_TIS_scores;
+
     #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
     {
@@ -269,7 +273,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 if (!error)
                 {
                     score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
-                                                     minimum_ORF_score, ORF_batch_size, TIS_batch_size));
+                                                     minimum_ORF_score, ORF_batch_size, TIS_batch_size, all_ORF_scores, all_TIS_scores));
                     gene_paths = call_true_genes (score_map, ORF_overlap_map, minimum_path_score);
 
                     // get high scoring genes
@@ -377,6 +381,10 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             bar.update();
         }
     }
+
+    // clear score maps
+    all_ORF_scores.clear();
+    all_TIS_scores.clear();
 
     // generate clusters if required
     ORFClusterMap cluster_map;
