@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# find pthreads and eigen and boost
+# find packages with cmake methods
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
@@ -20,13 +20,13 @@ pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cp
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
+  SET(Protobuf_PROTOC_EXECUTABLE ${CONDA_DIR}/bin/protoc)
 ENDIF()
 
-# add torch libraries
-FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
-MESSAGE(${PYTHON_SITE_PACKAGES})
-list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
-find_package(Torch REQUIRED)
+# find correct protobuf library
+FIND_LIBRARY(Protobuf_LIBRARY NAMES protobuf HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_LIBRARY(Protobuf_PROTOC_LIBRARY NAMES protoc HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_PATH(Protobuf_INCLUDE_DIR zlib.h HINTS ${CONDA_DIR}/include)
 
 #Find include dirs for z, bifrost
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
@@ -44,13 +44,23 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifros
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
 SET( bifrost_INCLUDE_DIRS ${z_INCLUDE_DIR} )
-SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
+# hack to avoid local MKL being linked
+SET( MKL_LIBRARIES ${bifrost_LIBRARY} )
+# avoid local MKL
+SET(MKL_FOUND TRUE)
+
+# add torch libraries
+FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
+#MESSAGE(${PYTHON_SITE_PACKAGES})
+list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
+list(APPEND CMAKE_PREFIX_PATH ${MKL_ROOT})
+find_package(Torch REQUIRED)
 
 # add sdsl include directory
 target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
+target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
 
 #find OpenMP library
 find_package(OpenMP)
