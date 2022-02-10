@@ -96,7 +96,9 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
                 torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
                 TIS_prob = pred[0].item<double>();
 
+                mtx2.lock();
                 all_TIS_scores[TIS_hash] = TIS_prob;
+                mtx2.unlock();
             }
         }
 
