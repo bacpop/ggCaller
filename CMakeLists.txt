@@ -36,7 +36,7 @@ FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_hash_map.h HINTS ${CONDA_DIR}/include)
 # Find libraries
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
-FIND_LIBRARY(tbb_LIBRARY NAMES tbb HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_LIBRARY(tbb_LIBRARY NAMES tbb libtbb.so libtbb.so.0 libtbb.so.1 libtbb.so.2 HINTS ${CONDA_DIR}/lib REQUIRED)
 
 # Set package found as true
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(z DEFAULT_MSG z_INCLUDE_DIR z_LIBRARY)
@@ -62,7 +62,7 @@ list(APPEND CMAKE_PREFIX_PATH ${MKL_ROOT})
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
-target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR})
 
 # link libraries
 target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
