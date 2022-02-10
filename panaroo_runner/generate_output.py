@@ -412,17 +412,25 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
 def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
     if alignment is True:
         # determine distance matrix from gene_presence/absence
-        distance_mat = np.array(ggCaller_cpp.get_distances_align(matrix_in, threads)).reshape(len(isolate_names),
-                                                                                              len(isolate_names))
-        phylip_name = output_dir + 'core_gene_alignment.phylip'
-        tree_filename = output_dir + 'core_tree_NJ.nwk'
+        try:
+            distance_mat = np.array(ggCaller_cpp.get_distances_align(matrix_in, threads)).reshape(len(isolate_names),
+                                                                                                  len(isolate_names))
+            phylip_name = output_dir + 'core_gene_alignment.phylip'
+            tree_filename = output_dir + 'core_tree_NJ.nwk'
+        except ValueError:
+            print("Unable to generate tree from core-genome alignment. Check core_gene_alignment.aln.")
+            return
 
     else:
         # determine distance matrix from core gene alignment
-        distance_mat = np.array(ggCaller_cpp.get_distances_pa(matrix_in, threads)).reshape(len(isolate_names),
-                                                                                           len(isolate_names))
-        phylip_name = output_dir + 'pangenome_gene_presence_absence.phylip'
-        tree_filename = output_dir + 'pangenome_NJ.nwk'
+        try:
+            distance_mat = np.array(ggCaller_cpp.get_distances_pa(matrix_in, threads)).reshape(len(isolate_names),
+                                                                                               len(isolate_names))
+            phylip_name = output_dir + 'pangenome_gene_presence_absence.phylip'
+            tree_filename = output_dir + 'pangenome_NJ.nwk'
+        except ValueError:
+            print("Unable to generate tree from gene presence/absence.")
+            return
 
     # generate phylip matrix
     with open(phylip_name, 'w') as pFile:
@@ -438,8 +446,8 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
 
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
-        raise Exception("RapidNJ failed to run on file: " + phylip_name)
-        sys.exit(1)
+        print("RapidNJ failed to run on file: " + phylip_name)
+        return
 
     # remove phylip file
     os.remove(phylip_name)
@@ -689,7 +697,7 @@ def generate_common_struct_presence_absence(G,
     return
 
 
-def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
+def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
                                   isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, ref_aln,
                                   call_variants, verbose, ignore_pseduogenes, truncation_threshold, pool):
     unaligned_sequence_files = []
@@ -703,10 +711,8 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir,
-                                                 shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap,
-                                                 ref_aln=ref_aln,
+                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
+                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseduogenes=ignore_pseduogenes,
                                                  truncation_threshold=truncation_threshold),
                                          G.nodes(data=True)):
@@ -742,7 +748,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir, n_cpus, "def", not verbose)
+        multi_align_sequences(commands, temp_dir, threads, "def", not verbose)
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
@@ -755,7 +761,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              n_cpus, "ref", not verbose)
+                              threads, "ref", not verbose)
     else:
         commands = [
             get_alignment_commands(fastafile, output_dir, "def")
@@ -763,7 +769,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpus,
         ]
         # Run these commands in a multi-threaded way
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              n_cpus, "def", not verbose)
+                              threads, "def", not verbose)
 
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
@@ -866,7 +872,7 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
     return core_filenames
 
 
-def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
+def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                    isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
                                    overlap, ref_aln, call_variants, verbose,
                                    ignore_pseduogenes, truncation_threshold, pool):
@@ -885,10 +891,8 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir,
-                                                 shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap,
-                                                 ref_aln=ref_aln,
+                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
+                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseduogenes=ignore_pseduogenes,
                                                  truncation_threshold=truncation_threshold),
                                          core_genes):
@@ -925,7 +929,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
             for fastafile in unaligned_reference_files if "_ref.aln.fas" not in fastafile
         ]
         if verbose: print("Aligning centroids...")
-        multi_align_sequences(commands, temp_dir, n_cpus, "def", not verbose)
+        multi_align_sequences(commands, temp_dir, threads, "def", not verbose)
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
@@ -938,7 +942,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
         ]
         if verbose: print("Aligning remaining sequences...")
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              n_cpus, "ref", not verbose)
+                              threads, "ref", not verbose)
     else:
         # Get alignment commands
         commands = [
@@ -947,10 +951,10 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
         ]
         # Run alignment commands
         multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
-                              n_cpus, "def", not verbose)
+                              threads, "def", not verbose)
     # back translate sequences
     back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
-                       n_cpus)
+                       pool)
 
     # call variants using snp-sites
     if call_variants:
@@ -958,10 +962,10 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, n_cpus,
             os.mkdir(output_dir + "VCF")
         except FileExistsError:
             None
-        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, n_cpus)
+        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
 
     # Concatenate them together to produce the two output files
-    concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpus)
+    concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, threads)
 
     return
 
