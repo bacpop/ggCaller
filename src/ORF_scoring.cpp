@@ -1,4 +1,6 @@
 #include "ORF_scoring.h"
+std::mutex mtx3;
+std::mutex mtx4;
 
 vector<size_t> sort_indexes(vector<torch::Tensor> &v) {
 
@@ -44,8 +46,8 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
                                                const float& minimum_ORF_score,
                                                const int ORF_batch_size,
                                                const int TIS_batch_size,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores)
+                                               robin_hood::unordered_map<size_t, double>& all_ORF_scores,
+                                               robin_hood::unordered_map<size_t, double>& all_TIS_scores)
 {
     // initialise map to return
     std::unordered_map<size_t, double> score_map;
@@ -94,7 +96,9 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
                 torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
                 TIS_prob = pred[0].item<double>();
 
-                all_TIS_scores.emplace(TIS_hash, TIS_prob);
+                mtx3.lock();
+                all_TIS_scores[TIS_hash] = TIS_prob;
+                mtx4.lock();
             }
         }
 
@@ -122,7 +126,9 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
 
                 gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
 
-                all_ORF_scores.emplace(ORF_hash, gene_prob);
+                mtx4.lock();
+                all_ORF_scores[ORF_hash] = gene_prob;
+                mtx4.unlock();
             }
         }
 

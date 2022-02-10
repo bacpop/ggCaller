@@ -50,8 +50,6 @@
 // edlib header
 #include "edlib/edlib.h"
 
-// Intel tbb headers
-#include <tbb/concurrent_unordered_map.h>
 
 // bifrost header
 #include <bifrost/ColoredCDBG.hpp>
