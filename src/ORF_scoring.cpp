@@ -1,4 +1,6 @@
 #include "ORF_scoring.h"
+// define mutex for safe addition to scoring maps
+std::mutex mtx2;
 
 vector<size_t> sort_indexes(vector<torch::Tensor> &v) {
 
@@ -122,7 +124,9 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
 
                 gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
 
+                mtx2.lock();
                 all_ORF_scores[ORF_hash] = gene_prob;
+                mtx2.unlock();
             }
         }
 
