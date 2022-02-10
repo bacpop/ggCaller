@@ -2,6 +2,7 @@
 #define ORF_CONNECTION_H
 
 #include "unitigDict.h"
+#include "match_string.h"
 
 std::vector<robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
                                                              const robin_hood::unordered_set<size_t>& target_ORFs,
@@ -23,7 +24,9 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
                                                        const size_t& max_ORF_path_length,
                                                        const int stream,
                                                        std::unordered_set<int>& prev_node_set,
-                                                       const int overlap);
+                                                       const int overlap,
+                                                       const bool is_ref,
+                                                       const fm_index_coll& fm_idx);
 
 std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                         const std::vector<Kmer>& head_kmer_arr,
@@ -35,6 +38,8 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                                                         const ORFNodeMap& gene_map,
                                                         const size_t max_ORF_path_length,
                                                         std::unordered_set<int>& prev_node_set,
-                                                        const int overlap);
+                                                        const int overlap,
+                                                        const bool is_ref,
+                                                        const fm_index_coll& fm_idx);
 
 #endif //ORF_CONNECTION_H

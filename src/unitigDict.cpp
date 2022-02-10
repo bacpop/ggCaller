@@ -2,9 +2,6 @@
 #include "unitigDict.h"
 #include "indexing.h"
 
-std::mutex mtx2;
-
-
 void MyUnitigMap::clear(const UnitigColorMap<MyUnitigMap>& um_dest)
 {
     if (!um_dest.isEmpty && (um_dest.getGraph() != nullptr)){

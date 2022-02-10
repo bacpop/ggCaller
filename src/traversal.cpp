@@ -1,8 +1,5 @@
 // ggCaller header
 #include "traversal.h"
-// define mutex for safe addition to robinhood_maps
-//std::mutex mtx2;
-
 PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                               const std::vector<Kmer>& head_kmer_arr,
                               const NodeTuple& head_node_tuple,
@@ -72,17 +69,6 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
-//            const auto& frame = neighbour_um_data->get_codon_dict(strand, neighbour_strand);
-//            const auto& colour_set = std::get<2>(neighbour);
-//
-//            // if is_ref, determine if edge is correct
-//            if (is_ref)
-//            {
-//                if (colour_set.find(current_colour) == colour_set.end())
-//                {
-//                    continue;
-//                }
-//            }
 
             // check if unitig has already been traversed, and pass if repeat not specified
             const bool is_in = node_set.find(neighbour_id) != node_set.end();

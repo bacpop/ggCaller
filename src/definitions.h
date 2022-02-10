@@ -92,8 +92,8 @@ typedef std::vector<ORFNodeVector> ORFVector;
 typedef std::tuple<size_t, int, std::bitset<3>, boost::dynamic_bitset<>, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification
 typedef std::stack<NodeTuple> NodeStack;
-// stack for holding node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
-typedef std::stack<std::tuple<int, boost::dynamic_bitset<>, size_t>> ORFStack;
+// stack for holding pos_idx, node ids, previous ORF ID, the next expected node, colour array and path length during DFS traversal for ORF ordering
+typedef std::stack<std::tuple<size_t, int, boost::dynamic_bitset<>, size_t>> ORFStack;
 // A vector of paths
 typedef std::vector<std::vector<int>> PathVector;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis

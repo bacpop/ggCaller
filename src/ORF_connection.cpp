@@ -114,7 +114,9 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
                                                        const size_t& max_ORF_path_length,
                                                        const int stream,
                                                        std::unordered_set<int>& prev_node_set,
-                                                       const int overlap)
+                                                       const int overlap,
+                                                       const bool is_ref,
+                                                       const fm_index_coll& fm_idx)
 {
     // initialise pair of vectors (first = upstream of start_ORF, second = downstream of start_ORF)
     std::vector<std::pair<size_t, size_t>> ORF_edges;
@@ -161,7 +163,7 @@ std::vector<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUniti
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
             if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
             {
-                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, prev_node_set, overlap);
+                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, prev_node_set, overlap, is_ref, fm_idx);
                 ORF_edges.insert(ORF_edges.end(), make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
 
@@ -181,7 +183,9 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                                                         const ORFNodeMap& gene_map,
                                                         const size_t max_ORF_path_length,
                                                         std::unordered_set<int>& prev_node_set,
-                                                        const int overlap)
+                                                        const int overlap,
+                                                        const bool is_ref,
+                                                        const fm_index_coll& fm_idx)
 {
     // initialise return vector of upstream ORFs (vectors will break at branches in graph)
     std::vector<std::pair<size_t, size_t>> connected_ORFs;
@@ -195,22 +199,35 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
 
     // generate path list, vector for path and the stack
     ORFStack ORF_stack;
+    std::vector<int> node_vector;
 
     // create node set for identification of repeats
     std::unordered_set<int> node_set;
     node_set.insert(head_node * stream);
 
     // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
-    ORF_stack.push(std::make_tuple(head_node * stream, colour_arr, 0));
+    ORF_stack.push(std::make_tuple(0, head_node * stream, colour_arr, 0));
 
     while(!ORF_stack.empty())
     {
         // pop node in stack
         auto path_tuple = ORF_stack.top();
-        const auto& node_id = std::get<0>(path_tuple);
-        colour_arr = std::get<1>(path_tuple);
-        auto& path_length = std::get<2>(path_tuple);
         ORF_stack.pop();
+        const size_t & pos_idx = std::get<0>(path_tuple);
+        const auto& node_id = std::get<1>(path_tuple);
+        colour_arr = std::get<2>(path_tuple);
+        auto& path_length = std::get<3>(path_tuple);
+
+        if (pos_idx != 0)
+        {
+            node_vector = std::vector<int> (node_vector.begin(), node_vector.begin() + pos_idx);
+        }
+
+        // add node to path
+        node_vector.push_back(node_id);
+
+        // get length of vector for new pos_idx
+        const size_t new_pos_idx = node_vector.size();
 
         // get unitig_dict entry in graph_vector
         um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
@@ -264,6 +281,16 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
             // check if node is traversed by end of an ORF
             if (!node_to_ORFs.at(abs(neighbour_id) - 1).empty())
             {
+                // check path against fm-index, if not present then pass
+                if (is_ref)
+                {
+                    const auto present = path_search(node_vector, fm_idx);
+                    if (!present.first)
+                    {
+                        continue;
+                    }
+                }
+
                 // pull out next ORFs and order them
                 const auto& next_ORFs = node_to_ORFs.at(abs(neighbour_id) - 1);
                 const auto ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, next_ORFs, neighbour_id, gene_map);
@@ -292,7 +319,7 @@ std::vector<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnit
                 if (temp_path_length <= max_ORF_path_length)
                 {
                     temp_path_length += neighbour_um.size - overlap;
-                    ORF_stack.push({neighbour_id, updated_colours_arr, temp_path_length});
+                    ORF_stack.push({new_pos_idx, neighbour_id, updated_colours_arr, temp_path_length});
                 }
             }
         }

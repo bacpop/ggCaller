@@ -338,12 +338,34 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             // initialise prev_node_set to avoid same ORFs being traversed from again
             std::unordered_set<int> prev_node_set;
 
+            const auto& FM_fasta_file = input_colours.at(colour_ID);
+
+            // if no FM_fasta_file specified, cannot generate FM Index
+            if (FM_fasta_file == "NA")
+            {
+                is_ref = false;
+            }
+
+            // generate FM_index if is_ref
+            fm_index_coll fm_idx;
+
+            // reload fm-index if required
+            if (is_ref)
+            {
+                const auto idx_file_name = FM_fasta_file + ".fmp";
+                if (!load_from_file(fm_idx, idx_file_name))
+                {
+                    cout << "FM-Index not available for " << FM_fasta_file << endl;
+                    is_ref = false;
+                }
+            }
+
             // conduct DBG traversal for upstream...
-            auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, -1, prev_node_set, overlap);
+            auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, -1, prev_node_set, overlap, is_ref, fm_idx);
             connected_ORFs.insert(connected_ORFs.end(), std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
             // ... and downstream
-            new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, prev_node_set, overlap);
+            new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, prev_node_set, overlap, is_ref, fm_idx);
             connected_ORFs.insert(connected_ORFs.end(), std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
             // check edges found in connected_ORFs against redundant edges
@@ -382,6 +404,9 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         }
     }
 
+    // add new line to account for progress bar
+    cout << "\n" << endl;
+
     // clear score maps
     all_ORF_scores.clear();
     all_TIS_scores.clear();
@@ -391,7 +416,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     ORFMatrixVector ORF_mat_vector;
     if (clustering)
     {
-        cout << "\nGenerating clusters of high-scoring ORFs..." << endl;
+        cout << "Generating clusters of high-scoring ORFs..." << endl;
 
         // group ORFs together based on single shared k-mer
         auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
