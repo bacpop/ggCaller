@@ -31,23 +31,18 @@ FIND_PATH(Protobuf_INCLUDE_DIR zlib.h HINTS ${CONDA_DIR}/include)
 #Find include dirs
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
-FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_hash_map.h HINTS ${CONDA_DIR}/include)
 
 # Find libraries
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
-FIND_LIBRARY(tbb_LIBRARY NAMES tbb HINTS ${CONDA_DIR}/lib REQUIRED)
 
 # Set package found as true
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(z DEFAULT_MSG z_INCLUDE_DIR z_LIBRARY)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifrost_LIBRARY)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
 
 # Set dirs if multiple include/libraries found
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
-SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
-SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 SET( bifrost_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 # hack to avoid local MKL being linked
 SET( MKL_LIBRARIES ${bifrost_LIBRARY} )
@@ -65,7 +60,7 @@ find_package(Torch REQUIRED)
 target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
+target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
 
 #find OpenMP library
 find_package(OpenMP)

@@ -44,4 +44,3 @@ dependencies:
   - seaborn
   - rapidnj
   - boost-cpp
-  - tbb

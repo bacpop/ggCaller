@@ -36,7 +36,7 @@ std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& c
                                                const float& minimum_ORF_score,
                                                const int ORF_batch_size,
                                                const int TIS_batch_size,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores);
+                                               robin_hood::unordered_map<size_t, double>& all_ORF_scores,
+                                               robin_hood::unordered_map<size_t, double>& all_TIS_scores);
 
 #endif //ORF_SCORING_H
