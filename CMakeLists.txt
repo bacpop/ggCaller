@@ -21,6 +21,9 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
   SET(Protobuf_PROTOC_EXECUTABLE ${CONDA_DIR}/bin/protoc)
+  FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_unordered_map.h HINTS ${CONDA_DIR}/include NO_DEFAULT_PATH)
+ELSE()
+  FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_unordered_map.h)
 ENDIF()
 
 # find correct protobuf library
@@ -31,7 +34,6 @@ FIND_PATH(Protobuf_INCLUDE_DIR zlib.h HINTS ${CONDA_DIR}/include)
 #Find include dirs
 FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
-FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_hash_map.h HINTS ${CONDA_DIR}/include)
 
 # Find libraries
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
