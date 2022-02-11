@@ -49,7 +49,7 @@ class Graph {
     std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const bool repeat,
                                                                                        const size_t overlap,
                                                                                        const size_t max_path_length,
-                                                                                       bool is_ref,
+                                                                                       const std::vector<bool>& ref_list,
                                                                                        const bool no_filter,
                                                                                        const std::vector<std::string>& stop_codons_for,
                                                                                        const std::vector<std::string>& start_codons_for,
@@ -70,13 +70,12 @@ class Graph {
                                                                                        size_t num_threads);
 
 
-    RefindMap refind_gene(const size_t& colour_ID,
-                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                          const size_t radius,
-                          bool is_ref,
-                          const int kmer,
-                          const std::string& FM_fasta_file,
-                          const bool repeat);
+    std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
+                                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                                          const size_t radius,
+                                          const int kmer,
+                                          const std::string& FM_fasta_file,
+                                          const bool repeat);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
@@ -125,6 +124,9 @@ class Graph {
 
     // nodes to colours
     NodeColourVector _NodeColourVector;
+
+    // bitset to determine if colours are refs or reads
+    boost::dynamic_bitset<> _RefSet;
 };
 
 #endif //GRAPH_H

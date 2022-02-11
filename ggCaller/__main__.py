@@ -357,6 +357,13 @@ def main():
     options = get_options()
 
     # determine if references/assemblies present
+    refs = set()
+    if options.refs is not None:
+        with open(options.refs, "r") as f:
+            for line in f.readlines():
+                line = line.strip("\n")
+                refs.add(line)
+
     if (options.refs is not None and options.reads is None) or (
             options.graph is not None and options.colours is not None
             and options.not_ref):
@@ -433,6 +440,11 @@ def main():
     # unpack ORF pair into overlap dictionary and list for gene scoring
     input_colours, nb_colours, overlap = graph_tuple
 
+    if is_ref and not refs:
+        ref_list = [True] * len(input_colours)
+    else:
+        ref_list = [True if colour in refs else False for colour in input_colours]
+
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
     annotation_db = options.annotation_db
@@ -489,7 +501,7 @@ def main():
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls per colour...")
 
-    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length, is_ref,
+    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length, ref_list,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
                                  options.max_ORF_overlap, options.no_write_idx, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score, ORF_batch_size,
@@ -511,7 +523,7 @@ def main():
                             options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, is_ref,
+                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, ref_list,
                             options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,

@@ -148,7 +148,7 @@ void Graph::out(const std::string& outfile)
 std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::findGenes (const bool repeat,
                                                                                           const size_t overlap,
                                                                                           const size_t max_path_length,
-                                                                                          bool is_ref,
+                                                                                          const std::vector<bool>& ref_list,
                                                                                           const bool no_filter,
                                                                                           const std::vector<std::string>& stop_codons_for,
                                                                                           const std::vector<std::string>& start_codons_for,
@@ -214,9 +214,22 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     tbb::concurrent_unordered_map<size_t, double> all_ORF_scores;
     tbb::concurrent_unordered_map<size_t, double> all_TIS_scores;
 
+    // store is_ref information in bitvector
+    _RefSet.resize(ref_list.size());
+    for (int i = 0; i < ref_list.size(); i++)
+    {
+        if (ref_list.at(i))
+        {
+            _RefSet[i] = 1;
+        }
+    }
+
     #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
+        // get whether colour is reference or not
+        bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
+
         // initialise values for gene information
         std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
         ORFNodeMap gene_map;
@@ -437,14 +450,16 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 }
 
 
-RefindMap Graph::refind_gene(const size_t& colour_ID,
-                             const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
-                             const size_t radius,
-                             bool is_ref,
-                             const int kmer,
-                             const std::string& FM_fasta_file,
-                             const bool repeat)
+std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
+                                             const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                                             const size_t radius,
+                                             const int kmer,
+                                             const std::string& FM_fasta_file,
+                                             const bool repeat)
 {
+    // get whether colour is reference or not
+    bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
+
     fm_index_coll fm_idx;
     if (is_ref)
     {
@@ -456,8 +471,8 @@ RefindMap Graph::refind_gene(const size_t& colour_ID,
         }
     }
 
-    return refind_in_nodes(_ccdbg, _KmerArray, colour_ID, node_search_dict, radius, is_ref,
-                            kmer, fm_idx, repeat);
+    return {refind_in_nodes(_ccdbg, _KmerArray, colour_ID, node_search_dict, radius, is_ref,
+                            kmer, fm_idx, repeat), is_ref};
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

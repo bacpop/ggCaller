@@ -228,14 +228,23 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
-            updated_colours_arr &= neighbour_um_data->full_colour();
+            auto neighbour_colour = neighbour_um_data->full_colour();
+            updated_colours_arr &= neighbour_colour;
 
             // determine if neighbour is in same colour as iteration, if not return and pass
-            if (!updated_colours_arr[current_colour])
+            if (!(bool)updated_colours_arr[current_colour])
             {
                 continue;
             } else
             {
+                // if not is_ref, check that unitig is shared in at least one other colour
+                if (!is_ref)
+                {
+                    if (neighbour_colour.count() < 2)
+                    {
+                        continue;
+                    }
+                }
                 neighbour_found = true;
             }
 

@@ -20,7 +20,6 @@ from functools import partial
 def find_missing(G,
                  graph_shd_arr_tup,
                  high_scoring_ORFs,
-                 is_ref,
                  kmer,
                  repeat,
                  isolate_names,
@@ -74,7 +73,6 @@ def find_missing(G,
                                                     search_radius=search_radius,
                                                     prop_match=prop_match,
                                                     pairwise_id_thresh=pairwise_id_thresh,
-                                                    is_ref=is_ref,
                                                     kmer=kmer,
                                                     repeat=repeat),
                                             search_dict.items()):
@@ -202,7 +200,6 @@ def find_missing(G,
 def search_graph(search_pair,
                  graph_shd_arr_tup,
                  isolate_names,
-                 is_ref,
                  kmer,
                  repeat,
                  search_radius=10000,
@@ -235,8 +232,8 @@ def search_graph(search_pair,
         node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # get sequences to search
-    node_search_dict = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, is_ref,
-                                                    kmer, fasta, repeat)
+    node_search_dict, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
+                                                            repeat)
 
     # search for matches
     hits = []

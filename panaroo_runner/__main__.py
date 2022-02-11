@@ -37,7 +37,7 @@ class SmartFormatter(argparse.HelpFormatter):
 def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list, cluster_dict, overlap,
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
-                merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, is_ref, write_idx, kmer, repeat,
+                merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, ref_list, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
                 call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
 
@@ -151,7 +151,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         G, high_scoring_ORFs = find_missing(G,
                                             shd_arr_tup,
                                             high_scoring_ORFs,
-                                            is_ref=is_ref,
                                             kmer=kmer,
                                             repeat=repeat,
                                             isolate_names=input_colours,
@@ -219,7 +218,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 ids_len_stop[sid] = (ORF_len / 3, ORF_info[3])
             else:
                 ids_len_stop[sid] = (ORF_len / 3, False)
-            if annotate is not None and is_ref:
+            if annotate is not None and ref_list[mem]:
                 # annotated genes
                 if len(ORF_info) == 7 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
@@ -235,11 +234,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 contig_annotation[mem].append((ORF_ID, annotation))
 
     # write output GFF
-    if annotate is not None and is_ref:
+    if annotate is not None and any(ref_list):
         if verbose:
             print("writing GFF files...")
         generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
-                     overlap, write_idx, n_cpu)
+                     overlap, write_idx, ref_list, n_cpu)
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,
