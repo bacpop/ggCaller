@@ -431,7 +431,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    node_colour_vector, input_colours, nb_colours, overlap = graph_tuple
+    input_colours, nb_colours, overlap = graph_tuple
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -489,7 +489,7 @@ def main():
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls per colour...")
 
-    gene_tuple = graph.findGenes(node_colour_vector, options.repeat, overlap, options.max_path_length, is_ref,
+    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length, is_ref,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
                                  options.max_ORF_overlap, options.no_write_idx, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score, ORF_batch_size,

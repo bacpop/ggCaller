@@ -46,8 +46,7 @@ class Graph {
     void out(const std::string& outfile);
 
     // find ORFs
-    std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const NodeColourVector& node_colour_vector,
-                                                                                       const bool repeat,
+    std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const bool repeat,
                                                                                        const size_t overlap,
                                                                                        const size_t max_path_length,
                                                                                        bool is_ref,
@@ -109,12 +108,12 @@ class Graph {
 
     private:
     // index graph
-    NodeColourVector _index_graph (const std::vector<std::string>& stop_codons_for,
-                                   const std::vector<std::string>& stop_codons_rev,
-                                   const int& kmer,
-                                   const size_t& nb_colours,
-                                   const bool is_ref,
-                                   const std::vector<std::string>& input_colours);
+    void _index_graph (const std::vector<std::string>& stop_codons_for,
+                       const std::vector<std::string>& stop_codons_rev,
+                       const int& kmer,
+                       const size_t& nb_colours,
+                       const bool is_ref,
+                       const std::vector<std::string>& input_colours);
 
 
 
@@ -123,6 +122,9 @@ class Graph {
 
     // mapping of head kmers to nodes
     std::vector<Kmer> _KmerArray;
+
+    // nodes to colours
+    NodeColourVector _NodeColourVector;
 };
 
 #endif //GRAPH_H

@@ -44,10 +44,10 @@ GraphTuple Graph::build (const std::string& infile1,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    NodeColourVector node_colour_vector = std::move(_index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
+    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
 
     return graph_tuple;
 }
@@ -87,10 +87,10 @@ GraphTuple Graph::read (const std::string& graphfile,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    NodeColourVector node_colour_vector = std::move(_index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
+    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
 
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(node_colour_vector, input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
 
     return graph_tuple;
 }
@@ -145,8 +145,7 @@ void Graph::out(const std::string& outfile)
 }
 
 
-std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::findGenes (const NodeColourVector& node_colour_vector,
-                                                                                          const bool repeat,
+std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::findGenes (const bool repeat,
                                                                                           const size_t overlap,
                                                                                           const size_t max_path_length,
                                                                                           bool is_ref,
@@ -205,7 +204,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     omp_set_num_threads(num_threads);
 
     // set up progress bar
-    progressbar bar(node_colour_vector.size());
+    progressbar bar(_NodeColourVector.size());
     bar.set_todo_char(" ");
     bar.set_done_char("█");
     bar.set_opening_bracket_char("|");
@@ -216,7 +215,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     tbb::concurrent_unordered_map<size_t, double> all_TIS_scores;
 
     #pragma omp parallel for schedule(dynamic)
-    for (int colour_ID = 0; colour_ID < node_colour_vector.size(); colour_ID++)
+    for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
         // initialise values for gene information
         std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
@@ -229,7 +228,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
             // traverse graph, set scope for all_paths and fm_idx
             {
-                const auto& node_ids = node_colour_vector.at(colour_ID);
+                const auto& node_ids = _NodeColourVector.at(colour_ID);
 
                 // recursive traversal
                 //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
@@ -404,8 +403,11 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         }
     }
 
+    //clear _NodeColourVector
+    _NodeColourVector.clear();
+
     // add new line to account for progress bar
-    cout << "\n" << endl;
+    cout << endl;
 
     // clear score maps
     all_ORF_scores.clear();
@@ -530,15 +532,12 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
     return ORF_coords;
 }
 
-NodeColourVector Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
-                                      const std::vector<std::string>& stop_codons_rev,
-                                      const int& kmer,
-                                      const size_t& nb_colours,
-                                      const bool is_ref,
-                                      const std::vector<std::string>& input_colours)
+void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
+                          const std::vector<std::string>& stop_codons_rev,
+                          const int& kmer,
+                          const size_t& nb_colours,
+                          const bool is_ref,
+                          const std::vector<std::string>& input_colours)
 {
-    auto node_colour_vector = index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
-
-    // return node_colour vector
-    return node_colour_vector;
+    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
 }
