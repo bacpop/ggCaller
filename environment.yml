@@ -14,7 +14,7 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - panaroo">=1.2"
+  - panaroo>=1.2
   - pytorch
   - snp-sites
   - zlib
@@ -35,7 +35,7 @@ dependencies:
   - uncertainties
   - eigen=3.3
   - openblas
-  - cmake">=3.10"
+  - cmake>=3.10
   - libgomp
   - llvm-openmp
   - tqdm
