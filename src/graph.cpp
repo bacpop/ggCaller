@@ -245,7 +245,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
                 // recursive traversal
                 //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
-                std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref);
+                std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet);
 
                 const auto& FM_fasta_file = input_colours.at(colour_ID);
 

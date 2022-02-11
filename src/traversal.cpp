@@ -7,7 +7,8 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                               const size_t length_max,
                               const size_t overlap,
                               const bool repeat,
-                              const bool is_ref)
+                              const bool is_ref,
+                              const boost::dynamic_bitset<>& ref_set)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -91,13 +92,13 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
 
             // if not is_ref, check that unitig is shared in at least one other colour
-            if (!is_ref)
-            {
-                if (neighbour_colour.count() < 2)
-                {
-                    continue;
-                }
-            }
+//            if (!is_ref)
+//            {
+//                if (neighbour_colour.count() < 2)
+//                {
+//                    continue;
+//                }
+//            }
 
             // check path length, if too long continue
             const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
@@ -110,6 +111,17 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                     // create temporary path to account for reaching end of contig
                     std::vector<int> return_path = node_vector;
                     return_path.push_back(neighbour_id);
+
+                    // check if end node is reference sequence
+                    if (!is_ref)
+                    {
+                        auto ref_check = neighbour_colour;
+                        ref_check &= ref_set;
+                        if (ref_check.none())
+                        {
+                            continue;
+                        }
+                    }
 
                     // update path_list to enable this to be returned
                     path_list.push_back(std::move(return_path));
@@ -124,6 +136,17 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // return path if end of contig found or if stop indexes paired
             if (neighbour_um_data->end_contig() || updated_codon_arr.none())
             {
+                // check if end node is reference sequence
+                if (!is_ref)
+                {
+                    auto ref_check = neighbour_colour;
+                    ref_check &= ref_set;
+                    if (ref_check.none())
+                    {
+                        continue;
+                    }
+                }
+
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
                 return_path.push_back(neighbour_id);
@@ -155,7 +178,8 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const bool repeat,
                                        const size_t max_path_length,
                                        const size_t overlap,
-                                       const bool is_ref)
+                                       const bool is_ref,
+                                       const boost::dynamic_bitset<>& ref_set)
 {
     // initialise all_paths
     std::vector<PathVector> all_paths;
@@ -182,11 +206,22 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
+        // check if end node is reference sequence
+        if (!is_ref)
+        {
+            auto ref_check = colour_arr;
+            ref_check &= ref_set;
+            if (ref_check.none())
+            {
+                continue;
+            }
+        }
+
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set);
 
         if (!unitig_complete_paths.empty())
         {
@@ -216,11 +251,22 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
+        // check if end node is reference sequence
+        if (!is_ref)
+        {
+            auto ref_check = colour_arr;
+            ref_check &= ref_set;
+            if (ref_check.none())
+            {
+                continue;
+            }
+        }
+
         // generate node tuple for iteration
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set);
 
         if (!unitig_complete_paths.empty())
         {

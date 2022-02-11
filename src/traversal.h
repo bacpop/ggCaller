@@ -13,7 +13,8 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                               const size_t length_max,
                               const size_t overlap,
                               const bool repeat,
-                              const bool is_ref);
+                              const bool is_ref,
+                              const boost::dynamic_bitset<>& ref_set);
 
 std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const std::vector<Kmer>& head_kmer_arr,
@@ -22,6 +23,7 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const bool repeat,
                                        const size_t max_path_length,
                                        const size_t overlap,
-                                       const bool is_ref);
+                                       const bool is_ref,
+                                       const boost::dynamic_bitset<>& ref_set);
 
 #endif //TRAVERSAL_H
