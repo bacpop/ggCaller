@@ -194,7 +194,7 @@ std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_
     }
 
     // check if higher than minimum_path_score
-    if (high_score < -(minimum_path_score))
+    if (high_score <= -(minimum_path_score))
     {
         return gene_path;
     } else
@@ -212,6 +212,8 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
     GeneGraph tc;
     std::vector<size_t> vertex_mapping(score_map.size());
     std::unordered_map<size_t, size_t> ORF_ID_mapping;
+    std::vector<std::unordered_set<size_t>> components;
+    size_t numVertices;
     // scope for graph objects
     {
         // initialise graph
@@ -266,6 +268,11 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
             has_cycle = false;
             depth_first_search(g, visitor(vis));
         }
+
+
+        // get components from simple graph
+        components = get_components(g);
+        numVertices = num_vertices(g);
 
         // make transative closure graph
         transitive_closure(g, tc);
@@ -326,13 +333,7 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
         remove_edge(e, tc);
     }
 
-    // compute connected components, storing in map of vectors
-
-    std::vector<std::unordered_set<size_t>> components = get_components(tc);
-    const size_t numVertices = num_vertices(tc);
-
     // iterate over components using bellman ford algorithm
-
     for (const auto& component : components)
     {
         auto path = traverse_components(score_map, vertex_mapping, component, tc, minimum_path_score, numVertices);
