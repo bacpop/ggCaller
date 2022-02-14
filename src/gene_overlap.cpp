@@ -91,7 +91,9 @@ void reverse_ORFNodeVector(const ColoredCDBG<MyUnitigMap>& ccdbg,
 std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(const std::pair<std::vector<int>, std::vector<indexPair>>& ORF1_nodes,
                                                                                const std::pair<std::vector<int>, std::vector<indexPair>>& ORF2_nodes,
                                                                                const int& ORF2_start_node,
-                                                                               const int& ORF2_end_node)
+                                                                               const int& ORF2_end_node,
+                                                                               const bool is_ref,
+                                                                               const fm_index_coll& fm_idx)
 {
     bool overlap_complete = false;
 
@@ -172,7 +174,7 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
 
             // slice ORF1 node vector from first entry to last
             ORF1_nodes_sliced = std::vector<int> (std::get<0>(ORF1_nodes).begin() + start_index, std::get<0>(ORF1_nodes).end());
-            // check if ORF1_slice is too large to slice ORF1 (meaning likely ORF2 is reversed
+            // check if ORF1_slice is too large to slice ORF1 (meaning likely ORF2 is reversed)
             if (ORF1_nodes_sliced.size() <= ORF2_nodes.first.size())
             {
                 // slice ORF1 node vector from first entry to the equivalent length of ORF2_nodes_sliced
@@ -190,6 +192,20 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
                 {
                     ORF_2_overlap_node_index.push_back(i2);
                 }
+
+                // check if overlap is correct
+                if (is_ref)
+                {
+                    std::vector<int> search_vector = ORF1_nodes.first;
+                    search_vector.insert(search_vector.end(), ORF2_nodes.first.begin() + ORF_2_overlap_node_index.back() + 1, ORF2_nodes.first.end());
+
+                    const auto present = path_search(search_vector, fm_idx);
+                    if (!present.first)
+                    {
+                        continue;
+                    }
+                }
+
                 overlap_complete = true;
 
                 break;
@@ -225,6 +241,19 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
                 {
                     ORF_2_overlap_node_index.push_back(i2);
                 }
+                // check if overlap is correct
+                if (is_ref)
+                {
+                    std::vector<int> search_vector = ORF2_nodes.first;
+                    search_vector.insert(search_vector.end(), ORF1_nodes.first.begin() + ORF_1_overlap_node_index.back() + 1, ORF1_nodes.first.end());
+
+                    const auto present = path_search(search_vector, fm_idx);
+                    if (!present.first)
+                    {
+                        continue;
+                    }
+                }
+
                 overlap_complete = true;
 
                 break;
@@ -238,7 +267,9 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                  const std::vector<Kmer>& head_kmer_arr,
                                  const ORFVector& ORF_vector,
                                  const int DBG_overlap,
-                                 const size_t max_overlap)
+                                 const size_t max_overlap,
+                                 const bool is_ref,
+                                 const fm_index_coll& fm_idx)
 {
     // initialise overlap map for each ORF per colour (each first ORF is the first ORF on positive strand etc.)
     ORFOverlapMap ORF_overlap_map;
@@ -404,7 +435,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                     {
                         reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
                     }
-                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
                     overlap_complete = std::get<0>(return_tuple);
                     ORF_1_overlap_node_index = std::get<1>(return_tuple);
                     ORF_2_overlap_node_index = std::get<2>(return_tuple);
@@ -412,7 +443,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                 // else, need to try in both directions, testing if overlap_complete
                 else
                 {
-                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
                     overlap_complete = std::get<0>(return_tuple);
                     ORF_1_overlap_node_index = std::get<1>(return_tuple);
                     ORF_2_overlap_node_index = std::get<2>(return_tuple);
@@ -420,7 +451,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                     if (!overlap_complete)
                     {
                         reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
-                        return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node));
+                        return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
                         overlap_complete = std::get<0>(return_tuple);
                         ORF_1_overlap_node_index = std::get<1>(return_tuple);
                         ORF_2_overlap_node_index = std::get<2>(return_tuple);

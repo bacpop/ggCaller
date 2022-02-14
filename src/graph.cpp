@@ -224,11 +224,19 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         }
     }
 
-    #pragma omp parallel for schedule(dynamic)
+//    #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
         // get whether colour is reference or not
         bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
+
+        const auto& FM_fasta_file = input_colours.at(colour_ID);
+
+        // if no FM_fasta_file specified, cannot generate FM Index
+        if (FM_fasta_file == "NA")
+        {
+            is_ref = false;
+        }
 
         // initialise values for gene information
         std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
@@ -246,14 +254,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 // recursive traversal
                 //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
                 std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet);
-
-                const auto& FM_fasta_file = input_colours.at(colour_ID);
-
-                // if no FM_fasta_file specified, cannot generate FM Index
-                if (FM_fasta_file == "NA")
-                {
-                    is_ref = false;
-                }
 
                 // generate FM_index if is_ref
                 fm_index_coll fm_idx;
@@ -277,8 +277,25 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             // if no filtering required, do not calculate overlaps, score genes or get gene_paths
             if (!no_filter)
             {
+                ORFOverlapMap ORF_overlap_map;
                 //        cout << "Determining overlaps: " << to_string(colour_ID) << endl;
-                ORFOverlapMap ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_vector, overlap, max_overlap));
+
+                {
+                    // generate FM_index if is_ref
+                    fm_index_coll fm_idx;
+
+                    if (is_ref)
+                    {
+                        //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
+                        const auto idx_file_name = FM_fasta_file + ".fmp";
+                        if (!load_from_file(fm_idx, idx_file_name))
+                        {
+                            cout << "FM-Index not available for " << FM_fasta_file << endl;
+                            is_ref = false;
+                        }
+                    }
+                    ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_vector, overlap, max_overlap, is_ref, fm_idx));
+                }
 
                 std::unordered_map<size_t, double> score_map;
 
@@ -322,7 +339,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
         // connect ORFs
         {
-            std::vector<std::pair<size_t, size_t>> connected_ORFs;
+            std::set<std::pair<size_t, size_t>> connected_ORFs;
 
             // determine target_ORFs to connect and redundant edges
             std::set<std::pair<size_t, size_t>> redundant_edges;
@@ -374,11 +391,11 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
             // conduct DBG traversal for upstream...
             auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, -1, prev_node_set, overlap, is_ref, fm_idx);
-            connected_ORFs.insert(connected_ORFs.end(), std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
+            connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
             // ... and downstream
             new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, prev_node_set, overlap, is_ref, fm_idx);
-            connected_ORFs.insert(connected_ORFs.end(), std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
+            connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
             // check edges found in connected_ORFs against redundant edges
             for (const auto& edge : connected_ORFs)
