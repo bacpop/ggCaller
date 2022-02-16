@@ -1,6 +1,36 @@
 #include "gene_overlap.h"
 #include "ORF_clustering.h"
 
+bool remove_nodes(std::pair<std::vector<int>, std::vector<indexPair>>& ORF_nodes,
+                  const int& overlap)
+{
+    std::vector<int> to_remove;
+    for (int i = 0; i < ORF_nodes.first.size(); i++)
+    {
+        auto& start = ORF_nodes.second.at(i).first;
+        auto& end = ORF_nodes.second.at(i).second;
+        if ((end - start) + 1 <= overlap)
+        {
+            to_remove.push_back(i);
+        }
+    }
+
+    if (to_remove.empty())
+    {
+        return false;
+    }
+
+    // reverse to_remove so order isn't affected
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (const auto& index : to_remove)
+    {
+        ORF_nodes.first.erase(ORF_nodes.first.begin() + index);
+        ORF_nodes.second.erase(ORF_nodes.second.begin() + index);
+    }
+
+    return true;
+}
+
 inline std::pair<std::vector<int>, std::vector<indexPair>> combine_nodes(const std::vector<int>& ORF_nodes,
                                                                           const std::vector<indexPair>& ORF_coords,
                                                                           const std::vector<int>& TIS_nodes,
@@ -263,6 +293,110 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
     return {overlap_complete, ORF_1_overlap_node_index, ORF_2_overlap_node_index};
 }
 
+std::tuple<bool, std::vector<size_t>, std::vector<size_t>> node_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                         const std::vector<Kmer>& head_kmer_arr,
+                                                                         bool& reversed,
+                                                                         const std::pair<std::vector<int>, std::vector<indexPair>>& ORF1_nodes,
+                                                                         std::pair<std::vector<int>, std::vector<indexPair>> ORF2_nodes,
+                                                                         const size_t& ORF1_len,
+                                                                         const size_t& ORF2_len,
+                                                                         std::pair<int, size_t>& ORF1_5p,
+                                                                         std::pair<int, size_t>& ORF1_3p,
+                                                                         std::pair<int, size_t>& ORF2_5p,
+                                                                         std::pair<int, size_t>& ORF2_3p,
+                                                                         char& overlap_type,
+                                                                         size_t& abs_overlap,
+                                                                         int& first_ORF,
+                                                                         const bool is_ref,
+                                                                         const fm_index_coll& fm_idx)
+{
+    // initialise overlap_complete check
+    bool overlap_complete = false;
+    bool bidirectional = false;
+
+    // work out strand of 3p node
+    const bool ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
+    const bool ORF2_3p_strand = (ORF2_nodes.first.back() >= 0) ? true : false;
+
+    //get ORF1 and ORF2 5' and 3' ends in pair <node_head_kmer, position>. ORF1 can be references, ORF2 cannot as can change
+    ORF1_5p = {std::get<0>(ORF1_nodes)[0], std::get<0>(std::get<1>(ORF1_nodes)[0])};
+    ORF1_3p = {std::get<0>(ORF1_nodes).back(), std::get<1>(std::get<1>(ORF1_nodes).back())};
+    ORF2_5p = {ORF2_nodes.first[0], std::get<0>(ORF2_nodes.second[0])};
+    ORF2_3p = {ORF2_nodes.first.back(), std::get<1>(ORF2_nodes.second.back())};
+
+    // initialise values for start and end nodes. Again ORF1 can be references, ORF2 cannot as can change
+    const int& ORF1_start_node = std::get<0>(ORF1_nodes)[0];
+    const int& ORF1_end_node = std::get<0>(ORF1_nodes).back();
+    int ORF2_start_node = ORF2_nodes.first[0];
+    int ORF2_end_node = ORF2_nodes.first.back();
+
+
+    // determine if ORF2 should be reversed or not by looking at orientation of component nodes
+    auto start_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
+    auto end_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
+    auto start_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node * -1);
+    auto end_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node * -1);
+
+    // determine if ORFs are reversed, or if ORFs are bidirectional,
+    // meaning both orientations of ORF2 must be investigated
+    if ((start_iter != std::get<0>(ORF1_nodes).end() && start_iter_rev != std::get<0>(ORF1_nodes).end()) ||
+        (end_iter != std::get<0>(ORF1_nodes).end() && end_iter_rev != std::get<0>(ORF1_nodes).end()))
+    {
+        // if forward and reverse nodes present, then need to check both orientations
+        bidirectional = true;
+    }
+        // else if reversed nodes present but forward are not, then reverse
+    else if (start_iter == std::get<0>(ORF1_nodes).end() && end_iter == std::get<0>(ORF1_nodes).end())
+    {
+        reversed = true;
+    }
+
+    // check if 3p matches between the two ORFs and node is in the same strand without reversal.
+    // If so, set as incompatible, and the overlap as the shorter of the two ORFS
+    if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand && !reversed)
+    {
+        overlap_type = 'i';
+        overlap_complete = true;
+        abs_overlap = (ORF1_len >= ORF2_len) ? ORF2_len : ORF1_len;
+
+        // set the first ORF to be the longest, regardless of strand
+        first_ORF = (ORF1_len >= ORF2_len) ? 1 : 2;
+
+        return {overlap_complete, {}, {}};
+    }
+
+    // initialise overlap node_indices
+    std::vector<size_t> ORF_1_overlap_node_index;
+    std::vector<size_t> ORF_2_overlap_node_index;
+
+    // if not bidirectional, run as normal
+    if (!bidirectional)
+    {
+        if (reversed)
+        {
+            reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+        }
+        return slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx);
+    }
+        // else, need to try in both directions, testing if overlap_complete
+    else
+    {
+        auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
+        bool& overlap_complete = std::get<0>(return_tuple);
+
+        if (!overlap_complete)
+        {
+            reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+            return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
+
+            // set reversed as true
+            reversed = true;
+        }
+
+        return return_tuple;
+    }
+}
+
 ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                  const std::vector<Kmer>& head_kmer_arr,
                                  const ORFVector& ORF_vector,
@@ -345,7 +479,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             const bool ORF2_TIS = (!ORF2_TIS_ids.empty()) ? true : false;
 
             // merge ORF and TIS nodes for ORF1 and ORF2
-            const auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
+            auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
             auto ORF2_nodes = std::move(combine_nodes(ORF2_node_ids, ORF2_node_coords, ORF2_TIS_ids, ORF2_TIS_coords));
 
             // initialise overlap type
@@ -360,7 +494,6 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             // set reversed variable to determine if ORFs are in same strand,
             // or bidirectional if both orientations of ORF2 must be checked
             bool reversed = false;
-            bool bidirectional = false;
 
             // set first ORF in relative ordering on strand
             int first_ORF = 1;
@@ -368,99 +501,48 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             // initialise absolute overlap
             size_t abs_overlap = 0;
 
-            // initialise overlap_complete check
-            bool overlap_complete = false;
-
-            // work out strand of 3p node
-            const bool ORF1_3p_strand = (std::get<0>(ORF1_nodes).back() >= 0) ? true : false;
-            const bool ORF2_3p_strand = (ORF2_nodes.first.back() >= 0) ? true : false;
-
-            //get ORF1 and ORF2 5' and 3' ends in pair <node_head_kmer, position>. ORF1 can be references, ORF2 cannot as can change
-            const std::pair<int, size_t> ORF1_5p(std::get<0>(ORF1_nodes)[0], std::get<0>(std::get<1>(ORF1_nodes)[0]));
-            const std::pair<int, size_t> ORF1_3p(std::get<0>(ORF1_nodes).back(), std::get<1>(std::get<1>(ORF1_nodes).back()));
-            std::pair<int, size_t> ORF2_5p(ORF2_nodes.first[0], std::get<0>(ORF2_nodes.second[0]));
-            std::pair<int, size_t> ORF2_3p(ORF2_nodes.first.back(), std::get<1>(ORF2_nodes.second.back()));
-
-            // initialise values for start and end nodes. Again ORF1 can be references, ORF2 cannot as can change
-            const int& ORF1_start_node = std::get<0>(ORF1_nodes)[0];
-            const int& ORF1_end_node = std::get<0>(ORF1_nodes).back();
-            int ORF2_start_node = ORF2_nodes.first[0];
-            int ORF2_end_node = ORF2_nodes.first.back();
-
             // work out if node 1 is negative by checking strand
             bool negative = ORF1_strand;
 
-            // determine if ORF2 should be reversed or not by looking at orientation of component nodes
-            auto start_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
-            auto end_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
-            auto start_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node * -1);
-            auto end_iter_rev = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node * -1);
+            // initilise 5p and 3p information
+            std::pair<int, size_t> ORF1_5p;
+            std::pair<int, size_t> ORF1_3p;
+            std::pair<int, size_t> ORF2_5p;
+            std::pair<int, size_t> ORF2_3p;
 
-            // determine if ORFs are reversed, or if ORFs are bidirectional,
-            // meaning both orientations of ORF2 must be investigated
-            if ((start_iter != std::get<0>(ORF1_nodes).end() && start_iter_rev != std::get<0>(ORF1_nodes).end()) ||
-                (end_iter != std::get<0>(ORF1_nodes).end() && end_iter_rev != std::get<0>(ORF1_nodes).end()))
-            {
-                // if forward and reverse nodes present, then need to check both orientations
-                bidirectional = true;
-            }
-                // else if reversed nodes present but forward are not, then reverse
-            else if (start_iter == std::get<0>(ORF1_nodes).end() && end_iter == std::get<0>(ORF1_nodes).end())
-            {
-                reversed = true;
-            }
-
-            // check if 3p matches between the two ORFs and node is in the same strand without reversal.
-            // If so, set as incompatible, and the overlap as the shorter of the two ORFS
-            if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand && !reversed)
-            {
-                overlap_type = 'i';
-                overlap_complete = true;
-                abs_overlap = (ORF1_len >= ORF2_len) ? ORF2_len : ORF1_len;
-
-                // set the first ORF to be the longest, regardless of strand
-                first_ORF = (ORF1_len >= ORF2_len) ? 1 : 2;
-            }
-
-            // initialise overlap node_indices
+            // check overlaps
             std::vector<size_t> ORF_1_overlap_node_index;
             std::vector<size_t> ORF_2_overlap_node_index;
 
+            auto overlaps = node_overlaps(ccdbg, head_kmer_arr, reversed, ORF1_nodes, ORF2_nodes, ORF1_len,
+                                             ORF2_len, ORF1_5p, ORF1_3p, ORF2_5p, ORF2_3p, overlap_type,
+                                             abs_overlap, first_ORF, is_ref, fm_idx);
+
+            bool overlap_complete = std::get<0>(overlaps);
+
+            // if no overlap detected, try removing nodes that are only in overlapping regions
             if (!overlap_complete)
             {
-                // if not bidirectional, run as normal
-                if (!bidirectional)
-                {
-                    if (reversed)
-                    {
-                        reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
-                    }
-                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
-                    overlap_complete = std::get<0>(return_tuple);
-                    ORF_1_overlap_node_index = std::get<1>(return_tuple);
-                    ORF_2_overlap_node_index = std::get<2>(return_tuple);
-                }
-                // else, need to try in both directions, testing if overlap_complete
-                else
-                {
-                    auto return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
-                    overlap_complete = std::get<0>(return_tuple);
-                    ORF_1_overlap_node_index = std::get<1>(return_tuple);
-                    ORF_2_overlap_node_index = std::get<2>(return_tuple);
+                // go over both ORFs, removing additional overlaps
+                bool removed1 = remove_nodes(ORF1_nodes, DBG_overlap);
+                bool removed2 = remove_nodes(ORF2_nodes, DBG_overlap);
 
-                    if (!overlap_complete)
-                    {
-                        reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
-                        return_tuple = std::move(slice_ORFNodeVector(ORF1_nodes, ORF2_nodes, ORF2_start_node, ORF2_end_node, is_ref, fm_idx));
-                        overlap_complete = std::get<0>(return_tuple);
-                        ORF_1_overlap_node_index = std::get<1>(return_tuple);
-                        ORF_2_overlap_node_index = std::get<2>(return_tuple);
-
-                        // set reversed as true
-                        reversed = true;
-                    }
+                if (!removed1 && !removed2)
+                {
+                    break;
                 }
+
+                // re-run overlap finding function with nodes removed
+                overlaps = node_overlaps(ccdbg, head_kmer_arr, reversed, ORF1_nodes, ORF2_nodes, ORF1_len,
+                                              ORF2_len, ORF1_5p, ORF1_3p, ORF2_5p, ORF2_3p, overlap_type,
+                                              abs_overlap, first_ORF, is_ref, fm_idx);
+
+                overlap_complete = std::get<0>(overlaps);
             }
+
+            ORF_1_overlap_node_index = std::get<1>(overlaps);
+            ORF_2_overlap_node_index = std::get<2>(overlaps);
+
 
             // if overlap complete, calculate overlap if not already calculated
             // check that an overlapping region has been found. If so, calculate absolute overlap in base-pairs
