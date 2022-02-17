@@ -140,7 +140,7 @@ std::pair<bool, bool> path_search(const std::vector<int>& query_path,
 
     // convert query into string
     std::ostringstream oss;
-    std::copy(query_path.begin(), query_path.end()-1,
+    std::copy(query_path.begin(), query_path.end(),
               std::ostream_iterator<int>(oss, ","));
 
     std::string query = oss.str();
@@ -156,7 +156,7 @@ std::pair<bool, bool> path_search(const std::vector<int>& query_path,
     {
         const auto rev_query_path = reverse_unitig_path(query_path);
         oss.str(std::string());
-        std::copy(rev_query_path.begin(), rev_query_path.end()-1,
+        std::copy(rev_query_path.begin(), rev_query_path.end(),
                   std::ostream_iterator<int>(oss, ","));
         query = oss.str();
         count = sdsl::count(ref_idx, query);
