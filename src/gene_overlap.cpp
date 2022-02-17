@@ -1,6 +1,9 @@
 #include "gene_overlap.h"
 #include "ORF_clustering.h"
 
+int test_ORF1;
+int test_ORF2;
+
 bool remove_nodes(std::pair<std::vector<int>, std::vector<indexPair>>& ORF_nodes,
                   const int& overlap)
 {
@@ -510,13 +513,9 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             std::pair<int, size_t> ORF2_5p;
             std::pair<int, size_t> ORF2_3p;
 
-            // check overlaps
-            std::vector<size_t> ORF_1_overlap_node_index;
-            std::vector<size_t> ORF_2_overlap_node_index;
-
             auto overlaps = node_overlaps(ccdbg, head_kmer_arr, reversed, ORF1_nodes, ORF2_nodes, ORF1_len,
                                              ORF2_len, ORF1_5p, ORF1_3p, ORF2_5p, ORF2_3p, overlap_type,
-                                             abs_overlap, first_ORF, is_ref, fm_idx);
+                                             abs_overlap,first_ORF, is_ref, fm_idx);
 
             bool overlap_complete = std::get<0>(overlaps);
 
@@ -535,19 +534,29 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                 // re-run overlap finding function with nodes removed
                 overlaps = node_overlaps(ccdbg, head_kmer_arr, reversed, ORF1_nodes, ORF2_nodes, ORF1_len,
                                               ORF2_len, ORF1_5p, ORF1_3p, ORF2_5p, ORF2_3p, overlap_type,
-                                              abs_overlap, first_ORF, is_ref, fm_idx);
+                                              abs_overlap,first_ORF, is_ref, fm_idx);
 
                 overlap_complete = std::get<0>(overlaps);
             }
-
-            ORF_1_overlap_node_index = std::get<1>(overlaps);
-            ORF_2_overlap_node_index = std::get<2>(overlaps);
-
 
             // if overlap complete, calculate overlap if not already calculated
             // check that an overlapping region has been found. If so, calculate absolute overlap in base-pairs
             if (overlap_complete)
             {
+                std::vector<size_t> ORF_1_overlap_node_index = std::get<1>(overlaps);
+                std::vector<size_t> ORF_2_overlap_node_index = std::get<2>(overlaps);
+
+                // reverse ORF2_nodes in place if required
+                if (reversed)
+                {
+                    int ORF2_start_node = ORF2_nodes.first[0];
+                    int ORF2_end_node = ORF2_nodes.first.back();
+                    ORF2_5p = {ORF2_nodes.first[0], std::get<0>(ORF2_nodes.second[0])};
+                    ORF2_3p = {ORF2_nodes.first.back(), std::get<1>(ORF2_nodes.second.back())};
+
+                    reverse_ORFNodeVector(ccdbg, head_kmer_arr, ORF2_nodes, ORF2_start_node, ORF2_end_node, ORF2_5p, ORF2_3p);
+                }
+
                 if (abs_overlap == 0)
                 {
                     // initialise options for computing which type of overlap has occurred
