@@ -47,7 +47,7 @@ protected:
     EdgeDescriptor& _cycle_e;
 };
 
-std::vector<VertexDescriptor> getPath(
+std::vector<size_t> getPath(
         const GeneGraph& graph,
         const std::vector<VertexDescriptor>& pMap,
         const std::vector<double>& distances,
@@ -56,11 +56,14 @@ std::vector<VertexDescriptor> getPath(
         double& path_score,
         const std::vector<size_t>& vertex_mapping);
 
-std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_t, double>& score_map,
-                                                  const std::unordered_set<size_t>& vertex_list,
-                                                  const GeneGraph& g,
-                                                  const double& minimum_path_score,
-                                                  const size_t numVertices);
+template <class T>
+std::vector<size_t> traverse_components(const std::unordered_map<size_t, double>& score_map,
+                                        const std::vector<size_t>& vertex_mapping,
+                                        const std::unordered_set<size_t>& vertex_list,
+                                        const GeneGraph& g,
+                                        const double& minimum_path_score,
+                                        const size_t numVertices,
+                                        T weight_pmap);
 
 std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_t, double>& score_map,
                                                   const ORFOverlapMap& overlap_map,

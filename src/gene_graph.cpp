@@ -80,7 +80,7 @@ std::vector<std::unordered_set<size_t>> get_components(const GeneGraph& g)
     return components;
 }
 
-std::vector<VertexDescriptor> getPath(
+std::vector<size_t> getPath(
         const GeneGraph& graph,
         const std::vector<VertexDescriptor>& pMap,
         const std::vector<double>& distances,
@@ -102,7 +102,6 @@ std::vector<VertexDescriptor> getPath(
     VertexDescriptor current = destination;
     while (current != source)
     {
-
         path.push_back(vertex_mapping.at(current));
         current = pMap.at(current);
         path_score += distances.at(current);
@@ -114,12 +113,14 @@ std::vector<VertexDescriptor> getPath(
     return path;
 }
 
-std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_t, double>& score_map,
-                                                  const std::vector<size_t>& vertex_mapping,
-                                                  const std::unordered_set<size_t>& vertex_list,
-                                                  const GeneGraph& g,
-                                                  const double& minimum_path_score,
-                                                  const size_t numVertices)
+template <class T>
+std::vector<size_t> traverse_components(const std::unordered_map<size_t, double>& score_map,
+                                       const std::vector<size_t>& vertex_mapping,
+                                       const std::unordered_set<size_t>& vertex_list,
+                                       const GeneGraph& g,
+                                       const double& minimum_path_score,
+                                       const size_t numVertices,
+                                       T weight_pmap)
 {
     // determine start (in-degree = 0) and end (out-degree = 0) vertices
     std::vector<VertexDescriptor> start_vertices;
@@ -161,12 +162,10 @@ std::vector<VertexDescriptor> traverse_components(const std::unordered_map<size_
             if (start_score < high_score)
             {
                 high_score = start_score;
-                gene_path = {start};
+                gene_path = {vertex_mapping.at(start)};
             }
         } else
         {
-            const auto weight_pmap = get(boost::edge_weight_t(), g);
-
             std::vector<double> distances(numVertices);
             std::vector<VertexDescriptor> pMap(numVertices);
 
@@ -226,7 +225,7 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
             for (const auto& source : target.second)
             {
                 bool target_found = score_map.find(target.first) != score_map.end();
-                auto source_found = score_map.find(source.first) != score_map.end();
+                bool source_found = score_map.find(source.first) != score_map.end();
                 // if only source found, add singly
                 if (target_found)
                 {
@@ -333,10 +332,13 @@ std::vector<std::vector<size_t>> call_true_genes (const std::unordered_map<size_
         remove_edge(e, tc);
     }
 
+    // get weight map for graph
+    const auto weight_pmap = get(boost::edge_weight_t(), tc);
+
     // iterate over components using bellman ford algorithm
     for (const auto& component : components)
     {
-        auto path = traverse_components(score_map, vertex_mapping, component, tc, minimum_path_score, numVertices);
+        auto path = traverse_components(score_map, vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap);
         // ensure path is not empty
         if (!path.empty())
         {
