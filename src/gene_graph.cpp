@@ -103,8 +103,8 @@ std::vector<size_t> getPath(
     while (current != source)
     {
         path.push_back(vertex_mapping.at(current));
-        current = pMap.at(current);
         path_score += distances.at(current);
+        current = pMap.at(current);
     }
     path.push_back(vertex_mapping.at(source));
 
