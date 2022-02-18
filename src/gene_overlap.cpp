@@ -668,7 +668,16 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                     }
 
                     // check if TIS present for specific overlaps and negate
-                    if ((overlap_start == 25 && ORF2_TIS) || (overlap_start == 15 && ORF1_TIS))
+                    if (ORF2_TIS && (overlap_start == 25 || overlap_end == 25))
+                    {
+                        if (abs_overlap < 16)
+                        {
+                            abs_overlap = 0;
+                        } else
+                        {
+                            abs_overlap -= 16;
+                        }
+                    } else if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
                     {
                         if (abs_overlap < 16)
                         {
@@ -798,7 +807,6 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
                     ORF_overlap_map[ORF2_ID][ORF1_ID] = std::move(overlap_tuple);
-
                 } else {
                     std::pair<char, size_t> overlap_tuple(overlap_type, abs_overlap);
                     ORF_overlap_map[ORF1_ID][ORF2_ID] = std::move(overlap_tuple);
