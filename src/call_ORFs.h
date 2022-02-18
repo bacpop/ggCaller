@@ -38,7 +38,8 @@ ORFVector call_ORFs(const int colour_ID,
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
-                           const std::vector<Kmer>& head_kmer_arr);
+                           const std::vector<Kmer>& head_kmer_arr,
+                           const bool is_ref);
 
 NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                    const std::vector<Kmer>& head_kmer_arr,

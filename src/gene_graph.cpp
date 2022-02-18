@@ -148,7 +148,7 @@ std::vector<size_t> traverse_components(const std::unordered_map<size_t, double>
     }
 
     // set values of paths and scores
-    std::vector<VertexDescriptor> gene_path;
+    std::vector<size_t> gene_path;
     double high_score = 0;
 
     for (const auto& start : start_vertices)

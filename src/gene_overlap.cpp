@@ -677,7 +677,8 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         {
                             abs_overlap -= 16;
                         }
-                    } else if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
+                    }
+                    if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
                     {
                         if (abs_overlap < 16)
                         {

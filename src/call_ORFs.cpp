@@ -17,10 +17,11 @@ void generate_ORFs(const int& colour_ID,
                    const bool is_ref,
                    const fm_index_coll& fm_idx)
 {
-    // check if path is real, if not then pass
+    // check if path is real, if not then pass. Set as present and not-reverse complement
+    std::pair<bool, bool> present(true, false);
     if (is_ref)
     {
-        auto present = path_search(nodelist, fm_idx);
+        present = path_search(nodelist, fm_idx);
         if (!present.first)
         {
             return;
@@ -308,8 +309,8 @@ void generate_ORFs(const int& colour_ID,
                     auto& TIS_node_id = std::get<0>(TIS_coords);
                     auto& TIS_node_coords = std::get<1>(TIS_coords);
 
-                    // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand and population ID, to be worked out later).
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, true);
+                    // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
+                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, !present.second);
 
                     // think about if there is no TIS, then can ignore ORF?
                     update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
@@ -478,7 +479,8 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
-                           const std::vector<Kmer>& head_kmer_arr)
+                           const std::vector<Kmer>& head_kmer_arr,
+                           const bool is_ref)
 {
     ORFVector ORF_vector(ORF_node_map.size());
 
@@ -486,50 +488,54 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     size_t ORF_ID = 0;
     for (auto& ORF : ORF_node_map)
     {
-        // assign strand to ORF by iterating over all nodes, and assigning strand to most supported by nodes
-        int num_pos = 0;
-        int num_neg = 0;
-        // iterate over ORF nodes...
-        for (const auto& node_id : std::get<0>(ORF.second))
+        // if strand not known from contigs, assign based on ORF overlap
+        if (!is_ref)
         {
-            const bool strand = (node_id > 0) ? true : false;
-
-            // get a reference to the unitig map object
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
-
-            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
-            if (strand != pos_strand_map.at(node_hash))
+            // assign strand to ORF by iterating over all nodes, and assigning strand to most supported by nodes
+            int num_pos = 0;
+            int num_neg = 0;
+            // iterate over ORF nodes...
+            for (const auto& node_id : std::get<0>(ORF.second))
             {
-                num_neg++;
-            } else
-            {
-                num_pos++;
+                const bool strand = (node_id > 0) ? true : false;
+
+                // get a reference to the unitig map object
+                auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+                auto& um = um_pair.first;
+
+                const size_t node_hash = hasher{}(um.getUnitigHead().toString());
+                if (strand != pos_strand_map.at(node_hash))
+                {
+                    num_neg++;
+                } else
+                {
+                    num_pos++;
+                }
             }
-        }
-        // ...and over TIS nodes if present
-        for (const auto& node_id : std::get<3>(ORF.second))
-        {
-            const bool strand = (node_id > 0) ? true : false;
-
-            // get a reference to the unitig map object
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
-
-            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
-            if (strand != pos_strand_map.at(node_hash))
+            // ...and over TIS nodes if present
+            for (const auto& node_id : std::get<3>(ORF.second))
             {
-                num_neg++;
-            } else
-            {
-                num_pos++;
+                const bool strand = (node_id > 0) ? true : false;
+
+                // get a reference to the unitig map object
+                auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+                auto& um = um_pair.first;
+
+                const size_t node_hash = hasher{}(um.getUnitigHead().toString());
+                if (strand != pos_strand_map.at(node_hash))
+                {
+                    num_neg++;
+                } else
+                {
+                    num_pos++;
+                }
             }
-        }
 
-        // if the number of negative strands are greater than positive, assign overall strand as negative
-        if (num_neg > num_pos)
-        {
-            std::get<5>(ORF.second) = false;
+            // if the number of negative strands are greater than positive, assign overall strand as negative
+            if (num_neg > num_pos)
+            {
+                std::get<5>(ORF.second) = false;
+            }
         }
 
         // move entry from map to vector
@@ -731,11 +737,15 @@ ORFVector call_ORFs(const int colour_ID,
         }
     }
 
-    // generate pos_strand_map to determine relative strands of each node for each colour
-    auto pos_strand_map = std::move(calculate_pos_strand(ccdbg, head_kmer_arr, ORF_node_map));
+    // generate pos_strand_map to determine relative strands of each node for each colour if not given by alignment of contigs
+    NodeStrandMap pos_strand_map;
+    if (!is_ref)
+    {
+        pos_strand_map = std::move(calculate_pos_strand(ccdbg, head_kmer_arr, ORF_node_map));
+    }
 
     // group colours of ORFs together
-    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr));
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
 
     return ORF_vector;
 }
