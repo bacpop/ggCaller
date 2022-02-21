@@ -56,7 +56,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const std::vector<std::string>& stop_codons_rev,
                              const int kmer,
                              const size_t nb_colours,
-                             const bool is_ref,
-                             const std::vector<std::string>& input_colours);
+                             const std::vector<std::string>& input_colours,
+                             const boost::dynamic_bitset<>& ref_set);
 
 #endif //INDEXING_H

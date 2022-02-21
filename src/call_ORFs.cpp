@@ -17,15 +17,11 @@ void generate_ORFs(const int& colour_ID,
                    const bool is_ref,
                    const fm_index_coll& fm_idx)
 {
-    // check if path is real, if not then pass. Set as present and not-reverse complement
+    // Set as present and not-reverse complement if is_ref
     std::pair<bool, bool> present(true, false);
     if (is_ref)
     {
         present = path_search(nodelist, fm_idx);
-        if (!present.first)
-        {
-            return;
-        }
     }
 
     // initialise path sequence

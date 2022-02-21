@@ -195,6 +195,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     const Kmer head_kmer_binary = um.getUnitigHead();
     const std::string head_kmer = head_kmer_binary.toString();
 
+
     // calculate colours for unitig
     boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
     um_data->add_head_colour(unitig_colours);
@@ -421,6 +422,10 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     // initialize seq
     kseq_t *seq = kseq_init(fp);
 
+    // for setting end contig
+    std::bitset<3> full_binary;
+    full_binary.set();
+
     // read sequence
     size_t contig_ID = 1;
     int l;
@@ -438,9 +443,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
             // create int to identify if head and tail kmers in unitig have been traversed
             int prev_head = 0;
-            int kmer_counter = 0;
 
-            size_t kmer_index = 1;
             for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
             {
                 auto um = ccdbg.find(it_km->first);
@@ -457,6 +460,23 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     int node_ID = um_data->get_id() * strand;
 
                     if (prev_head != node_ID) {
+                        // if at start of contig i.e. prev_head==0, set as end_contig
+                        if (!prev_head)
+                        {
+                            if (!um_data->end_contig())
+                            {
+                                // update full codon indexes
+                                um_data->add_codon(true, full_binary);
+                                um_data->add_codon(false, full_binary);
+
+                                um_data->set_forward_stop(true);
+                                um_data->set_reverse_stop(true);
+
+                                // set unitig to end of contig
+                                um_data->set_end_contig(true);
+                            }
+                        }
+
                         // set prev_head to new node
                         prev_head = node_ID;
 
@@ -466,13 +486,24 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                         // add new node
                         const std::string node_entry = std::to_string(node_ID);
                         contig_path += node_entry + ",";
-
-                        // reset kmer counter
-                        kmer_counter = 0;
                     }
                 }
-                kmer_counter++;
-                kmer_index++;
+            }
+
+            // map to last entry and assign end-contig
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
+            auto& um_data = um_pair.second;
+
+            if (!um_data->end_contig()) {
+                // update full codon indexes
+                um_data->add_codon(true, full_binary);
+                um_data->add_codon(false, full_binary);
+
+                um_data->set_forward_stop(true);
+                um_data->set_reverse_stop(true);
+
+                // set unitig to end of contig
+                um_data->set_end_contig(true);
             }
 
             // add delimiter between contigs
@@ -496,8 +527,8 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const std::vector<std::string>& stop_codons_rev,
                              const int kmer,
                              const size_t nb_colours,
-                             const bool is_ref,
-                             const std::vector<std::string>& input_colours)
+                             const std::vector<std::string>& input_colours,
+                             const boost::dynamic_bitset<>& ref_set)
 {
     // get all head kmers and add IDs
     size_t unitig_id = 1;
@@ -546,19 +577,32 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
         }
     }
 
-    // update neighbour index in place within graph_vector
-    update_neighbour_index(ccdbg, head_kmer_arr);
+    // determine if end contigs present if any of the input colours are not references
+    if (ref_set.count() != ref_set.size())
+    {
+        update_neighbour_index(ccdbg, head_kmer_arr);
+    }
 
-    // generate FM-indexes of all fastas in node-space
-    if (is_ref)
+    // generate index of references within ref_set
+    std::vector<size_t> ref_index;
+    for (int i = 0; i < input_colours.size(); i++)
+    {
+        if ((bool)ref_set[i])
+        {
+            ref_index.push_back(i);
+        }
+    }
+
+    // generate FM-indexes of all reference fasta in node-space
+    if (ref_set.any())
     {
         cout << "Mapping contigs to graph..." << endl;
         #pragma omp parallel
         {
             #pragma omp for nowait
-            for (int i = 0; i < nb_colours; i++)
+            for (int i = 0; i < ref_index.size(); i++)
             {
-                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[i], kmer, i);
+                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i]);
             }
         }
     }

@@ -357,12 +357,12 @@ def main():
     options = get_options()
 
     # determine if references/assemblies present
-    refs = set()
+    ref_list = set()
     if options.refs is not None:
         with open(options.refs, "r") as f:
             for line in f.readlines():
                 line = line.strip("\n")
-                refs.add(line)
+                ref_list.add(line)
 
     if (options.refs is not None and options.reads is None) or (
             options.graph is not None and options.colours is not None
@@ -398,13 +398,12 @@ def main():
     output_dir = os.path.join(options.out, "")
 
     # if build graph specified, build graph and then call ORFs
-    if (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
-            options.reads is None) and (options.query is None):
+    if (options.graph is not None) and (options.colours is not None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, is_ref)
+                                 options.threads, is_ref, ref_list)
     # query unitigs in previous saved ggc graph
-    elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and (
-            options.reads is None) and (options.query is not None):
+    elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
+            (options.query is not None):
         if options.data is None:
             print("Please specify a ggc_data directory from a previous ggCaller run.")
             sys.exit(1)
@@ -417,20 +416,20 @@ def main():
             options.reads is None) and (
             options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, True, options.no_write_graph, "NA")
+                                  options.threads, True, options.no_write_graph, "NA", ref_list)
     # if reads file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, "NA")
+                                  options.threads, False, options.no_write_graph, "NA", ref_list)
     # if both reads and refs file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, options.reads)
+                                  options.threads, False, options.no_write_graph, options.reads, ref_list)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
-              "- Bifrost GFA and Bifrost colours file\n"
+              "- Bifrost GFA and Bifrost colours file (with/without list of reference files)\n"
               "- Bifrost GFA, Bifrost colours file and list of query sequences\n"
               "- List of reference files\n"
               "- List of read files\n"
@@ -439,11 +438,6 @@ def main():
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     input_colours, nb_colours, overlap = graph_tuple
-
-    if is_ref and not refs:
-        ref_list = [True] * len(input_colours)
-    else:
-        ref_list = [True if colour in refs else False for colour in input_colours]
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -501,9 +495,9 @@ def main():
     # use shared memory to generate graph vector
     print("Generating high scoring ORF calls per colour...")
 
-    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length, ref_list,
+    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
-                                 options.max_ORF_overlap, options.no_write_idx, input_colours, ORF_model_file,
+                                 options.max_ORF_overlap, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score, ORF_batch_size,
                                  TIS_batch_size, options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads)

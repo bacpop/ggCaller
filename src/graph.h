@@ -20,13 +20,14 @@ class Graph {
     public:
     // build new bifrost graph and index
     GraphTuple build (const std::string& infile1,
-                    const int kmer,
-                    const std::vector<std::string>& stop_codons_for,
-                    const std::vector<std::string>& stop_codons_rev,
-                    size_t num_threads,
-                    bool is_ref,
-                    const bool write_graph,
-                    const std::string& infile2);
+                             const int kmer,
+                             const std::vector<std::string>& stop_codons_for,
+                             const std::vector<std::string>& stop_codons_rev,
+                             size_t num_threads,
+                             bool is_ref,
+                             const bool write_graph,
+                             const std::string& infile2,
+                             const std::unordered_set<std::string>& ref_list);
 
     // read existing graph and index
     GraphTuple read (const std::string& graphfile,
@@ -34,7 +35,8 @@ class Graph {
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& stop_codons_rev,
                      size_t num_threads,
-                     const bool is_ref);
+                     const bool is_ref,
+                     const std::unordered_set<std::string>& ref_list);
 
     // get graph object from serialised file
     void in(const std::string& infile,
@@ -49,13 +51,11 @@ class Graph {
     std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const bool repeat,
                                                                                        const size_t overlap,
                                                                                        const size_t max_path_length,
-                                                                                       const std::vector<bool>& ref_list,
                                                                                        const bool no_filter,
                                                                                        const std::vector<std::string>& stop_codons_for,
                                                                                        const std::vector<std::string>& start_codons_for,
                                                                                        const size_t min_ORF_length,
                                                                                        const size_t max_overlap,
-                                                                                       const bool write_idx,
                                                                                        const std::vector<std::string>& input_colours,
                                                                                        const std::string& ORF_model_file,
                                                                                        const std::string& TIS_model_file,
@@ -111,7 +111,6 @@ class Graph {
                        const std::vector<std::string>& stop_codons_rev,
                        const int& kmer,
                        const size_t& nb_colours,
-                       const bool is_ref,
                        const std::vector<std::string>& input_colours);
 
 

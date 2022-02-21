@@ -11,7 +11,8 @@ GraphTuple Graph::build (const std::string& infile1,
                         size_t num_threads,
                         bool is_ref,
                         const bool write_graph,
-                        const std::string& infile2) {
+                        const std::string& infile2,
+                        const std::unordered_set<std::string>& ref_list) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -42,9 +43,26 @@ GraphTuple Graph::build (const std::string& infile1,
     // get colour names
     std::vector<std::string> input_colours = _ccdbg.getColorNames();
 
+    // store is_ref information in bitvector
+    _RefSet.resize(nb_colours);
+    // assume all colours are references
+    if (is_ref && ref_list.empty())
+    {
+        _RefSet.set();
+    } else
+    {
+        for (int i = 0; i < input_colours.size(); i++)
+        {
+            if (ref_list.find(input_colours[i]) != ref_list.end())
+            {
+                _RefSet[i] = 1;
+            }
+        }
+    }
+
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
 
     // make tuple containing all information needed in python back-end
     GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
@@ -58,7 +76,8 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
                     size_t num_threads,
-                    const bool is_ref) {
+                    const bool is_ref,
+                    const std::unordered_set<std::string>& ref_list) {
 
     // Set number of threads
     if (num_threads < 1)
@@ -85,9 +104,26 @@ GraphTuple Graph::read (const std::string& graphfile,
     // get colour names
     std::vector<std::string> input_colours = _ccdbg.getColorNames();
 
+    // store is_ref information in bitvector
+    _RefSet.resize(nb_colours);
+    // assume all colours are references
+    if (is_ref && ref_list.empty())
+    {
+        _RefSet.set();
+    } else
+    {
+        for (int i = 0; i < input_colours.size(); i++)
+        {
+            if (ref_list.find(input_colours[i]) != ref_list.end())
+            {
+                _RefSet[i] = 1;
+            }
+        }
+    }
+
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
 
     // make tuple containing all information needed in python back-end
     GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
@@ -148,13 +184,11 @@ void Graph::out(const std::string& outfile)
 std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::findGenes (const bool repeat,
                                                                                           const size_t overlap,
                                                                                           const size_t max_path_length,
-                                                                                          const std::vector<bool>& ref_list,
                                                                                           const bool no_filter,
                                                                                           const std::vector<std::string>& stop_codons_for,
                                                                                           const std::vector<std::string>& start_codons_for,
                                                                                           const size_t min_ORF_length,
                                                                                           const size_t max_overlap,
-                                                                                          const bool write_idx,
                                                                                           const std::vector<std::string>& input_colours,
                                                                                           const std::string& ORF_model_file,
                                                                                           const std::string& TIS_model_file,
@@ -214,16 +248,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     tbb::concurrent_unordered_map<size_t, double> all_ORF_scores;
     tbb::concurrent_unordered_map<size_t, double> all_TIS_scores;
 
-    // store is_ref information in bitvector
-    _RefSet.resize(ref_list.size());
-    for (int i = 0; i < ref_list.size(); i++)
-    {
-        if (ref_list.at(i))
-        {
-            _RefSet[i] = 1;
-        }
-    }
-
     #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
@@ -251,10 +275,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             {
                 const auto& node_ids = _NodeColourVector.at(colour_ID);
 
-                // recursive traversal
-                //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
-                std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet);
-
                 // generate FM_index if is_ref
                 fm_index_coll fm_idx;
 
@@ -269,6 +289,10 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                     }
                 }
 
+                // recursive traversal
+                //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
+                std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet, fm_idx);
+
                 // generate ORF calls
                 //        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
                 ORF_vector = call_ORFs(colour_ID, all_paths, _ccdbg, _KmerArray, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
@@ -279,7 +303,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             {
                 ORFOverlapMap ORF_overlap_map;
                 //        cout << "Determining overlaps: " << to_string(colour_ID) << endl;
-
                 {
                     // generate FM_index if is_ref
                     fm_index_coll fm_idx;
@@ -568,8 +591,7 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                           const std::vector<std::string>& stop_codons_rev,
                           const int& kmer,
                           const size_t& nb_colours,
-                          const bool is_ref,
                           const std::vector<std::string>& input_colours)
 {
-    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, is_ref, input_colours));
+    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours, _RefSet));
 }

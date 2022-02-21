@@ -8,16 +8,13 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                               const size_t overlap,
                               const bool repeat,
                               const bool is_ref,
-                              const boost::dynamic_bitset<>& ref_set)
+                              const boost::dynamic_bitset<>& ref_set,
+                              const fm_index_coll& fm_idx)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
     std::vector<int> node_vector;
     NodeStack node_stack;
-
-    // create node set for identification of repeats
-    std::unordered_set<int> node_set;
-    node_set.insert(std::get<1>(head_node_tuple));
 
     // create first item in stack
     node_stack.push(head_node_tuple);
@@ -71,19 +68,30 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (!repeat && is_in)
+            // check against fm-idx, pass if not present
+            if (is_ref)
             {
-                continue;
+                std::vector<int> check_vector = node_vector;
+                check_vector.push_back(neighbour_id);
+                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
+                if (!present.first)
+                {
+                    continue;
+                }
+            } else if (!repeat)
+            {
+                // if using reads, check if unitig has already been traversed, and pass if repeat not specified
+                const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
+                if (is_in)
+                {
+                    continue;
+                }
             }
-
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
             auto neighbour_colour = neighbour_um_data->full_colour();
             updated_colours_arr &= neighbour_colour;
-
 
             // determine if neighbour is in same colour as iteration, if not pass
             if (!(bool)updated_colours_arr[current_colour])
@@ -108,10 +116,6 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 // if path is only 2 nodes in length return as will contain very large sequences
                 if (new_pos_idx == 1)
                 {
-                    // create temporary path to account for reaching end of contig
-                    std::vector<int> return_path = node_vector;
-                    return_path.push_back(neighbour_id);
-
                     // check if end node is reference sequence
                     if (!is_ref)
                     {
@@ -122,6 +126,10 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                             continue;
                         }
                     }
+
+                    // create temporary path to account for reaching end of contig
+                    std::vector<int> return_path = node_vector;
+                    return_path.push_back(neighbour_id);
 
                     // update path_list to enable this to be returned
                     path_list.push_back(std::move(return_path));
@@ -154,6 +162,16 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 // update path_list to enable this to be returned
                 path_list.push_back(std::move(return_path));
 
+                // if node is end_contig, continue to add to path
+                if (neighbour_um_data->end_contig() && !updated_codon_arr.none())
+                {
+                    // if no previous conditions are satisfied, prepare tuple for stack
+                    NodeTuple new_node_tuple(new_pos_idx, neighbour_id, updated_codon_arr, updated_colours_arr, updated_path_length);
+
+                    // add to stack
+                    node_stack.push(new_node_tuple);
+                }
+
                 // move onto next neighbour
                 continue;
             }
@@ -163,9 +181,6 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // add to stack
             node_stack.push(new_node_tuple);
-
-            // add node to node_set
-            node_set.insert(neighbour_id);
         }
     }
     return path_list;
@@ -179,7 +194,8 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                        const size_t max_path_length,
                                        const size_t overlap,
                                        const bool is_ref,
-                                       const boost::dynamic_bitset<>& ref_set)
+                                       const boost::dynamic_bitset<>& ref_set,
+                                       const fm_index_coll& fm_idx)
 {
     // initialise all_paths
     std::vector<PathVector> all_paths;
@@ -221,7 +237,7 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set, fm_idx);
 
         if (!unitig_complete_paths.empty())
         {
@@ -266,7 +282,7 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
         // recur paths
-        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set);
+        PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set, fm_idx);
 
         if (!unitig_complete_paths.empty())
         {
