@@ -12,7 +12,7 @@ GraphTuple Graph::build (const std::string& infile1,
                         bool is_ref,
                         const bool write_graph,
                         const std::string& infile2,
-                        const std::unordered_set<std::string>& ref_list) {
+                        const std::unordered_set<std::string>& ref_set) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -46,14 +46,14 @@ GraphTuple Graph::build (const std::string& infile1,
     // store is_ref information in bitvector
     _RefSet.resize(nb_colours);
     // assume all colours are references
-    if (is_ref && ref_list.empty())
+    if (is_ref && ref_set.empty())
     {
         _RefSet.set();
     } else
     {
         for (int i = 0; i < input_colours.size(); i++)
         {
-            if (ref_list.find(input_colours[i]) != ref_list.end())
+            if (ref_set.find(input_colours[i]) != ref_set.end())
             {
                 _RefSet[i] = 1;
             }
@@ -64,8 +64,18 @@ GraphTuple Graph::build (const std::string& infile1,
     cout << "Generating graph stop codon index..." << endl;
     _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
 
+    // create vector bool for reference sequences
+    std::vector<bool> ref_list(nb_colours, false);
+    for (int i = 0; i < _RefSet.size(); i++)
+    {
+        if ((bool)_RefSet[i])
+        {
+            ref_list[i] = true;
+        }
+    }
+
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap, ref_list);
 
     return graph_tuple;
 }
@@ -77,7 +87,7 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::vector<std::string>& stop_codons_rev,
                     size_t num_threads,
                     const bool is_ref,
-                    const std::unordered_set<std::string>& ref_list) {
+                    const std::unordered_set<std::string>& ref_set) {
 
     // Set number of threads
     if (num_threads < 1)
@@ -107,14 +117,14 @@ GraphTuple Graph::read (const std::string& graphfile,
     // store is_ref information in bitvector
     _RefSet.resize(nb_colours);
     // assume all colours are references
-    if (is_ref && ref_list.empty())
+    if (is_ref && ref_set.empty())
     {
         _RefSet.set();
     } else
     {
         for (int i = 0; i < input_colours.size(); i++)
         {
-            if (ref_list.find(input_colours[i]) != ref_list.end())
+            if (ref_set.find(input_colours[i]) != ref_set.end())
             {
                 _RefSet[i] = 1;
             }
@@ -125,8 +135,18 @@ GraphTuple Graph::read (const std::string& graphfile,
     cout << "Generating graph stop codon index..." << endl;
     _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
 
+    // create vector bool for reference sequences
+    std::vector<bool> ref_list(nb_colours, false);
+    for (int i = 0; i < _RefSet.size(); i++)
+    {
+        if ((bool)_RefSet[i])
+        {
+            ref_list[i] = true;
+        }
+    }
+
     // make tuple containing all information needed in python back-end
-    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap);
+    GraphTuple graph_tuple = std::make_tuple(input_colours, nb_colours, overlap, ref_list);
 
     return graph_tuple;
 }

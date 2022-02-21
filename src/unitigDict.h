@@ -85,7 +85,7 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 };
 
 // tuple of GraphVector, a mapping of colours to component nodes, the number of colours and the size of the overlap
-typedef std::tuple<std::vector<std::string>, size_t, int> GraphTuple;
+typedef std::tuple<std::vector<std::string>, size_t, int, std::vector<bool>> GraphTuple;
 
 // function to get um and pointer to unitig map data
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,

@@ -27,7 +27,7 @@ class Graph {
                              bool is_ref,
                              const bool write_graph,
                              const std::string& infile2,
-                             const std::unordered_set<std::string>& ref_list);
+                             const std::unordered_set<std::string>& ref_set);
 
     // read existing graph and index
     GraphTuple read (const std::string& graphfile,
@@ -36,7 +36,7 @@ class Graph {
                      const std::vector<std::string>& stop_codons_rev,
                      size_t num_threads,
                      const bool is_ref,
-                     const std::unordered_set<std::string>& ref_list);
+                     const std::unordered_set<std::string>& ref_set);
 
     // get graph object from serialised file
     void in(const std::string& infile,

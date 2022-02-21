@@ -357,12 +357,12 @@ def main():
     options = get_options()
 
     # determine if references/assemblies present
-    ref_list = set()
+    ref_set = set()
     if options.refs is not None:
         with open(options.refs, "r") as f:
             for line in f.readlines():
                 line = line.strip("\n")
-                ref_list.add(line)
+                ref_set.add(line)
 
     if (options.refs is not None and options.reads is None) or (
             options.graph is not None and options.colours is not None
@@ -400,7 +400,7 @@ def main():
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, is_ref, ref_list)
+                                 options.threads, is_ref, ref_set)
     # query unitigs in previous saved ggc graph
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
             (options.query is not None):
@@ -416,17 +416,17 @@ def main():
             options.reads is None) and (
             options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, True, options.no_write_graph, "NA", ref_list)
+                                  options.threads, True, options.no_write_graph, "NA", ref_set)
     # if reads file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, "NA", ref_list)
+                                  options.threads, False, options.no_write_graph, "NA", ref_set)
     # if both reads and refs file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, options.reads, ref_list)
+                                  options.threads, False, options.no_write_graph, options.reads, ref_set)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file (with/without list of reference files)\n"
@@ -437,7 +437,7 @@ def main():
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
-    input_colours, nb_colours, overlap = graph_tuple
+    input_colours, nb_colours, overlap, ref_list = graph_tuple
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
