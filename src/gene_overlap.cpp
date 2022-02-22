@@ -58,13 +58,23 @@ inline std::pair<std::vector<int>, std::vector<indexPair>> combine_nodes(const s
     }
 
     // as now aligned across TIS and ORF nodes, now combine
-    combined_nodes.push_back(TIS_nodes.at(i));
-    combined_coords.push_back(TIS_coords.at(i));
-    combined_coords.back().second = ORF_coords.at(0).second;
+    int j = 0;
+    for (; i < TIS_nodes.size(); i++)
+    {
+        combined_nodes.push_back(TIS_nodes.at(i));
+        combined_coords.push_back(TIS_coords.at(i));
+        combined_coords.back().second = ORF_coords.at(j).second;
+        j++;
+        // if at end of ORF_node, break
+        if (j == ORF_nodes.size())
+        {
+            break;
+        }
+    }
 
     // add the remaining entries for ORF_nodes
-    combined_nodes.insert(combined_nodes.end(), ORF_nodes.begin() + 1, ORF_nodes.end());
-    combined_coords.insert(combined_coords.end(), ORF_coords.begin() + 1, ORF_coords.end());
+    combined_nodes.insert(combined_nodes.end(), ORF_nodes.begin() + j, ORF_nodes.end());
+    combined_coords.insert(combined_coords.end(), ORF_coords.begin() + j, ORF_coords.end());
 
     return {combined_nodes, combined_coords};
 }
