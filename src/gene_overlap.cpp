@@ -215,7 +215,7 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
             }
 
             // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
-            if (ORF1_nodes_sliced == ORF2_nodes_sliced)
+            if (ORF1_nodes_sliced == ORF2_nodes_sliced && !ORF1_nodes_sliced.empty())
             {
                 for (size_t i1 = start_index; i1 < std::get<0>(ORF1_nodes).size(); i1++)
                 {
@@ -264,7 +264,7 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
             }
 
             // check if sliced vectors are equivalent. If they are, add indexes to overlap indexes
-            if (ORF1_nodes_sliced == ORF2_nodes_sliced)
+            if (ORF1_nodes_sliced == ORF2_nodes_sliced && !ORF1_nodes_sliced.empty())
             {
                 for (size_t i1 = 0; i1 < ORF1_nodes_sliced.size(); i1++)
                 {
