@@ -151,10 +151,6 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
     std::vector<int> node_vector;
     NodeStack node_stack;
 
-    // create node set for identification of repeats
-    std::unordered_set<int> node_set;
-    node_set.insert(std::get<1>(head_node_tuple));
-
     // create first item in stack
     node_stack.push(head_node_tuple);
 
@@ -170,23 +166,8 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
         const boost::dynamic_bitset<> & colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
-        // slice path, unless at first node
-        if (pos_idx != 0)
-        {
-            node_vector = std::vector<int> (node_vector.begin(), node_vector.begin() + pos_idx);
-            // check if path is real, if not then pass
-            std::pair<bool, bool> present;
-            if (is_ref)
-            {
-                present = path_search(node_vector, fm_idx);
-                if (!present.first)
-                {
-                    continue;
-                }
-            }
-        }
-
         // add node to path
+        node_vector = std::vector<int> (node_vector.begin(), node_vector.begin() + pos_idx);
         node_vector.push_back(node_id);
 
         // get length of vector for new pos_idx
@@ -219,11 +200,24 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (!repeat && is_in)
+            // check against fm-idx, pass if not present
+            if (is_ref)
             {
-                continue;
+                std::vector<int> check_vector = node_vector;
+                check_vector.push_back(neighbour_id);
+                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
+                if (!present.first)
+                {
+                    continue;
+                }
+            } else if (!repeat)
+            {
+                // if using reads, check if unitig has already been traversed, and pass if repeat not specified
+                const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
+                if (is_in)
+                {
+                    continue;
+                }
             }
 
             // calculate colours array
@@ -268,9 +262,6 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
             // add to stack
             node_stack.push(new_node_tuple);
-
-            // add node to node_set
-            node_set.insert(neighbour_id);
         }
 
         // if neighbour not found, push back the node_vector as is

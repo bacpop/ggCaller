@@ -112,6 +112,7 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
                                                     const robin_hood::unordered_set<size_t>& target_ORFs,
                                                     const ORFNodeMap& gene_map,
                                                     const size_t& max_ORF_path_length,
+                                                    const bool repeat,
                                                     const int stream,
                                                     std::unordered_set<int>& prev_node_set,
                                                     const int overlap,
@@ -163,7 +164,7 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
             if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
             {
-                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, prev_node_set, overlap, is_ref, fm_idx);
+                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, repeat, prev_node_set, overlap, is_ref, fm_idx);
                 ORF_edges.insert(make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
             }
 
@@ -182,6 +183,7 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
                                                      const int stream,
                                                      const ORFNodeMap& gene_map,
                                                      const size_t max_ORF_path_length,
+                                                     const bool repeat,
                                                      std::unordered_set<int>& prev_node_set,
                                                      const int overlap,
                                                      const bool is_ref,
@@ -273,15 +275,27 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             auto neighbour_um_data = neighbour_da->getData(neighbour_um);
             const bool neighbour_strand = neighbour_um.strand;
 
-
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check if unitig has already been traversed, and pass if repeat not specified
-            const bool is_in = node_set.find(neighbour_id) != node_set.end();
-            if (is_in)
+            // check against fm-idx, pass if not present
+            if (is_ref)
             {
-                continue;
+                std::vector<int> check_vector = node_vector;
+                check_vector.push_back(neighbour_id);
+                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
+                if (!present.first)
+                {
+                    continue;
+                }
+            } else if (!repeat)
+            {
+                // if using reads, check if unitig has already been traversed, and pass if repeat not specified
+                const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
+                if (is_in)
+                {
+                    continue;
+                }
             }
 
             // calculate colours array
@@ -303,9 +317,6 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
                     continue;
                 }
             }
-
-            // add node to temp_node_set
-            node_set.insert(neighbour_id);
 
             // check if node is traversed by end of an ORF
             const auto ORF_found = node_to_ORFs.find(abs(neighbour_id) - 1);
