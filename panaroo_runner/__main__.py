@@ -328,7 +328,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             for ORF_ID, ORF_info in gene_dict.items():
                 entry_ID = str(colour) + "_" + str(ORF_ID)
                 for node in ORF_info[0]:
-                    node_index[node].append(entry_ID)
+                    node_index[abs(node)].append(entry_ID)
 
         with open(objects_dir + "node_index.dat", "wb") as o:
             cPickle.dump(node_index, o)
