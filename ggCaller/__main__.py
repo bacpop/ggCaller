@@ -513,8 +513,7 @@ def main():
             with Pool(processes=options.threads) as pool:
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
                             cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
-                            options.threads,
-                            options.length_outlier_support_proportion, options.identity_cutoff,
+                            options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
                             options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, ref_list,
@@ -526,6 +525,31 @@ def main():
     else:
         print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
                         input_colours, overlap, graph)
+
+        if options.save:
+            # create directory if it isn't present already
+            objects_dir = output_dir + "ggc_data"
+            if not os.path.exists(objects_dir):
+                os.mkdir(objects_dir)
+
+            # make sure trailing forward slash is present
+            objects_dir = os.path.join(objects_dir, "")
+
+            # serialise graph object and high scoring ORFs to future reading
+            graph[0].data_out(objects_dir + "ggc_graph.dat")
+            with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
+                cPickle.dump(high_scoring_ORFs, o)
+
+            # create index of all high_scoring_ORFs node_IDs
+            node_index = defaultdict(list)
+            for colour, gene_dict in high_scoring_ORFs.items():
+                for ORF_ID, ORF_info in gene_dict.items():
+                    entry_ID = str(colour) + "_" + str(ORF_ID)
+                    for node in ORF_info[0]:
+                        node_index[node].append(entry_ID)
+
+            with open(objects_dir + "node_index.dat", "wb") as o:
+                cPickle.dump(node_index, o)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)

@@ -542,9 +542,9 @@ std::string Graph::generate_sequence(const std::vector<int>& nodelist,
     return generate_sequence_nm(nodelist, node_coords, overlap, _ccdbg, _KmerArray);
 }
 
-std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::search_graph(const std::vector<std::string>& query_vec,
-                                                                                          const double& id_cutoff,
-                                                                                          size_t num_threads)
+std::tuple<std::vector<std::string>, int, std::vector<std::unordered_set<int>>> Graph::search_graph(const std::vector<std::string>& query_vec,
+                                                                                                  const double& id_cutoff,
+                                                                                                  size_t num_threads)
 {
     // Set number of threads
     if (num_threads < 1)
@@ -561,16 +561,16 @@ std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> Graph::sea
     //set local variables
     const int kmer = _ccdbg.getK();
 
-    std::vector<MappingCoords> query_coords(query_vec.size());
+    std::vector<std::unordered_set<int>> query_nodes(query_vec.size());
 
     // go through query, determine head-kmers of each node and map to _GraphVector
     #pragma omp parallel for
     for (int i = 0; i < query_vec.size(); i++)
     {
-        query_coords[i] = std::move(query_DBG(_ccdbg, query_vec.at(i), kmer, id_cutoff));
+        query_nodes[i] = std::move(query_DBG(_ccdbg, query_vec.at(i), kmer, id_cutoff));
     }
 
-    return {input_colours, kmer, query_coords};
+    return {input_colours, kmer, query_nodes};
 }
 
 std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>& ORF_IDs,

@@ -82,7 +82,7 @@ class Graph {
                                   const std::vector<indexPair>& node_coords,
                                   const size_t& overlap);
 
-    std::tuple<std::vector<std::string>, int, std::vector<MappingCoords>> search_graph(const std::vector<std::string>& query_vec,
+    std::tuple<std::vector<std::string>, int, std::vector<std::unordered_set<int>>> search_graph(const std::vector<std::string>& query_vec,
                                                                                        const double& id_cutoff,
                                                                                        size_t num_threads);
 

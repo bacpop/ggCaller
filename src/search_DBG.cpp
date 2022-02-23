@@ -4,13 +4,13 @@
 
 #include "search_DBG.h"
 
-MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
+std::unordered_set<int> query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         const std::string& query,
                         const int& kmer,
                         const double& id_cutoff)
 {
     // tuple of head kmer string, strand and coordinates
-    MappingCoords mapping_coords;
+    std::unordered_set<int> node_set;
 
     const size_t num_kmers = query.length() - kmer + 1;
 
@@ -30,20 +30,11 @@ MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto da = um.getData();
             const MyUnitigMap* um_data = da->getData(um);
 
-            const std::string head_kmer = um.getUnitigHead().toString();
             const int strand = um.strand ? 1 : -1;
             const int node_id = um_data->get_id() * strand;
 
-            if (mapping_coords.empty())
-            {
-                mapping_coords.push_back(node_id);
-            } else
-            {
-                if (mapping_coords.back() != node_id)
-                {
-                    mapping_coords.push_back(node_id);
-                }
-            }
+            node_set.insert(node_id);
+
         } else
         {
             // if not matching add to missed_kmers
@@ -60,10 +51,11 @@ MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
     // check if query traversed fully
     if ((num_kmers - missed_kmers) < (num_kmers * id_cutoff))
     {
-        return {};
+        std::unordered_set<int> empty_set;
+        return empty_set;
     }
     else
     {
-        return mapping_coords;
+        return node_set;
     }
 }

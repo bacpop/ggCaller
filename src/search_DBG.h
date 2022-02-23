@@ -8,9 +8,9 @@
 #include "definitions.h"
 #include "unitigDict.h"
 
-MappingCoords query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                        const std::string& query,
-                        const int& kmer,
-                        const double& id_cutoff);
+std::unordered_set<int> query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                    const std::string& query,
+                                    const int& kmer,
+                                    const double& id_cutoff);
 
 #endif //GGCALLER_SEARCH_DBG_H
