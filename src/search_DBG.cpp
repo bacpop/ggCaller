@@ -30,7 +30,7 @@ std::unordered_set<int> query_DBG(const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto da = um.getData();
             const MyUnitigMap* um_data = da->getData(um);
 
-            const int node_id = um_data->get_id()
+            const int node_id = um_data->get_id();
 
             node_set.insert(node_id);
 
