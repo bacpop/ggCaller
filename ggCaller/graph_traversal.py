@@ -21,7 +21,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
 
     # query the sequences in the graph
     print("Querying unitigs in graph...")
-    input_colours, kmer, query_nodes = graph.search_graph(graphfile, coloursfile, query_vec, query_id, num_threads)
+    input_colours, kmer, query_nodes = graph.search_graph(query_vec, query_id, num_threads)
 
     # parse isolate names
     isolate_names = [
