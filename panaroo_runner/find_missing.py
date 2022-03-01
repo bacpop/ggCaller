@@ -22,6 +22,7 @@ def find_missing(G,
                  high_scoring_ORFs,
                  kmer,
                  repeat,
+                 overlap,
                  isolate_names,
                  search_radius,
                  prop_match,
@@ -39,6 +40,10 @@ def find_missing(G,
     n_searches = 0
     search_dict = {key: {"conflicts": {}, "searches": {}} for key in range(0, len(isolate_names))}
     for node in G.nodes():
+        centroid = G.nodes[node]["centroid"][G.nodes[node]['maxLenId']]
+        member = int(centroid.split("_")[0])
+        ORF_ID = int(centroid.split("_")[-1])
+        curr_ORF_info = high_scoring_ORFs[member][ORF_ID]
         for neigh in G.neighbors(node):
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
@@ -53,9 +58,8 @@ def find_missing(G,
                         raise NameError("Problem!")
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
-                        search_dict[member]["searches"][node] = {}
-                    search_dict[member]["searches"][node][G.nodes[node]["dna"][G.nodes[node]['maxLenId']]] = ORF_info[
-                                                                                                             :6]
+                        search_dict[member]["searches"][node] = ((curr_ORF_info[0], curr_ORF_info[1]), [])
+                    search_dict[member]["searches"][node][1].append(ORF_info[:7])
 
                     n_searches += 1
 
@@ -71,6 +75,7 @@ def find_missing(G,
                                                     graph_shd_arr_tup=graph_shd_arr_tup,
                                                     isolate_names=isolate_names,
                                                     search_radius=search_radius,
+                                                    overlap=overlap,
                                                     prop_match=prop_match,
                                                     pairwise_id_thresh=pairwise_id_thresh,
                                                     kmer=kmer,
@@ -202,6 +207,7 @@ def search_graph(search_pair,
                  isolate_names,
                  kmer,
                  repeat,
+                 overlap,
                  search_radius=10000,
                  prop_match=0.2,
                  pairwise_id_thresh=0.95):
@@ -232,16 +238,18 @@ def search_graph(search_pair,
         node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # get sequences to search
-    node_search_dict, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
-                                                            repeat)
+    refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
+                                                      repeat)
 
     # search for matches
     hits = []
     for node in node_search_dict:
         best_hit = ""
         best_loc = None
-        for search, search_info in node_search_dict[node].items():
-            db_seq, nodelist, node_ranges, path_rev_comp = search_info
+        search = graph_shd_arr[0].generate_sequence(node_search_dict[node][0][0],
+                                                    node_search_dict[node][0][1], overlap)
+        for entry in refind_map[node]:
+            db_seq, nodelist, node_ranges, path_rev_comp = entry
 
             # check if no sequence found
             if db_seq == "":

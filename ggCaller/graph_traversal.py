@@ -49,7 +49,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
                 ORF_info = high_scoring_ORFs[colour][ORF_ID]
                 seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
                 # add annotation if available
-                if len(ORF_info) == 7 or ORF_ID < 0:
+                if len(ORF_info) == 8 or ORF_ID < 0:
                     ORF_annotation = ORF_info[-1]
                     f.write(
                         ">" + fasta_ID + " " + ORF_annotation[-1] + " QUERY=" + query_vec[i] + "\n" + seq + "\n")

@@ -153,6 +153,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             high_scoring_ORFs,
                                             kmer=kmer,
                                             repeat=repeat,
+                                            overlap=overlap,
                                             isolate_names=input_colours,
                                             remove_by_consensus=remove_by_consensus,
                                             search_radius=search_radius,
@@ -220,7 +221,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 ids_len_stop[sid] = (ORF_len / 3, False)
             if annotate is not None and ref_list[mem]:
                 # annotated genes
-                if len(ORF_info) == 7 or ORF_ID < 0:
+                if len(ORF_info) == 8 or ORF_ID < 0:
                     # add each sequence to its respective contig for each gff file.
                     annotation = ORF_info[-1]
                 else:

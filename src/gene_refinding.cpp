@@ -486,7 +486,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
 RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
                           const std::vector<Kmer>& head_kmer_arr,
                           const size_t colour_ID,
-                          const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                          const NodeSearchDict& node_search_dict,
                           const size_t radius,
                           const bool is_ref,
                           const int kmer,
@@ -499,15 +499,13 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
     for (const auto node_search : node_search_dict)
     {
         const auto& node = node_search.first;
+        const auto& seq_search = node_search.second;
 
         // iterate over search sequences in node_search
-        for (const auto& seq_search : node_search.second)
+        for (const auto& ORF_info : seq_search.second)
         {
-            const auto& search = seq_search.first;
-            const auto& ORF_info = seq_search.second;
-
-            refind_map[node][search] = traverse_outward(ccdbg, head_kmer_arr, colour_ID, ORF_info, radius, is_ref,
-                                                         kmer, fm_idx, repeat);
+            refind_map[node].push_back(std::move(traverse_outward(ccdbg, head_kmer_arr, colour_ID, ORF_info, radius, is_ref,
+                                                         kmer, fm_idx, repeat)));
         }
     }
     return refind_map;

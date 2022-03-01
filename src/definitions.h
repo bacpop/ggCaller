@@ -112,6 +112,8 @@ typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
 typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, bool> RefindTuple;
 // map containing nodeID, search sequence and refind tuple
-typedef std::map<int, std::map<std::string, RefindTuple>> RefindMap;
+typedef std::map<int, std::vector<RefindTuple>> RefindMap;
+// dictionary passed by python for refinding
+typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<ORFNodeVector>>> NodeSearchDict;
 
 #endif //DEFINITIONS_H

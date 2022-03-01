@@ -511,7 +511,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
 
 std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
-                                             const std::unordered_map<int, std::unordered_map<std::string, ORFNodeVector>>& node_search_dict,
+                                             const NodeSearchDict& node_search_dict,
                                              const size_t radius,
                                              const int kmer,
                                              const std::string& FM_fasta_file,
