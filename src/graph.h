@@ -51,7 +51,7 @@ class Graph {
     std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> findGenes (const bool repeat,
                                                                                        const size_t overlap,
                                                                                        const size_t max_path_length,
-                                                                                       const bool no_filter,
+                                                                                       bool no_filter,
                                                                                        const std::vector<std::string>& stop_codons_for,
                                                                                        const std::vector<std::string>& start_codons_for,
                                                                                        const size_t min_ORF_length,

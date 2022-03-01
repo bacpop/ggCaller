@@ -1,7 +1,6 @@
 // ggCaller header
 
 #include "call_ORFs.h"
-#include "ORF_clustering.h"
 
 // generate ORFs from paths
 void generate_ORFs(const int& colour_ID,
@@ -15,7 +14,13 @@ void generate_ORFs(const int& colour_ID,
                    const int& overlap,
                    const size_t min_len,
                    const bool is_ref,
-                   const fm_index_coll& fm_idx)
+                   const fm_index_coll& fm_idx,
+                   torch::jit::script::Module& ORF_model,
+                   torch::jit::script::Module& TIS_model,
+                   const double& minimum_ORF_score,
+                   const bool no_filter,
+                   tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
+                   tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores)
 {
     // Set as present and not-reverse complement if is_ref
     std::pair<bool, bool> present(true, false);
@@ -128,16 +133,16 @@ void generate_ORFs(const int& colour_ID,
         // iterate over each stop codon
         for (const auto &codon : stop_codons) {
             found_indices = findIndex(path_sequence, codon, 0, 0, false);
-            stop_codon_indices.insert(stop_codon_indices.end(), make_move_iterator(found_indices.begin()),
-                                      make_move_iterator(found_indices.end()));
+            stop_codon_indices.insert(stop_codon_indices.end(), std::make_move_iterator(found_indices.begin()),
+                                      std::make_move_iterator(found_indices.end()));
             found_indices.clear();
         }
 
         // iterate over each start codon
         for (const auto &codon : start_codons) {
             found_indices = findIndex(path_sequence, codon, 0, 0, false);
-            start_codon_indices.insert(start_codon_indices.end(), make_move_iterator(found_indices.begin()),
-                                       make_move_iterator(found_indices.end()));
+            start_codon_indices.insert(start_codon_indices.end(), std::make_move_iterator(found_indices.begin()),
+                                       std::make_move_iterator(found_indices.end()));
             found_indices.clear();
         }
 
@@ -190,7 +195,7 @@ void generate_ORFs(const int& colour_ID,
     }
 
     // create pair for each paired start and stop codon
-    std::vector<std::vector<std::pair<size_t, std::pair<std::size_t, std::size_t>>>> ORF_index_pairs(3);
+    std::vector<std::unordered_map<size_t, std::vector<std::pair<std::size_t, std::size_t>>>> ORF_index_pairs(3);
 
     // iterate through frames, pair sequential start+stop codons after first stop codon
     // for each stop codon frame, determine first start codon and last stop codon and pair
@@ -209,10 +214,8 @@ void generate_ORFs(const int& colour_ID,
                 {
                     // stop index is indexed at first base, therefore end of ORF is two bases after
                     std::pair<size_t, size_t> codon_pair(*start_index, *stop_index + 2);
-                    // calculate length of ORF entry, return nested pair with size and codon_pair
-                    std::pair<size_t, std::pair<std::size_t, std::size_t>> ORF_entry = std::make_pair(codon_pair.second - codon_pair.first + 1, codon_pair);
                     // add to correct frame in ORF_index_pairs
-                    ORF_index_pairs[frame].push_back(std::move(ORF_entry));
+                    ORF_index_pairs[frame][codon_pair.second].push_back(std::move(codon_pair));
 
                     // iterate start index
                     start_index++;
@@ -224,99 +227,161 @@ void generate_ORFs(const int& colour_ID,
         }
     }
 
-    // sort ORF_index_pairs entries in descending order if not empty
-    for (auto& frame : ORF_index_pairs)
-    {
-        if (!frame.empty())
-        {
-            sort(frame.rbegin(), frame.rend());
-        }
-    }
-
     // generate sequences for ORFs from codon pairs
     for (const auto& frame : ORF_index_pairs)
     {
         // check if any ORFs present, if not pass.
         if (!frame.empty())
         {
-            // create set of positions of stops of ORFs already added. If present, ignore ORF
-            robin_hood::unordered_set<size_t> prev_stops;
-
             // iterate over the entries in each frame, starting with the largest.
-            for (const auto& ORF_entry : frame)
+            for (const auto& stop_codon : frame)
             {
-                // unpack pair
-                const auto & ORF_len = ORF_entry.first;
-                const auto & codon_pair = ORF_entry.second;
-
-                // check if stop encountered before, if so, pass to next ORF, if not add to set.
-                if (prev_stops.find(codon_pair.second) != prev_stops.end())
+                if (!no_filter)
                 {
-                    continue;
-                }
+                    // set variables to determine highest scoring ORF with same stop codon
+                    std::pair<size_t, size_t> best_codon = {0,0};
+                    double best_score = minimum_ORF_score;
+                    size_t best_hash;
+                    bool best_TIS_present;
+                    size_t best_ORF_len = 0;
 
-                // check ORF is longer than minimum length, if not, break to move to next frame
-                if (ORF_len >= min_len)
-                {
-                    // initialise TIS_present
-                    bool TIS_present = true;
-
-                    // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
-                    if (codon_pair.first < 16)
+                    // unpack all ORFs with same stop codon
+                    for (const auto& codon_pair : stop_codon.second)
                     {
-                        TIS_present = false;
+                        const size_t ORF_len = codon_pair.second - codon_pair.first + 1;
+
+                        // check ORF is longer than minimum length, if not, break to move to next frame
+                        if (ORF_len >= min_len)
+                        {
+                            // initialise TIS_present
+                            bool TIS_present = true;
+
+                            // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
+                            if (codon_pair.first < 16)
+                            {
+                                TIS_present = false;
+                            }
+
+                            // generate hash for ORF sequence and ORF sequence
+                            std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                            std::string TIS_seq;
+
+                            if (TIS_present)
+                            {
+                                TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
+                            }
+
+                            // get gene score
+                            double score =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model,all_ORF_scores, all_TIS_scores);
+
+                            ORF_seq += TIS_seq;
+
+                            size_t ORF_hash = hasher{}(ORF_seq);
+
+                            if (score >= best_score)
+                            {
+                                best_codon = codon_pair;
+                                best_score = score;
+                                best_TIS_present = TIS_present;
+                                best_ORF_len = ORF_len;
+                                best_hash = ORF_hash;
+                            } else
+                            {
+                                continue;
+                            }
+                        }
                     }
 
-                    // generate hash for ORF sequence and ORF sequence
-                    size_t ORF_hash = 0;
-                    std::string ORF_seq;
+                    // check codon found
+                    if (best_codon.second)
+                    {
+                        // if TIS is present, add the non-TIS hash to to_remove
+                        ORFCoords TIS_coords;
+                        if (best_TIS_present)
+                        {
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
+                            hashes_to_remove.insert(hash_to_remove);
+                            std::pair<std::size_t, std::size_t> TIS_pair(best_codon.first - 16, best_codon.first - 1);
+                            TIS_coords = std::move(calculate_coords(TIS_pair, nodelist, node_ranges, overlap));
+                        }
 
-                    if (TIS_present)
-                    {
-                        ORF_seq = path_sequence.substr((codon_pair.first - 16), (ORF_len + 16));
-                    } else
-                    {
-                        ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                        // If ORF is real, continue and work out coordinates for ORF in node space
+                        ORFCoords ORF_coords = std::move(calculate_coords(best_codon, nodelist, node_ranges, overlap));
+
+                        // unpack tuples
+                        auto& ORF_node_id = std::get<0>(ORF_coords);
+                        auto& ORF_node_coords = std::get<1>(ORF_coords);
+                        auto& TIS_node_id = std::get<0>(TIS_coords);
+                        auto& TIS_node_coords = std::get<1>(TIS_coords);
+
+                        // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
+                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, best_ORF_len, TIS_node_id, TIS_node_coords, !present.second, best_score);
+
+                        // think about if there is no TIS, then can ignore ORF?
+                        update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
                     }
-
-                    ORF_hash = hasher{}(ORF_seq);
-
-                    // if TIS is present, add the non-TIS hash to to_remove
-                    if (TIS_present)
-                    {
-                        size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
-                        hashes_to_remove.insert(hash_to_remove);
-                    }
-
-                    // If ORF is real, continue and work out coordinates for ORF in node space
-                    ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
-
-                    // work coordinates for TIS in node space
-                    ORFCoords TIS_coords;
-                    if (TIS_present)
-                    {
-                        std::pair<std::size_t, std::size_t> TIS_pair(codon_pair.first - 16, codon_pair.first - 1);
-                        TIS_coords = std::move(calculate_coords(TIS_pair, nodelist, node_ranges, overlap));
-                    }
-
-                    // unpack tuples
-                    auto& ORF_node_id = std::get<0>(ORF_coords);
-                    auto& ORF_node_coords = std::get<1>(ORF_coords);
-                    auto& TIS_node_id = std::get<0>(TIS_coords);
-                    auto& TIS_node_coords = std::get<1>(TIS_coords);
-
-                    // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                    ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, !present.second);
-
-                    // think about if there is no TIS, then can ignore ORF?
-                    update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
-
-                    // once known that ORF is correct, add stop to set
-                    prev_stops.insert(codon_pair.second);
-
                 } else
                 {
-                    break;
+                    // unpack all ORFs with same stop codon
+                    for (const auto& codon_pair : stop_codon.second)
+                    {
+                        // unpack all ORFs with same stop codon
+                        for (const auto& codon_pair : stop_codon.second)
+                        {
+                            const size_t ORF_len = codon_pair.second - codon_pair.first + 1;
+
+                            // check ORF is longer than minimum length, if not, break to move to next frame
+                            if (ORF_len >= min_len)
+                            {
+                                // initialise TIS_present
+                                bool TIS_present = true;
+
+                                // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
+                                if (codon_pair.first < 16)
+                                {
+                                    TIS_present = false;
+                                }
+
+                                // generate hash for ORF sequence and ORF sequence
+                                std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                                std::string TIS_seq;
+
+                                if (TIS_present)
+                                {
+                                    TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
+                                }
+
+                                ORF_seq += TIS_seq;
+
+                                size_t ORF_hash = hasher{}(ORF_seq);
+
+                                // if TIS is present, add the non-TIS hash to to_remove
+                                ORFCoords TIS_coords;
+                                if (TIS_present)
+                                {
+                                    size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
+                                    hashes_to_remove.insert(hash_to_remove);
+                                    std::pair<std::size_t, std::size_t> TIS_pair(codon_pair.first - 16, codon_pair.first - 1);
+                                    TIS_coords = std::move(calculate_coords(TIS_pair, nodelist, node_ranges, overlap));
+                                }
+
+                                // If ORF is real, continue and work out coordinates for ORF in node space
+                                ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
+
+                                // unpack tuples
+                                auto& ORF_node_id = std::get<0>(ORF_coords);
+                                auto& ORF_node_coords = std::get<1>(ORF_coords);
+                                auto& TIS_node_id = std::get<0>(TIS_coords);
+                                auto& TIS_node_coords = std::get<1>(TIS_coords);
+
+                                // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
+                                ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, !present.second, 0);
+
+                                // think about if there is no TIS, then can ignore ORF?
+                                update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -707,7 +772,13 @@ ORFVector call_ORFs(const int colour_ID,
                     const int overlap,
                     const size_t min_ORF_length,
                     const bool is_ref,
-                    const fm_index_coll& fm_idx)
+                    const fm_index_coll& fm_idx,
+                    torch::jit::script::Module& ORF_model,
+                    torch::jit::script::Module& TIS_model,
+                    const double& minimum_ORF_score,
+                    const bool no_filter,
+                    tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
+                    tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -719,7 +790,7 @@ ORFVector call_ORFs(const int colour_ID,
         for (const auto& path : path_vector)
         {
             // generate all ORFs within the path for start and stop codon pairs
-            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx);
+            generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
         }
     }
 

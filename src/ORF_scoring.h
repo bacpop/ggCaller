@@ -27,16 +27,12 @@ torch::Tensor predict(torch::jit::script::Module& module,
                       const bool gene);
 
 
-std::unordered_map<size_t, double> run_BALROG (const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                               const std::vector<Kmer>& head_kmer_arr,
-                                               const ORFVector& ORF_vector,
-                                               torch::jit::script::Module& ORF_model,
-                                               torch::jit::script::Module& TIS_model,
-                                               const int overlap,
-                                               const float& minimum_ORF_score,
-                                               const int ORF_batch_size,
-                                               const int TIS_batch_size,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
-                                               tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores);
+double run_BALROG (const std::string& ORF_DNA,
+                   const std::string& upstream,
+                   const size_t& ORF_len,
+                   torch::jit::script::Module& ORF_model,
+                   torch::jit::script::Module& TIS_model,
+                   tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
+                   tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores);
 
 #endif //ORF_SCORING_H

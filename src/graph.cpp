@@ -204,7 +204,7 @@ void Graph::out(const std::string& outfile)
 std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::findGenes (const bool repeat,
                                                                                           const size_t overlap,
                                                                                           const size_t max_path_length,
-                                                                                          const bool no_filter,
+                                                                                          bool no_filter,
                                                                                           const std::vector<std::string>& stop_codons_for,
                                                                                           const std::vector<std::string>& start_codons_for,
                                                                                           const size_t min_ORF_length,
@@ -300,7 +300,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
                 if (is_ref)
                 {
-                    //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
                     const auto idx_file_name = FM_fasta_file + ".fmp";
                     if (!load_from_file(fm_idx, idx_file_name))
                     {
@@ -310,14 +309,17 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 }
 
                 // recursive traversal
-                //        cout << "Traversing graph: " << to_string(colour_ID) << endl;
                 std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet, fm_idx);
 
                 // generate ORF calls
-                //        cout << "Calling ORFs: " << to_string(colour_ID) << endl;
-                ORF_vector = call_ORFs(colour_ID, all_paths, _ccdbg, _KmerArray, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx);
-            }
+                // if error with loading scoring model, set as no_filter
+                if (error)
+                {
+                    no_filter = true;
+                }
 
+                ORF_vector = call_ORFs(colour_ID, all_paths, _ccdbg, _KmerArray, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
+            }
             // if no filtering required, do not calculate overlaps, score genes or get gene_paths
             if (!no_filter)
             {
@@ -340,13 +342,11 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                     ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_vector, overlap, max_overlap, is_ref, fm_idx));
                 }
 
-                std::unordered_map<size_t, double> score_map;
-
                 if (!error)
                 {
-                    score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
-                                                     minimum_ORF_score, ORF_batch_size, TIS_batch_size, all_ORF_scores, all_TIS_scores));
-                    gene_paths = call_true_genes (score_map, ORF_overlap_map, minimum_path_score);
+//                    score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
+//                                                     minimum_ORF_score, ORF_batch_size, TIS_batch_size, all_ORF_scores, all_TIS_scores));
+                    gene_paths = call_true_genes (ORF_vector, ORF_overlap_map, minimum_path_score);
 
                     // get high scoring genes
                     for (const auto& path : gene_paths)
