@@ -4,8 +4,8 @@ import networkx as nx
 from intbitset import intbitset
 
 
-def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
-                     cluster_id_list, cluster_dict, overlap, all_dna=False):
+def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
+                     cluster_id_list, cluster_dict):
     # associate sequences with their clusters
     seq_to_cluster = {}
     seqid_to_centroid = {}
@@ -53,17 +53,10 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
 
         # access ORF information for centroid from high_scoring_ORFs
         ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
-        ORF_nodelist = ORFNodeVector[0]
-        ORF_node_coords = ORFNodeVector[1]
-
-        # generate dna sequence and protein sequence
-        dna_sequence = DBG.generate_sequence(ORF_nodelist, ORF_node_coords, overlap)
-        prot_sequence = str(Seq(dna_sequence).translate())
 
         # add information to cluster_centroid_data
         cluster_centroid_data[cluster_id] = {
-            'prot_sequence': prot_sequence,
-            'dna_sequence': dna_sequence,
+            'ORF_info': ORFNodeVector,
             'annotation': '',
             'description': '',
         }
@@ -118,27 +111,16 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     members=intbitset([genome_id]),
                     seqIDs=set([ORF_id]),
                     hasEnd=has_end,
-                    protein=[
-                        cluster_centroid_data[current_cluster]
-                        ['prot_sequence']
-                    ],
-                    dna=[
-                        cluster_centroid_data[current_cluster]
-                        ['dna_sequence']
-                    ],
+                    ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
+                               cluster_centroid_data[current_cluster]['ORF_info'][1])],
                     annotation=cluster_centroid_data[current_cluster]
                     ['annotation'],
                     bitscore=0,
                     description=cluster_centroid_data[current_cluster]
                     ['description'],
                     lengths=[
-                        len(cluster_centroid_data[current_cluster]
-                            ['dna_sequence'])
+                        cluster_centroid_data[current_cluster]['ORF_info'][2]
                     ],
-                    longCentroidID=(len(
-                        cluster_centroid_data[current_cluster]
-                        ['dna_sequence']),
-                                    cluster_centroids[current_cluster]),
                     paralog=has_paralogs,
                     mergedDNA=False)
                 # if has_paralogs == true, then need to add new node for each sequence
@@ -153,14 +135,6 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                     G.nodes[current_cluster]['members'].add(genome_id)
                     G.nodes[current_cluster]['seqIDs'].add(ORF_id)
                     if G.nodes[current_cluster]['hasEnd'] == False: G.nodes[current_cluster]['hasEnd'] = has_end
-                    G.nodes[current_cluster]['lengths'].append(
-                        len(cluster_centroid_data[current_cluster]
-                            ['dna_sequence']))
-                    if all_dna:
-                        G.nodes[current_cluster]['dna'] += [
-                            cluster_centroid_data[current_cluster]
-                            ['dna_sequence']
-                        ]
 
             # iterate through edge_set, adding nodes and then adding edges if required
             for neighbour in edge_set:
@@ -203,27 +177,16 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         members=intbitset([genome_id]),
                         seqIDs=set([pan_neigbour_id]),
                         hasEnd=neighbour_has_end,
-                        protein=[
-                            cluster_centroid_data[neighbour_cluster]
-                            ['prot_sequence']
-                        ],
-                        dna=[
-                            cluster_centroid_data[neighbour_cluster]
-                            ['dna_sequence']
-                        ],
+                        ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
+                                   cluster_centroid_data[current_cluster]['ORF_info'][1])],
                         annotation=cluster_centroid_data[neighbour_cluster]
                         ['annotation'],
                         bitscore=0,
                         description=cluster_centroid_data[neighbour_cluster]
                         ['description'],
                         lengths=[
-                            len(cluster_centroid_data[neighbour_cluster]
-                                ['dna_sequence'])
+                            cluster_centroid_data[current_cluster]['ORF_info'][2]
                         ],
-                        longCentroidID=(len(
-                            cluster_centroid_data[neighbour_cluster]
-                            ['dna_sequence']),
-                                        cluster_centroids[neighbour_cluster]),
                         paralog=neighbour_has_paralogs,
                         mergedDNA=False)
                 else:
@@ -234,14 +197,6 @@ def generate_network(DBG, high_scoring_ORFs, high_scoring_ORF_edges,
                         G.nodes[neighbour_cluster]['seqIDs'].add(pan_neigbour_id)
                         if G.nodes[neighbour_cluster]['hasEnd'] == False:
                             G.nodes[neighbour_cluster]['hasEnd'] = neighbour_has_end
-                        G.nodes[neighbour_cluster]['lengths'].append(
-                            len(cluster_centroid_data[neighbour_cluster]
-                                ['dna_sequence']))
-                        if all_dna:
-                            G.nodes[neighbour_cluster]['dna'] += [
-                                cluster_centroid_data[neighbour_cluster]
-                                ['dna_sequence']
-                            ]
 
                 # add edge between current ORF and neighbour
                 if G.has_edge(cluster_to_add, neighbour_cluster_to_add):

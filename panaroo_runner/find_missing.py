@@ -2,8 +2,6 @@ from collections import defaultdict, Counter
 from Bio.Seq import translate, reverse_complement, Seq
 from multiprocessing import get_context
 from Bio import SeqIO
-from panaroo.cdhit import align_dna_cdhit
-from panaroo.isvalid import del_dups
 from joblib import Parallel, delayed
 import os
 import gffutils as gff
@@ -52,9 +50,8 @@ def find_missing(G,
                 search_dict[member]["conflicts"][neigh] = ORF_info
 
                 if member not in G.nodes[node]['members']:
-                    if len(G.nodes[node]["dna"][G.nodes[node]
-                    ['maxLenId']]) <= 0:
-                        print(G.nodes[node]["dna"])
+                    if G.nodes[node]["lengths"][G.nodes[node]['maxLenId']] <= 0:
+                        print(G.nodes[node]["centroid"])
                         raise NameError("Problem!")
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
@@ -90,7 +87,10 @@ def find_missing(G,
     hits_trans_dict = {}
     for member, hits in enumerate(all_hits):
         hits_trans_dict[member] = Parallel(n_jobs=n_cpu)(
-            delayed(translate_to_match)(hit[1], G.nodes[hit[0]]["protein"][0])
+            delayed(translate_to_match)(hit[1],
+                                        str(Seq(graph_shd_arr[0].generate_sequence(G.nodes[hit[0]]["ORF_info"][0][0],
+                                                                                   G.nodes[hit[0]]["ORF_info"][0][1],
+                                                                                   overlap)).translate()))
             for hit in hits)
 
     # remove nodes that conflict (overlap)
@@ -182,8 +182,6 @@ def find_missing(G,
             hit_protein, hit_dna = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
             G.nodes[node]['size'] += 1
-            G.nodes[node]['dna'].append(dna_hit)
-            G.nodes[node]['protein'].append(hit_protein)
             G.nodes[node]['seqIDs'] |= set([str(member) + "_refound_" + str(n_found * -1)])
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node]

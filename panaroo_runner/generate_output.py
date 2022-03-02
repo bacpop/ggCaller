@@ -90,7 +90,7 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
         with open(outfile, "w") as f:
             for node in G.nodes():
                 node_annotation = G.nodes[node]["description"]
-                length_centroid = G.nodes[node]['longCentroidID'][0]
+                length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
                 for sid in G.nodes[node]['seqIDs']:
                     # if sid not in centroid_sequence_ids:
                     colour = int(sid.split("_")[0])
@@ -207,7 +207,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
 
     # determine sequences to aligned
     if ignore_pseduogenes:
-        length_centroid = node['longCentroidID'][0]
+        length_centroid = node['lengths'][node['maxLenId']]
         # identify pseudogenes based on truncation threshold, and if annotated as
         # having premature stop or not multiple of 3 long
         sequence_ids = [x for x in node["seqIDs"] if
@@ -634,7 +634,7 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
     return G
 
 
-def generate_pan_genome_reference(G, output_dir, split_paralogs=False):
+def generate_pan_genome_reference(G, DBG, overlap, output_dir, split_paralogs=False):
     # need to treat paralogs differently?
     centroids = set()
     records = []
@@ -642,8 +642,10 @@ def generate_pan_genome_reference(G, output_dir, split_paralogs=False):
     for node in G.nodes():
         if not split_paralogs and G.nodes[node]['centroid'][0] in centroids:
             continue
+        ORFNodeVector = G.nodes[node]["ORF_info"][G.nodes[node]['maxLenId']]
+        seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
         records.append(
-            SeqRecord(Seq(max(G.nodes[node]['dna'], key=lambda x: len(x))),
+            SeqRecord(Seq(seq),
                       id=G.nodes[node]['name'],
                       description=""))
         for centroid in G.nodes[node]['centroid']:

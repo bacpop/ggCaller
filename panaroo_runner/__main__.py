@@ -11,7 +11,7 @@ import _pickle as cPickle
 # panaroo scripts
 from panaroo.isvalid import *
 from .generate_network import *
-from panaroo.cdhit import check_cdhit_version, run_cdhit
+from .cdhit import check_cdhit_version
 from .find_missing import *
 
 # custom panaroo scripts
@@ -65,9 +65,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], high_scoring_ORFs, high_scoring_ORF_edges,
-                                                               cluster_id_list, cluster_dict, overlap, all_seq_in_graph)
-
+    G, centroid_contexts, seqid_to_centroid = generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
+                                                               cluster_id_list, cluster_dict)
 
     # check if G is empty before proceeding
     if G.number_of_nodes() == 0:
@@ -98,6 +97,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # clean up translation errors
     G = collapse_families(G,
+                          DBG=shd_arr[0],
+                          overlap=overlap,
                           seqid_to_centroid=seqid_to_centroid,
                           outdir=temp_dir,
                           dna_error_threshold=0.98,
@@ -127,6 +128,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # collapse gene families
     G, distances_bwtn_centroids, centroid_to_index = collapse_families(
         G,
+        DBG=shd_arr[0],
+        overlap=overlap,
         seqid_to_centroid=seqid_to_centroid,
         outdir=temp_dir,
         family_threshold=family_threshold,
@@ -169,6 +172,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose:
             print("collapse gene families with refound genes...")
         G = collapse_families(G,
+                              DBG=shd_arr[0],
+                              overlap=overlap,
                               seqid_to_centroid=seqid_to_centroid,
                               outdir=temp_dir,
                               family_threshold=family_threshold,
@@ -207,7 +212,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     ids_len_stop = {}
     contig_annotation = defaultdict(list)
     for node in G.nodes():
-        length_centroid = G.nodes[node]['longCentroidID'][0]
+        length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
         for sid in G.nodes[node]['seqIDs']:
             orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
@@ -251,6 +256,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # write pan genome reference fasta file
     generate_pan_genome_reference(G,
+                                  shd_arr[0],
+                                  overlap,
                                   output_dir=output_dir,
                                   split_paralogs=False)
 
@@ -288,15 +295,37 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     for node in G.nodes():
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
         G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
-        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        G.nodes[node]['protein'] = ";".join(conv_list(
-            G.nodes[node]['protein']))
+        # G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+        # G.nodes[node]['protein'] = ";".join(conv_list(
+        #     G.nodes[node]['protein']))
         G.nodes[node]['genomeIDs'] = ";".join(
             [str(m) for m in G.nodes[node]['members']])
         G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
         G.nodes[node]['degrees'] = G.degree[node]
         G.nodes[node]['members'] = list(G.nodes[node]['members'])
         G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
+
+        # if all seq in graph specified, generate DNA sequences and protein sequences for all seq_IDs
+        if all_seq_in_graph:
+            G.nodes[node]['dna'] = []
+            G.nodes[node]['protein'] = []
+            for seq_ID in G.nodes[node]['seqIDs']:
+                # parse genome id and local ORF id from centroid
+                parsed_id = seq_ID.split("_")
+                genome_id = int(parsed_id[0])
+                local_id = int(parsed_id[-1])
+
+                # access ORF information for each ORF from high_scoring_ORFs
+                ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+                seq = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                G.nodes[node]['dna'].append(seq)
+                if local_id < 0:
+                    G.nodes[node]['protein'].append(ORFNodeVector[4])
+                else:
+                    G.nodes[node]['protein'].append(str(Seq(seq).translate()))
+            # convert to printable format
+            G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+            G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
@@ -307,7 +336,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     if verbose:
         print("writing graph file...")
-    nx.write_gml(G, output_dir + "final_graph.gml")
+    nx.write_gml(G, output_dir + "final_graph.gml", stringizer=custom_stringizer)
 
     if save_objects:
         # create directory if it isn't present already

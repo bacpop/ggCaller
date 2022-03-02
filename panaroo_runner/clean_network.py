@@ -1,5 +1,5 @@
 import networkx as nx
-from panaroo.cdhit import *
+from .cdhit import *
 from panaroo.merge_nodes import *
 from panaroo.isvalid import del_dups
 from collections import defaultdict, deque, Counter
@@ -38,32 +38,30 @@ def merge_node_cluster(G,
             for i in range(1, len(indices)):
                 to_remove.add(indices[i])
 
-    # flatten nested lists and then generate list of dna/protein entries that are not repeated centroid_IDs
-    dna = [item for sublist in gen_node_iterables(G, nodes, 'dna') for item in sublist]
-    protein = [item for sublist in gen_node_iterables(G, nodes, 'protein') for item in sublist]
-    dna = [element for index, element in enumerate(dna) if index not in to_remove]
-    protein = [element for index, element in enumerate(protein) if index not in to_remove]
-
     # take the highest e-score for annotation
     bitscore = max([x for x in gen_node_iterables(G, nodes, 'bitscore')])
 
     # generate iterables of centroids and seqIDs
     centroid = [item for sublist in gen_node_iterables(G, nodes, 'centroid') for item in sublist]
     centroid = [element for index, element in enumerate(centroid) if index not in to_remove]
+    ORF_info = [item for sublist in gen_node_iterables(G, nodes, 'ORF_info') for item in sublist]
+    ORF_info = [element for index, element in enumerate(ORF_info) if index not in to_remove]
     seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
+
+    # generate the lengths for the determination of the longest sequence
+    lengths = [item for sublist in gen_node_iterables(G, nodes, 'lengths') for item in sublist]
+    lengths = [element for index, element in enumerate(lengths) if index not in to_remove]
 
     # update seqid_to_centroid
     for seqID in seqIDs:
         seqid_to_centroid[seqID] = centroid[0]
 
     # First create a new node and combine the attributes
-    # dna = iter_del_dups(gen_node_iterables(G, nodes, 'dna'))
-    # protein = iter_del_dups(gen_node_iterables(G, nodes, 'protein'))
     maxLenId = 0
     max_l = 0
-    for i, s in enumerate(centroid):
-        if len(s) >= max_l:
-            max_l = len(s)
+    for i, s in enumerate(lengths):
+        if s > max_l:
+            max_l = s
             maxLenId = i
 
     members = G.nodes[nodes[0]]['members'].copy()
@@ -83,8 +81,7 @@ def merge_node_cluster(G,
         members=members,
         seqIDs=seqIDs,
         hasEnd=any(gen_node_iterables(G, nodes, 'hasEnd')),
-        protein=protein,
-        dna=dna,
+        ORF_info=ORF_info,
         annotation=";".join(
             iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
                                              split=";"))),
@@ -92,10 +89,7 @@ def merge_node_cluster(G,
         description=";".join(
             iter_del_dups(
                 gen_node_iterables(G, nodes, 'description', split=";"))),
-        lengths=list(
-            itertools.chain.from_iterable(
-                gen_node_iterables(G, nodes, 'lengths'))),
-        longCentroidID=max(gen_node_iterables(G, nodes, 'longCentroidID')),
+        lengths=lengths,
         paralog=any(gen_node_iterables(G, nodes, 'paralog')),
         mergedDNA=mergedDNA)
     if "prevCentroids" in G.nodes[nodes[0]]:
@@ -197,6 +191,8 @@ def single_linkage(G, distances_bwtn_centroids, centroid_to_index, neighbours):
 
 # @profile
 def collapse_families(G,
+                      DBG,
+                      overlap,
                       seqid_to_centroid,
                       outdir,
                       family_threshold=0.7,
@@ -219,6 +215,8 @@ def collapse_families(G,
     # precluster for speed
     if correct_mistranslations:
         cdhit_clusters = iterative_cdhit(G,
+                                         DBG,
+                                         overlap,
                                          outdir,
                                          thresholds=threshold,
                                          n_cpu=n_cpu,
@@ -227,24 +225,25 @@ def collapse_families(G,
                                          word_length=7,
                                          accurate=False)
         distances_bwtn_centroids, centroid_to_index = pwdist_edlib(
-            G, cdhit_clusters, dna_error_threshold, dna=True, n_cpu=n_cpu)
+            G, DBG, overlap, cdhit_clusters, dna_error_threshold, dna=True, n_cpu=n_cpu)
     elif distances_bwtn_centroids is None:
         cdhit_clusters = iterative_cdhit(G,
+                                         DBG,
+                                         overlap,
                                          outdir,
                                          thresholds=threshold,
                                          n_cpu=n_cpu,
                                          quiet=True,
                                          dna=False)
         distances_bwtn_centroids, centroid_to_index = pwdist_edlib(
-            G, cdhit_clusters, family_threshold, dna=False, n_cpu=n_cpu)
+            G, DBG, overlap, cdhit_clusters, family_threshold, dna=False, n_cpu=n_cpu)
 
     # keep track of centroids for each sequence. Need this to resolve clashes
     seqid_to_index = {}
     for node in G.nodes():
         for sid in G.nodes[node]['seqIDs']:
             if "refound" in sid:
-                seqid_to_index[sid] = centroid_to_index[G.nodes[node]
-                ["longCentroidID"][1]]
+                seqid_to_index[sid] = centroid_to_index[G.nodes[node]['centroid'][G.nodes[node]["maxLenId"]]]
             else:
                 seqid_to_index[sid] = centroid_to_index[seqid_to_centroid[sid]]
 
