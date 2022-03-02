@@ -176,7 +176,11 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
 
     return
 
-def output_aa_sequence(node_pair):
+def output_aa_sequence(node_pair, shd_arr_tup, overlap):
+    # load shared memory items
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
+
     # unpack node_pair
     node = node_pair[1]
 
@@ -185,7 +189,10 @@ def output_aa_sequence(node_pair):
     # iterate over centroids to generate fasta files
     for i in range(0, len(node["centroid"])):
         name = str(node_pair[0]) + ";" + node["centroid"][i]
-        ref_output_sequences.append(SeqRecord(Seq(node["protein"][i]), id=name, description=""))
+        ORF_info = node["ORF_info"][i]
+
+        seq = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
+        ref_output_sequences.append(SeqRecord(seq, id=name, description=""))
 
     return ref_output_sequences
 

@@ -119,7 +119,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
         # generate annotations
-        G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db,
+        G, high_scoring_ORFs = iterative_annotation_search(G, shd_arr_tup, overlap, high_scoring_ORFs,
+                                                           annotation_temp_dir, annotation_db,
                                                            hmm_db, evalue, annotate, n_cpu, pool)
 
     if verbose:
