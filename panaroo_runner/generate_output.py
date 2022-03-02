@@ -50,10 +50,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
 
             # parse DNA sequence
             ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
-            if ORF_ID < 0:
-                dna = ORFNodeVector[5]
-            else:
-                dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
             # back translate sequence
             aligned_dna = ""

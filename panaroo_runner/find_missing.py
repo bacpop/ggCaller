@@ -194,7 +194,7 @@ def find_missing(G,
             else:
                 annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna, annotation)
+                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, annotation)
 
     if verbose:
         print("Number of refound genes: ", n_found)
