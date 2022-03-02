@@ -268,7 +268,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     tbb::concurrent_unordered_map<size_t, double> all_ORF_scores;
     tbb::concurrent_unordered_map<size_t, double> all_TIS_scores;
 
-//    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
         // get whether colour is reference or not
@@ -344,8 +344,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
 
                 if (!error)
                 {
-//                    score_map = std::move(run_BALROG(_ccdbg, _KmerArray, ORF_vector, ORF_model, TIS_model, overlap,
-//                                                     minimum_ORF_score, ORF_batch_size, TIS_batch_size, all_ORF_scores, all_TIS_scores));
                     gene_paths = call_true_genes (ORF_vector, ORF_overlap_map, minimum_path_score);
 
                     // get high scoring genes
