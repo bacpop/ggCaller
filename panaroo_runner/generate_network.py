@@ -177,15 +177,15 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
                         members=intbitset([genome_id]),
                         seqIDs=set([pan_neigbour_id]),
                         hasEnd=neighbour_has_end,
-                        ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
-                                   cluster_centroid_data[current_cluster]['ORF_info'][1])],
+                        ORF_info=[(cluster_centroid_data[neighbour_cluster]['ORF_info'][0],
+                                   cluster_centroid_data[neighbour_cluster]['ORF_info'][1])],
                         annotation=cluster_centroid_data[neighbour_cluster]
                         ['annotation'],
                         bitscore=0,
                         description=cluster_centroid_data[neighbour_cluster]
                         ['description'],
                         lengths=[
-                            cluster_centroid_data[current_cluster]['ORF_info'][2]
+                            cluster_centroid_data[neighbour_cluster]['ORF_info'][2]
                         ],
                         paralog=neighbour_has_paralogs,
                         mergedDNA=False)
