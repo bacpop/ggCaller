@@ -9,7 +9,6 @@ import pandas as pd
 from Bio import SearchIO
 from collections import defaultdict
 
-
 def check_diamond_install():
     command = ["diamond", "help"]
 

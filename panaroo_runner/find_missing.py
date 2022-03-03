@@ -7,7 +7,7 @@ import os
 import gffutils as gff
 from io import StringIO
 import edlib
-from panaroo.merge_nodes import delete_node, remove_member_from_node
+from .clean_network import delete_node, remove_member_from_node
 from tqdm import tqdm
 import re
 

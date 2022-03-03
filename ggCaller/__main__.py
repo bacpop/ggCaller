@@ -10,7 +10,8 @@ from Bio import Seq
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
 from panaroo_runner.generate_output import print_ORF_calls
-from panaroo_runner.annotate import *
+from panaroo_runner.annotate import check_diamond_install, check_HMMER_install, generate_HMMER_index, \
+    generate_diamond_index
 import ast
 import tempfile
 import json

@@ -14,7 +14,6 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - panaroo>=1.2
   - pytorch
   - snp-sites
   - zlib

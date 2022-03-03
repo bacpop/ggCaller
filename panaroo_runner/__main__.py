@@ -9,7 +9,6 @@ from collections import defaultdict
 import _pickle as cPickle
 
 # panaroo scripts
-from panaroo.isvalid import *
 from .generate_network import *
 from .cdhit import check_cdhit_version
 from .find_missing import *
