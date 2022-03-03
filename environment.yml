@@ -44,4 +44,4 @@ dependencies:
   - rapidnj
   - boost-cpp
   - tbb-devel
-  - edlib
+  - python-edlib
