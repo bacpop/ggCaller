@@ -183,11 +183,11 @@ def get_options():
 
     Panaroo_matching = parser.add_argument_group('Matching')
     Panaroo_matching.add_argument(
-        "--family_threshold",
+        "--family-threshold",
         dest="family_threshold",
         help="protein family sequence identity threshold (default=0.7)",
         type=float)
-    Panaroo_matching.add_argument("--merge_paralogs",
+    Panaroo_matching.add_argument("--merge-paralogs",
                                   dest="merge_paralogs",
                                   help="don't split paralogs",
                                   action='store_true',
@@ -214,7 +214,7 @@ def get_options():
                                   help="Maximum e-value to return for DIAMOND and HMMER searches during annotation",
                                   default=0.001,
                                   type=float)
-    Panaroo_matching.add_argument("--truncation_threshold",
+    Panaroo_matching.add_argument("--truncation-threshold",
                                   dest="truncation_threshold",
                                   help="Sequences in a gene family cluster below this proportion of the length of the"
                                        "centroid will be annotated as 'potential pseudogene'",
@@ -223,14 +223,14 @@ def get_options():
 
     Panaroo_refind = parser.add_argument_group('Refind')
     Panaroo_refind.add_argument(
-        "--search_radius",
+        "--search-radius",
         dest="search_radius",
         help=("the distance in nucleotides surronding the " +
               "neighbour of an accessory gene in which to search for it"),
         default=5000,
         type=int)
     Panaroo_refind.add_argument(
-        "--refind_prop_match",
+        "--refind-prop-match",
         dest="refind_prop_match",
         help=("the proportion of an accessory gene that must " +
               "be found in order to consider it a match"),
@@ -240,26 +240,26 @@ def get_options():
     Panaroo_graph = parser.add_argument_group('Graph correction')
 
     Panaroo_graph.add_argument(
-        "--min_trailing_support",
+        "--min-trailing-support",
         dest="min_trailing_support",
         help=("minimum cluster size to keep a gene called at the " +
               "end of a contig"),
         type=int)
     Panaroo_graph.add_argument(
-        "--trailing_recursive",
+        "--trailing-recursive",
         dest="trailing_recursive",
         help=("number of times to perform recursive trimming of low support " +
               "nodes near the end of contigs"),
         type=int)
     Panaroo_graph.add_argument(
-        "--edge_support_threshold",
+        "--edge-support-threshold",
         dest="edge_support_threshold",
         help=(
                 "minimum support required to keep an edge that has been flagged" +
                 " as a possible mis-assembly"),
         type=float)
     Panaroo_graph.add_argument(
-        "--length_outlier_support_proportion",
+        "--length-outlier-support-proportion",
         dest="length_outlier_support_proportion",
         help=
         ("proportion of genomes supporting a gene with a length more " +
@@ -270,7 +270,7 @@ def get_options():
         type=float,
         default=0.1)
     Panaroo_graph.add_argument(
-        "--remove_by_consensus",
+        "--remove-by-consensus",
         dest="remove_by_consensus",
         type=ast.literal_eval,
         choices=[True, False],
@@ -279,7 +279,7 @@ def get_options():
          + "of the time, remove it. One of 'True' or 'False'"),
         default=None)
     Panaroo_graph.add_argument(
-        "--high_var_flag",
+        "--high-var-flag",
         dest="cycle_threshold_min",
         help=(
                 "minimum number of nested cycles to call a highly variable gene " +
@@ -287,20 +287,20 @@ def get_options():
         type=int,
         default=5)
     Panaroo_graph.add_argument(
-        "--min_edge_support_sv",
+        "--min-edge-support-sv",
         dest="min_edge_support_sv",
         help=("minimum edge support required to call structural variants" +
               " in the presence/absence sv file"),
         type=int)
     Panaroo_graph.add_argument(
-        "--all_seq_in_graph",
+        "--all-seq-in-graph",
         dest="all_seq_in_graph",
         help=("Retains all DNA sequence for each gene cluster in the graph " +
               "output. Off by default as it uses a large amount of space."),
         action='store_true',
         default=False)
     Panaroo_graph.add_argument(
-        "--no_clean_edges",
+        "--no-clean-edges",
         dest="clean_edges",
         help=("Turn off edge filtering in the final output graph."),
         action='store_false',
@@ -323,17 +323,17 @@ def get_options():
         type=str,
         choices=['def', 'ref'],
         default="def")
-    Panaroo_aln.add_argument("--core_threshold",
+    Panaroo_aln.add_argument("--core-threshold",
                              dest="core",
                              help="Core-genome sample threshold (default=0.95)",
                              type=float,
                              default=0.95)
-    Panaroo_aln.add_argument("--no_variants",
+    Panaroo_aln.add_argument("--no-variants",
                              dest="call_variants",
                              help="Do not call variants using SNP-sites after alignment.",
                              action='store_false',
                              default=True)
-    Panaroo_matching.add_argument("--ignore_pseduogenes",
+    Panaroo_matching.add_argument("--ignore-pseduogenes",
                                   dest="ignore_pseduogenes",
                                   help="Ignore ORFs annotated as 'potential pseudogenes' in alignment",
                                   action='store_true',
