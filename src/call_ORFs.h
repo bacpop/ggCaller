@@ -33,7 +33,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
                            const int overlap);
 
 ORFVector call_ORFs(const int colour_ID,
-                    const std::vector<PathVector>& all_paths,
+                    std::vector<PathVector>& all_paths,
                     const ColoredCDBG<MyUnitigMap>& ccdbg,
                     const std::vector<Kmer>& head_kmer_arr,
                     const std::vector<std::string>& stop_codons_for,

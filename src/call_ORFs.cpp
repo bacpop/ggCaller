@@ -772,7 +772,7 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
 }
 
 ORFVector call_ORFs(const int colour_ID,
-                    const std::vector<PathVector>& all_paths,
+                    std::vector<PathVector>& all_paths,
                     const ColoredCDBG<MyUnitigMap>& ccdbg,
                     const std::vector<Kmer>& head_kmer_arr,
                     const std::vector<std::string>& stop_codons_for,
@@ -793,13 +793,15 @@ ORFVector call_ORFs(const int colour_ID,
     std::unordered_set<size_t> hashes_to_remove;
 
     // iterate over all_paths
-    for (const auto& path_vector : all_paths)
+    for (int i = 0; i < all_paths.size(); i++)
     {
-        for (const auto& path : path_vector)
+        for (const auto& path : all_paths[i])
         {
             // generate all ORFs within the path for start and stop codon pairs
             generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, path, overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
         }
+        // clear path and reallocate
+        PathVector().swap(all_paths[i]);
     }
 
     // remove hashes to remove from ORF_hash
