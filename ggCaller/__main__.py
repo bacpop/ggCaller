@@ -3,7 +3,6 @@ import argparse
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 import shutil
-# from memory_profiler import profile
 from balrog.__main__ import *
 from ggCaller.shared_memory import *
 from Bio import Seq
@@ -12,6 +11,7 @@ from panaroo_runner.__main__ import run_panaroo
 from panaroo_runner.generate_output import print_ORF_calls
 from panaroo_runner.annotate import check_diamond_install, check_HMMER_install, generate_HMMER_index, \
     generate_diamond_index
+from collections import defaultdict
 import ast
 import tempfile
 import json
@@ -50,15 +50,25 @@ def get_options():
                     default=31,
                     help='K-mer size used in Bifrost build (bp). '
                          '[Default = 31] ')
-    IO.add_argument('--threads',
-                    type=int,
-                    default=1,
-                    help='Number of threads to use. '
-                         '[Default = 1] ')
+    IO.add_argument('--save',
+                    action="store_true",
+                    default=False,
+                    help='Save graph objects for sequence querying. '
+                         '[Default = False] ')
+    IO.add_argument('--data',
+                    default=None,
+                    help='Directory containing data from previous ggCaller run generated via "--save" ')
+    IO.add_argument(
+        "--all-seq-in-graph",
+        dest="all_seq_in_graph",
+        help=("Retains all DNA sequence for each gene cluster in the Panaroo graph " +
+              "output. Off by default as it uses a large amount of space."),
+        action='store_true',
+        default=False)
     IO.add_argument('--out',
                     default='ggCaller_output',
                     help='Output directory ')
-    Settings = parser.add_argument_group('Cut-off settings')
+    Settings = parser.add_argument_group('ggCaller traversal and gene-calling cut-off settings')
     Settings.add_argument('--max-path-length',
                           type=int,
                           default=10000,
@@ -89,29 +99,11 @@ def get_options():
                           default=10000,
                           help='Maximum distance for graph traversal during ORF connection (bp). '
                                '[Default = 10000] ')
-    Settings.add_argument('--identity-cutoff',
-                          type=float,
-                          default=0.98,
-                          help='Minimum identity at amino acid level between two ORFs for clustering. '
-                               '[Default = 0.98] ')
-    Settings.add_argument('--len-diff-cutoff',
-                          type=float,
-                          default=0.98,
-                          help='Minimum ratio of length between two ORFs for clustering.  '
-                               '[Default = 0.98] ')
     Settings.add_argument('--query-id',
                           type=float,
                           default=0.8,
                           help='Ratio of query-kmers to required to match in graph. '
                                '[Default = 0.8] ')
-    Settings.add_argument('--save',
-                          action="store_true",
-                          default=False,
-                          help='Save graph objects for sequence querying. '
-                               '[Default = False] ')
-    Settings.add_argument('--data',
-                          default=None,
-                          help='Directory containing data from previous ggCaller run generated via "--save" ')
     Algorithm = parser.add_argument_group('Settings to avoid/include algorithms')
     Algorithm.add_argument('--no-filter',
                            action="store_true",
@@ -144,8 +136,28 @@ def get_options():
                            default=True,
                            help='Do not refind uncalled genes '
                                 '[Default = False] ')
-    Panaroo_mode_opts = parser.add_argument_group('Mode')
-
+    Clustering = parser.add_argument_group('Gene clustering options.')
+    Clustering.add_argument('--identity-cutoff',
+                            type=float,
+                            default=0.98,
+                            help='Minimum identity at amino acid level between two ORFs for clustering. '
+                                 '[Default = 0.98] ')
+    Clustering.add_argument('--len-diff-cutoff',
+                            type=float,
+                            default=0.98,
+                            help='Minimum ratio of length between two ORFs for clustering.  '
+                                 '[Default = 0.98] ')
+    Clustering.add_argument(
+        "--family-threshold",
+        dest="family_threshold",
+        help="protein family sequence identity threshold (default=0.7)",
+        type=float)
+    Clustering.add_argument("--merge-paralogs",
+                            dest="merge_paralogs",
+                            help="don't split paralogs",
+                            action='store_true',
+                            default=False)
+    Panaroo_mode_opts = parser.add_argument_group('Panaroo run mode options')
     Panaroo_mode_opts.add_argument(
         "--clean-mode",
         dest="mode",
@@ -172,56 +184,37 @@ def get_options():
         choices=['strict', 'moderate', 'sensitive'],
         required=False)
 
-    Panaroo_mode_opts.add_argument(
-        "--remove-invalid-genes",
-        dest="filter_invalid",
-        action='store_true',
-        default=False,
-        help=(
-                "removes annotations that do not conform to the expected Prokka" +
-                " format such as those including premature stop codons."))
+    Panaroo_annotation = parser.add_argument_group('Panaroo gene cluster annotation options')
+    Panaroo_annotation.add_argument("--annotation",
+                                    dest="annotate",
+                                    help="Annotate genes using diamond (fast) or diamond and HMMscan (sensitive)."
+                                         "If not specified, no annotation done",
+                                    choices=["fast", "sensitive"],
+                                    default=None)
+    Panaroo_annotation.add_argument("--diamonddb",
+                                    dest="annotation_db",
+                                    help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
+                                         "specify path to fasta file for custom database generation",
+                                    default="Bacteria")
+    Panaroo_annotation.add_argument("--hmmdb",
+                                    dest="hmm_db",
+                                    help="HMMER hmm profile file. Default is Uniprot HAMAP. Can also"
+                                         "specify path to pre-built hmm profile file generated using hmmbuild",
+                                    type=str,
+                                    default="default")
+    Panaroo_annotation.add_argument("--evalue",
+                                    dest="evalue",
+                                    help="Maximum e-value to return for DIAMOND and HMMER searches during annotation",
+                                    default=0.001,
+                                    type=float)
+    Panaroo_annotation.add_argument("--truncation-threshold",
+                                    dest="truncation_threshold",
+                                    help="Sequences in a gene family cluster below this proportion of the length of the"
+                                         "centroid will be annotated as 'potential pseudogene'",
+                                    default=0.8,
+                                    type=float)
 
-    Panaroo_matching = parser.add_argument_group('Matching')
-    Panaroo_matching.add_argument(
-        "--family-threshold",
-        dest="family_threshold",
-        help="protein family sequence identity threshold (default=0.7)",
-        type=float)
-    Panaroo_matching.add_argument("--merge-paralogs",
-                                  dest="merge_paralogs",
-                                  help="don't split paralogs",
-                                  action='store_true',
-                                  default=False)
-    Panaroo_matching.add_argument("--annotation",
-                                  dest="annotate",
-                                  help="Annotate genes using diamond (fast) or diamond and HMMscan (sensitive)."
-                                       "If not specified, no annotation done",
-                                  choices=["fast", "sensitive"],
-                                  default=None)
-    Panaroo_matching.add_argument("--diamonddb",
-                                  dest="annotation_db",
-                                  help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
-                                       "specify path to fasta file for custom database generation",
-                                  default="Bacteria")
-    Panaroo_matching.add_argument("--hmmdb",
-                                  dest="hmm_db",
-                                  help="HMMER hmm profile file. Default is Uniprot HAMAP. Can also"
-                                       "specify path to pre-built hmm profile file generated using hmmbuild",
-                                  type=str,
-                                  default="default")
-    Panaroo_matching.add_argument("--evalue",
-                                  dest="evalue",
-                                  help="Maximum e-value to return for DIAMOND and HMMER searches during annotation",
-                                  default=0.001,
-                                  type=float)
-    Panaroo_matching.add_argument("--truncation-threshold",
-                                  dest="truncation_threshold",
-                                  help="Sequences in a gene family cluster below this proportion of the length of the"
-                                       "centroid will be annotated as 'potential pseudogene'",
-                                  default=0.8,
-                                  type=float)
-
-    Panaroo_refind = parser.add_argument_group('Refind')
+    Panaroo_refind = parser.add_argument_group('Panaroo gene-refinding options')
     Panaroo_refind.add_argument(
         "--search-radius",
         dest="search_radius",
@@ -236,9 +229,14 @@ def get_options():
               "be found in order to consider it a match"),
         default=0.2,
         type=float)
-
-    Panaroo_graph = parser.add_argument_group('Graph correction')
-
+    Panaroo_graph = parser.add_argument_group('Panaroo graph correction stringency options')
+    Panaroo_graph.add_argument(
+        "--remove-invalid-genes",
+        dest="filter_invalid",
+        action='store_true',
+        default=False,
+        help=("removes annotations that do not conform to the expected Prokka" +
+              " format such as those including premature stop codons."))
     Panaroo_graph.add_argument(
         "--min-trailing-support",
         dest="min_trailing_support",
@@ -254,9 +252,8 @@ def get_options():
     Panaroo_graph.add_argument(
         "--edge-support-threshold",
         dest="edge_support_threshold",
-        help=(
-                "minimum support required to keep an edge that has been flagged" +
-                " as a possible mis-assembly"),
+        help=("minimum support required to keep an edge that has been flagged" +
+              " as a possible mis-assembly"),
         type=float)
     Panaroo_graph.add_argument(
         "--length-outlier-support-proportion",
@@ -293,20 +290,13 @@ def get_options():
               " in the presence/absence sv file"),
         type=int)
     Panaroo_graph.add_argument(
-        "--all-seq-in-graph",
-        dest="all_seq_in_graph",
-        help=("Retains all DNA sequence for each gene cluster in the graph " +
-              "output. Off by default as it uses a large amount of space."),
-        action='store_true',
-        default=False)
-    Panaroo_graph.add_argument(
         "--no-clean-edges",
         dest="clean_edges",
         help=("Turn off edge filtering in the final output graph."),
         action='store_false',
         default=True)
 
-    Panaroo_aln = parser.add_argument_group('Gene alignment')
+    Panaroo_aln = parser.add_argument_group('Gene alignment options')
     Panaroo_aln.add_argument(
         "--alignment",
         dest="aln",
@@ -333,23 +323,24 @@ def get_options():
                              help="Do not call variants using SNP-sites after alignment.",
                              action='store_false',
                              default=True)
-    Panaroo_matching.add_argument("--ignore-pseduogenes",
-                                  dest="ignore_pseduogenes",
-                                  help="Ignore ORFs annotated as 'potential pseudogenes' in alignment",
-                                  action='store_true',
-                                  default=False)
+    Panaroo_aln.add_argument("--ignore-pseduogenes",
+                             dest="ignore_pseduogenes",
+                             help="Ignore ORFs annotated as 'potential pseudogenes' in alignment",
+                             action='store_true',
+                             default=False)
 
     # Other options
-    parser.add_argument("--codon-table",
-                        dest="table",
-                        help="the codon table to use for translation (default=11)",
-                        type=int,
-                        default=11)
-    parser.add_argument("--quiet",
-                        dest="verbose",
-                        help="suppress additional output",
-                        action='store_false',
-                        default=True)
+    Misc = parser.add_argument_group('Misc. options')
+    Misc.add_argument("--quiet",
+                      dest="verbose",
+                      help="suppress additional output",
+                      action='store_false',
+                      default=True)
+    Misc.add_argument('--threads',
+                      type=int,
+                      default=1,
+                      help='Number of threads to use. '
+                           '[Default = 1] ')
 
     return parser.parse_args()
 
