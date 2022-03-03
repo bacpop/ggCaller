@@ -56,7 +56,7 @@ def find_missing(G,
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = ((curr_ORF_info[0], curr_ORF_info[1]), [])
-                    search_dict[member]["searches"][node][1].append(ORF_info[:7])
+                    search_dict[member]["searches"][node][1].append(ORF_info[:5])
 
                     n_searches += 1
 

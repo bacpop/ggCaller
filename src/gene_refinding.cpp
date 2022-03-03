@@ -293,16 +293,14 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
     bool path_rev_comp = true;
 
     // generate a string of the ORF to check against FM-index
-    std::string ORF_seq = generate_sequence_nm(std::get<3>(ORF_info), std::get<4>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
-    ORF_seq += generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
+    std::string ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), kmer - 1, ccdbg, head_kmer_arr);
 
     const auto original_ORF = ORF_seq;
 
     // traverse start node in reverse direction
     {
         // get node_id to traverse from, parse unitig_id from TIS if present.
-        const bool TIS_present = (!std::get<3>(ORF_info).empty()) ? true : false;
-        const int head_id = ((TIS_present) ? std::get<3>(ORF_info).at(0) : std::get<0>(ORF_info).at(0)) * -1;
+        const int head_id = std::get<0>(ORF_info).at(0) * -1;
 
         // get reference to unitig_dict object
         // get unitig data
@@ -318,31 +316,17 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         size_t path_length;
         size_t ORF_end;
 
-        if (TIS_present)
-        {
-            path_length = std::get<4>(ORF_info).at(0).first + 16;
+        path_length = std::get<1>(ORF_info).at(0).first;
 
-            // reverse the ORF end
-            // get absolute last node index (same as unitig length minus 1 as zero indexed)
-            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, std::get<3>(ORF_info).at(0));
-            const auto& end_um = end_um_pair.first;
-            const size_t node_end = end_um.size - 1;
+        // reverse the ORF end
+        // get absolute last node index (same as unitig length minus 1 as zero indexed)
+        auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, std::get<0>(ORF_info).at(0));
+        const auto& end_um = end_um_pair.first;
+        const size_t node_end = end_um.size - 1;
 
-            // get difference from original start to absolute last node index
-            ORF_end = node_end - std::get<4>(ORF_info).at(0).first;
-        } else
-        {
-            path_length = std::get<1>(ORF_info).at(0).first;
+        // get difference from original start to absolute last node index
+        ORF_end = node_end - std::get<1>(ORF_info).at(0).first;
 
-            // reverse the ORF end
-            // get absolute last node index (same as unitig length minus 1 as zero indexed)
-            auto end_um_pair = get_um_data(ccdbg, head_kmer_arr, std::get<0>(ORF_info).at(0));
-            const auto& end_um = end_um_pair.first;
-            const size_t node_end = end_um.size - 1;
-
-            // get difference from original start to absolute last node index
-            ORF_end = node_end - std::get<1>(ORF_info).at(0).first;
-        }
 
         // check if path_length already exceeds radius
         PathVector unitig_complete_paths;
@@ -392,29 +376,15 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
         ORF_seq = reverse_complement(upstream_seq);
     }
 
-    // scope for TIS + ORF node_list
+    // add ORF nodes to the upstream path
     {
-        // merge TIS and ORF node lists
-        auto temp_nodelist = std::get<3>(ORF_info);
-        if (std::get<0>(ORF_info).size() > 1)
-        {
-            int i = 0;
-            for (; i < std::get<0>(ORF_info).size(); i++)
-            {
-                if (std::find(temp_nodelist.begin(), temp_nodelist.end(), std::get<0>(ORF_info).at(i)) == temp_nodelist.end())
-                {
-                    break;
-                }
-            }
-            temp_nodelist.insert(temp_nodelist.end(), std::get<0>(ORF_info).begin() + i, std::get<0>(ORF_info).end());
-        }
         if (full_nodelist.empty())
         {
-            full_nodelist = temp_nodelist;
+            full_nodelist = std::get<0>(ORF_info);
         }
-        else if (temp_nodelist.size() > 1)
+        else
         {
-            full_nodelist.insert(full_nodelist.end(), temp_nodelist.begin() + 1, temp_nodelist.end());
+            full_nodelist.insert(full_nodelist.end(), std::get<0>(ORF_info).begin() + 1, std::get<0>(ORF_info).end());
         }
     }
 

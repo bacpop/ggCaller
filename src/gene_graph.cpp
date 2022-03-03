@@ -83,10 +83,10 @@ std::vector<std::unordered_set<size_t>> get_components(const GeneGraph& g)
 std::vector<size_t> getPath(
         const GeneGraph& graph,
         const std::vector<VertexDescriptor>& pMap,
-        const std::vector<double>& distances,
+        const std::vector<float>& distances,
         const VertexDescriptor& source,
         const VertexDescriptor& destination,
-        double& path_score,
+        float& path_score,
         const std::vector<size_t>& vertex_mapping)
 {
     std::vector<VertexDescriptor> path;
@@ -118,7 +118,7 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
                                        const std::vector<size_t>& vertex_mapping,
                                        const std::unordered_set<size_t>& vertex_list,
                                        const GeneGraph& g,
-                                       const double& minimum_path_score,
+                                       const float& minimum_path_score,
                                        const size_t numVertices,
                                        T weight_pmap)
 {
@@ -149,12 +149,12 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
 
     // set values of paths and scores
     std::vector<size_t> gene_path;
-    double high_score = 0;
+    float high_score = 0;
 
     for (const auto& start : start_vertices)
     {
         // get start score
-        const double start_score = -std::get<6>(ORF_vector.at(vertex_mapping.at(start)));
+        const float start_score = -std::get<4>(ORF_vector.at(vertex_mapping.at(start)));
 
         // check if start is also end vertex
         if (std::find(end_vertices.begin(), end_vertices.end(), start) != end_vertices.end())
@@ -166,7 +166,7 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
             }
         } else
         {
-            std::vector<double> distances(numVertices);
+            std::vector<float> distances(numVertices);
             std::vector<VertexDescriptor> pMap(numVertices);
 
             // call to the algorithm, searching all paths from start
@@ -179,7 +179,7 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
             // determine shortest path to each end
             for (const auto& end : end_vertices)
             {
-                double path_score = start_score;
+                float path_score = start_score;
 
                 auto path = getPath(g, pMap, distances, start, end, path_score, vertex_mapping);
 
@@ -204,7 +204,7 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
 
 std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
                                                    const ORFOverlapMap& overlap_map,
-                                                   const double& minimum_path_score)
+                                                   const float& minimum_path_score)
 {
     std::vector<std::vector<size_t>> gene_paths;
 
@@ -269,7 +269,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
         const auto& source = vertex_mapping.at(boost::source(*eit, tc));
         const auto& target = vertex_mapping.at(boost::target(*eit, tc));
 
-        double edge_score = std::get<6>(ORF_vector.at(target));
+        float edge_score = std::get<4>(ORF_vector.at(target));
 
         if (overlap_map.find(target) == overlap_map.end())
         {
@@ -286,7 +286,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
         const auto& overlap_type = overlap_pair.first;
         const auto& abs_overlap = overlap_pair.second;
 
-        double penalty = 0;
+        float penalty = 0;
         if (overlap_type == 'i')
         {
             incompatible_edges.push_back(*eit);

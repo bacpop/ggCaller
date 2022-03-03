@@ -76,13 +76,13 @@ typedef std::vector<std::vector<size_t>> NodeColourVector;
 // vector of contig mappings for a node in the graph
 typedef std::vector<std::pair<size_t, std::tuple<size_t, size_t, size_t, size_t, bool>>> NodeContigMapping;
 //a pair of start and end coordinates for an ORF across a node
-typedef std::pair<size_t, size_t> indexPair;
+typedef std::pair<unsigned short int, unsigned short int> indexPair;
 // pair that describes the contig locations of an ORF, 1-indexed for contig id (first) and locations within contig (second)
 typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
-typedef std::tuple<std::vector<int>, std::vector<indexPair>> ORFCoords;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, TIS coordinate information, relative strand and score
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, std::vector<int>, std::vector<indexPair>, bool, double> ORFNodeVector;
+typedef std::pair<std::vector<int>, std::vector<indexPair>> ORFCoords;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, bool, float> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
 typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeMap to its colour

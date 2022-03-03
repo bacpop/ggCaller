@@ -425,7 +425,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // iterate over nodes traversed by ORF and its TIS
         const auto& ORF_info = ORF_vector.at(ORF_index);
         std::unordered_set<int> ORF_nodes;
-        std::copy(std::get<3>(ORF_info).begin(), std::get<3>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
+//        std::copy(std::get<3>(ORF_info).begin(), std::get<3>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
         std::copy(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
         for (const auto& node_traversed : ORF_nodes)
         {
@@ -470,25 +470,28 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             const auto& ORF1_info = ORF_vector.at(ORF1_ID);
             const auto& ORF1_node_ids = std::get<0>(ORF1_info);
             const auto& ORF1_node_coords = std::get<1>(ORF1_info);
-            const auto& ORF1_TIS_ids = std::get<3>(ORF1_info);
-            const auto& ORF1_TIS_coords = std::get<4>(ORF1_info);
-            const auto& ORF1_strand = std::get<5>(ORF1_info);
+//            const auto& ORF1_TIS_ids = std::get<3>(ORF1_info);
+//            const auto& ORF1_TIS_coords = std::get<4>(ORF1_info);
+            const auto& ORF1_strand = std::get<3>(ORF1_info);
             const auto& ORF1_len = std::get<2>(ORF1_info);
-            const bool ORF1_TIS = (!ORF1_TIS_ids.empty()) ? true : false;
+//            const bool ORF1_TIS = (!ORF1_TIS_ids.empty()) ? true : false;
 
             // unpack ORF2_info
             const auto& ORF2_info = ORF_vector.at(ORF2_ID);
             const auto& ORF2_node_ids = std::get<0>(ORF2_info);
             const auto& ORF2_node_coords = std::get<1>(ORF2_info);
-            const auto& ORF2_TIS_ids = std::get<3>(ORF2_info);
-            const auto& ORF2_TIS_coords = std::get<4>(ORF2_info);
-            const auto& ORF2_strand = std::get<5>(ORF2_info);
+//            const auto& ORF2_TIS_ids = std::get<3>(ORF2_info);
+//            const auto& ORF2_TIS_coords = std::get<4>(ORF2_info);
+            const auto& ORF2_strand = std::get<3>(ORF2_info);
             const auto& ORF2_len = std::get<2>(ORF2_info);
-            const bool ORF2_TIS = (!ORF2_TIS_ids.empty()) ? true : false;
+//            const bool ORF2_TIS = (!ORF2_TIS_ids.empty()) ? true : false;
 
             // merge ORF and TIS nodes for ORF1 and ORF2
-            auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
-            auto ORF2_nodes = std::move(combine_nodes(ORF2_node_ids, ORF2_node_coords, ORF2_TIS_ids, ORF2_TIS_coords));
+//            auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
+//            auto ORF2_nodes = std::move(combine_nodes(ORF2_node_ids, ORF2_node_coords, ORF2_TIS_ids, ORF2_TIS_coords));
+
+            ORFCoords ORF1_nodes = {ORF1_node_ids, ORF1_node_coords};
+            ORFCoords ORF2_nodes = {ORF2_node_ids, ORF2_node_coords};
 
             // initialise overlap type
             // n = no overlap
@@ -672,27 +675,27 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         }
                     }
 
-                    // check if TIS present for specific overlaps and negate
-                    if (ORF2_TIS && (overlap_start == 25 || overlap_end == 25))
-                    {
-                        if (abs_overlap < 16)
-                        {
-                            abs_overlap = 0;
-                        } else
-                        {
-                            abs_overlap -= 16;
-                        }
-                    }
-                    if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
-                    {
-                        if (abs_overlap < 16)
-                        {
-                            abs_overlap = 0;
-                        } else
-                        {
-                            abs_overlap -= 16;
-                        }
-                    }
+//                    // check if TIS present for specific overlaps and negate
+//                    if (ORF2_TIS && (overlap_start == 25 || overlap_end == 25))
+//                    {
+//                        if (abs_overlap < 16)
+//                        {
+//                            abs_overlap = 0;
+//                        } else
+//                        {
+//                            abs_overlap -= 16;
+//                        }
+//                    }
+//                    if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
+//                    {
+//                        if (abs_overlap < 16)
+//                        {
+//                            abs_overlap = 0;
+//                        } else
+//                        {
+//                            abs_overlap -= 16;
+//                        }
+//                    }
 
                     // convert overlap_start and overlap_end to string to enable creation of ID for switch
                     // check if any overlap detected.

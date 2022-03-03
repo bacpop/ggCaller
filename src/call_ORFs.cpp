@@ -281,9 +281,10 @@ void generate_ORFs(const int& colour_ID,
                         }
 
                         // get gene score
-                        double score =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model,all_ORF_scores, all_TIS_scores);
+                        double score =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
 
-                        ORF_seq += TIS_seq;
+                        // create hash including TIS sequence
+                        ORF_seq = TIS_seq + ORF_seq;
 
                         size_t ORF_hash = hasher{}(ORF_seq);
 
@@ -311,26 +312,17 @@ void generate_ORFs(const int& colour_ID,
                     if (best_codon.second)
                     {
                         // if TIS is present, add the non-TIS hash to to_remove
-                        ORFCoords TIS_coords;
                         if (best_TIS_present)
                         {
                             size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
-                            std::pair<std::size_t, std::size_t> TIS_pair(best_codon.first - 16, best_codon.first - 1);
-                            TIS_coords = std::move(calculate_coords(TIS_pair, nodelist, node_ranges, overlap));
                         }
 
                         // If ORF is real, continue and work out coordinates for ORF in node space
-                        ORFCoords ORF_coords = std::move(calculate_coords(best_codon, nodelist, node_ranges, overlap));
-
-                        // unpack tuples
-                        auto& ORF_node_id = std::get<0>(ORF_coords);
-                        auto& ORF_node_coords = std::get<1>(ORF_coords);
-                        auto& TIS_node_id = std::get<0>(TIS_coords);
-                        auto& TIS_node_coords = std::get<1>(TIS_coords);
+                        ORFCoords ORF_coords = std::move(calculate_coords(best_codon, nodelist, node_ranges));
 
                         // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, best_ORF_len, TIS_node_id, TIS_node_coords, !present.second, best_score);
+                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, best_ORF_len, !present.second, (float)best_score);
 
                         // think about if there is no TIS, then can ignore ORF?
                         update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
@@ -343,49 +335,27 @@ void generate_ORFs(const int& colour_ID,
                         const auto& ORF_len = ORF_entry.first;
                         const auto& codon_pair = ORF_entry.second;
 
-                        // initialise TIS_present
-                        bool TIS_present = true;
-
                         // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
+                        std::string TIS_seq;
                         if (codon_pair.first < 16)
                         {
-                            TIS_present = false;
+                            TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
+                            hashes_to_remove.insert(hash_to_remove);
                         }
 
                         // generate hash for ORF sequence and ORF sequence
                         std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
-                        std::string TIS_seq;
 
-                        if (TIS_present)
-                        {
-                            TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
-                        }
-
-                        ORF_seq += TIS_seq;
+                        ORF_seq = TIS_seq + ORF_seq;
 
                         size_t ORF_hash = hasher{}(ORF_seq);
 
-                        // if TIS is present, add the non-TIS hash to to_remove
-                        ORFCoords TIS_coords;
-                        if (TIS_present)
-                        {
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
-                            hashes_to_remove.insert(hash_to_remove);
-                            std::pair<std::size_t, std::size_t> TIS_pair(codon_pair.first - 16, codon_pair.first - 1);
-                            TIS_coords = std::move(calculate_coords(TIS_pair, nodelist, node_ranges, overlap));
-                        }
-
                         // If ORF is real, continue and work out coordinates for ORF in node space
-                        ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges, overlap));
-
-                        // unpack tuples
-                        auto& ORF_node_id = std::get<0>(ORF_coords);
-                        auto& ORF_node_coords = std::get<1>(ORF_coords);
-                        auto& TIS_node_id = std::get<0>(TIS_coords);
-                        auto& TIS_node_coords = std::get<1>(TIS_coords);
+                        ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
                         // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_node_id, ORF_node_coords, ORF_len, TIS_node_id, TIS_node_coords, !present.second, 0);
+                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, ORF_len, !present.second, 0);
 
                         // think about if there is no TIS, then can ignore ORF?
                         update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
@@ -399,20 +369,16 @@ void generate_ORFs(const int& colour_ID,
 // calculate node coordinates for an ORF
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                             const std::vector<int>& nodelist,
-                            const std::vector<std::vector<size_t>>& node_ranges,
-                            const int overlap)
+                            const std::vector<std::vector<size_t>>& node_ranges)
 {
     // initialise items for a tuple containing a vector of each node name, corresponding vector of positions traversed in the node and node strand
     std::vector<int> ORF_node_id;
     std::vector<indexPair> ORF_node_coords;
 
-    // generate a unique string for the ORF for storage using nodes traversed (will match across matching ORFs)
-    std::string ORF_path_ID;
-
     for (size_t i = 0; i < nodelist.size(); i++)
     {
-        size_t traversed_node_start;
-        size_t traversed_node_end;
+        unsigned short int traversed_node_start;
+        unsigned short int traversed_node_end;
         bool start_assigned = false;
         bool end_assigned = false;
 
@@ -452,7 +418,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
         }
     }
 
-    const ORFCoords return_tuple = std::make_tuple(ORF_node_id, ORF_node_coords);
+    const ORFCoords return_tuple = std::make_pair(ORF_node_id, ORF_node_coords);
     return return_tuple;
 }
 
@@ -483,61 +449,51 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
             current_entry = std::move(ORF_node_vector);
         } else if (new_ORF_size == current_ORF_size)
         {
-            // if they are the same length, check the size of the TIS
-            size_t current_TIS_size = std::get<3>(current_entry).size();
-            size_t new_TIS_size = std::get<3>(ORF_node_vector).size();
+            // if ORFs are also the same length, check if first/last entries are identical across the two entries
+            // to deal with cases where a different node is traversed at beginning/end
+            // for first, check if TIS present, if so take that as first entry, if not take first ORF node
+            const auto& current_first = std::get<0>(current_entry).at(0);
+            const auto& new_first = std::get<0>(ORF_node_vector).at(0);
+            const auto& current_last = std::get<0>(current_entry).back();
+            const auto& new_last = std::get<0>(ORF_node_vector).back();
 
-            if (new_TIS_size > current_TIS_size)
+            // check if the nodes are identical, if so pass
+            if (current_first == new_first && current_last == new_last)
+            {
+                return;
+            }
+
+            // get a reference to the unitig map object
+            auto curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_first);
+            auto& curr_um = curr_um_pair.first;
+
+            auto new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_first);
+            auto& new_um = new_um_pair.first;
+
+            // get hashes of first nodes to ensure stable assignment across runs
+            const size_t current_first_hash = hasher{}(curr_um.getUnitigHead().toString());
+            const size_t new_first_hash = hasher{}(new_um.getUnitigHead().toString());
+
+            // compare first/last entries. Assign the new ORF entry to that with the highest ID
+            if (new_first_hash > current_first_hash)
             {
                 current_entry = std::move(ORF_node_vector);
-            } else if (new_TIS_size == current_TIS_size)
+            } else if (new_first_hash == current_first_hash)
             {
-                // if TIS are also the same length, check if first/last entries are identical across the two entries
-                // to deal with cases where a different node is traversed at beginning/end
-                // for first, check if TIS present, if so take that as first entry, if not take first ORF node
-                const auto& current_first = (current_TIS_size == 0) ? std::get<0>(current_entry).at(0) : std::get<3>(current_entry).at(0);
-                const auto& new_first = (new_TIS_size == 0) ? std::get<0>(ORF_node_vector).at(0) : std::get<3>(ORF_node_vector).at(0);
-                const auto& current_last = std::get<0>(current_entry).back();
-                const auto& new_last = std::get<0>(ORF_node_vector).back();
-
-                // check if the nodes are identical, if so pass
-                if (current_first == new_first && current_last == new_last)
-                {
-                    return;
-                }
-
                 // get a reference to the unitig map object
-                auto curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_first);
-                auto& curr_um = curr_um_pair.first;
+                curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_last);
+                curr_um = curr_um_pair.first;
 
-                auto new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_first);
-                auto& new_um = new_um_pair.first;
+                new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_last);
+                new_um = new_um_pair.first;
 
-                // get hashes of first nodes to ensure stable assignment across runs
-                const size_t current_first_hash = hasher{}(curr_um.getUnitigHead().toString());
-                const size_t new_first_hash = hasher{}(new_um.getUnitigHead().toString());
+                // if no clear winner, check last nodes
+                const size_t current_last_hash = hasher{}(curr_um.getUnitigHead().toString());
+                const size_t new_last_hash = hasher{}(new_um.getUnitigHead().toString());
 
-                // compare first/last entries. Assign the new ORF entry to that with the highest ID
-                if (new_first_hash > current_first_hash)
+                if (new_last_hash > current_last_hash)
                 {
                     current_entry = std::move(ORF_node_vector);
-                } else if (new_first_hash == current_first_hash)
-                {
-                    // get a reference to the unitig map object
-                    curr_um_pair = get_um_data(ccdbg, head_kmer_arr, current_last);
-                    curr_um = curr_um_pair.first;
-
-                    new_um_pair = get_um_data(ccdbg, head_kmer_arr, new_last);
-                    new_um = new_um_pair.first;
-
-                    // if no clear winner, check last nodes
-                    const size_t current_last_hash = hasher{}(curr_um.getUnitigHead().toString());
-                    const size_t new_last_hash = hasher{}(new_um.getUnitigHead().toString());
-
-                    if (new_last_hash > current_last_hash)
-                    {
-                        current_entry = std::move(ORF_node_vector);
-                    }
                 }
             }
         }
@@ -581,29 +537,11 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                     num_pos++;
                 }
             }
-            // ...and over TIS nodes if present
-            for (const auto& node_id : std::get<3>(ORF.second))
-            {
-                const bool strand = (node_id > 0) ? true : false;
-
-                // get a reference to the unitig map object
-                auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-                auto& um = um_pair.first;
-
-                const size_t node_hash = hasher{}(um.getUnitigHead().toString());
-                if (strand != pos_strand_map.at(node_hash))
-                {
-                    num_neg++;
-                } else
-                {
-                    num_pos++;
-                }
-            }
 
             // if the number of negative strands are greater than positive, assign overall strand as negative
             if (num_neg > num_pos)
             {
-                std::get<5>(ORF.second) = false;
+                std::get<3>(ORF.second) = false;
             }
         }
 
@@ -633,17 +571,6 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // create new map to store node info
         NodeStrandMap new_map;
 
-        // iterate over TIS nodes, getting hash for head_kmer for stable node stranding
-        for (const auto& node_id : std::get<3>(ORF.second))
-        {
-            // get a reference to the unitig map object
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-            auto& um = um_pair.first;
-
-            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
-            // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
-            new_map[node_hash] = (node_id > 0) ? true : false;
-        }
         // repeat for ORF nodes
         for (const auto& node_id : std::get<0>(ORF.second))
         {

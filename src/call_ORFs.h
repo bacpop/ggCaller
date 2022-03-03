@@ -10,7 +10,6 @@
 // call_ORFs
 void generate_ORFs(const int& colour_ID,
                    ORFNodeMap& ORF_node_map,
-                   std::unordered_set<size_t>& hashes_to_remove,
                    const ColoredCDBG<MyUnitigMap>& ccdbg,
                    const std::vector<Kmer>& head_kmer_arr,
                    const std::vector<std::string>& stop_codons,
@@ -29,8 +28,7 @@ void generate_ORFs(const int& colour_ID,
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,
-                           const std::vector<std::vector<size_t>>& node_ranges,
-                           const int overlap);
+                           const std::vector<std::vector<size_t>>& node_ranges);
 
 ORFVector call_ORFs(const int colour_ID,
                     std::vector<PathVector>& all_paths,
