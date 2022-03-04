@@ -1,0 +1,5 @@
+balrog_models.tar.gz filter=lfs diff=lfs merge=lfs -text
+*_models.tar.gz filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
+*_test.fasta filter=lfs diff=lfs merge=lfs -text
+*.hmm filter=lfs diff=lfs merge=lfs -text
