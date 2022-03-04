@@ -5,9 +5,6 @@ import tarfile
 module_dir = os.path.dirname(os.path.realpath(__file__))
 model_dir = os.path.join(module_dir, "balrog_models")
 
-ORF_batch_size = 200
-TIS_batch_size = 1000
-
 def load_gene_models():
     # check if directory exists. If not, unzip file
     if not os.path.exists(model_dir):

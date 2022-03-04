@@ -490,8 +490,8 @@ def main():
     gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
-                                 TIS_model_file, options.min_orf_score, options.min_path_score, ORF_batch_size,
-                                 TIS_batch_size, options.max_orf_orf_distance, not options.no_clustering,
+                                 TIS_model_file, options.min_orf_score, options.min_path_score,
+                                 options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads)
 
     high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict, cluster_id_list = gene_tuple

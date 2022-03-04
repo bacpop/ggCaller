@@ -214,8 +214,6 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                                                                                           const std::string& TIS_model_file,
                                                                                           const float& minimum_ORF_score,
                                                                                           const float& minimum_path_score,
-                                                                                          const int ORF_batch_size,
-                                                                                          const int TIS_batch_size,
                                                                                           const size_t max_ORF_path_length,
                                                                                           const bool clustering,
                                                                                           const double& id_cutoff,
@@ -265,8 +263,8 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     bar.set_closing_bracket_char("|");
 
     // initialise maps to store ORF scores across threads
-    tbb::concurrent_unordered_map<size_t, double> all_ORF_scores;
-    tbb::concurrent_unordered_map<size_t, double> all_TIS_scores;
+    tbb::concurrent_unordered_map<size_t, float> all_ORF_scores;
+    tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
     #pragma omp parallel for schedule(dynamic)
     for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
@@ -308,17 +306,15 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                     }
                 }
 
-                // recursive traversal
-                std::vector<PathVector> all_paths = traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length, overlap, is_ref, _RefSet, fm_idx);
-
-                // generate ORF calls
-                // if error with loading scoring model, set as no_filter
+                // recursive traversal and ORF calling
                 if (error)
                 {
                     no_filter = true;
                 }
+                ORF_vector = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
+                        overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
+                        ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores));
 
-                ORF_vector = call_ORFs(colour_ID, all_paths, _ccdbg, _KmerArray, stop_codons_for, start_codons_for, overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
             }
             // if no filtering required, do not calculate overlaps, score genes or get gene_paths
             if (!no_filter)

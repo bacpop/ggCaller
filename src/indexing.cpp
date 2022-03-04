@@ -410,7 +410,6 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
     // initialise string of nodes for FM-index generation
     std::string genome_path;
-    NodeContigMapping node_contig_mappings;
 
     // open the file handler
     gzFile fp = gzopen(fasta_file.c_str(), "r");
@@ -450,7 +449,6 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
                 // if found, add to FM-index string
                 if (!um.isEmpty) {
-                    std::string head_kmer = um.getUnitigHead().toString();
                     int strand = um.strand ? 1 : -1;
 
                     DataAccessor<MyUnitigMap>* da = um.getData();

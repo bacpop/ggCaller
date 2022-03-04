@@ -68,8 +68,8 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check against fm-idx, pass if not present
-            if (is_ref)
+            // check against fm-idx for every other node, pass if not present
+            if (is_ref && node_vector.size() % 2 == 1)
             {
                 std::vector<int> check_vector = node_vector;
                 check_vector.push_back(neighbour_id);
@@ -186,19 +186,29 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
     return path_list;
 }
 
-std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                       const std::vector<Kmer>& head_kmer_arr,
-                                       const size_t colour_ID,
-                                       const std::vector<size_t>& node_ids,
-                                       const bool repeat,
-                                       const size_t max_path_length,
-                                       const size_t overlap,
-                                       const bool is_ref,
-                                       const boost::dynamic_bitset<>& ref_set,
-                                       const fm_index_coll& fm_idx)
+ORFVector traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                         const std::vector<Kmer>& head_kmer_arr,
+                         const size_t colour_ID,
+                         const std::vector<size_t>& node_ids,
+                         const bool repeat,
+                         const size_t max_path_length,
+                         const size_t overlap,
+                         const bool is_ref,
+                         const boost::dynamic_bitset<>& ref_set,
+                         const fm_index_coll& fm_idx,
+                         const std::vector<std::string>& stop_codons_for,
+                         const std::vector<std::string>& start_codons_for,
+                         const size_t min_ORF_length,
+                         torch::jit::script::Module& ORF_model,
+                         torch::jit::script::Module& TIS_model,
+                         const double& minimum_ORF_score,
+                         const bool no_filter,
+                         tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
+                         tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
-    // initialise all_paths
-    std::vector<PathVector> all_paths;
+    //initialise ORF_nodes_paths to add ORF sequences to
+    ORFNodeMap ORF_node_map;
+    std::unordered_set<size_t> hashes_to_remove;
 
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
@@ -239,9 +249,15 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // recur paths
         PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set, fm_idx);
 
+        // iterate over paths, calling ORFs
         if (!unitig_complete_paths.empty())
         {
-            all_paths.push_back(std::move(unitig_complete_paths));
+            // iterate over all_paths
+            for (int i = 0; i < unitig_complete_paths.size(); i++)
+            {
+                // generate all ORFs within the path for start and stop codon pairs
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
+            }
         }
     }
 
@@ -284,11 +300,37 @@ std::vector<PathVector> traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         // recur paths
         PathVector unitig_complete_paths = iter_nodes_binary(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, overlap, repeat, is_ref, ref_set, fm_idx);
 
+        // iterate over paths, calling ORFs
         if (!unitig_complete_paths.empty())
         {
-            all_paths.push_back(std::move(unitig_complete_paths));
+            // iterate over all_paths
+            for (int i = 0; i < unitig_complete_paths.size(); i++)
+            {
+                // generate all ORFs within the path for start and stop codon pairs
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
+            }
         }
     }
 
-    return all_paths;
+    // remove hashes to remove from ORF_hash
+    for (const auto& hash : hashes_to_remove)
+    {
+        auto it = ORF_node_map.find(hash);
+        if (it != ORF_node_map.end())
+        {
+            ORF_node_map.erase(it);
+        }
+    }
+
+    // generate pos_strand_map to determine relative strands of each node for each colour if not given by alignment of contigs
+    NodeStrandMap pos_strand_map;
+    if (!is_ref)
+    {
+        pos_strand_map = std::move(calculate_pos_strand(ccdbg, head_kmer_arr, ORF_node_map));
+    }
+
+    // group colours of ORFs together
+    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
+
+    return ORF_vector;
 }

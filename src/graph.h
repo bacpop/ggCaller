@@ -61,8 +61,6 @@ class Graph {
                                                                                        const std::string& TIS_model_file,
                                                                                        const float& minimum_ORF_score,
                                                                                        const float& minimum_path_score,
-                                                                                       const int ORF_batch_size,
-                                                                                       const int TIS_batch_size,
                                                                                        const size_t max_ORF_path_length,
                                                                                        const bool clustering,
                                                                                        const double& id_cutoff,

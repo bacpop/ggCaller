@@ -35,20 +35,20 @@ torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
     return torch::stack(padded_stack);
 }
 
-double run_BALROG (const std::string& ORF_DNA,
+float run_BALROG (const std::string& ORF_DNA,
                    const std::string& upstream,
                    const size_t& ORF_len,
                    torch::jit::script::Module& ORF_model,
                    torch::jit::script::Module& TIS_model,
-                   tbb::concurrent_unordered_map<size_t, double>& all_ORF_scores,
-                   tbb::concurrent_unordered_map<size_t, double>& all_TIS_scores)
+                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
+                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
     // pull info from sequences
     const auto downstream = ORF_DNA.substr (0,19);
     const auto& encode_len = (ORF_len / 3) - 2;
 
-    double TIS_prob = 0.5;
-    double gene_prob = 0;
+    float TIS_prob = 0.5;
+    float gene_prob = 0;
 
     // score TIS
     if (upstream.size())
@@ -80,7 +80,7 @@ double run_BALROG (const std::string& ORF_DNA,
             padded_stack.push_back(std::move(zeroes));
 
             torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
-            TIS_prob = pred[0].item<double>();
+            TIS_prob = pred[0].item<float>();
 
             all_TIS_scores.emplace(TIS_hash, TIS_prob);
         }
@@ -108,7 +108,7 @@ double run_BALROG (const std::string& ORF_DNA,
 
             auto sub_seq = pred.index({0, 0, torch::indexing::Slice(torch::indexing::None, encode_len)});
 
-            gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<double>();
+            gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<float>();
 
             all_ORF_scores.emplace(ORF_hash, gene_prob);
         }
@@ -118,10 +118,10 @@ double run_BALROG (const std::string& ORF_DNA,
     const bool GTG = (start_codon == 1) ? 1 : 0;
     const bool TTG = (start_codon == 2) ? 1 : 0;
 
-    const double comb_prob = (gene_prob * weight_gene_prob + TIS_prob * weight_TIS_prob) +
+    const float comb_prob = (gene_prob * weight_gene_prob + TIS_prob * weight_TIS_prob) +
                              (ATG * weight_ATG) + (GTG * weight_GTG) + (TTG * weight_TTG);
 
-    double score = (comb_prob - probthresh) * ORF_len;
+    float score = (comb_prob - probthresh) * ORF_len;
 
     return score;
 }
