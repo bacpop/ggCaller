@@ -259,12 +259,29 @@ void generate_ORFs(const int& colour_ID,
                     size_t best_hash;
                     bool best_TIS_present;
                     size_t best_ORF_len = 0;
+                    ORFCoords best_ORF_coords;
+                    size_t best_start_coverage = 0;
+                    bool confident = false;
 
                     // unpack all ORFs with same stop codon
                     for (const auto& ORF_entry : stop_codon.second)
                     {
                         const auto& ORF_len = ORF_entry.first;
                         const auto& codon_pair = ORF_entry.second;
+
+                        // get ORF coords for current iteration
+                        ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
+
+                        // determine coverage for start_site
+                        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF_coords.first[0]);
+                        auto& um_data = um_pair.second;
+                        size_t start_coverage = um_data->full_colour().count();
+
+                        // break if confident in previous start and coverage of next ORF less than or equal to previous
+                        if (confident && start_coverage <= best_start_coverage)
+                        {
+                            break;
+                        }
 
                         // initialise TIS_present
                         bool TIS_present = true;
@@ -285,15 +302,16 @@ void generate_ORFs(const int& colour_ID,
                         }
 
                         // get gene score
-                        auto score_pair =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
+                        auto score_pair = run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
                         float score = score_pair.first;
-                        bool confident = score_pair.second;
+                        confident = score_pair.second;
 
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
 
                         size_t ORF_hash = hasher{}(ORF_seq);
 
+                        // determine if score is better and start site is better supported
                         if (score >= best_score)
                         {
                             best_codon = codon_pair;
@@ -301,12 +319,8 @@ void generate_ORFs(const int& colour_ID,
                             best_TIS_present = TIS_present;
                             best_ORF_len = ORF_len;
                             best_hash = ORF_hash;
-
-                            // determine if confident in start, if true then break without checking next ORF
-                            if (confident)
-                            {
-                                break;
-                            }
+                            best_start_coverage = start_coverage;
+                            best_ORF_coords = std::move(ORF_coords);
                         } else
                         {
                             // if the score is not better and has already been set, then break and ignore shorter ORFs
@@ -333,11 +347,8 @@ void generate_ORFs(const int& colour_ID,
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
-                        // If ORF is real, continue and work out coordinates for ORF in node space
-                        ORFCoords ORF_coords = std::move(calculate_coords(best_codon, nodelist, node_ranges));
-
                         // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, best_ORF_len, !present.second, (float)best_score);
+                        ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, (float)best_score);
 
                         // think about if there is no TIS, then can ignore ORF?
                         update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
