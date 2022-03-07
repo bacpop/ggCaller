@@ -470,25 +470,15 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             const auto& ORF1_info = ORF_vector.at(ORF1_ID);
             const auto& ORF1_node_ids = std::get<0>(ORF1_info);
             const auto& ORF1_node_coords = std::get<1>(ORF1_info);
-//            const auto& ORF1_TIS_ids = std::get<3>(ORF1_info);
-//            const auto& ORF1_TIS_coords = std::get<4>(ORF1_info);
             const auto& ORF1_strand = std::get<3>(ORF1_info);
             const auto& ORF1_len = std::get<2>(ORF1_info);
-//            const bool ORF1_TIS = (!ORF1_TIS_ids.empty()) ? true : false;
 
             // unpack ORF2_info
             const auto& ORF2_info = ORF_vector.at(ORF2_ID);
             const auto& ORF2_node_ids = std::get<0>(ORF2_info);
             const auto& ORF2_node_coords = std::get<1>(ORF2_info);
-//            const auto& ORF2_TIS_ids = std::get<3>(ORF2_info);
-//            const auto& ORF2_TIS_coords = std::get<4>(ORF2_info);
             const auto& ORF2_strand = std::get<3>(ORF2_info);
             const auto& ORF2_len = std::get<2>(ORF2_info);
-//            const bool ORF2_TIS = (!ORF2_TIS_ids.empty()) ? true : false;
-
-            // merge ORF and TIS nodes for ORF1 and ORF2
-//            auto ORF1_nodes = std::move(combine_nodes(ORF1_node_ids, ORF1_node_coords, ORF1_TIS_ids, ORF1_TIS_coords));
-//            auto ORF2_nodes = std::move(combine_nodes(ORF2_node_ids, ORF2_node_coords, ORF2_TIS_ids, ORF2_TIS_coords));
 
             ORFCoords ORF1_nodes = {ORF1_node_ids, ORF1_node_coords};
             ORFCoords ORF2_nodes = {ORF2_node_ids, ORF2_node_coords};

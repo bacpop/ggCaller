@@ -363,7 +363,7 @@ void generate_ORFs(const int& colour_ID,
 
                         // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
                         std::string TIS_seq;
-                        if (codon_pair.first < 16)
+                        if (codon_pair.first >= 16)
                         {
                             TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
                             size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));

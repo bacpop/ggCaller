@@ -235,22 +235,26 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
     torch::jit::script::Module TIS_model;
     bool error = false;
 
-    try {
-        // Deserialize the ScriptModule from a file using torch::jit::load().
-        ORF_model = torch::jit::load(ORF_model_file);
+    if (!no_filter)
+    {
+        try {
+            // Deserialize the ScriptModule from a file using torch::jit::load().
+            ORF_model = torch::jit::load(ORF_model_file);
+        }
+        catch (const c10::Error& e) {
+            std::cerr << "error loading the ORF model\n";
+            error = true;
+        }
+        try {
+            // Deserialize the ScriptModule from a file using torch::jit::load().
+            TIS_model = torch::jit::load(TIS_model_file);
+        }
+        catch (const c10::Error& e) {
+            std::cerr << "error loading the TIS model\n";
+            error = true;
+        }
     }
-    catch (const c10::Error& e) {
-        std::cerr << "error loading the ORF model\n";
-        error = true;
-    }
-    try {
-        // Deserialize the ScriptModule from a file using torch::jit::load().
-        TIS_model = torch::jit::load(TIS_model_file);
-    }
-    catch (const c10::Error& e) {
-        std::cerr << "error loading the TIS model\n";
-        error = true;
-    }
+
 
     // set OMP number of threads
     omp_set_num_threads(num_threads);
