@@ -47,3 +47,4 @@ dependencies:
   - python-edlib
   - joblib
   - gffutils
+  - cd-hit
