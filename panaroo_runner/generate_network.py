@@ -1,4 +1,3 @@
-from Bio.Seq import Seq
 from collections import defaultdict
 import networkx as nx
 from intbitset import intbitset

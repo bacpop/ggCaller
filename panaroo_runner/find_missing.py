@@ -1,14 +1,8 @@
-from collections import defaultdict, Counter
+from collections import Counter
 from Bio.Seq import translate, reverse_complement, Seq
-from multiprocessing import get_context
-from Bio import SeqIO
 from joblib import Parallel, delayed
-import os
-import gffutils as gff
-from io import StringIO
 import edlib
 from .clean_network import delete_node, remove_member_from_node
-from tqdm import tqdm
 import re
 
 from ggCaller.shared_memory import *

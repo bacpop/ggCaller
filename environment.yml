@@ -45,3 +45,5 @@ dependencies:
   - boost-cpp
   - tbb-devel
   - python-edlib
+  - joblib
+  - gffutils

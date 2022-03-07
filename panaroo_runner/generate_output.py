@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from collections import defaultdict
 from Bio import AlignIO
 import itertools as iter
 from intbitset import intbitset
@@ -18,7 +17,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from scipy.optimize import curve_fit
-from scipy.interpolate import make_interp_spline, BSpline
+from scipy.interpolate import make_interp_spline
 from random import shuffle
 from uncertainties import ufloat
 from .generate_alignments import *

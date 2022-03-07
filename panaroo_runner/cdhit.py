@@ -8,12 +8,8 @@ import networkx as nx
 from Bio.Seq import reverse_complement, Seq
 import edlib
 import itertools
-import numpy as np
 from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import connected_components
 from joblib import Parallel, delayed
-import math
-from tqdm import tqdm
 
 
 def check_cdhit_version(cdhit_exec='cd-hit'):

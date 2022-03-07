@@ -1,11 +1,5 @@
-import os, sys
-import tempfile
-from Bio import SeqIO
-import networkx as nx
 import argparse
 import textwrap
-import ast
-from collections import defaultdict
 import _pickle as cPickle
 
 # panaroo scripts
