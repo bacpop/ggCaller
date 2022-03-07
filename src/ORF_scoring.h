@@ -27,12 +27,12 @@ torch::Tensor predict(torch::jit::script::Module& module,
                       const bool gene);
 
 
-float run_BALROG (const std::string& ORF_DNA,
-                   const std::string& upstream,
-                   const size_t& ORF_len,
-                   torch::jit::script::Module& ORF_model,
-                   torch::jit::script::Module& TIS_model,
-                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
+std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
+                                   const std::string& upstream,
+                                   const size_t& ORF_len,
+                                   torch::jit::script::Module& ORF_model,
+                                   torch::jit::script::Module& TIS_model,
+                                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
+                                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
 
 #endif //ORF_SCORING_H

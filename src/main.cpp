@@ -95,9 +95,9 @@ int main(int argc, char *argv[]) {
     const size_t max_overlap = 60;
     const bool no_filter = false;
 
-    const std::string graphfile = "/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/pan_sim_gr_1e-12_lr_1e-12_mu_1e-14_all.gfa";
-    const std::string coloursfile ="/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/pan_sim_gr_1e-12_lr_1e-12_mu_1e-14_all.bfg_colors";
-    const std::string listfile ="/mnt/c/Users/sth19/PycharmProjects/Genome_Graph_project/ggCaller/data/pan_sim_gr_1e-12_lr_1e-12_mu_1e-14_all.txt";
+    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.gfa";
+    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.bfg_colors";
+    const std::string listfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/pan_sim_gr_1e-12_lr_1e-12_mu_1e-14_all.txt";
     const std::string ORF_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/geneTCN_jit.pt";
     const std::string TIS_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/tisTCN_jit.pt";
     const double minimum_ORF_score = 100;

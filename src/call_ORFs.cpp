@@ -285,7 +285,9 @@ void generate_ORFs(const int& colour_ID,
                         }
 
                         // get gene score
-                        float score =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
+                        auto score_pair =  run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
+                        float score = score_pair.first;
+                        bool confident = score_pair.second;
 
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
@@ -299,20 +301,29 @@ void generate_ORFs(const int& colour_ID,
                             best_TIS_present = TIS_present;
                             best_ORF_len = ORF_len;
                             best_hash = ORF_hash;
+
+                            // determine if confident in start, if true then break without checking next ORF
+                            if (confident)
+                            {
+                                break;
+                            }
                         } else
                         {
                             // if the score is not better and has already been set, then break and ignore shorter ORFs
-                            if (best_codon.second)
+                            if (best_ORF_len)
                             {
                                 break;
                             } else
                             {
+                                // set to ensure that if longer ORF before was
+                                // not greater than minimum_ORF_score, then break
+                                best_ORF_len = ORF_len;
                                 continue;
                             }
                         }
                     }
 
-                    // check codon found
+                    // check if codon found
                     if (best_codon.second)
                     {
                         // if TIS is present, add the non-TIS hash to to_remove

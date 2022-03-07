@@ -35,20 +35,25 @@ torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
     return torch::stack(padded_stack);
 }
 
-float run_BALROG (const std::string& ORF_DNA,
-                   const std::string& upstream,
-                   const size_t& ORF_len,
-                   torch::jit::script::Module& ORF_model,
-                   torch::jit::script::Module& TIS_model,
-                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
+std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
+                                   const std::string& upstream,
+                                   const size_t& ORF_len,
+                                   torch::jit::script::Module& ORF_model,
+                                   torch::jit::script::Module& TIS_model,
+                                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
+                                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
+    bool confident = true;
+
     // pull info from sequences
     const auto downstream = ORF_DNA.substr (0,19);
     const auto& encode_len = (ORF_len / 3) - 2;
 
     float TIS_prob = 0.5;
     float gene_prob = 0;
+
+    // get float for start amino acid probability
+    float start_prob = 0;
 
     // score TIS
     if (upstream.size())
@@ -108,7 +113,11 @@ float run_BALROG (const std::string& ORF_DNA,
 
             auto sub_seq = pred.index({0, 0, torch::indexing::Slice(torch::indexing::None, encode_len)});
 
-            gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<float>();
+            auto logit = torch::logit(sub_seq);
+
+            start_prob = logit[0].item<float>();
+
+            gene_prob = torch::special::expit(torch::mean(logit)).item<float>();
 
             all_ORF_scores.emplace(ORF_hash, gene_prob);
         }
@@ -123,7 +132,13 @@ float run_BALROG (const std::string& ORF_DNA,
 
     float score = (comb_prob - probthresh) * ORF_len;
 
-    return score;
+    // determine if not confident about start site i.e. little support for TIS and starting residue
+    if (TIS_prob <= 0.5 && start_prob <= 0)
+    {
+        confident = false;
+    }
+
+    return {score, confident};
 }
 
 torch::Tensor predict(torch::jit::script::Module& module,
