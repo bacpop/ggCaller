@@ -136,7 +136,7 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
 
             auto logit = torch::logit(sub_seq);
 
-            start_prob = logit[-1].item<float>();
+            start_prob = logit[0].item<float>();
 
             gene_prob = torch::special::expit(torch::mean(logit)).item<float>();
 
