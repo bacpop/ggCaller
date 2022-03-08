@@ -302,7 +302,7 @@ void generate_ORFs(const int& colour_ID,
                         }
 
                         // get gene score
-                        auto score_pair = run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, all_ORF_scores, all_TIS_scores);
+                        auto score_pair = run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, best_score, all_ORF_scores, all_TIS_scores);
                         float score = score_pair.first;
                         confident = score_pair.second;
 

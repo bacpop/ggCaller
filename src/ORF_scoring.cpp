@@ -40,6 +40,7 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
                                    const size_t& ORF_len,
                                    torch::jit::script::Module& ORF_model,
                                    torch::jit::script::Module& TIS_model,
+                                   const float& prev_score,
                                    tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
                                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
@@ -94,6 +95,26 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
     // encode start codon
     const auto start_codon = start_encode(downstream.substr(0,3)).out();
 
+    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
+    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
+    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
+
+    // multiply by TIS_prob weight
+    TIS_prob *= weight_TIS_prob;
+
+    // conduct check to ensure if max score for gene prob = 1, will be higher than prev_score
+    {
+        const float comb_prob = (1 * weight_gene_prob) + TIS_prob + ATG + GTG + TTG;
+
+        float score = (comb_prob - probthresh) * ORF_len;
+
+        // if next
+        if (score <= prev_score)
+        {
+            return {0, false};
+        }
+    }
+
     // get gene score either from stored scores or calculate it
     {
         // get aa sequence, remove start and end codon
@@ -123,12 +144,7 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
         }
     }
 
-    const bool ATG = (start_codon == 0) ? 1 : 0;
-    const bool GTG = (start_codon == 1) ? 1 : 0;
-    const bool TTG = (start_codon == 2) ? 1 : 0;
-
-    const float comb_prob = (gene_prob * weight_gene_prob + TIS_prob * weight_TIS_prob) +
-                             (ATG * weight_ATG) + (GTG * weight_GTG) + (TTG * weight_TTG);
+    const float comb_prob = (gene_prob * weight_gene_prob) + TIS_prob + ATG + GTG + TTG;
 
     float score = (comb_prob - probthresh) * ORF_len;
 

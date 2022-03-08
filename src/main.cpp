@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     const size_t max_path_length = 10000;
     const size_t min_ORF_length = 90;
     const size_t max_overlap = 60;
-    const bool no_filter = true;
+    const bool no_filter = false;
 
     const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.gfa";
     const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.bfg_colors";
