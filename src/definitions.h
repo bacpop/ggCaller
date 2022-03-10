@@ -52,6 +52,7 @@
 
 // Intel tbb headers
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_unordered_set.h>
 
 // bifrost header
 #include <bifrost/ColoredCDBG.hpp>
@@ -89,8 +90,10 @@ typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
 typedef std::map<size_t, ORFNodeMap> ColourORFMap;
 // maps colours to the edges for every ORF in that colour
 typedef std::map<size_t, std::unordered_map<size_t, std::unordered_set<size_t>>> ColourEdgeMap;
-// vector of ORF paths through graphs
-typedef std::vector<ORFNodeVector> ORFVector;
+// map of ORF paths through graphs
+typedef robin_hood::unordered_map<size_t, ORFNodeVector> ORFNodeRobMap;
+// map of ORFNodeRobMap, one for each colour
+typedef std::unordered_map<size_t, ORFNodeRobMap> ColourORFVectorMap;
 // tuple for holding node information during traversal (1st = path index, 2nd = node id, 3rd = codon array, 4th = colour array, 5th = path length)
 typedef std::tuple<size_t, int, std::bitset<3>, boost::dynamic_bitset<>, size_t> NodeTuple;
 // stack for holding nodes during DFS traversal for ORF identification

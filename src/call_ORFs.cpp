@@ -255,7 +255,7 @@ void generate_ORFs(const int& colour_ID,
                 {
                     // set variables to determine highest scoring ORF with same stop codon
                     std::pair<size_t, size_t> best_codon = {0,0};
-                    float best_score = minimum_ORF_score;
+                    float best_score = 0;
                     size_t best_hash;
                     bool best_TIS_present;
                     size_t best_ORF_len = 0;
@@ -301,10 +301,18 @@ void generate_ORFs(const int& colour_ID,
                             TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
                         }
 
-                        // get gene score
-                        auto score_pair = run_BALROG(ORF_seq, TIS_seq, ORF_len, ORF_model, TIS_model, best_score, all_ORF_scores, all_TIS_scores);
-                        float score = score_pair.first;
-                        confident = score_pair.second;
+                        // get TIS score
+                        float score;
+                        if (TIS_present)
+                        {
+                            auto score_pair = score_TIS(ORF_seq, TIS_seq, ORF_len, TIS_model, minimum_ORF_score, all_TIS_scores);
+                            score = score_pair.first;
+                            confident = score_pair.second;
+                        } else
+                        {
+                            score = 0.5;
+                            confident = false;
+                        }
 
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
@@ -312,7 +320,7 @@ void generate_ORFs(const int& colour_ID,
                         size_t ORF_hash = hasher{}(ORF_seq);
 
                         // determine if score is better and start site is better supported
-                        if (score >= best_score)
+                        if (score > best_score)
                         {
                             best_codon = codon_pair;
                             best_score = score;
@@ -527,13 +535,13 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 }
 
 // converts ORF entries into a vector and assigns relative strand
-ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
                            const std::vector<Kmer>& head_kmer_arr,
                            const bool is_ref)
 {
-    ORFVector ORF_vector(ORF_node_map.size());
+    ORFNodeRobMap ORF_map(ORF_node_map.size());
 
     // generate ID for each ORF and assign strand
     size_t ORF_ID = 0;
@@ -572,7 +580,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         }
 
         // move entry from map to vector
-        ORF_vector[ORF_ID] = std::move(ORF.second);
+        ORF_map[ORF_ID] = std::move(ORF.second);
 
         // iterate ORF_ID
         ORF_ID++;
@@ -581,7 +589,7 @@ ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     // clear ORF_node_map
     ORF_node_map.clear();
 
-    return ORF_vector;
+    return ORF_map;
 }
 
 // calculate the relative strand of each node traversed in an ORF

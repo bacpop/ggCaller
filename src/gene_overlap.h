@@ -26,7 +26,7 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> slice_ORFNodeVector(c
 
 ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                  const std::vector<Kmer>& head_kmer_arr,
-                                 const ORFVector& ORF_vector,
+                                 const ORFNodeRobMap& ORF_map,
                                  const int DBG_overlap,
                                  const size_t max_overlap,
                                  const bool is_ref,

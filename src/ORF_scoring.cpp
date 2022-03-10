@@ -35,26 +35,20 @@ torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
     return torch::stack(padded_stack);
 }
 
-std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
-                                   const std::string& upstream,
-                                   const size_t& ORF_len,
-                                   torch::jit::script::Module& ORF_model,
-                                   torch::jit::script::Module& TIS_model,
-                                   const float& prev_score,
-                                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-                                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
+std::pair<float, bool> score_TIS (const std::string& ORF_DNA,
+                                  const std::string& upstream,
+                                  const size_t& ORF_len,
+                                  torch::jit::script::Module& TIS_model,
+                                  const float& minimum_ORF_score,
+                                  tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
     bool confident = true;
 
     // pull info from sequences
     const auto downstream = ORF_DNA.substr (0,19);
-    const auto& encode_len = (ORF_len / 3) - 2;
 
+    // set TIS_prob as 0.5
     float TIS_prob = 0.5;
-    float gene_prob = 0;
-
-    // get float for start amino acid probability
-    float start_prob = 0;
 
     // score TIS
     if (upstream.size())
@@ -99,21 +93,47 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
     const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
     const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
 
-    // multiply by TIS_prob weight
-    TIS_prob *= weight_TIS_prob;
 
     // conduct check to ensure if max score for gene prob = 1, will be higher than prev_score
     {
-        const float comb_prob = (1 * weight_gene_prob) + TIS_prob + ATG + GTG + TTG;
+        const float comb_prob = (1 * weight_gene_prob) + (TIS_prob * weight_TIS_prob) + ATG + GTG + TTG;
 
         float score = (comb_prob - probthresh) * ORF_len;
 
         // if next
-        if (score <= prev_score)
+        if (score <= minimum_ORF_score)
         {
             return {0, false};
         }
     }
+
+    // determine if not confident about start site i.e. little support for TIS and starting residue
+    if (TIS_prob <= 0.5)
+    {
+        confident = false;
+    }
+
+    return {TIS_prob, confident};
+}
+
+float score_gene (float& curr_prob,
+                   const std::string& ORF_DNA,
+                   const size_t& ORF_len,
+                   torch::jit::script::Module& ORF_model,
+                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores)
+{
+    // pull info from sequences
+    const auto downstream = ORF_DNA.substr (0,19);
+    const auto& encode_len = (ORF_len / 3) - 2;
+
+    float gene_prob = 0;
+
+    // encode start codon
+    const auto start_codon = start_encode(downstream.substr(0,3)).out();
+
+    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
+    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
+    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
 
     // get gene score either from stored scores or calculate it
     {
@@ -134,27 +154,45 @@ std::pair<float, bool> run_BALROG (const std::string& ORF_DNA,
 
             auto sub_seq = pred.index({0, 0, torch::indexing::Slice(torch::indexing::None, encode_len)});
 
-            auto logit = torch::logit(sub_seq);
-
-            start_prob = logit[0].item<float>();
-
-            gene_prob = torch::special::expit(torch::mean(logit)).item<float>();
+            gene_prob = torch::special::expit(torch::mean(torch::logit(sub_seq))).item<float>();
 
             all_ORF_scores.emplace(ORF_hash, gene_prob);
         }
     }
 
-    const float comb_prob = (gene_prob * weight_gene_prob) + TIS_prob + ATG + GTG + TTG;
+    // get weighted gene probability
+    gene_prob *= weight_gene_prob;
 
-    float score = (comb_prob - probthresh) * ORF_len;
+    // curr_prob is TIS prob, use this to determine overall score
+    const float comb_prob = gene_prob + (curr_prob *= weight_TIS_prob) + ATG + GTG + TTG;
 
-    // determine if not confident about start site i.e. little support for TIS and starting residue
-    if (TIS_prob <= 0.5 && start_prob <= 0)
-    {
-        confident = false;
-    }
+    // edit current probability in place
+    curr_prob = (comb_prob - probthresh) * ORF_len;
 
-    return {score, confident};
+    return gene_prob;
+}
+
+void score_cluster(float& curr_prob,
+                   const float& gene_prob,
+                   const std::string& ORF_DNA,
+                   const size_t& ORF_len)
+{
+    // pull info from sequences
+    const auto downstream = ORF_DNA.substr (0,19);
+    const auto& encode_len = (ORF_len / 3) - 2;
+
+    // encode start codon
+    const auto start_codon = start_encode(downstream.substr(0,3)).out();
+
+    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
+    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
+    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
+
+    // curr_prob is TIS prob, use this to determine overall score
+    const float comb_prob = gene_prob + (curr_prob *= weight_TIS_prob) + ATG + GTG + TTG;
+
+    // edit current probability in place
+    curr_prob = (comb_prob - probthresh) * ORF_len;
 }
 
 torch::Tensor predict(torch::jit::script::Module& module,

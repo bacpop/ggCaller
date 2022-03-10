@@ -186,7 +186,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
     return path_list;
 }
 
-ORFVector traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
+ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          const std::vector<Kmer>& head_kmer_arr,
                          const size_t colour_ID,
                          const std::vector<size_t>& node_ids,
@@ -330,7 +330,7 @@ ORFVector traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     }
 
     // group colours of ORFs together
-    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
+    ORFNodeRobMap ORF_map = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
 
-    return ORF_vector;
+    return ORF_map;
 }

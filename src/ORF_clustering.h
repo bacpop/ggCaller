@@ -9,10 +9,10 @@
 #include "gene_overlap.h"
 #include "translation.h"
 
-ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
+ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                          const std::vector<Kmer>& head_kmer_arr);
 
-ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
+ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const ColoredCDBG<MyUnitigMap>& ccdbg,
                                const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,

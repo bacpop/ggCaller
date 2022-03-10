@@ -114,7 +114,7 @@ std::vector<size_t> getPath(
 }
 
 template <class T>
-std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
+std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                                        const std::vector<size_t>& vertex_mapping,
                                        const std::unordered_set<size_t>& vertex_list,
                                        const GeneGraph& g,
@@ -154,7 +154,7 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
     for (const auto& start : start_vertices)
     {
         // get start score
-        const float start_score = -std::get<4>(ORF_vector.at(vertex_mapping.at(start)));
+        const float start_score = -std::get<4>(ORF_map.at(vertex_mapping.at(start)));
 
         // check if start is also end vertex
         if (std::find(end_vertices.begin(), end_vertices.end(), start) != end_vertices.end())
@@ -202,14 +202,14 @@ std::vector<size_t> traverse_components(const ORFVector& ORF_vector,
     }
 }
 
-std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
-                                                   const ORFOverlapMap& overlap_map,
-                                                   const float& minimum_path_score)
+std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
+                                                  const ORFOverlapMap& overlap_map,
+                                                  const float& minimum_path_score)
 {
     std::vector<std::vector<size_t>> gene_paths;
 
     GeneGraph tc;
-    std::vector<size_t> vertex_mapping(ORF_vector.size());
+    std::vector<size_t> vertex_mapping;
     std::unordered_map<size_t, size_t> ORF_ID_mapping;
     std::vector<std::unordered_set<size_t>> components;
     size_t numVertices;
@@ -221,10 +221,10 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
         // create IDs for vertex mappings
         int vertex_id = 0;
         // add all vertices
-        for (int i = 0; i < ORF_vector.size(); i ++)
+        for (const auto& entry : ORF_map)
         {
-            vertex_mapping[vertex_id] = i;
-            ORF_ID_mapping[i] = vertex_id++;
+            vertex_mapping.push_back(entry.first);
+            ORF_ID_mapping[entry.first] = vertex_id++;
             add_vertex(g);
         }
 
@@ -269,7 +269,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
         const auto& source = vertex_mapping.at(boost::source(*eit, tc));
         const auto& target = vertex_mapping.at(boost::target(*eit, tc));
 
-        float edge_score = std::get<4>(ORF_vector.at(target));
+        float edge_score = std::get<4>(ORF_map.at(target));
 
         if (overlap_map.find(target) == overlap_map.end())
         {
@@ -321,7 +321,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFVector& ORF_vector,
     // iterate over components using bellman ford algorithm
     for (const auto& component : components)
     {
-        auto path = traverse_components(ORF_vector, vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap);
+        auto path = traverse_components(ORF_map, vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap);
         // ensure path is not empty
         if (!path.empty())
         {

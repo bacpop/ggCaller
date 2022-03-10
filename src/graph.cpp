@@ -220,9 +220,8 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                                                                                           const double& len_diff_cutoff,
                                                                                           size_t num_threads)
 {
-    // initilise return values
-    ColourORFMap colour_ORF_map;
-    ColourEdgeMap colour_edge_map;
+    // initilise intermediate colour ORF vector
+    ColourORFVectorMap colour_ORF_vec_map;
 
     // Set number of threads
     if (num_threads < 1)
@@ -255,43 +254,38 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         }
     }
 
-
     // set OMP number of threads
     omp_set_num_threads(num_threads);
-
-    // set up progress bar
-    progressbar bar(_NodeColourVector.size());
-    bar.set_todo_char(" ");
-    bar.set_done_char("█");
-    bar.set_opening_bracket_char("|");
-    bar.set_closing_bracket_char("|");
 
     // initialise maps to store ORF scores across threads
     tbb::concurrent_unordered_map<size_t, float> all_ORF_scores;
     tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
-    #pragma omp parallel for schedule(dynamic)
-    for (int colour_ID = 0; colour_ID < _NodeColourVector.size(); colour_ID++)
     {
-        // get whether colour is reference or not
-        bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
+        // set up progress bar
+        progressbar bar(input_colours.size());
+        bar.set_todo_char(" ");
+        bar.set_done_char("█");
+        bar.set_opening_bracket_char("|");
+        bar.set_closing_bracket_char("|");
 
-        const auto& FM_fasta_file = input_colours.at(colour_ID);
-
-        // if no FM_fasta_file specified, cannot generate FM Index
-        if (FM_fasta_file == "NA")
+        cout << "Traversing graph to identify ORFs..." << endl;
+        #pragma omp parallel for schedule(dynamic)
+        for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
-            is_ref = false;
-        }
+            // get whether colour is reference or not
+            bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
 
-        // initialise values for gene information
-        std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
-        ORFNodeMap gene_map;
-        std::vector<std::vector<size_t>> gene_paths;
+            const auto& FM_fasta_file = input_colours.at(colour_ID);
 
-        // scope for ORF_vector
-        {
-            ORFVector ORF_vector;
+            // if no FM_fasta_file specified, cannot generate FM Index
+            if (FM_fasta_file == "NA")
+            {
+                is_ref = false;
+            }
+
+            // initialise ORF_vector
+            ORFNodeRobMap ORF_map;
 
             // traverse graph, set scope for all_paths and fm_idx
             {
@@ -315,11 +309,194 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 {
                     no_filter = true;
                 }
-                ORF_vector = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
-                        overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                        ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores));
+
+                // convert this to map to make removal easier
+                ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
+                                                      overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
+                                                      ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores));
 
             }
+
+            // update colour_orf_vec_map
+            colour_ORF_vec_map[colour_ID] = std::move(ORF_map);
+
+            // update progress bar
+            #pragma omp critical
+            {
+                bar.update();
+            }
+        }
+    }
+
+    //clear _NodeColourVector
+    _NodeColourVector.clear();
+
+    // add new line to account for progress bar
+    cout << endl;
+
+    // generate clusters if required
+    ORFClusterMap cluster_map;
+    ORFMatrixVector ORF_mat_vector;
+    if (clustering || !no_filter)
+    {
+        cout << "Generating clusters of high-scoring ORFs..." << endl;
+
+        // group ORFs together based on single shared k-mer
+        auto ORF_group_tuple = group_ORFs(colour_ORF_vec_map, _KmerArray);
+
+        //unpack ORF_group_tuple
+        ORF_mat_vector = std::get<0>(ORF_group_tuple);
+        auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
+        auto& centroid_vector = std::get<2>(ORF_group_tuple);
+
+        // generate clusters for ORFs based on identity
+        cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap, ORF_mat_vector,
+                                       ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
+
+        if (!no_filter)
+        {
+            cout << "Scoring ORF clusters..." << endl;
+
+            // keep track of clusters with low scoring centroids
+            robin_hood::unordered_set<size_t> to_remove;
+
+            // set up progress bar
+            progressbar bar(cluster_map.size());
+            bar.set_todo_char(" ");
+            bar.set_done_char("█");
+            bar.set_opening_bracket_char("|");
+            bar.set_closing_bracket_char("|");
+
+            // score centroid and apply score to all ORFs in group
+            #pragma omp parallel for schedule(dynamic)
+            for (int i = 0; i < cluster_map.size(); i++)
+            {
+                // get index in map
+                auto datIt = cluster_map.begin();
+                std::advance(datIt, i);
+                const auto& centroid_mat_ID = datIt->first;
+
+                // get centroid info
+                const auto& centroid_ID_pair = ORF_mat_vector.at(centroid_mat_ID);
+                auto& centroid_info = colour_ORF_vec_map.at(centroid_ID_pair.first).at(centroid_ID_pair.second);
+
+                // get centroid sequence
+                const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
+
+                // score centroid
+                const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
+
+                // determine if centroid is low scorer
+                bool centroid_low = false;
+
+                // if centroid score is below the min-orf score remove from cluster map
+                if (std::get<4>(centroid_info) < minimum_ORF_score)
+                {
+                    colour_ORF_vec_map[centroid_ID_pair.first].erase(centroid_ID_pair.second);
+                    #pragma omp critical
+                    {
+                        to_remove.insert(centroid_mat_ID);
+                    }
+                    centroid_low = true;
+                }
+
+                // determine if there are any elements to remove from current cluster
+                std::vector<size_t> to_remove_cluster;
+
+                // iterate over remaining elements in cluster, calculating scores
+                auto& ORF_entries = datIt->second;
+                for (int i = 0; i < ORF_entries.size(); i++)
+                {
+                    auto& entry = ORF_entries.at(i);
+                    if (entry != centroid_mat_ID)
+                    {
+                        // get ORF info
+                        const auto& ORF_ID_pair = ORF_mat_vector.at(entry);
+
+                        // if centroid score too low then remove
+                        if (centroid_low)
+                        {
+                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
+                            continue;
+                        }
+
+                        auto& ORF_info = colour_ORF_vec_map.at(ORF_ID_pair.first).at(ORF_ID_pair.second);
+
+                        // get centroid sequence
+                        const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
+
+                        // score ORF in place
+                        score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
+
+                        // remove from orf map if score too low
+                        if (std::get<4>(ORF_info) < minimum_ORF_score)
+                        {
+                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
+                            to_remove_cluster.push_back(i);
+                        }
+                    }
+                }
+                // remove low scoring entries, reversing to preserve order
+                std::reverse(to_remove_cluster.begin(), to_remove_cluster.end());
+                for (const auto& index : to_remove_cluster)
+                {
+                    ORF_entries.erase(ORF_entries.begin() + index);
+                }
+
+                // update progress bar
+                #pragma omp critical
+                {
+                    bar.update();
+                }
+            }
+
+            // remove any low scoring clusters from cluster map
+            for (const auto& low_scorer : to_remove)
+            {
+                cluster_map.erase(low_scorer);
+            }
+
+            // new line for progress bar
+            cout << endl;
+        }
+    }
+
+    // initialise return values
+    ColourORFMap colour_ORF_map;
+    ColourEdgeMap colour_edge_map;
+
+    {
+        // set up progress bar
+        progressbar bar(input_colours.size());
+        bar.set_todo_char(" ");
+        bar.set_done_char("█");
+        bar.set_opening_bracket_char("|");
+        bar.set_closing_bracket_char("|");
+
+        cout << "Identifying high-scoring ORFs..." << endl;
+        // after clustering, determing highest scoring gene set
+        #pragma omp parallel for schedule(dynamic)
+        for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
+        {
+            // pull ORF_map for colour
+            auto& ORF_map = colour_ORF_vec_map[colour_ID];
+
+            // get whether colour is reference or not
+            bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
+
+            const auto& FM_fasta_file = input_colours.at(colour_ID);
+
+            // if no FM_fasta_file specified, cannot generate FM Index
+            if (FM_fasta_file == "NA")
+            {
+                is_ref = false;
+            }
+
+            // initialise values for gene information
+            std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
+            ORFNodeMap gene_map;
+            std::vector<std::vector<size_t>> gene_paths;
+
             // if no filtering required, do not calculate overlaps, score genes or get gene_paths
             if (!no_filter)
             {
@@ -339,12 +516,12 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                             is_ref = false;
                         }
                     }
-                    ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_vector, overlap, max_overlap, is_ref, fm_idx));
+                    ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_map, overlap, max_overlap, is_ref, fm_idx));
                 }
 
                 if (!error)
                 {
-                    gene_paths = call_true_genes (ORF_vector, ORF_overlap_map, minimum_path_score);
+                    gene_paths = call_true_genes (ORF_map, ORF_overlap_map, minimum_path_score);
 
                     // get high scoring genes
                     for (const auto& path : gene_paths)
@@ -353,156 +530,135 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                         {
                             if (gene_map.find(ORF_ID) == gene_map.end())
                             {
-                                gene_map[ORF_ID] = std::move(ORF_vector[ORF_ID]);
+                                gene_map[ORF_ID] = std::move(ORF_map[ORF_ID]);
                             }
                         }
                     }
                 } else
                 {
                     // return unfiltered genes
-                    for (size_t i = 0; i < ORF_vector.size(); i++)
+                    for (auto& entry : ORF_map)
                     {
-                        gene_map[i] = std::move(ORF_vector[i]);
-                        gene_paths.push_back({i});
+                        gene_map[entry.first] = std::move(entry.second);
+                        gene_paths.push_back({entry.first});
                     }
                 }
             } else
             {
                 // return unfiltered genes
-                for (size_t i = 0; i < ORF_vector.size(); i++)
+                for (auto& entry : ORF_map)
                 {
-                    gene_map[i] = std::move(ORF_vector[i]);
-                    gene_paths.push_back({i});
-                }
-            }
-        }
-
-
-        // connect ORFs
-        {
-            std::set<std::pair<size_t, size_t>> connected_ORFs;
-
-            // determine target_ORFs to connect and redundant edges
-            std::set<std::pair<size_t, size_t>> redundant_edges;
-            robin_hood::unordered_set<size_t> target_ORFs;
-            for (const auto& path : gene_paths)
-            {
-                const auto& first = path.at(0);
-                const auto& second = path.back();
-                target_ORFs.insert(first);
-                target_ORFs.insert(second);
-
-                // add redundant edges by ordering first and second ORF
-                if (first <= second)
-                {
-                    redundant_edges.insert({first, second});
-                } else
-                {
-                    redundant_edges.insert({second, first});
+                    gene_map[entry.first] = std::move(entry.second);
+                    gene_paths.push_back({entry.first});
                 }
             }
 
-            // add ORF info for colour to graph
-            const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, gene_map);
+            // deallocate ORF_map
+            ORF_map.clear();
 
-            // initialise prev_node_set to avoid same ORFs being traversed from again
-            std::unordered_set<int> prev_node_set;
-
-            const auto& FM_fasta_file = input_colours.at(colour_ID);
-
-            // if no FM_fasta_file specified, cannot generate FM Index
-            if (FM_fasta_file == "NA")
+            // connect ORFs
             {
-                is_ref = false;
-            }
+                std::set<std::pair<size_t, size_t>> connected_ORFs;
 
-            // generate FM_index if is_ref
-            fm_index_coll fm_idx;
-
-            // reload fm-index if required
-            if (is_ref)
-            {
-                const auto idx_file_name = FM_fasta_file + ".fmp";
-                if (!load_from_file(fm_idx, idx_file_name))
+                // determine target_ORFs to connect and redundant edges
+                std::set<std::pair<size_t, size_t>> redundant_edges;
+                robin_hood::unordered_set<size_t> target_ORFs;
+                for (const auto& path : gene_paths)
                 {
-                    cout << "FM-Index not available for " << FM_fasta_file << endl;
+                    const auto& first = path.at(0);
+                    const auto& second = path.back();
+                    target_ORFs.insert(first);
+                    target_ORFs.insert(second);
+
+                    // add redundant edges by ordering first and second ORF
+                    if (first <= second)
+                    {
+                        redundant_edges.insert({first, second});
+                    } else
+                    {
+                        redundant_edges.insert({second, first});
+                    }
+                }
+
+                // add ORF info for colour to graph
+                const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, gene_map);
+
+                // initialise prev_node_set to avoid same ORFs being traversed from again
+                std::unordered_set<int> prev_node_set;
+
+                const auto& FM_fasta_file = input_colours.at(colour_ID);
+
+                // if no FM_fasta_file specified, cannot generate FM Index
+                if (FM_fasta_file == "NA")
+                {
                     is_ref = false;
                 }
-            }
 
-            // conduct DBG traversal for upstream...
-            auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, -1, prev_node_set, overlap, is_ref, fm_idx);
-            connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
+                // generate FM_index if is_ref
+                fm_index_coll fm_idx;
 
-            // ... and downstream
-            new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, repeat, prev_node_set, overlap, is_ref, fm_idx);
-            connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
-
-            // check edges found in connected_ORFs against redundant edges
-            for (const auto& edge : connected_ORFs)
-            {
-                if (redundant_edges.find(edge) == redundant_edges.end())
+                // reload fm-index if required
+                if (is_ref)
                 {
-                    std::vector<size_t> edge_vec = {edge.first, edge.second};
-                    gene_paths.push_back(edge_vec);
+                    const auto idx_file_name = FM_fasta_file + ".fmp";
+                    if (!load_from_file(fm_idx, idx_file_name))
+                    {
+                        cout << "FM-Index not available for " << FM_fasta_file << endl;
+                        is_ref = false;
+                    }
+                }
+
+                // conduct DBG traversal for upstream...
+                auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, -1, prev_node_set, overlap, is_ref, fm_idx);
+                connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
+
+                // ... and downstream
+                new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, repeat, prev_node_set, overlap, is_ref, fm_idx);
+                connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
+
+                // check edges found in connected_ORFs against redundant edges
+                for (const auto& edge : connected_ORFs)
+                {
+                    if (redundant_edges.find(edge) == redundant_edges.end())
+                    {
+                        std::vector<size_t> edge_vec = {edge.first, edge.second};
+                        gene_paths.push_back(edge_vec);
+                    }
                 }
             }
-        }
 
-        // create map to connect ORFs for panaroo and to store high scoring ORFs
-        for (const auto& entry : gene_paths)
-        {
-            size_t last_index = entry.size() - 1;
-            for (int i = 0; i < entry.size(); i++)
+            // create map to connect ORFs for panaroo and to store high scoring ORFs
+            for (const auto& entry : gene_paths)
             {
-                const size_t& ORF = entry.at(i);
-                if (i != last_index)
+                size_t last_index = entry.size() - 1;
+                for (int i = 0; i < entry.size(); i++)
                 {
-                    gene_edges[ORF].insert(entry.at(i + 1));
+                    const size_t& ORF = entry.at(i);
+                    if (i != last_index)
+                    {
+                        gene_edges[ORF].insert(entry.at(i + 1));
+                    }
                 }
             }
-        }
 
-        // update colour_ORF_map and colour_edge_map
-        colour_ORF_map[colour_ID] = std::move(gene_map);
-        colour_edge_map[colour_ID] = std::move(gene_edges);
+            // update colour_ORF_map and colour_edge_map
+            colour_ORF_map[colour_ID] = std::move(gene_map);
+            colour_edge_map[colour_ID] = std::move(gene_edges);
 
-        // update progress bar
-        #pragma omp critical
-        {
-            bar.update();
+            // update progress bar
+            #pragma omp critical
+            {
+                bar.update();
+            }
         }
     }
 
-    //clear _NodeColourVector
-    _NodeColourVector.clear();
-
-    // add new line to account for progress bar
+    // add line for progress bar
     cout << endl;
 
     // clear score maps
     all_ORF_scores.clear();
     all_TIS_scores.clear();
-
-    // generate clusters if required
-    ORFClusterMap cluster_map;
-    ORFMatrixVector ORF_mat_vector;
-    if (clustering)
-    {
-        cout << "Generating clusters of high-scoring ORFs..." << endl;
-
-        // group ORFs together based on single shared k-mer
-        auto ORF_group_tuple = group_ORFs(colour_ORF_map, _KmerArray);
-
-        //unpack ORF_group_tuple
-        ORF_mat_vector = std::get<0>(ORF_group_tuple);
-        auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
-        auto& centroid_vector = std::get<2>(ORF_group_tuple);
-
-        // generate clusters for ORFs based on identity
-        cluster_map = produce_clusters(colour_ORF_map, _ccdbg, _KmerArray, overlap, ORF_mat_vector,
-                                            ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
-    }
 
     return {colour_ORF_map, colour_edge_map, cluster_map, ORF_mat_vector};
 }

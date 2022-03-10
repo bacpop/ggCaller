@@ -373,10 +373,6 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> node_overlaps(const C
         return {overlap_complete, {}, {}};
     }
 
-    // initialise overlap node_indices
-    std::vector<size_t> ORF_1_overlap_node_index;
-    std::vector<size_t> ORF_2_overlap_node_index;
-
     // if not bidirectional, run as normal
     if (!bidirectional)
     {
@@ -407,7 +403,7 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> node_overlaps(const C
 
 ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                  const std::vector<Kmer>& head_kmer_arr,
-                                 const ORFVector& ORF_vector,
+                                 const ORFNodeRobMap& ORF_map,
                                  const int DBG_overlap,
                                  const size_t max_overlap,
                                  const bool is_ref,
@@ -419,13 +415,18 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
 
+    // set up matrix to map ORF_map id to ORF-index
+    std::vector<size_t> ORF_ID_matrix(ORF_map.size());
+
     // iterate over each ORF sequence with specific colours combination
-    for (size_t ORF_index = 0; ORF_index < ORF_vector.size(); ORF_index++)
+    size_t ORF_index = 0;
+    for (const auto& entry : ORF_map)
     {
-        // iterate over nodes traversed by ORF and its TIS
-        const auto& ORF_info = ORF_vector.at(ORF_index);
+        // iterate over nodes traversed by ORF
+        const auto& ORF_info = entry.second;
+        ORF_ID_matrix[ORF_index] = entry.first;
+
         std::unordered_set<int> ORF_nodes;
-//        std::copy(std::get<3>(ORF_info).begin(), std::get<3>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
         std::copy(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), std::inserter(ORF_nodes, ORF_nodes.end()));
         for (const auto& node_traversed : ORF_nodes)
         {
@@ -434,10 +435,11 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             const size_t abs_node_id = abs(node_traversed) - 1;
             tripletList.push_back(ET(ORF_index, abs_node_id, 1));
         }
+        ORF_index++;
     }
 
     // initialise sparse matrix
-    Eigen::SparseMatrix<double> mat(ORF_vector.size(), head_kmer_arr.size());
+    Eigen::SparseMatrix<double> mat(ORF_ID_matrix.size(), head_kmer_arr.size());
     mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
     // conduct transposition + matrix multiplication to calculate ORFs sharing nodes
@@ -455,26 +457,27 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
 
             // Assign temporary values for ORF1 and ORF2, not sorted by traversed node vector.
-            auto temp_ORF1_ID = init.col();
-            auto temp_ORF2_ID = init.row();
+            auto temp_ORF1_ID = ORF_ID_matrix.at(init.col());
+            auto temp_ORF2_ID = ORF_ID_matrix.at(init.row());
 
             // Get nodes traversed by genes. Order by length of the node vector; ORF1 is the longer of the two vectors. Need to copy ORF2, as may be reversed
             // check if ORF1 traverse more nodes than ORF2
-            const bool temp_ORF1_longer = ((std::get<0>(ORF_vector.at(temp_ORF1_ID)).size() >= std::get<0>(ORF_vector.at(temp_ORF2_ID)).size()) ? true : false);
+            const bool temp_ORF1_longer = std::get<0>(ORF_map.at(temp_ORF1_ID)).size() >=
+                                          std::get<0>(ORF_map.at(temp_ORF2_ID)).size();
 
             // get respective ORF IDs
             const size_t& ORF1_ID = (temp_ORF1_longer ? temp_ORF1_ID : temp_ORF2_ID);
             const size_t& ORF2_ID = (temp_ORF1_longer ? temp_ORF2_ID : temp_ORF1_ID);
 
             // get reference to ORF1_info information and unpack
-            const auto& ORF1_info = ORF_vector.at(ORF1_ID);
+            const auto& ORF1_info = ORF_map.at(ORF1_ID);
             const auto& ORF1_node_ids = std::get<0>(ORF1_info);
             const auto& ORF1_node_coords = std::get<1>(ORF1_info);
             const auto& ORF1_strand = std::get<3>(ORF1_info);
             const auto& ORF1_len = std::get<2>(ORF1_info);
 
             // unpack ORF2_info
-            const auto& ORF2_info = ORF_vector.at(ORF2_ID);
+            const auto& ORF2_info = ORF_map.at(ORF2_ID);
             const auto& ORF2_node_ids = std::get<0>(ORF2_info);
             const auto& ORF2_node_coords = std::get<1>(ORF2_info);
             const auto& ORF2_strand = std::get<3>(ORF2_info);
@@ -665,27 +668,6 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         }
                     }
 
-//                    // check if TIS present for specific overlaps and negate
-//                    if (ORF2_TIS && (overlap_start == 25 || overlap_end == 25))
-//                    {
-//                        if (abs_overlap < 16)
-//                        {
-//                            abs_overlap = 0;
-//                        } else
-//                        {
-//                            abs_overlap -= 16;
-//                        }
-//                    }
-//                    if (ORF1_TIS && (overlap_start == 15 || overlap_end == 15))
-//                    {
-//                        if (abs_overlap < 16)
-//                        {
-//                            abs_overlap = 0;
-//                        } else
-//                        {
-//                            abs_overlap -= 16;
-//                        }
-//                    }
 
                     // convert overlap_start and overlap_end to string to enable creation of ID for switch
                     // check if any overlap detected.

@@ -1,6 +1,6 @@
 #include "ORF_clustering.h"
 
-ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
+ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                          const std::vector<Kmer>& head_kmer_arr)
 {
     // intialise Eigen Triplet
@@ -13,13 +13,13 @@ ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
     size_t ORF_ID = 0;
     for (const auto& colour : colour_ORF_map)
     {
-        for (const auto& ORF_map : colour.second)
+        for (int i = 0; i < colour.second.size(); i++)
         {
             // add to ORF_mat_map, initialising empty vector
-            ORF_mat_vector.push_back({colour.first, ORF_map.first});
+            ORF_mat_vector.push_back({colour.first, i});
 
             // iterate over nodes traversed by ORF
-            const auto& ORF_nodes = std::get<0>(ORF_map.second);
+            const auto& ORF_nodes = std::get<0>(colour.second.at(i));
             for (const auto& node_traversed : ORF_nodes)
             {
                 // add to triplet list, with temp_ORF_ID (row), node id (column) and set value as 1 (true)
@@ -81,7 +81,7 @@ ORFGroupTuple group_ORFs(const ColourORFMap& colour_ORF_map,
     return return_tuple;
 }
 
-ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
+ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const ColoredCDBG<MyUnitigMap>& ccdbg,
                                const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,
@@ -92,7 +92,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                                const double& len_diff_cutoff)
 {
     // initialise temporary cluster map, first item is centroid, second is set of nodes in that cluster
-    robin_hood::unordered_map<size_t, std::unordered_set<size_t>> cluster_map;
+    tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<size_t>> cluster_map;
 
     // initialise final cluster map for return
     ORFClusterMap final_clusters;
@@ -101,95 +101,109 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
     std::vector<std::pair<size_t, size_t>> ORF_length_list;
 
     // create set to keep track of assigned ORFs to avoid ORFs being added to other groups
-    std::unordered_set<size_t> encountered_set;
+    tbb::concurrent_unordered_set<size_t> encountered_set;
 
     // iterate through group_map
-    for (size_t ORF_ID = 0; ORF_ID < ORF_group_vector.size(); ORF_ID++)
+    #pragma omp parallel
     {
-        // get entry information for the current ORF
-        const auto& ORF2_entry = ORF_mat_vector.at(ORF_ID);
-        const auto& ORF2_info = colour_ORF_map.at(ORF2_entry.first).at(ORF2_entry.second);
-        const auto& ORF2_len = std::get<2>(ORF2_info);
-
-        // assign ORF_ID and length
-        ORF_length_list.push_back({ORF2_len, ORF_ID});
-
-        // check if ORF encountered previously
-        if (encountered_set.find(ORF_ID) != encountered_set.end())
+        std::vector<std::pair<size_t, size_t>> ORF_length_list_private;
+        std::vector<std::vector<std::pair<size_t, size_t>>> centroid_vector_private(centroid_vector.size());
+        #pragma omp parallel for schedule(dynamic)
+        for (size_t ORF_ID = 0; ORF_ID < ORF_group_vector.size(); ORF_ID++)
         {
-            continue;
-        }
+            // get entry information for the current ORF
+            const auto& ORF2_entry = ORF_mat_vector.at(ORF_ID);
+            const auto& ORF2_info = colour_ORF_map.at(ORF2_entry.first).at(ORF2_entry.second);
+            const auto& ORF2_len = std::get<2>(ORF2_info);
 
-        // create a set for all the centroids for the groups the ORF belongs to
-        std::unordered_set<size_t> centroid_set;
+            // assign ORF_ID and length
+            ORF_length_list_private.push_back({ORF2_len, ORF_ID});
 
-        // go through the group_IDs
-        for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
-        {
-            // iterate over all centroids for the given k-mer group
-            for (const auto& centroid_ID : centroid_vector.at(group_ID))
+            // check if ORF encountered previously
+            if (encountered_set.find(ORF_ID) != encountered_set.end())
             {
-                centroid_set.insert(centroid_ID.first);
+                continue;
             }
-        }
 
+            // create a set for all the centroids for the groups the ORF belongs to
+            std::unordered_set<size_t> centroid_set;
 
-        // go through and align to each centroid, determine what is the highest scoring assignment
-        size_t assigned_centroid = ORF_ID;
-        double assigned_perc_id = 0;
-        for (const auto& centroid : centroid_set)
-        {
-            if (centroid != ORF_ID)
-            {
-                const auto& ORF1_entry = ORF_mat_vector.at(centroid);
-                const auto& ORF1_info = colour_ORF_map.at(ORF1_entry.first).at(ORF1_entry.second);
-                const auto& ORF1_len = std::get<2>(ORF1_info);
-
-                // check that perc_len_diff is greater than cut-off, otherwise pass
-                double perc_len_diff = (double)ORF2_len / (double)ORF1_len;
-
-                if (perc_len_diff < len_diff_cutoff)
-                {
-                    continue;
-                }
-
-                // calculate the perc_id between the current centroid and the ORF
-                double current_perc_id = align_seqs(ORF1_info, ORF2_info, ccdbg, head_kmer_arr, DBG_overlap);
-
-                if (current_perc_id > assigned_perc_id)
-                {
-                    assigned_perc_id = current_perc_id;
-                    assigned_centroid = centroid;
-                }
-                // when current_perc_id == assigned_perc_id, assign assigned_centroid to lowest index
-                else if (current_perc_id == assigned_perc_id)
-                {
-                    assigned_centroid = std::min(centroid, assigned_centroid);
-                }
-            }
-        }
-
-        // check if centroid perc_id is greater than cut-off, if not then assign the cluster to it's own centroid
-        if (assigned_perc_id >= id_cutoff)
-        {
-            cluster_map[assigned_centroid].insert(ORF_ID);
-            cluster_map[assigned_centroid].insert(assigned_centroid);
-            encountered_set.insert(ORF_ID);
-            encountered_set.insert(assigned_centroid);
-        }
-        else
-        {
-            cluster_map[ORF_ID].insert(ORF_ID);
-            encountered_set.insert(ORF_ID);
-
-            // if singleton, add the current ORF as a centroid for all groups it is part of
+            // go through the group_IDs
             for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
             {
-                // check that ORF is not already the centroid for the group
-                if (centroid_vector.at(group_ID).at(0).first != ORF_ID)
+                // iterate over all centroids for the given k-mer group
+                for (const auto& centroid_ID : centroid_vector.at(group_ID))
                 {
-                    centroid_vector[group_ID].push_back({ORF_ID, ORF2_len});
+                    centroid_set.insert(centroid_ID.first);
                 }
+            }
+
+            // go through and align to each centroid, determine what is the highest scoring assignment
+            size_t assigned_centroid = ORF_ID;
+            double assigned_perc_id = 0;
+            for (const auto& centroid : centroid_set)
+            {
+                if (centroid != ORF_ID)
+                {
+                    const auto& ORF1_entry = ORF_mat_vector.at(centroid);
+                    const auto& ORF1_info = colour_ORF_map.at(ORF1_entry.first).at(ORF1_entry.second);
+                    const auto& ORF1_len = std::get<2>(ORF1_info);
+
+                    // check that perc_len_diff is greater than cut-off, otherwise pass
+                    double perc_len_diff = (double)ORF2_len / (double)ORF1_len;
+
+                    if (perc_len_diff < len_diff_cutoff)
+                    {
+                        continue;
+                    }
+
+                    // calculate the perc_id between the current centroid and the ORF
+                    double current_perc_id = align_seqs(ORF1_info, ORF2_info, ccdbg, head_kmer_arr, DBG_overlap);
+
+                    if (current_perc_id > assigned_perc_id)
+                    {
+                        assigned_perc_id = current_perc_id;
+                        assigned_centroid = centroid;
+                    }
+                    // when current_perc_id == assigned_perc_id, assign assigned_centroid to lowest index
+                    else if (current_perc_id == assigned_perc_id)
+                    {
+                        assigned_centroid = std::min(centroid, assigned_centroid);
+                    }
+                }
+            }
+
+            // check if centroid perc_id is greater than cut-off, if not then assign the cluster to it's own centroid
+            if (assigned_perc_id >= id_cutoff)
+            {
+                cluster_map[assigned_centroid].insert(ORF_ID);
+                cluster_map[assigned_centroid].insert(assigned_centroid);
+                encountered_set.insert(ORF_ID);
+                encountered_set.insert(assigned_centroid);
+            }
+            else
+            {
+                cluster_map[ORF_ID].insert(ORF_ID);
+                encountered_set.insert(ORF_ID);
+
+                // if singleton, add the current ORF as a centroid for all groups it is part of
+                for (const auto& group_ID : ORF_group_vector.at(ORF_ID))
+                {
+                    // check that ORF is not already the centroid for the group
+                    if (centroid_vector.at(group_ID).at(0).first != ORF_ID)
+                    {
+                        centroid_vector_private[group_ID].push_back({ORF_ID, ORF2_len});
+                    }
+                }
+            }
+        }
+        #pragma omp critical
+        {
+            // update node_colour_vector with calculated colours
+            ORF_length_list.insert(ORF_length_list.end(), std::make_move_iterator(ORF_length_list_private.begin()), std::make_move_iterator(ORF_length_list_private.end()));
+            for (int i = 0; i < centroid_vector_private.size(); i++)
+            {
+                centroid_vector[i].insert(centroid_vector[i].end(), std::make_move_iterator(centroid_vector_private[i].begin()), std::make_move_iterator(centroid_vector_private[i].end()));
             }
         }
     }
@@ -198,7 +212,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
     std::stable_sort(ORF_length_list.rbegin(), ORF_length_list.rend());
 
     // generate set to determine which ORFs have already been assigned clusters
-    std::set<size_t> cluster_assigned;
+    robin_hood::unordered_set<size_t> cluster_assigned;
 
     // iterate over ORF_length_list, pulling out centroids and their assigned clustered ORFs
     for (size_t i = 0; i < ORF_length_list.size(); i++)
@@ -240,7 +254,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                     // if entry is centroid, find next largest entry and assign that as centroid
                     size_t centroid_id = 0;
                     size_t centroid_len = 0;
-                    std::unordered_set<size_t> homolog_set;
+                    tbb::concurrent_unordered_set<size_t> homolog_set;
 
                     for (const auto& homolog2_ID : cluster_map.at(homolog_ID))
                     {
@@ -284,7 +298,7 @@ ORFClusterMap produce_clusters(const ColourORFMap& colour_ORF_map,
                 }
             }
             // delete ORF_ID from cluster_map
-            cluster_map.erase(ORF_ID);
+            cluster_map.unsafe_erase(ORF_ID);
         }
     }
 

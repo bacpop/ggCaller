@@ -48,7 +48,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 //                    tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
 //                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
 
-ORFVector sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
                            const std::vector<Kmer>& head_kmer_arr,
