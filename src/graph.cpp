@@ -359,7 +359,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             cout << "Scoring ORF clusters..." << endl;
 
             // keep track of clusters with low scoring centroids
-            robin_hood::unordered_set<size_t> to_remove;
+            tbb::concurrent_unordered_set<size_t> to_remove;
 
             // set up progress bar
             progressbar bar(cluster_map.size());
@@ -394,21 +394,18 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 if (std::get<4>(centroid_info) < minimum_ORF_score)
                 {
                     colour_ORF_vec_map[centroid_ID_pair.first].erase(centroid_ID_pair.second);
-                    #pragma omp critical
-                    {
-                        to_remove.insert(centroid_mat_ID);
-                    }
+                    to_remove.insert(centroid_mat_ID);
                     centroid_low = true;
                 }
 
                 // determine if there are any elements to remove from current cluster
-                std::vector<size_t> to_remove_cluster;
+                std::vector<size_t> to_remove_within_cluster;
 
                 // iterate over remaining elements in cluster, calculating scores
                 auto& ORF_entries = datIt->second;
-                for (int i = 0; i < ORF_entries.size(); i++)
+                for (int j = 0; j < ORF_entries.size(); j++)
                 {
-                    auto& entry = ORF_entries.at(i);
+                    auto& entry = ORF_entries.at(j);
                     if (entry != centroid_mat_ID)
                     {
                         // get ORF info
@@ -433,13 +430,13 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                         if (std::get<4>(ORF_info) < minimum_ORF_score)
                         {
                             colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
-                            to_remove_cluster.push_back(i);
+                            to_remove_within_cluster.push_back(j);
                         }
                     }
                 }
                 // remove low scoring entries, reversing to preserve order
-                std::reverse(to_remove_cluster.begin(), to_remove_cluster.end());
-                for (const auto& index : to_remove_cluster)
+                std::reverse(to_remove_within_cluster.begin(), to_remove_within_cluster.end());
+                for (const auto& index : to_remove_within_cluster)
                 {
                     ORF_entries.erase(ORF_entries.begin() + index);
                 }
