@@ -18,6 +18,10 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
         centroid_local_id = cluster_id_list[centroid][1]
         pan_centroid_ID = str(centroid_genome_id) + "_0_" + str(centroid_local_id)
 
+        # access ORF information for centroid from high_scoring_ORFs, ensuring cluster is present
+        if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
+            continue
+
         # append centroid to cluster
         cluster_centroids[cluster_id] = pan_centroid_ID
 
@@ -137,8 +141,6 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
 
             # iterate through edge_set, adding nodes and then adding edges if required
             for neighbour in edge_set:
-                # parse neighbour information from high_scoring_ORFs
-
                 # generate panaroo neighbour id
                 pan_neigbour_id = str(genome_id) + "_0_" + str(neighbour)
 
