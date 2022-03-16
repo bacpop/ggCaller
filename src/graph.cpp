@@ -393,13 +393,13 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                 // if centroid score is below the min-orf score remove from cluster map
                 if (std::get<4>(centroid_info) < minimum_ORF_score)
                 {
-                    colour_ORF_vec_map[centroid_ID_pair.first].erase(centroid_ID_pair.second);
+//                    colour_ORF_vec_map[centroid_ID_pair.first].erase(centroid_ID_pair.second);
                     to_remove.insert(centroid_mat_ID);
                     centroid_low = true;
                 }
 
                 // determine if there are any elements to remove from current cluster
-                std::vector<size_t> to_remove_within_cluster;
+//                std::vector<size_t> to_remove_within_cluster;
 
                 // iterate over remaining elements in cluster, calculating scores
                 auto& ORF_entries = datIt->second;
@@ -414,7 +414,8 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                         // if centroid score too low then remove
                         if (centroid_low)
                         {
-                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
+//                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
+                            to_remove.insert(entry);
                             continue;
                         }
 
@@ -429,17 +430,18 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
                         // remove from orf map if score too low
                         if (std::get<4>(ORF_info) < minimum_ORF_score)
                         {
-                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
-                            to_remove_within_cluster.push_back(j);
+//                            colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
+                            to_remove.insert(entry);
+//                            to_remove_within_cluster.push_back(j);
                         }
                     }
                 }
                 // remove low scoring entries, reversing to preserve order
-                std::reverse(to_remove_within_cluster.begin(), to_remove_within_cluster.end());
-                for (const auto& index : to_remove_within_cluster)
-                {
-                    ORF_entries.erase(ORF_entries.begin() + index);
-                }
+//                std::reverse(to_remove_within_cluster.begin(), to_remove_within_cluster.end());
+//                for (const auto& index : to_remove_within_cluster)
+//                {
+//                    ORF_entries.erase(ORF_entries.begin() + index);
+//                }
 
                 // update progress bar
                 #pragma omp critical
@@ -451,7 +453,12 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
             // remove any low scoring clusters from cluster map
             for (const auto& low_scorer : to_remove)
             {
-                cluster_map.erase(low_scorer);
+                if (cluster_map.find(low_scorer) != cluster_map.end())
+                {
+                    cluster_map.erase(low_scorer);
+                }
+                const auto& ORF_ID_pair = ORF_mat_vector.at(low_scorer);
+                colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
             }
 
             // new line for progress bar

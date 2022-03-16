@@ -10,17 +10,42 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
     seqid_to_centroid = {}
     cluster_centroids = {}
     cluster_members = defaultdict(list)
+    cluster_centroid_data = {}
     # iterate over cluster_dict, parsing all sequences to clusters
     cluster_id = 0
     for centroid, ORF_list in cluster_dict.items():
         # generate a panaroo sequence ID for current centroid
         centroid_genome_id = cluster_id_list[centroid][0]
         centroid_local_id = cluster_id_list[centroid][1]
-        pan_centroid_ID = str(centroid_genome_id) + "_0_" + str(centroid_local_id)
 
         # access ORF information for centroid from high_scoring_ORFs, ensuring cluster is present
         if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
-            continue
+            # if centroid not present, go through ORF_list and find next largest ORF present
+            current_length = 0
+            for ORF_id in ORF_list:
+                genome_id = cluster_id_list[ORF_id][0]
+                local_id = cluster_id_list[ORF_id][1]
+                if local_id in high_scoring_ORFs[genome_id]:
+                    ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+                    # if longer, assign as centroid
+                    if ORFNodeVector[2] > current_length:
+                        current_length = ORFNodeVector[2]
+                        centroid_genome_id = genome_id
+                        centroid_local_id = local_id
+            # if no new centroids assigned, pass
+            if current_length == 0:
+                continue
+
+        # access ORF information for centroid from high_scoring_ORFs
+        ORFNodeVector = high_scoring_ORFs[centroid_genome_id][centroid_local_id]
+        pan_centroid_ID = str(centroid_genome_id) + "_0_" + str(centroid_local_id)
+
+        # add information to cluster_centroid_data
+        cluster_centroid_data[cluster_id] = {
+            'ORF_info': ORFNodeVector,
+            'annotation': '',
+            'description': '',
+        }
 
         # append centroid to cluster
         cluster_centroids[cluster_id] = pan_centroid_ID
@@ -30,6 +55,11 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
             # generate a panaroo sequence ID for current ORF
             genome_id = cluster_id_list[ORF_id][0]
             local_id = cluster_id_list[ORF_id][1]
+
+            # check if ORF is present in high_scoring_ORFs
+            if local_id not in high_scoring_ORFs[genome_id]:
+                continue
+
             pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
 
             # index sequences to clusters
@@ -45,24 +75,6 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
         genomes = [int(s.split("_")[0]) for s in cluster_members[clust]]
         if len(genomes) != len(set(genomes)):
             paralogs.add(clust)
-
-    # Load meta data such as sequence and annotation
-    cluster_centroid_data = {}
-    for cluster_id, centroid_id in cluster_centroids.items():
-        # parse genome id and local ORF id from centroid
-        parsed_id = centroid_id.split("_")
-        genome_id = int(parsed_id[0])
-        local_id = int(parsed_id[-1])
-
-        # access ORF information for centroid from high_scoring_ORFs
-        ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
-
-        # add information to cluster_centroid_data
-        cluster_centroid_data[cluster_id] = {
-            'ORF_info': ORFNodeVector,
-            'annotation': '',
-            'description': '',
-        }
 
     # build graph using adjacency information and optionally split paralogs
     G = nx.Graph()
