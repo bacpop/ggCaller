@@ -437,9 +437,6 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
         }
     }
 
-    auto num_ORFs = ORF_mat_vector.size();
-    auto num_clusters = final_clusters.size();
-
     return final_clusters;
 }
 

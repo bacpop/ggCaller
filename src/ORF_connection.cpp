@@ -279,7 +279,7 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
             // check against fm-idx, pass if not present
-            if (is_ref)
+            if (is_ref && node_vector.size() % 2 == 1)
             {
                 std::vector<int> check_vector = node_vector;
                 check_vector.push_back(neighbour_id);
