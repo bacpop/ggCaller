@@ -348,10 +348,11 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap, ORFMatrixVector> Graph::f
         ORF_mat_vector = std::get<0>(ORF_group_tuple);
         auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
         auto& centroid_vector = std::get<2>(ORF_group_tuple);
+        auto& ID_hash_map = std::get<3>(ORF_group_tuple);
 
         // generate clusters for ORFs based on identity
         cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap, ORF_mat_vector,
-                                       ORF_group_vector, centroid_vector, id_cutoff, len_diff_cutoff);
+                                       ORF_group_vector, centroid_vector, ID_hash_map, id_cutoff, len_diff_cutoff);
 
         if (!no_filter)
         {

@@ -18,7 +18,8 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const size_t& DBG_overlap,
                                const ORFMatrixVector& ORF_mat_vector,
                                const std::vector<std::unordered_set<size_t>>& ORF_group_vector,
-                               std::vector<std::vector<std::pair<size_t, size_t>>>& centroid_vector,
+                               std::vector<size_t>& centroid_vector,
+                               const robin_hood::unordered_map<size_t, size_t>& ID_hash_map,
                                const double& id_cutoff,
                                const double& len_diff_cutoff);
 

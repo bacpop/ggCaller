@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     const bool no_filter = false;
 
     const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.gfa";
-    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.gfa";
+    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.bfg_colors";
     const std::string listfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.txt";
     const std::string ORF_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/geneTCN_jit.pt";
     const std::string TIS_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/tisTCN_jit.pt";
@@ -124,11 +124,11 @@ int main(int argc, char *argv[]) {
 
     std::unordered_set<std::string> ref_list;
 
-    GraphTuple graph_tuple = unitig_graph.build(
-            listfile, 31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA", ref_list);
+//    GraphTuple graph_tuple = unitig_graph.build(
+//            listfile, 31, stop_codons_for, stop_codons_rev, num_threads, is_ref, write_graph, "NA", ref_list);
 
-//    GraphTuple graph_tuple = unitig_graph.read(graphfile, coloursfile,
-//            stop_codons_for, stop_codons_rev, num_threads, is_ref, ref_list);
+    GraphTuple graph_tuple = unitig_graph.read(graphfile, coloursfile,
+            stop_codons_for, stop_codons_rev, num_threads, is_ref, ref_list);
 
     const auto& input_colours = std::get<0>(graph_tuple);
     const auto& nb_colours = std::get<1>(graph_tuple);
