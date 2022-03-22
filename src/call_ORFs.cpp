@@ -317,7 +317,7 @@ void generate_ORFs(const int& colour_ID,
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq);
+                        size_t ORF_hash = mphash(ORF_seq);
 
                         // determine if score is better and start site is better supported
                         if (score > best_score)
@@ -351,7 +351,7 @@ void generate_ORFs(const int& colour_ID,
                         // if TIS is present, add the non-TIS hash to to_remove
                         if (best_TIS_present)
                         {
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
+                            size_t hash_to_remove = mphash(path_sequence.substr((best_codon.first), (best_ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -374,7 +374,7 @@ void generate_ORFs(const int& colour_ID,
                         if (codon_pair.first >= 16)
                         {
                             TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
+                            size_t hash_to_remove = mphash(path_sequence.substr((codon_pair.first), (ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -383,7 +383,7 @@ void generate_ORFs(const int& colour_ID,
 
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq);
+                        size_t ORF_hash = mphash(ORF_seq);
 
                         // If ORF is real, continue and work out coordinates for ORF in node space
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
@@ -505,8 +505,8 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto& new_um = new_um_pair.first;
 
             // get hashes of first nodes to ensure stable assignment across runs
-            const size_t current_first_hash = hasher{}(curr_um.getUnitigHead().toString());
-            const size_t new_first_hash = hasher{}(new_um.getUnitigHead().toString());
+            const size_t current_first_hash = mphash(curr_um.getUnitigHead().toString());
+            const size_t new_first_hash = mphash(new_um.getUnitigHead().toString());
 
             // compare first/last entries. Assign the new ORF entry to that with the highest ID
             if (new_first_hash > current_first_hash)
@@ -522,8 +522,8 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 new_um = new_um_pair.first;
 
                 // if no clear winner, check last nodes
-                const size_t current_last_hash = hasher{}(curr_um.getUnitigHead().toString());
-                const size_t new_last_hash = hasher{}(new_um.getUnitigHead().toString());
+                const size_t current_last_hash = mphash(curr_um.getUnitigHead().toString());
+                const size_t new_last_hash = mphash(new_um.getUnitigHead().toString());
 
                 if (new_last_hash > current_last_hash)
                 {
@@ -562,7 +562,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                 auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
                 auto& um = um_pair.first;
 
-                const size_t node_hash = hasher{}(um.getUnitigHead().toString());
+                const size_t node_hash = mphash(um.getUnitigHead().toString());
                 if (strand != pos_strand_map.at(node_hash))
                 {
                     num_neg++;
@@ -612,7 +612,7 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
             auto& um = um_pair.first;
 
-            const size_t node_hash = hasher{}(um.getUnitigHead().toString());
+            const size_t node_hash = mphash(um.getUnitigHead().toString());
             // assigned new_map entry. If node is positive, strand is true, if negative, strand is false
             new_map[node_hash] = (node_id > 0) ? true : false;
         }

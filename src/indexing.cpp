@@ -1,10 +1,6 @@
 // ggCaller header
 #include "indexing.h"
 
-// define mutex for safe addition to maps
-std::mutex mtx1;
-std::mutex mtx2;
-
 ColoredCDBG<MyUnitigMap> buildGraph (const std::string& infile_1,
                                       const std::string& infile_2,
                                       const bool is_ref,
@@ -294,9 +290,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             for (const auto& succ : get_neighbours(um.getSuccessors()))
             {
                 // get copy of successor unitig
-                mtx1.lock();
                 const auto adj_um_pair = get_um_data(ccdbg, succ.first);
-                mtx1.unlock();
                 const auto& adj_um_data = adj_um_pair.second;
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
@@ -338,9 +332,7 @@ void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
             for (const auto& pred : get_neighbours(um.getSuccessors()))
             {
                 // get copy of predecessor unitig_ID
-                mtx2.lock();
                 const auto adj_um_pair = get_um_data(ccdbg, pred.first);
-                mtx2.unlock();
                 const auto& adj_um_data = adj_um_pair.second;
 
                 // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
