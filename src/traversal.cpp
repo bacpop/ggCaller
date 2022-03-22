@@ -78,7 +78,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 {
                     continue;
                 }
-            } else if (!repeat)
+            } else if (!is_ref && !repeat)
             {
                 // if using reads, check if unitig has already been traversed, and pass if repeat not specified
                 const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
