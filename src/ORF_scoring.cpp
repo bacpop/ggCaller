@@ -57,7 +57,7 @@ std::pair<float, bool> score_TIS (const std::string& ORF_DNA,
         std::string combined = upstream + downstream.substr(3, downstream.size() - 3);
         std::reverse(combined.begin(), combined.end());
 
-        size_t TIS_hash = mphash(combined);
+        size_t TIS_hash = hasher{}(combined);
 
         auto TIS_found = all_TIS_scores.find(TIS_hash);
         if (TIS_found != all_TIS_scores.end())
@@ -140,7 +140,7 @@ float score_gene (float& curr_prob,
         // get aa sequence, remove start and end codon
         const auto ORF_aa = (translate(ORF_DNA)).aa().substr(1,(ORF_DNA.size() / 3) - 2);
 
-        size_t ORF_hash = mphash(ORF_aa);
+        size_t ORF_hash = hasher{}(ORF_aa);
 
         auto ORF_found = all_ORF_scores.find(ORF_hash);
         if (ORF_found != all_ORF_scores.end())

@@ -123,8 +123,8 @@ std::pair<std::vector<int>, bool> assign_seq(const ColoredCDBG<MyUnitigMap>& ccd
         } else if (path_sequence.size() == stream_seq.size() && path_sequence != stream_seq)
         {
             // if equal size, get the hash of the last kmer in each and assign to highest
-            const size_t path_hash = mphash(path_sequence.substr(path_sequence.size() - kmer, kmer));
-            const size_t stream_hash = mphash(stream_seq.substr(stream_seq.size() - kmer, kmer));
+            const size_t path_hash = hasher{}(path_sequence.substr(path_sequence.size() - kmer, kmer));
+            const size_t stream_hash = hasher{}(stream_seq.substr(stream_seq.size() - kmer, kmer));
 
             if (path_hash > stream_hash)
             {

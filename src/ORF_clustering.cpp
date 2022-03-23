@@ -51,7 +51,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
             }
 
             // append to hash map
-            ID_hash_map[ORF_ID] = mphash(ORF_kmer);
+            ID_hash_map[ORF_ID] = hasher{}(ORF_kmer);
 
             // add new entry to ORF_group_vector
             ORF_group_vector.push_back({});

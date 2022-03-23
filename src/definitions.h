@@ -70,6 +70,8 @@ typedef Eigen::Triplet<double> ET;
 typedef sdsl::csa_wt<> fm_index_coll;
 
 // general typedefs
+// hasher using robin_hood hash
+typedef robin_hood::hash<std::string> hasher;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
 // vector of contig mappings for a node in the graph
@@ -107,7 +109,7 @@ typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, si
 // vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
 typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
 // tuple containing grouping information for ORFs filtered by Balrog
-typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<size_t>, robin_hood::unordered_map<size_t, size_t>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
+typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<int>, robin_hood::unordered_map<size_t, size_t>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
 // map of ORFs to clusters, with centroid as key
 typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
@@ -116,19 +118,5 @@ typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t
 typedef std::map<int, std::vector<RefindTuple>> RefindMap;
 // dictionary passed by python for refinding
 typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<ORFNodeVector>>> NodeSearchDict;
-
-// Mersenne prime hash function
-inline size_t mphash( std::string const& s )
-{
-    size_t result = 2166136261U ;
-    std::string::const_iterator end = s.end() ;
-    for ( std::string::const_iterator iter = s.begin() ;
-          iter != end ;
-          ++ iter ) {
-        result = 127 * result
-                 + static_cast< unsigned char >( *iter ) ;
-    }
-    return result ;
-};
 
 #endif //DEFINITIONS_H
