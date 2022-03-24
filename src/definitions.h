@@ -107,11 +107,11 @@ typedef std::map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
 // vector that maps colour/ORF_ID to a new 1D index for fast searching, and maps homologous IDs in same vector
-typedef std::vector<std::pair<size_t, size_t>> ORFMatrixVector;
+typedef robin_hood::unordered_map<size_t, std::pair<size_t, size_t>> ORFMatrixMap;
 // tuple containing grouping information for ORFs filtered by Balrog
-typedef std::tuple<ORFMatrixVector, std::vector<std::unordered_set<size_t>>, std::vector<int>, robin_hood::unordered_map<size_t, size_t>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
-// map of ORFs to clusters, with centroid as key
-typedef std::unordered_map<size_t, std::vector<size_t>> ORFClusterMap;
+typedef std::tuple<ORFMatrixMap, std::vector<std::unordered_set<size_t>>, std::vector<int>, robin_hood::unordered_map<size_t, size_t>, std::vector<std::pair<size_t, size_t>>> ORFGroupTuple;
+// map of ORFs to clusters, with centroid as first entry
+typedef std::unordered_map<size_t, std::vector<std::pair<size_t, size_t>>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
 typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, bool> RefindTuple;
 // map containing nodeID, search sequence and refind tuple

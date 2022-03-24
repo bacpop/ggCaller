@@ -484,9 +484,6 @@ def main():
     else:
         ORF_model_file, TIS_model_file = "NA", "NA"
 
-    # use shared memory to generate graph vector
-    print("Generating high scoring ORF calls per colour...")
-
     gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
@@ -494,7 +491,7 @@ def main():
                                  options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads)
 
-    high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict, cluster_id_list = gene_tuple
+    high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict = gene_tuple
 
     # generate ORF clusters
     if not options.no_clustering:
@@ -503,7 +500,7 @@ def main():
             total_arr = np.array([graph])
             array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
             with Pool(processes=options.threads) as pool:
-                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_id_list,
+                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
                             cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
                             options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,

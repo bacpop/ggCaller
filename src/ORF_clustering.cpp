@@ -7,7 +7,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
     std::vector<ET> tripletList;
 
     // generate a vector which maps ORF colour/ID to column in eigen matrix
-    ORFMatrixVector ORF_mat_vector;
+    ORFMatrixMap ORF_mat_map;
 
     // initialise length list for sorting of ORFs by length
     std::vector<std::pair<size_t, size_t>> ORF_length_list;
@@ -28,7 +28,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
         for (const auto& ORF_entry : colour.second)
         {
             // add to ORF_mat_map, initialising empty vector
-            ORF_mat_vector.push_back({colour.first, ORF_entry.first});
+            ORF_mat_map[ORF_ID] = {colour.first, ORF_entry.first};
 
             // extract info from ORF_entry
             const auto& ORF_info = ORF_entry.second;
@@ -71,7 +71,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                 if (centroid_vector.at(node_ID) != -1)
                 {
                     auto& centroid_ID = centroid_vector[node_ID];
-                    const auto& centroid_entry = ORF_mat_vector.at(centroid_ID);
+                    const auto& centroid_entry = ORF_mat_map.at(centroid_ID);
                     const auto& centroid_length = std::get<2>(colour_ORF_map.at(centroid_entry.first).at(centroid_entry.second));
 
                     // determine if current ORF is larger than current centroid
@@ -110,7 +110,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
     std::stable_sort(ORF_length_list.rbegin(), ORF_length_list.rend());
 
     //return group information
-    auto return_tuple = std::make_tuple(ORF_mat_vector, ORF_group_vector, centroid_vector, ID_hash_map, ORF_length_list);
+    auto return_tuple = std::make_tuple(ORF_mat_map, ORF_group_vector, centroid_vector, ID_hash_map, ORF_length_list);
     return return_tuple;
 }
 
@@ -118,7 +118,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const ColoredCDBG<MyUnitigMap>& ccdbg,
                                const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,
-                               const ORFMatrixVector& ORF_mat_vector,
+                               const ORFMatrixMap& ORF_mat_map,
                                const std::vector<std::unordered_set<size_t>>& ORF_group_vector,
                                std::vector<int>& centroid_vector,
                                const robin_hood::unordered_map<size_t, size_t>& ID_hash_map,
@@ -129,8 +129,8 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
     // initialise temporary cluster map, first item is centroid, second is set of nodes in that cluster
     tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<size_t>> cluster_map;
 
-    // initialise final cluster map for return
-    ORFClusterMap final_clusters;
+    // initialise map as intermediate to hold cluster IDs
+    robin_hood::unordered_map<size_t, std::vector<size_t>> final_clusters;
 
     // iterate over all ORFs, checking if all centroids have been identified
     std::vector<size_t> group_indices(ORF_group_vector.size());
@@ -165,7 +165,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                     continue;
                 }
 
-                const auto& ORF2_entry = ORF_mat_vector.at(ORF_ID);
+                const auto& ORF2_entry = ORF_mat_map.at(ORF_ID);
                 const auto& ORF2_info = colour_ORF_map.at(ORF2_entry.first).at(ORF2_entry.second);
                 const auto& ORF2_len = std::get<2>(ORF2_info);
 
@@ -205,7 +205,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                     const auto& centroid = centroid_pair.second;
                     if (centroid != ORF_ID)
                     {
-                        const auto& ORF1_entry = ORF_mat_vector.at(centroid);
+                        const auto& ORF1_entry = ORF_mat_map.at(centroid);
                         const auto& ORF1_info = colour_ORF_map.at(ORF1_entry.first).at(ORF1_entry.second);
                         const auto& ORF1_len = std::get<2>(ORF1_info);
 
@@ -316,8 +316,8 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                             } else if (ID_hash_map.at(group_entry[j].second) == ID_hash_map.at(largest.second))
                             {
                                 // if hashes equal, set lowest colour value as centroid
-                                const auto& new_entry = ORF_mat_vector.at(group_entry[j].second);
-                                const auto& larget_entry = ORF_mat_vector.at(largest.second);
+                                const auto& new_entry = ORF_mat_map.at(group_entry[j].second);
+                                const auto& larget_entry = ORF_mat_map.at(largest.second);
 
                                 if (new_entry.first < larget_entry.first)
                                 {
@@ -383,24 +383,26 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
         }
     }
 
-//    std::vector<size_t> not_assigned;
-//
-//    for (int i = 0; i < ORF_mat_vector.size(); i++)
-//    {
-//        if (cluster_assigned.find(i) == cluster_assigned.end())
-//        {
-//            not_assigned.push_back(i);
-//        }
-//    }
-//
-//    auto num_unassigned = not_assigned.size();
-//    auto num_ORFs = ORF_mat_vector.size();
-//    auto num_clusters = final_clusters.size();
-//    auto num_lengths = ORF_length_list.size();
-//
-//    cout << "Num unassigned: " << num_unassigned  << " Num ORFs: " << num_ORFs << " Num lengths: " << num_lengths << " Num clusters: " << num_clusters << endl;
+    // clear cluster_map
+    cluster_map.clear();
 
-    return final_clusters;
+    // initialise final cluster vector for return
+    ORFClusterMap final_cluster_map;
+    final_cluster_map.reserve(final_clusters.size());
+
+    // go through final_cluster_map, add all to final_cluster_map
+    size_t cluster_id = 0;
+    for (const auto& cluster : final_clusters)
+    {
+        // iterate over vector, centroid is first entry
+        for (const auto& ORF_ID : cluster.second)
+        {
+            final_cluster_map[cluster_id].push_back(ORF_mat_map.at(ORF_ID));
+        }
+        cluster_id++;
+    }
+
+    return final_cluster_map;
 }
 
 double align_seqs(const ORFNodeVector& ORF1_info,

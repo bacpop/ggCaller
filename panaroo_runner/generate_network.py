@@ -3,8 +3,7 @@ import networkx as nx
 from intbitset import intbitset
 
 
-def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
-                     cluster_id_list, cluster_dict):
+def generate_network(high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict):
     # associate sequences with their clusters
     seq_to_cluster = {}
     seqid_to_centroid = {}
@@ -13,18 +12,18 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
     cluster_centroid_data = {}
     # iterate over cluster_dict, parsing all sequences to clusters
     cluster_id = 0
-    for centroid, ORF_list in cluster_dict.items():
+    for cluster_id_temp, ORF_list in cluster_dict.items():
         # generate a panaroo sequence ID for current centroid
-        centroid_genome_id = cluster_id_list[centroid][0]
-        centroid_local_id = cluster_id_list[centroid][1]
+        centroid_genome_id = ORF_list[0][0]
+        centroid_local_id = ORF_list[0][1]
 
         # access ORF information for centroid from high_scoring_ORFs, ensuring cluster is present
         if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
             # if centroid not present, go through ORF_list and find next largest ORF present
             current_length = 0
-            for ORF_id in ORF_list:
-                genome_id = cluster_id_list[ORF_id][0]
-                local_id = cluster_id_list[ORF_id][1]
+            for ORF_ID_pair in ORF_list:
+                genome_id = ORF_ID_pair[0]
+                local_id = ORF_ID_pair[1]
                 if local_id in high_scoring_ORFs[genome_id]:
                     ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
                     # if longer, assign as centroid
@@ -51,10 +50,10 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges,
         cluster_centroids[cluster_id] = pan_centroid_ID
 
         # for each ORF, add ORF_id and cluster_id to respective dictionaries
-        for ORF_id in ORF_list:
+        for ORF_ID_pair in ORF_list:
             # generate a panaroo sequence ID for current ORF
-            genome_id = cluster_id_list[ORF_id][0]
-            local_id = cluster_id_list[ORF_id][1]
+            genome_id = ORF_ID_pair[0]
+            local_id = ORF_ID_pair[1]
 
             # check if ORF is present in high_scoring_ORFs
             if local_id not in high_scoring_ORFs[genome_id]:
