@@ -541,7 +541,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const std::vector<Kmer>& head_kmer_arr,
                            const bool is_ref)
 {
-    ORFNodeRobMap ORF_map(ORF_node_map.size());
+    ORFNodeRobMap ORF_map;
 
     // generate ID for each ORF and assign strand
     size_t ORF_ID = 0;
@@ -731,55 +731,3 @@ NodeStrandMap calculate_pos_strand(const ColoredCDBG<MyUnitigMap>& ccdbg,
         return pos_strand_vector[0];
     }
 }
-
-//ORFVector call_ORFs(const int colour_ID,
-//                    const ColoredCDBG<MyUnitigMap>& ccdbg,
-//                    const std::vector<Kmer>& head_kmer_arr,
-//                    const std::vector<std::string>& stop_codons_for,
-//                    const std::vector<std::string>& start_codons_for,
-//                    const int overlap,
-//                    const size_t min_ORF_length,
-//                    const bool is_ref,
-//                    const fm_index_coll& fm_idx,
-//                    torch::jit::script::Module& ORF_model,
-//                    torch::jit::script::Module& TIS_model,
-//                    const float& minimum_ORF_score,
-//                    const bool no_filter,
-//                    tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-//                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
-//{
-//    //initialise ORF_nodes_paths to add ORF sequences to
-//    ORFNodeMap ORF_node_map;
-//    std::unordered_set<size_t> hashes_to_remove;
-//
-//    // iterate over all_paths
-//    for (int i = 0; i < all_paths.size(); i++)
-//    {
-//        // generate all ORFs within the path for start and stop codon pairs
-//        generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, all_paths[i], overlap, min_ORF_length, is_ref, fm_idx, ORF_model, TIS_model, minimum_ORF_score, no_filter, all_ORF_scores, all_TIS_scores);
-//        // clear path and reallocate
-//        std::vector<int>().swap(all_paths[i]);
-//    }
-//
-//    // remove hashes to remove from ORF_hash
-//    for (const auto& hash : hashes_to_remove)
-//    {
-//        auto it = ORF_node_map.find(hash);
-//        if (it != ORF_node_map.end())
-//        {
-//            ORF_node_map.erase(it);
-//        }
-//    }
-//
-//    // generate pos_strand_map to determine relative strands of each node for each colour if not given by alignment of contigs
-//    NodeStrandMap pos_strand_map;
-//    if (!is_ref)
-//    {
-//        pos_strand_map = std::move(calculate_pos_strand(ccdbg, head_kmer_arr, ORF_node_map));
-//    }
-//
-//    // group colours of ORFs together
-//    ORFVector ORF_vector = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
-//
-//    return ORF_vector;
-//}
