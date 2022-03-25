@@ -347,14 +347,14 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
 
             //unpack ORF_group_tuple
             auto& ORF_mat_map = std::get<0>(ORF_group_tuple);
-            auto& ORF_group_vector = std::get<1>(ORF_group_tuple);
+            auto& ORF_group_map = std::get<1>(ORF_group_tuple);
             auto& centroid_vector = std::get<2>(ORF_group_tuple);
             auto& ID_hash_map = std::get<3>(ORF_group_tuple);
             auto& ORF_length_list = std::get<4>(ORF_group_tuple);
 
             // generate clusters for ORFs based on identity
             cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap, ORF_mat_map,
-                                               ORF_group_vector, centroid_vector, ID_hash_map, ORF_length_list,
+                                               ORF_group_map, centroid_vector, ID_hash_map, ORF_length_list,
                                                id_cutoff, len_diff_cutoff);
         }
 
@@ -429,33 +429,40 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
                         to_remove_within_cluster.insert(ORF_ID_pair);
                     } else if (centroid_low)
                     {
+                        // get ORF length
                         const auto& ORF_length = std::get<2>(ORF_info);
+                        // generate a hash based on kmer string
+                        std::string ORF_kmer;
+
+                        for (const auto& node_traversed : std::get<0>(ORF_info))
+                        {
+                            const size_t node_ID = abs(node_traversed) - 1;
+                            ORF_kmer += _KmerArray.at(node_ID).toString();
+                        }
+
+                        // calculate hash, determine highest hash if lengths equal
+                        size_t ORF_hash = hasher{}(ORF_kmer);
+
                         if (ORF_length > centroid_length)
                         {
                             centroid_ID_pair = ORF_ID_pair;
+                            centroid_length = ORF_length;
+                            centroid_hash = ORF_hash;
                         } else if (ORF_length == centroid_length)
                         {
-                            // generate a hash based on kmer string
-                            std::string ORF_kmer;
-
-                            for (const auto& node_traversed : std::get<0>(ORF_info))
-                            {
-                                const size_t node_ID = abs(node_traversed) - 1;
-                                ORF_kmer += _KmerArray.at(node_ID).toString();
-                            }
-
-                            // calculate hash, determine highest hash if lengths equal
-                            size_t ORF_hash = hasher{}(ORF_kmer);
-
-                            if (ORF_hash > centroid_hash)
+                            if (ORF_hash < centroid_hash)
                             {
                                 centroid_ID_pair = ORF_ID_pair;
+                                centroid_length = ORF_length;
+                                centroid_hash = ORF_hash;
                             } else if (ORF_hash == centroid_hash)
                             {
                                 // assign to lowest colour if hash and lengths equal
                                 if (ORF_ID_pair.first < centroid_ID_pair.first)
                                 {
                                     centroid_ID_pair = ORF_ID_pair;
+                                    centroid_length = ORF_length;
+                                    centroid_hash = ORF_hash;
                                 }
                             }
                         }
@@ -480,7 +487,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
                     }
 
                     // reassign entries
-                    ORF_entries = new_entries;
+                    ORF_entries = std::move(new_entries);
                 }
 
                 // determine whether to remove cluster
