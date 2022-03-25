@@ -3,7 +3,7 @@ import networkx as nx
 from intbitset import intbitset
 
 
-def generate_network(high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict):
+def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict):
     # associate sequences with their clusters
     seq_to_cluster = {}
     seqid_to_centroid = {}
@@ -21,16 +21,34 @@ def generate_network(high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict):
         if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
             # if centroid not present, go through ORF_list and find next largest ORF present
             current_length = 0
+            current_hash = 0
             for ORF_ID_pair in ORF_list:
                 genome_id = ORF_ID_pair[0]
                 local_id = ORF_ID_pair[1]
                 if local_id in high_scoring_ORFs[genome_id]:
                     ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
                     # if longer, assign as centroid
+                    seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    seq_hash = hash(seq)
                     if ORFNodeVector[2] > current_length:
                         current_length = ORFNodeVector[2]
                         centroid_genome_id = genome_id
                         centroid_local_id = local_id
+                        current_hash = seq_hash
+                    # if same length, assign to lowest hash
+                    elif ORFNodeVector[2] == current_length:
+                        if seq_hash < current_hash:
+                            current_length = ORFNodeVector[2]
+                            centroid_genome_id = genome_id
+                            centroid_local_id = local_id
+                            current_hash = seq_hash
+                        # if same hash, assign to lowest colour
+                        elif seq_hash == current_hash:
+                            if genome_id < centroid_genome_id:
+                                current_length = ORFNodeVector[2]
+                                centroid_genome_id = genome_id
+                                centroid_local_id = local_id
+                                current_hash = seq_hash
             # if no new centroids assigned, pass
             if current_length == 0:
                 continue

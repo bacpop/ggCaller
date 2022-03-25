@@ -58,7 +58,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts, seqid_to_centroid = generate_network(high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict)
+    G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], overlap, high_scoring_ORFs,
+                                                               high_scoring_ORF_edges, cluster_dict)
 
     # check if G is empty before proceeding
     if G.number_of_nodes() == 0:
