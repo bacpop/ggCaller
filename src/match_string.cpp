@@ -143,7 +143,8 @@ std::pair<bool, bool> path_search(const std::vector<int>& query_path,
     std::copy(query_path.begin(), query_path.end(),
               std::ostream_iterator<int>(oss, ","));
 
-    std::string query = oss.str();
+    // add start delimeter
+    std::string query = "," + oss.str();
 
     //count number of occurrences in positive strand
     auto count = sdsl::count(ref_idx, query);
@@ -158,7 +159,7 @@ std::pair<bool, bool> path_search(const std::vector<int>& query_path,
         oss.str(std::string());
         std::copy(rev_query_path.begin(), rev_query_path.end(),
                   std::ostream_iterator<int>(oss, ","));
-        query = oss.str();
+        query = "," + oss.str();
         count = sdsl::count(ref_idx, query);
         rev_comp = true;
     }

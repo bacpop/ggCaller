@@ -427,8 +427,8 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
         // roll through the sequence, generating k-mers and querying them in graph
         if (num_kmers > 0) {
-            // initialise variables for contig
-            std::string contig_path;
+            // initialise variables for contig, add initial delimeter
+            std::string contig_path = ",";
 
             const char *query_str = entry.c_str();
 
@@ -506,6 +506,14 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     // destroy seq and fp objects
     kseq_destroy(seq);
     gzclose(fp);
+
+    std::string outfile_name = fasta_file + "_node_ids.txt";
+    ofstream outfile;
+    outfile.open(outfile_name);
+
+    outfile << genome_path;
+    outfile.close();
+
 
     sdsl::construct_im(ref_index, genome_path, 1); // generate index
     store_to_file(ref_index, idx_file_name); // save it
