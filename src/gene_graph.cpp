@@ -120,7 +120,8 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                                        const GeneGraph& g,
                                        const float& minimum_path_score,
                                        const size_t numVertices,
-                                       T weight_pmap)
+                                       T weight_pmap,
+                                       const std::vector<Kmer>& head_kmer_arr)
 {
     // determine start (in-degree = 0) and end (out-degree = 0) vertices
     std::vector<VertexDescriptor> start_vertices;
@@ -188,6 +189,54 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                     gene_path = std::move(path);
                     high_score = path_score;
                 }
+                // if path_score is the same, take longest path
+                else if (path_score == high_score)
+                {
+                    if (path.size() > gene_path.size())
+                    {
+                        gene_path = std::move(path);
+                        high_score = path_score;
+                    }
+                    // if same size, then take lowest hash
+                    else if (path.size() == gene_path.size())
+                    {
+                        size_t curr_hash;
+                        {
+                            std::string seq;
+                            for (const auto& ORF_ID : gene_path)
+                            {
+                                const auto& ORF_info = ORF_map.at(ORF_ID);
+                                for (const auto& node_traversed : std::get<0>(ORF_info))
+                                {
+                                    const size_t node_ID = abs(node_traversed) - 1;
+                                    seq += head_kmer_arr.at(node_ID).toString();
+                                }
+                            }
+                            curr_hash = hasher{}(seq);
+                        }
+
+                        size_t new_hash;
+                        {
+                            std::string seq;
+                            for (const auto& ORF_ID : path)
+                            {
+                                const auto& ORF_info = ORF_map.at(ORF_ID);
+                                for (const auto& node_traversed : std::get<0>(ORF_info))
+                                {
+                                    const size_t node_ID = abs(node_traversed) - 1;
+                                    seq += head_kmer_arr.at(node_ID).toString();
+                                }
+                            }
+                            new_hash = hasher{}(seq);
+                        }
+
+                        if (new_hash < curr_hash)
+                        {
+                            gene_path = std::move(path);
+                            high_score = path_score;
+                        }
+                    }
+                }
             }
         }
     }
@@ -204,7 +253,8 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
 
 std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
                                                   const ORFOverlapMap& overlap_map,
-                                                  const float& minimum_path_score)
+                                                  const float& minimum_path_score,
+                                                  const std::vector<Kmer>& head_kmer_arr)
 {
     std::vector<std::vector<size_t>> gene_paths;
 
@@ -321,7 +371,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
     // iterate over components using bellman ford algorithm
     for (const auto& component : components)
     {
-        auto path = traverse_components(ORF_map, vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap);
+        auto path = traverse_components(ORF_map, vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap, head_kmer_arr);
         // ensure path is not empty
         if (!path.empty())
         {

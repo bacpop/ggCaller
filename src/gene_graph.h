@@ -63,10 +63,12 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                                         const GeneGraph& g,
                                         const float& minimum_path_score,
                                         const size_t numVertices,
-                                        T weight_pmap);
+                                        T weight_pmap,
+                                        const std::vector<Kmer>& head_kmer_arr);
 
 std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
                                                   const ORFOverlapMap& overlap_map,
-                                                  const float& minimum_path_score);
+                                                  const float& minimum_path_score,
+                                                  const std::vector<Kmer>& head_kmer_arr);
 
 #endif //GGCALLER_GENE_GRAPH_H
