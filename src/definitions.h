@@ -119,6 +119,6 @@ typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t
 // map containing nodeID, search sequence and refind tuple
 typedef std::map<int, std::vector<RefindTuple>> RefindMap;
 // dictionary passed by python for refinding
-typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<ORFNodeVector>>> NodeSearchDict;
+typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>>> NodeSearchDict;
 
 #endif //DEFINITIONS_H

@@ -32,15 +32,12 @@ def find_missing(G,
     n_searches = 0
     search_dict = {key: {"conflicts": {}, "searches": {}} for key in range(0, len(isolate_names))}
     for node in G.nodes():
-        centroid = G.nodes[node]["centroid"][G.nodes[node]['maxLenId']]
-        member = int(centroid.split("_")[0])
-        ORF_ID = int(centroid.split("_")[-1])
-        curr_ORF_info = high_scoring_ORFs[member][ORF_ID]
+        curr_ORF_info = G.nodes[node]["ORF_info"][G.nodes[node]['maxLenId']]
         for neigh in G.neighbors(node):
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
                 ORF_ID = int(sid.split("_")[-1])
-                ORF_info = high_scoring_ORFs[member][ORF_ID]
+                ORF_info = G.nodes[neigh]["ORF_info"][G.nodes[neigh]['maxLenId']]
                 search_dict[member]["conflicts"][neigh] = ORF_info
 
                 if member not in G.nodes[node]['members']:
@@ -50,7 +47,7 @@ def find_missing(G,
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = ((curr_ORF_info[0], curr_ORF_info[1]), [])
-                    search_dict[member]["searches"][node][1].append(ORF_info[:5])
+                    search_dict[member]["searches"][node][1].append(ORF_info)
 
                     n_searches += 1
 

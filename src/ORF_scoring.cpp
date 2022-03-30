@@ -100,8 +100,8 @@ std::pair<float, bool> score_TIS (const std::string& ORF_DNA,
 
         float score = (comb_prob - probthresh) * ORF_len;
 
-        // if next
-        if (score <= minimum_ORF_score)
+        // if score less than minimum, ignore
+        if (score < minimum_ORF_score)
         {
             return {0, false};
         }
