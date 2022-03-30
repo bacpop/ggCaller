@@ -507,14 +507,6 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     kseq_destroy(seq);
     gzclose(fp);
 
-    std::string outfile_name = fasta_file + "_node_ids.txt";
-    ofstream outfile;
-    outfile.open(outfile_name);
-
-    outfile << genome_path;
-    outfile.close();
-
-
     sdsl::construct_im(ref_index, genome_path, 1); // generate index
     store_to_file(ref_index, idx_file_name); // save it
 }
