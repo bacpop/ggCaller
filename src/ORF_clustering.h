@@ -10,7 +10,8 @@
 #include "translation.h"
 
 ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
-                         const std::vector<Kmer>& head_kmer_arr);
+                         const std::vector<Kmer>& head_kmer_arr,
+                         const size_t& overlap);
 
 ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const ColoredCDBG<MyUnitigMap>& ccdbg,

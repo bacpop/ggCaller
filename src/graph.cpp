@@ -343,7 +343,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
         // scope for clustering variables
         {
             // group ORFs together based on single shared k-mer
-            auto ORF_group_tuple = group_ORFs(colour_ORF_vec_map, _KmerArray);
+            auto ORF_group_tuple = group_ORFs(colour_ORF_vec_map, _KmerArray, overlap);
 
             //unpack ORF_group_tuple
             auto& ORF_mat_map = std::get<0>(ORF_group_tuple);
@@ -574,7 +574,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
 
                 if (!error)
                 {
-                    gene_paths = call_true_genes (ORF_map, ORF_overlap_map, minimum_path_score);
+                    gene_paths = call_true_genes (ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
 
                     // get high scoring genes
                     for (const auto& path : gene_paths)

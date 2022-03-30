@@ -1,7 +1,8 @@
 #include "ORF_clustering.h"
 
 ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
-                         const std::vector<Kmer>& head_kmer_arr)
+                         const std::vector<Kmer>& head_kmer_arr,
+                         const size_t& overlap)
 {
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
@@ -41,23 +42,40 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
             // generate a hash based on kmer string
             std::string ORF_kmer;
 
+            // hold indices that are complete unitigs i.e. start/end not in overlap
+            std::vector<size_t> complete_nodes;
+
             // traverse to generate hash
-            for (const auto& node_traversed : ORF_nodes)
+            for (int i = 0; i < ORF_nodes.size(); i++)
             {
-                // add to triplet list, with temp_ORF_ID (row), node id (column) and set value as 1 (true)
+                const auto& node_indices = std::get<1>(ORF_info).at(i);
+                // determine if at end and in overlap region of unitigs, if so pass
+                if (node_indices.second - node_indices.first < overlap)
+                {
+                    // if no entries added, then at start so break
+                    if (complete_nodes.empty())
+                    {
+                       continue;
+                    }
+                    // else at end, so break
+                    else
+                    {
+                        break;
+                    }
+                }
                 // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
+                const int& node_traversed = ORF_nodes.at(i);
                 const size_t node_ID = abs(node_traversed) - 1;
                 ORF_kmer += head_kmer_arr.at(node_ID).toString();
+                complete_nodes.push_back(node_ID);
             }
 
             // append to hash map
             ID_hash_map[ORF_ID] = hasher{}(ORF_kmer);
 
             // go over again, this time determining centroid status
-            for (const auto& node_traversed : ORF_nodes)
+            for (const auto& node_ID : complete_nodes)
             {
-                const size_t node_ID = abs(node_traversed) - 1;
-
                 // add the ORF to the group
                 ORF_group_map[ORF_ID].insert(node_ID);
 
