@@ -239,6 +239,9 @@ void generate_ORFs(const int& colour_ID,
         }
     }
 
+    // add strand in case gene is present in reverse
+    std::string strand_str = (!present.second) ? "1" : "0";
+
     // generate sequences for ORFs from codon pairs
     for (const auto& frame : ORF_index_pairs)
     {
@@ -317,7 +320,7 @@ void generate_ORFs(const int& colour_ID,
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq);
+                        size_t ORF_hash = hasher{}(ORF_seq + strand_str);
 
                         // determine if score is better and start site is better supported
                         if (score > best_score)
@@ -351,7 +354,7 @@ void generate_ORFs(const int& colour_ID,
                         // if TIS is present, add the non-TIS hash to to_remove
                         if (best_TIS_present)
                         {
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)) + strand_str);
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -374,7 +377,7 @@ void generate_ORFs(const int& colour_ID,
                         if (codon_pair.first >= 16)
                         {
                             TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)) + strand_str);
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -383,7 +386,7 @@ void generate_ORFs(const int& colour_ID,
 
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq);
+                        size_t ORF_hash = hasher{}(ORF_seq + strand_str);
 
                         // If ORF is real, continue and work out coordinates for ORF in node space
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
