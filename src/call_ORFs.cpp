@@ -239,9 +239,6 @@ void generate_ORFs(const int& colour_ID,
         }
     }
 
-    // add strand in case gene is present in reverse
-    std::string strand_str = (!present.second) ? "1" : "0";
-
     // generate sequences for ORFs from codon pairs
     for (const auto& frame : ORF_index_pairs)
     {
@@ -275,8 +272,18 @@ void generate_ORFs(const int& colour_ID,
                         // get ORF coords for current iteration
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
+                        // determine first 'complete unitig' i.e. with start not in overlap region
+                        int index = 0;
+                        for (; index < ORF_coords.second.size(); index++)
+                        {
+                            if (ORF_coords.second.at(index).second - ORF_coords.second.at(index).first >= overlap)
+                            {
+                                break;
+                            }
+                        }
+
                         // determine coverage for start_site
-                        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF_coords.first[0]);
+                        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF_coords.first[index]);
                         auto& um_data = um_pair.second;
                         size_t start_coverage = um_data->full_colour().count();
 
@@ -320,7 +327,7 @@ void generate_ORFs(const int& colour_ID,
                         // create hash including TIS sequence
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq + strand_str);
+                        size_t ORF_hash = hasher{}(ORF_seq);
 
                         // determine if score is better and start site is better supported
                         if (score > best_score)
@@ -354,7 +361,7 @@ void generate_ORFs(const int& colour_ID,
                         // if TIS is present, add the non-TIS hash to to_remove
                         if (best_TIS_present)
                         {
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)) + strand_str);
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -377,7 +384,7 @@ void generate_ORFs(const int& colour_ID,
                         if (codon_pair.first >= 16)
                         {
                             TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
-                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)) + strand_str);
+                            size_t hash_to_remove = hasher{}(path_sequence.substr((codon_pair.first), (ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
@@ -386,7 +393,7 @@ void generate_ORFs(const int& colour_ID,
 
                         ORF_seq = TIS_seq + ORF_seq;
 
-                        size_t ORF_hash = hasher{}(ORF_seq + strand_str);
+                        size_t ORF_hash = hasher{}(ORF_seq);
 
                         // If ORF is real, continue and work out coordinates for ORF in node space
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
