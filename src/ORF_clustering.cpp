@@ -405,14 +405,20 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
     ORFClusterMap final_cluster_map;
     final_cluster_map.reserve(final_clusters.size());
 
-    // go through final_cluster_map, add all to final_cluster_map
+    // go through final_cluster_map, add all to final_cluster_map in specific order of size
     size_t cluster_id = 0;
-    for (const auto& cluster : final_clusters)
+    for (size_t i = 0; i < ORF_length_list.size(); i++)
     {
-        // iterate over vector, centroid is first entry
-        for (const auto& ORF_ID : cluster.second)
+        const size_t& centroid_ID = ORF_length_list.at(i).second;
+
+        const auto present = final_clusters.find(centroid_ID);
+        if (present != final_clusters.end())
         {
-            final_cluster_map[cluster_id].push_back(ORF_mat_map.at(ORF_ID));
+            // iterate over vector, centroid is first entry
+            for (const auto& ORF_ID : present->second)
+            {
+                final_cluster_map[cluster_id].push_back(ORF_mat_map.at(ORF_ID));
+            }
         }
         cluster_id++;
     }
