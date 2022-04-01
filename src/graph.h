@@ -89,6 +89,10 @@ class Graph {
                                                          const int overlap,
                                                          const bool write_idx,
                                                          size_t num_threads);
+    size_t rb_hash(const std::string seq)
+    {
+        return hasher{}(seq);
+    }
 
     size_t node_size(const int& node_id)
     {
