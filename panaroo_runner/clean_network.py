@@ -112,7 +112,6 @@ def remove_member_from_node(G, node, member):
 def merge_node_cluster(G,
                        nodes,
                        newNode,
-                       seqid_to_centroid,
                        multi_centroid=True,
                        check_merge_mems=True):
     if check_merge_mems:
@@ -143,23 +142,37 @@ def merge_node_cluster(G,
     centroid = [element for index, element in enumerate(centroid) if index not in to_remove]
     ORF_info = [item for sublist in gen_node_iterables(G, nodes, 'ORF_info') for item in sublist]
     ORF_info = [element for index, element in enumerate(ORF_info) if index not in to_remove]
+    hash = [item for sublist in gen_node_iterables(G, nodes, 'hash') for item in sublist]
+    hash = [element for index, element in enumerate(hash) if index not in to_remove]
     seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
 
     # generate the lengths for the determination of the longest sequence
     lengths = [item for sublist in gen_node_iterables(G, nodes, 'lengths') for item in sublist]
     lengths = [element for index, element in enumerate(lengths) if index not in to_remove]
 
-    # update seqid_to_centroid
-    for seqID in seqIDs:
-        seqid_to_centroid[seqID] = centroid[0]
-
-    # First create a new node and combine the attributes
+    # determine new centroid within cluster
     maxLenId = 0
     max_l = 0
+    max_hash = 0
     for i, s in enumerate(lengths):
         if s > max_l:
             max_l = s
             maxLenId = i
+            max_hash = hash[i]
+        # if the same, determine hash for sequences
+        elif s == max_l:
+            if hash[i] < max_hash:
+                max_l = s
+                maxLenId = i
+                max_hash = hash[i]
+            # if hash is same, assign to lowest colour
+            elif hash[i] == max_hash:
+                prev_col = centroid[maxLenId].split("_")[0]
+                curr_col = centroid[i].split("_")[0]
+                if curr_col < prev_col:
+                    max_l = s
+                    maxLenId = i
+                    max_hash = hash[i]
 
     members = G.nodes[nodes[0]]['members'].copy()
     for n in nodes[1:]:
@@ -179,6 +192,7 @@ def merge_node_cluster(G,
         seqIDs=seqIDs,
         hasEnd=any(gen_node_iterables(G, nodes, 'hasEnd')),
         ORF_info=ORF_info,
+        hash=hash,
         annotation=";".join(
             iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
                                              split=";"))),
@@ -290,7 +304,6 @@ def single_linkage(G, distances_bwtn_centroids, centroid_to_index, neighbours):
 def collapse_families(G,
                       DBG,
                       overlap,
-                      seqid_to_centroid,
                       outdir,
                       family_threshold=0.7,
                       dna_error_threshold=0.99,
@@ -339,10 +352,7 @@ def collapse_families(G,
     seqid_to_index = {}
     for node in G.nodes():
         for sid in G.nodes[node]['seqIDs']:
-            if "refound" in sid:
-                seqid_to_index[sid] = centroid_to_index[G.nodes[node]['centroid'][G.nodes[node]["maxLenId"]]]
-            else:
-                seqid_to_index[sid] = centroid_to_index[seqid_to_centroid[sid]]
+            seqid_to_index[sid] = centroid_to_index[G.nodes[node]['centroid'][G.nodes[node]["maxLenId"]]]
 
     nonzero_dist = distances_bwtn_centroids.nonzero()
     nonzero_dist = set([(i, j)
@@ -368,7 +378,7 @@ def collapse_families(G,
         iteration_num = 1
         while len(search_space) > 0:
             # look for nodes to merge
-            temp_node_list = list(search_space)
+            temp_node_list = sorted(list(search_space))
             removed_nodes = set()
             if not quiet: print("Iteration: ", iteration_num)
             iteration_num += 1
@@ -415,7 +425,6 @@ def collapse_families(G,
                             G,
                             cluster,
                             node_count,
-                            seqid_to_centroid,
                             multi_centroid=(not correct_mistranslations))
 
                         node_mem_index[node_count] = node_mem_index[cluster[0]]
@@ -513,7 +522,6 @@ def collapse_families(G,
                                         G,
                                         clust,
                                         node_count,
-                                        seqid_to_centroid,
                                         multi_centroid=(
                                             not correct_mistranslations),
                                         check_merge_mems=False)
@@ -539,26 +547,22 @@ def collapse_families(G,
     return G, distances_bwtn_centroids, centroid_to_index
 
 
-def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, quiet=False):
+def collapse_paralogs(G, centroid_contexts, max_context=5, quiet=False):
     node_count = max(list(G.nodes())) + 10
 
     # first sort by context length, context dist to ensure ties
     #  are broken the same way
     for centroid in centroid_contexts:
-        centroid_contexts[centroid] = sorted(centroid_contexts[centroid])
+        centroid_contexts[centroid].sort(key = lambda x: x[-1])
 
     # set up for context search
     centroid_to_index = {}
     ncentroids = -1
     for node in G.nodes():
-        centroid = G.nodes[node]['centroid'][0]
+        centroid = G.nodes[node]['centroid'][G.nodes[node]['maxLenId']]
         if centroid not in centroid_to_index:
             ncentroids += 1
             centroid_to_index[centroid] = ncentroids
-            centroid_to_index[G.nodes[node]['centroid'][0]] = ncentroids
-        else:
-            centroid_to_index[G.nodes[node]['centroid']
-            [0]] = centroid_to_index[centroid]
     ncentroids += 1
 
     for centroid in tqdm(centroid_contexts, disable=quiet):
@@ -567,7 +571,20 @@ def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, qu
         for para in centroid_contexts[centroid]:
             member_paralogs[para[1]].append(para)
 
-        ref_paralogs = max(member_paralogs.items(), key=lambda x: len(x[1]))[1]
+        # iterate over member_paralogs, determining reference paralog based on cluster with most paralogs.
+        # If multiple, assign to lowest genome id.
+        ref_paralogs = []
+        largest_paralog_cluster = 0
+        for genome_id, para in member_paralogs.items():
+            paralog_cluster_size = len(para)
+            if paralog_cluster_size > largest_paralog_cluster:
+                largest_paralog_cluster = paralog_cluster_size
+                ref_paralogs = para
+            elif paralog_cluster_size == largest_paralog_cluster:
+                if para[0][1] < ref_paralogs[0][1]:
+                    largest_paralog_cluster = paralog_cluster_size
+                    ref_paralogs = para
+
         # for each paralog find its closest reference paralog
         cluster_dict = defaultdict(set)
         cluster_mems = defaultdict(set)
@@ -606,7 +623,7 @@ def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, qu
                 para_context = np.zeros(ncentroids)
                 for u, node, depth in mod_bfs_edges(G, para[0], max_context):
                     para_context[centroid_to_index[G.nodes[node]['centroid']
-                    [0]]] = depth
+                    [G.nodes[node]['maxLenId']]]] = depth
                 for c, ref in enumerate(ref_paralogs):
                     if para[1] in cluster_mems[c]:
                         # dont match paralogs of the same isolate
@@ -615,7 +632,7 @@ def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, qu
                     for u, node, depth in mod_bfs_edges(
                             G, ref[0], max_context):
                         ref_context[centroid_to_index[G.nodes[node]['centroid']
-                        [0]]] = depth
+                        [G.nodes[node]['maxLenId']]]] = depth
                     s = np.sum(1 / (1 + np.abs((para_context - ref_context)[
                                                    (para_context * ref_context) != 0])))
                     if s > s_max:
@@ -630,12 +647,12 @@ def collapse_paralogs(G, centroid_contexts, seqid_to_centroid, max_context=5, qu
             if len(cluster_dict[cluster]) < 2: continue
             node_count += 1
 
-            G = merge_node_cluster(G, list(cluster_dict[cluster]), node_count, seqid_to_centroid)
+            G = merge_node_cluster(G, list(cluster_dict[cluster]), node_count)
 
     return (G)
 
 
-def merge_paralogs(G, seqid_to_centroid):
+def merge_paralogs(G):
     node_count = max(list(G.nodes())) + 10
 
     # group paralog nodes by centroid
@@ -671,7 +688,6 @@ def merge_paralogs(G, seqid_to_centroid):
             G = merge_node_cluster(G,
                                    temp_c,
                                    node_count,
-                                   seqid_to_centroid,
                                    check_merge_mems=False)
 
     return (G)
