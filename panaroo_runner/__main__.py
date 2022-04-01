@@ -58,8 +58,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts, seqid_to_centroid = generate_network(shd_arr[0], overlap, high_scoring_ORFs,
-                                                               high_scoring_ORF_edges, cluster_dict)
+    G, centroid_contexts = generate_network(shd_arr[0], overlap, high_scoring_ORFs,
+                                            high_scoring_ORF_edges, cluster_dict)
 
     # check if G is empty before proceeding
     if G.number_of_nodes() == 0:
@@ -69,7 +69,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # merge paralogs
     if verbose:
         print("Processing paralogs...")
-    G = collapse_paralogs(G, centroid_contexts, seqid_to_centroid, quiet=(not verbose))
+    G = collapse_paralogs(G, centroid_contexts, quiet=(not verbose))
 
     # write out pre-filter graph in GML format
     for node in G.nodes():
@@ -92,7 +92,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     G = collapse_families(G,
                           DBG=shd_arr[0],
                           overlap=overlap,
-                          seqid_to_centroid=seqid_to_centroid,
                           outdir=temp_dir,
                           dna_error_threshold=0.98,
                           correct_mistranslations=True,
@@ -124,7 +123,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         G,
         DBG=shd_arr[0],
         overlap=overlap,
-        seqid_to_centroid=seqid_to_centroid,
         outdir=temp_dir,
         family_threshold=family_threshold,
         correct_mistranslations=False,
@@ -168,7 +166,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         G = collapse_families(G,
                               DBG=shd_arr[0],
                               overlap=overlap,
-                              seqid_to_centroid=seqid_to_centroid,
                               outdir=temp_dir,
                               family_threshold=family_threshold,
                               correct_mistranslations=False,
@@ -185,7 +182,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # if requested merge paralogs
     if merge_para:
-        G = merge_paralogs(G, seqid_to_centroid)
+        G = merge_paralogs(G)
 
     # generate list of input isolate names
     isolate_names = [
