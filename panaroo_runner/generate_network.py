@@ -10,15 +10,15 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
     cluster_centroids = {}
     cluster_members = defaultdict(list)
     cluster_centroid_data = {}
-    # iterate over cluster_dict, parsing all sequences to clusters
     cluster_id = 0
-    for cluster_id_temp, ORF_list in cluster_dict.items():
+    # iterate over cluster_dict in order of entries, parsing all sequences to clusters
+    for temp_cluster_id, ORF_list in sorted(cluster_dict.items()):
         # generate a panaroo sequence ID for current centroid
         centroid_genome_id = ORF_list[0][0]
         centroid_local_id = ORF_list[0][1]
 
         # hold current_hash
-        current_hash = 0
+        current_hash = None
 
         # access ORF information for centroid from high_scoring_ORFs, ensuring cluster is present
         if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
@@ -28,10 +28,11 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 genome_id = ORF_ID_pair[0]
                 local_id = ORF_ID_pair[1]
                 if local_id in high_scoring_ORFs[genome_id]:
+                    # generate a hash for the centroid based on the sequence and strand
                     ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
-                    # if longer, assign as centroid
                     seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    seq_hash = hash(seq)
+                    seq_hash = DBG.rb_hash(seq)
+                    # if longer, assign as centroid
                     if ORFNodeVector[2] > current_length:
                         current_length = ORFNodeVector[2]
                         centroid_genome_id = genome_id
@@ -60,16 +61,14 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
         pan_centroid_ID = str(centroid_genome_id) + "_0_" + str(centroid_local_id)
 
         # generate hash for later comparisons if not already generated
-        if not current_hash:
+        if current_hash is None:
             seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-            current_hash = hash(seq)
+            current_hash = DBG.rb_hash(seq)
 
         # add information to cluster_centroid_data
         cluster_centroid_data[cluster_id] = {
             'ORF_info': ORFNodeVector,
             'hash': current_hash,
-            'annotation': '',
-            'description': '',
         }
 
         # append centroid to cluster
@@ -120,20 +119,20 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
             genome_id = int(parsed_id[0])
             local_id = int(parsed_id[-1])
 
-            # map ORF ID to centroid ID
-            seqid_to_centroid[ORF_id] = cluster_centroids[current_cluster]
-
             # initialise cluster to add
             cluster_to_add = current_cluster
 
             if add_cluster:
                 if has_paralogs:
+                    ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+                    seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                    seq_hash = DBG.rb_hash(seq)
                     # create a new paralog
                     n_nodes += 1
                     cluster_to_add = n_nodes
                     centroid_context[
                         cluster_centroids[current_cluster]].append(
-                        [cluster_to_add, genome_id])
+                        (cluster_to_add, genome_id, seq_hash))
                     # overwrite seq_to_cluster for current ORF
                     seq_to_cluster[ORF_id] = cluster_to_add
                 G.add_node(
@@ -147,11 +146,9 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
                                cluster_centroid_data[current_cluster]['ORF_info'][1])],
                     hash=[cluster_centroid_data[current_cluster]['hash']],
-                    annotation=cluster_centroid_data[current_cluster]
-                    ['annotation'],
+                    annotation='',
                     bitscore=0,
-                    description=cluster_centroid_data[current_cluster]
-                    ['description'],
+                    description='',
                     lengths=[
                         cluster_centroid_data[current_cluster]['ORF_info'][2]
                     ],
@@ -199,4 +196,4 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                size=1,
                                members=intbitset([genome_id]))
 
-    return G, centroid_context, seqid_to_centroid
+    return G, centroid_context
