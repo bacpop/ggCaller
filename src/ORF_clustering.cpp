@@ -16,9 +16,6 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
     // create a mapping between ORF_ID and hash to determine centroids that have same length
     robin_hood::unordered_map<size_t, size_t> ID_hash_map;
 
-    // initialise map which holds which nodes map to which ORFs
-    ORFGroupMap ORF_group_map;
-
     // initialise vector to hold all centroid IDs in, and dynamic bitset to determine which centroids have been assigned
     std::vector<int> centroid_vector(head_kmer_arr.size(), -1);
 
@@ -73,15 +70,12 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
             // append to hash map
             ID_hash_map[ORF_ID] = hasher{}(ORF_kmer);
 
+            // get length of ORF entry
+            const size_t& ORF_length = std::get<2>(ORF_info);
+
             // go over again, this time determining centroid status
             for (const auto& node_ID : complete_nodes)
             {
-                // add the ORF to the group
-                ORF_group_map[ORF_ID].insert(node_ID);
-
-                // get length of ORF entry
-                const size_t& ORF_length = std::get<2>(ORF_info);
-
                 // determine the current size of the ORF and the centroid if previous assigned
                 if (centroid_vector.at(node_ID) != -1)
                 {
@@ -114,6 +108,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                 } else
                 {
                     centroid_vector[node_ID] = ORF_ID;
+                      int i = 1;
                 }
             }
             // increment ORF_ID
@@ -125,7 +120,7 @@ ORFGroupTuple group_ORFs(const ColourORFVectorMap& colour_ORF_map,
     std::stable_sort(ORF_length_list.rbegin(), ORF_length_list.rend());
 
     //return group information
-    auto return_tuple = std::make_tuple(ORF_mat_map, ORF_group_map, centroid_vector, ID_hash_map, ORF_length_list);
+    auto return_tuple = std::make_tuple(ORF_mat_map, centroid_vector, ID_hash_map, ORF_length_list);
     return return_tuple;
 }
 
@@ -134,7 +129,6 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                const std::vector<Kmer>& head_kmer_arr,
                                const size_t& DBG_overlap,
                                const ORFMatrixMap& ORF_mat_map,
-                               const robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>>& ORF_group_map,
                                std::vector<int>& centroid_vector,
                                const robin_hood::unordered_map<size_t, size_t>& ID_hash_map,
                                const std::vector<std::pair<size_t, size_t>>& ORF_length_list,
@@ -148,7 +142,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
     robin_hood::unordered_map<size_t, std::vector<size_t>> final_clusters;
 
     // iterate over all ORFs, checking if all centroids have been identified
-    std::vector<size_t> group_indices(ORF_group_map.size());
+    std::vector<size_t> group_indices(ORF_length_list.size());
     std::iota(group_indices.begin(), group_indices.end(), 0);
 
     // iterate through group_map, ensuring all ORFs have been checked against all potential centroids
@@ -191,8 +185,9 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                 bool is_centroid = false;
 
                 // go through the group_IDs
-                for (const auto& group_ID : ORF_group_map.at(ORF_ID))
+                for (const auto& node_ID : std::get<0>(ORF2_info))
                 {
+                    size_t group_ID = abs(node_ID) - 1;
                     if (centroid_vector.at(group_ID) != -1)
                     {
                         // add all centroids to centroid set for shared k-mer groups
@@ -269,10 +264,10 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                     {
                         // if singleton and not centroid, add the current ORF as a centroid for all groups it is part of
                         // enabling searching in next iteration
-                        for (const auto& group_ID : ORF_group_map.at(ORF_ID))
+                        for (const auto& node_ID : std::get<0>(ORF2_info))
                         {
                             // add ORF as new centroid of group
-                            centroid_vector_sizes_private[group_ID].push_back({ORF2_len, ORF_ID});
+                            centroid_vector_sizes_private[abs(node_ID) - 1].push_back({ORF2_len, ORF_ID});
                         }
                         // add entry to group_indices_private to re-cluster in next pass
                         group_indices_private.push_back(ORF_ID);
