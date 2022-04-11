@@ -246,7 +246,7 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
 
             // if adding new node pushes path length over radius or neighbour is end contig, add neighbour and return
-            if (updated_path_length >= radius || neighbour_um_data->end_contig())
+            if (updated_path_length >= radius || neighbour_um_data->end_contig(current_colour))
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;

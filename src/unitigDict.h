@@ -4,7 +4,6 @@
 #include "definitions.h"
 #include <boost/serialization/access.hpp>
 
-
 // unitigDict class declaration
 class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     public:
@@ -37,18 +36,12 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
     std::bitset<3> get_codon_arr (const bool full, const bool forward, const int frame) const;
 
     // add and return unitig colours
-    void add_head_colour(boost::dynamic_bitset<> colours) {_unitig_head_colour = colours;};
-    boost::dynamic_bitset<> head_colour() const {return _unitig_head_colour;};
     void add_full_colour(boost::dynamic_bitset<> colours) {_unitig_full_colour = colours;};
-    boost::dynamic_bitset<> full_colour() const {return _unitig_full_colour;};
-    void add_tail_colour(boost::dynamic_bitset<> colours) {_unitig_tail_colour = colours; _check_head_tail_equal();};
-    boost::dynamic_bitset<> tail_colour() const {return _unitig_tail_colour;};
-    bool head_tail_colours_equal() const {return _head_tail_colours_equal;};
-    void clear_colours() {_unitig_head_colour.clear(); _unitig_tail_colour.clear();};
+    boost::dynamic_bitset<> full_colour() const {return _unitig_full_colour;}
 
     // access end_contig
-    void set_end_contig (bool choice) {_end_contig = choice;};
-    bool end_contig() const {return _end_contig;};
+    void set_end_contig (int colour, size_t nb_colours);
+    bool end_contig (int colour) const;
 
     private:
     // Bifrost data accessor methods
@@ -69,15 +62,9 @@ class MyUnitigMap : public CCDBG_Data_t<MyUnitigMap>, CDBG_Data_t<MyUnitigMap> {
 
     // unitig colours
     boost::dynamic_bitset<> _unitig_full_colour;
-    boost::dynamic_bitset<> _unitig_head_colour;
-    boost::dynamic_bitset<> _unitig_tail_colour;
-    bool _head_tail_colours_equal = false;
 
-    // check head and tail colours equal
-    void _check_head_tail_equal();
-
-    // bool to determine if unitig is end of a contig/assembly
-    bool _end_contig = false;
+    // bitset to determine if unitig is end of a contig/assembly
+    boost::dynamic_bitset<> _end_contig;
 
     // forward_stop presence/absence
     bool _forward_stop = false;

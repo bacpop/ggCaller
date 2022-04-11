@@ -95,9 +95,9 @@ int main(int argc, char *argv[]) {
     const size_t max_overlap = 60;
     const bool no_filter = false;
 
-    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.gfa";
-    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.bfg_colors";
-    const std::string listfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/SP_PRJEB2632_5.txt";
+    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.gfa";
+    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.bfg_colors";
+    const std::string listfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/plasmid_clique_556_list.txt";
     const std::string ORF_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/geneTCN_jit.pt";
     const std::string TIS_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/tisTCN_jit.pt";
     const double minimum_ORF_score = 100;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     const std::vector<std::string> start_codons_for = {"ATG", "GTG", "TTG"};
 
 
-    // Set number of threads
+//     Set number of threads
     if (num_threads < 1) {
         num_threads = 1;
     }
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
             const auto& ORF_ID = ORF_entry.first;
             const auto& ORF_info = ORF_entry.second;
 //            const std::string sequence = unitig_graph.generate_sequence(std::get<0>(ORF_info), std::get<1>(ORF_info), 30);
-            node_search_dict[node_ID] = {{std::get<0>(ORF_info), std::get<1>(ORF_info)}, {ORF_info}};
+            node_search_dict[node_ID] = {{std::get<0>(ORF_info), std::get<1>(ORF_info)}, {{std::get<0>(ORF_info), std::get<1>(ORF_info)}}};
             node_ID++;
         }
         const auto refound = unitig_graph.refind_gene(i, node_search_dict, 5000, 31, input_colours[i], repeat);

@@ -2,6 +2,8 @@
 #include "unitigDict.h"
 #include "indexing.h"
 
+std::mutex mtx0;
+
 void MyUnitigMap::clear(const UnitigColorMap<MyUnitigMap>& um_dest)
 {
     if (!um_dest.isEmpty && (um_dest.getGraph() != nullptr)){
@@ -103,22 +105,6 @@ void MyUnitigMap::add_codon (const bool forward, const std::bitset<9>& array) {
     _part_codon[i] = array[8];
 }
 
-// check if head and tail colours are the same
-void MyUnitigMap::_check_head_tail_equal() {
-    if (_unitig_head_colour == _unitig_tail_colour)
-    {
-        _head_tail_colours_equal = true;
-        _unitig_full_colour = _unitig_head_colour;
-    }
-    else
-    {
-        _head_tail_colours_equal = false;
-        _end_contig = true;
-        _unitig_full_colour = _unitig_head_colour;
-        _unitig_full_colour |= _unitig_tail_colour;
-    }
-}
-
 std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, const int frame) const {
     // set first position of bits
     size_t a = 0;
@@ -160,6 +146,26 @@ std::bitset<3> MyUnitigMap::get_codon_arr (const bool full, const bool forward, 
     return array;
 }
 
+void MyUnitigMap::set_end_contig (int colour, size_t nb_colours)
+{
+    mtx0.lock();
+    if (_end_contig.size() == 0)
+    {
+        _end_contig.resize(nb_colours);
+    }
+    _end_contig[colour] = 1;
+    mtx0.unlock();
+}
+
+bool MyUnitigMap::end_contig (int colour) const
+{
+    if (_end_contig.size() == 0)
+    {
+        return false;
+    }
+
+    return  (bool)_end_contig[colour];
+}
 
 // function to get unitig data from an ID number, returning pointer to data
 std::pair<UnitigColorMap<MyUnitigMap>, MyUnitigMap*> get_um_data (ColoredCDBG<MyUnitigMap>& ccdbg,

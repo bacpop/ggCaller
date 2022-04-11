@@ -21,9 +21,7 @@ std::vector<std::size_t> findIndex(const std::string& seq,
 
 std::bitset<3> calculateFrame_binary_full (const std::vector<std::size_t>& index_list);
 
-std::bitset<9> calculateFrame_binary (const std::vector<std::size_t>& index_list);
-
-//std::bitset<3> switchFrame_binary (const std::bitset<3> binary_array, const int frame);
+std::bitset<9> calculateFrame_binary_part (const std::vector<std::size_t>& index_list);
 
 template <class T, class U, bool is_const>
 boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> unitig,
@@ -41,14 +39,12 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                              const int& kmer,
                              const size_t& nb_colours);
 
-void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
-                            const std::vector<Kmer>& head_kmer_arr);
-
 void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             ColoredCDBG<MyUnitigMap>& ccdbg,
                             const std::string& fasta_file,
                             const int kmer,
-                            const int colour_ID);
+                            const int colour_ID,
+                            const size_t nb_colours);
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              ColoredCDBG<MyUnitigMap>& ccdbg,

@@ -142,7 +142,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             std::bitset<3> updated_codon_arr = (codon_arr & ~(neighbour_um_data->get_codon_arr(false, neighbour_strand, modulus)));
 
             // return path if end of contig found or if stop indexes paired
-            if (neighbour_um_data->end_contig() || updated_codon_arr.none())
+            if (neighbour_um_data->end_contig(current_colour) || updated_codon_arr.none())
             {
                 // check if end node is reference sequence
                 if (!is_ref)
@@ -163,7 +163,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 path_list.push_back(std::move(return_path));
 
                 // if node is end_contig, continue to add to path
-                if (neighbour_um_data->end_contig() && !updated_codon_arr.none())
+                if (neighbour_um_data->end_contig(current_colour) && !updated_codon_arr.none())
                 {
                     // if no previous conditions are satisfied, prepare tuple for stack
                     NodeTuple new_node_tuple(new_pos_idx, neighbour_id, updated_codon_arr, updated_colours_arr, updated_path_length);
@@ -210,6 +210,10 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     ORFNodeMap ORF_node_map;
     std::unordered_set<size_t> hashes_to_remove;
 
+    // set for any end contigs
+    std::bitset<3> full_binary;
+    full_binary.set();
+
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
     {
@@ -219,7 +223,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
-        if (!um_data->forward_stop())
+        if (!um_data->forward_stop() && !um_data->end_contig(colour_ID))
         {
             continue;
         }
@@ -228,9 +232,15 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const int head_id = (int) node_id;
 
         // gather unitig information from graph_vector
-        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
+        std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
+
+        // if end contig, set to full array
+        if (um_data->end_contig(colour_ID))
+        {
+            codon_arr = full_binary;
+        }
 
         // check if end node is reference sequence
         if (!is_ref)
@@ -270,7 +280,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
-        if (!um_data->reverse_stop())
+        if (!um_data->reverse_stop() && !um_data->end_contig(colour_ID))
         {
             continue;
         }
@@ -279,9 +289,15 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const int head_id = ((int) node_id) * -1;
 
         // gather unitig information from graph_vector
-        const std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
+        std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
         const size_t unitig_len = um.size;
         const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
+
+        // if end contig, set to full array
+        if (um_data->end_contig(colour_ID))
+        {
+            codon_arr = full_binary;
+        }
 
         // check if end node is reference sequence
         if (!is_ref)

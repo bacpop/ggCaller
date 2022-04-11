@@ -57,7 +57,7 @@ void generate_ORFs(const int& colour_ID,
     auto& end_um_data = end_um_pair.second;
 
     // determine if start or end of the path has a end-unitig. If so, set all frames to true, else calculate correct frames
-    if (start_um_data->end_contig() || end_um_data->end_contig()) {
+    if (start_um_data->end_contig(colour_ID) || end_um_data->end_contig(colour_ID)) {
         stop_frames[0] = 1;
         stop_frames[1] = 1;
         stop_frames[2] = 1;

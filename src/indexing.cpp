@@ -193,16 +193,15 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
 
 
     // calculate colours for unitig
-    boost::dynamic_bitset<> unitig_colours = generate_colours(um, nb_colours, 0);
-    um_data->add_head_colour(unitig_colours);
+    boost::dynamic_bitset<> full_unitig_colour = generate_colours(um, nb_colours, 0);
 
     // generate colours for tail also
     const Kmer tail_kmer = um.getUnitigTail();
     const auto um_tail = ccdbg.find(tail_kmer, true);
     const size_t tail_pos = unitig_len - kmer;
-    unitig_colours = generate_colours(um_tail, nb_colours, tail_pos);
-    um_data->add_tail_colour(unitig_colours);
-    
+    full_unitig_colour |= generate_colours(um_tail, nb_colours, tail_pos);
+    um_data->add_full_colour(full_unitig_colour);
+
     // analyse codon presence/absence
     //initialise codon search vectors
     std::vector<std::size_t> full_indices_pos;
@@ -263,136 +262,12 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     um_data->add_codon(false, part_binary_neg);
 }
 
-void update_neighbour_index(ColoredCDBG<MyUnitigMap>& ccdbg,
-                            const std::vector<Kmer>& head_kmer_arr)
-{
-    // iterate over entries, determine correct successors/predecessors (i.e. have correct colours)
-    size_t head_kmer_arr_size = head_kmer_arr.size();
-    #pragma omp parallel
-    {
-        #pragma omp for nowait
-        for (int i = 1; i < head_kmer_arr_size + 1; i++)
-        {
-            // get a reference to the unitig map object
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, i);
-            auto& um = um_pair.first;
-            auto& um_data = um_pair.second;
-
-            // keep track of the number of neighbours
-            size_t num_succ = 0;
-            size_t num_pred = 0;
-
-            // get copy of unitig_dict.unitig_full_colour to determine whether unitig gains a new colour not present in
-            // gains a new colour not present in predecessors/successors
-            auto full_colours = um_data->full_colour();
-
-            // iterate over the connected nodes in successors
-            for (const auto& succ : get_neighbours(um.getSuccessors()))
-            {
-                // get copy of successor unitig
-                const auto adj_um_pair = get_um_data(ccdbg, succ.first);
-                const auto& adj_um_data = adj_um_pair.second;
-
-                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
-                // for current untiig, should negate tail, as this portion will overlap with next unitig
-                boost::dynamic_bitset<> colours;
-                if (succ.second)
-                {
-                    colours = um_data->tail_colour();
-                    colours &= adj_um_data->head_colour();
-                } else
-                {
-                    colours = um_data->tail_colour();
-                    colours &= adj_um_data->tail_colour();
-                }
-
-                // negate adjacent full colours from full colours
-                auto adj_unitig_dict_full = adj_um_data->full_colour();
-                adj_unitig_dict_full.flip();
-                full_colours &= adj_unitig_dict_full;
-
-                // if colours are viable, add successor information to current unitig
-                if (!colours.none())
-                {
-                    num_succ++;
-                }
-            }
-
-            // determine if unitig has new colour not found in successors, if so set end_contig as true
-            if (!full_colours.none())
-            {
-                um_data->set_end_contig(true);
-            }
-
-            // reset full_colours to repeat with predecessors
-            full_colours = um_data->full_colour();
-
-            // iterate over the connected nodes in predecessors, flipping sign to get successors in reverse strand
-            um.strand = !um.strand;
-            for (const auto& pred : get_neighbours(um.getSuccessors()))
-            {
-                // get copy of predecessor unitig_ID
-                const auto adj_um_pair = get_um_data(ccdbg, pred.first);
-                const auto& adj_um_data = adj_um_pair.second;
-
-                // ensure colours are viable between the current and neigbouring unitig. Base this off head/tail colours depending on orientation
-                // for current untiig, should negate head, as this portion will overlap with next unitig
-                boost::dynamic_bitset<> colours;
-                if (pred.second)
-                {
-                    colours = um_data->head_colour();
-                    colours &= adj_um_data->head_colour();
-                } else
-                {
-                    colours = um_data->head_colour();
-                    colours &= adj_um_data->tail_colour();
-                }
-
-                // negate adjacent full colours from full colours
-                auto adj_unitig_dict_full = adj_um_data->full_colour();
-                adj_unitig_dict_full.flip();
-                full_colours &= adj_unitig_dict_full;
-
-                // if colours are viable, add successor information to current unitig
-                if (!colours.none())
-                {
-                    num_pred++;
-                }
-            }
-
-            // determine if unitig has new colour not found in predecessors, if so set end_contig as true
-            if (!full_colours.none())
-            {
-                um_data->set_end_contig(true);
-            }
-
-            // if there are no successors/predecessors or unitig colours change, means that unitig is first/last in sequence. Therefore,
-            // update full codon array to be 3 frame stop index to enable complete traversal
-            if (num_succ == 0 || num_pred == 0 || !um_data->head_tail_colours_equal() || um_data->end_contig())
-            {
-                // set all bits to 1
-                std::bitset<3> full_binary;
-                full_binary.set();
-
-                // update full codon indexes
-                um_data->add_codon(true, full_binary);
-                um_data->add_codon(false, full_binary);
-
-                um_data->set_forward_stop(true);
-                um_data->set_reverse_stop(true);
-
-                // set unitig to end of contig
-                um_data->set_end_contig(true);
-            }
-        }
-    }
-}
-
 void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             ColoredCDBG<MyUnitigMap>& ccdbg,
                             const std::string& fasta_file,
                             const int kmer,
-                            const int colour_ID)
+                            const int colour_ID,
+                            const size_t nb_colours)
 {
     // generate the index
     fm_index_coll ref_index;
@@ -412,10 +287,6 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     }
     // initialize seq
     kseq_t *seq = kseq_init(fp);
-
-    // for setting end contig
-    std::bitset<3> full_binary;
-    full_binary.set();
 
     // read sequence
     size_t contig_ID = 1;
@@ -453,25 +324,11 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                         // if at start of contig i.e. prev_head==0, set as end_contig
                         if (!prev_head)
                         {
-                            if (!um_data->end_contig())
-                            {
-                                // update full codon indexes
-                                um_data->add_codon(true, full_binary);
-                                um_data->add_codon(false, full_binary);
-
-                                um_data->set_forward_stop(true);
-                                um_data->set_reverse_stop(true);
-
-                                // set unitig to end of contig
-                                um_data->set_end_contig(true);
-                            }
+                            um_data->set_end_contig(colour_ID, nb_colours);
                         }
 
                         // set prev_head to new node
                         prev_head = node_ID;
-
-                        // clear unitig colours
-                        um_data->clear_colours();
 
                         // add new node
                         const std::string node_entry = std::to_string(node_ID);
@@ -484,17 +341,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
             auto& um_data = um_pair.second;
 
-            if (!um_data->end_contig()) {
-                // update full codon indexes
-                um_data->add_codon(true, full_binary);
-                um_data->add_codon(false, full_binary);
-
-                um_data->set_forward_stop(true);
-                um_data->set_reverse_stop(true);
-
-                // set unitig to end of contig
-                um_data->set_end_contig(true);
-            }
+            um_data->set_end_contig(colour_ID, nb_colours);
 
             // add delimiter between contigs
             genome_path += contig_path;
@@ -567,12 +414,6 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
         }
     }
 
-    // determine if end contigs present if any of the input colours are not references
-    if (ref_set.count() != ref_set.size())
-    {
-        update_neighbour_index(ccdbg, head_kmer_arr);
-    }
-
     // generate index of references within ref_set
     std::vector<size_t> ref_index;
     for (int i = 0; i < input_colours.size(); i++)
@@ -592,7 +433,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             #pragma omp for nowait
             for (int i = 0; i < ref_index.size(); i++)
             {
-                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i]);
+                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);
             }
         }
     }
