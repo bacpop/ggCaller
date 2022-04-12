@@ -48,24 +48,25 @@ class Graph {
     void out(const std::string& outfile);
 
     // find ORFs
-    std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> findGenes (const bool repeat,
-                                                                       const size_t overlap,
-                                                                       const size_t max_path_length,
-                                                                       bool no_filter,
-                                                                       const std::vector<std::string>& stop_codons_for,
-                                                                       const std::vector<std::string>& start_codons_for,
-                                                                       const size_t min_ORF_length,
-                                                                       const size_t max_overlap,
-                                                                       const std::vector<std::string>& input_colours,
-                                                                       const std::string& ORF_model_file,
-                                                                       const std::string& TIS_model_file,
-                                                                       const float& minimum_ORF_score,
-                                                                       const float& minimum_path_score,
-                                                                       const size_t max_ORF_path_length,
-                                                                       const bool clustering,
-                                                                       const double& id_cutoff,
-                                                                       const double& len_diff_cutoff,
-                                                                       size_t num_threads);
+std::pair<ColourORFMap, ColourEdgeMap> findGenes (const bool repeat,
+                                                 const size_t overlap,
+                                                 const size_t max_path_length,
+                                                 bool no_filter,
+                                                 const std::vector<std::string>& stop_codons_for,
+                                                 const std::vector<std::string>& start_codons_for,
+                                                 const size_t min_ORF_length,
+                                                 const size_t max_overlap,
+                                                 const std::vector<std::string>& input_colours,
+                                                 const std::string& ORF_model_file,
+                                                 const std::string& TIS_model_file,
+                                                 const float& minimum_ORF_score,
+                                                 const float& minimum_path_score,
+                                                 const size_t max_ORF_path_length,
+                                                 const bool clustering,
+                                                 const double& id_cutoff,
+                                                 const double& len_diff_cutoff,
+                                                 size_t num_threads,
+                                                 const std::string& cluster_file);
 
 
     std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
@@ -129,5 +130,7 @@ class Graph {
     // bitset to determine if colours are refs or reads
     boost::dynamic_bitset<> _RefSet;
 };
+
+ORFClusterMap read_cluster_file(const std::string& cluster_file);
 
 #endif //GRAPH_H

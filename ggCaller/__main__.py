@@ -476,6 +476,9 @@ def main():
     # Create temporary directory
     temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
+    # Create temp_file for cluster_map
+    cluster_file = os.path.join(temp_dir, "cluster_map.dat")
+
     # load balrog models if required
     if not options.no_filter:
         print("Loading gene models...")
@@ -489,9 +492,9 @@ def main():
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
-                                 options.identity_cutoff, options.len_diff_cutoff, options.threads)
+                                 options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file)
 
-    high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict = gene_tuple
+    high_scoring_ORFs, high_scoring_ORF_edges = gene_tuple
 
     # generate ORF clusters
     if not options.no_clustering:
@@ -501,7 +504,7 @@ def main():
             array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
             with Pool(processes=options.threads) as pool:
                 run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
-                            cluster_dict, overlap, input_colours, output_dir, temp_dir, options.verbose,
+                            cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
                             options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
                             options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,

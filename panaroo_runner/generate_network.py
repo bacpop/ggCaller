@@ -1,9 +1,13 @@
 from collections import defaultdict
 import networkx as nx
 from intbitset import intbitset
+import ggCaller_cpp
 
 
-def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cluster_dict):
+def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file):
+    # read in cluster_dict
+    cluster_dict = ggCaller_cpp.read_cluster_file(cluster_file)
+
     # associate sequences with their clusters
     seq_to_cluster = {}
     seqid_to_centroid = {}
@@ -11,6 +15,7 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
     cluster_members = defaultdict(list)
     cluster_centroid_data = {}
     cluster_id = 0
+
     # iterate over cluster_dict in order of entries, parsing all sequences to clusters
     for temp_cluster_id, ORF_list in sorted(cluster_dict.items()):
         # generate a panaroo sequence ID for current centroid
@@ -91,6 +96,9 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
             cluster_members[cluster_id].append(pan_ORF_id)
 
         cluster_id += 1
+
+    # clear cluster_dict
+    cluster_dict.clear()
 
     # determine paralogs if required
     paralogs = set()

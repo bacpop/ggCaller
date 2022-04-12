@@ -201,24 +201,25 @@ void Graph::out(const std::string& outfile)
 }
 
 
-std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const bool repeat,
-                                                                          const size_t overlap,
-                                                                          const size_t max_path_length,
-                                                                          bool no_filter,
-                                                                          const std::vector<std::string>& stop_codons_for,
-                                                                          const std::vector<std::string>& start_codons_for,
-                                                                          const size_t min_ORF_length,
-                                                                          const size_t max_overlap,
-                                                                          const std::vector<std::string>& input_colours,
-                                                                          const std::string& ORF_model_file,
-                                                                          const std::string& TIS_model_file,
-                                                                          const float& minimum_ORF_score,
-                                                                          const float& minimum_path_score,
-                                                                          const size_t max_ORF_path_length,
-                                                                          const bool clustering,
-                                                                          const double& id_cutoff,
-                                                                          const double& len_diff_cutoff,
-                                                                          size_t num_threads)
+std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
+                                                         const size_t overlap,
+                                                         const size_t max_path_length,
+                                                         bool no_filter,
+                                                         const std::vector<std::string>& stop_codons_for,
+                                                         const std::vector<std::string>& start_codons_for,
+                                                         const size_t min_ORF_length,
+                                                         const size_t max_overlap,
+                                                         const std::vector<std::string>& input_colours,
+                                                         const std::string& ORF_model_file,
+                                                         const std::string& TIS_model_file,
+                                                         const float& minimum_ORF_score,
+                                                         const float& minimum_path_score,
+                                                         const size_t max_ORF_path_length,
+                                                         const bool clustering,
+                                                         const double& id_cutoff,
+                                                         const double& len_diff_cutoff,
+                                                         size_t num_threads,
+                                                         const std::string& cluster_file)
 {
     // initilise intermediate colour ORF vector
     ColourORFVectorMap colour_ORF_vec_map;
@@ -335,10 +336,10 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
     cout << endl;
 
     // generate clusters if required
-    ORFClusterMap cluster_map;
     if (clustering || !no_filter)
     {
         cout << "Generating clusters of high-scoring ORFs..." << endl;
+        ORFClusterMap cluster_map;
 
         // scope for clustering variables
         {
@@ -503,6 +504,14 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
 
             // new line for progress bar
             cout << endl;
+        }
+        // write cluster file
+        {
+            std::ofstream ofs(cluster_file);
+            boost::archive::text_oarchive oa(ofs);
+            // write class instance to archive
+
+            oa << cluster_map;
         }
     }
 
@@ -705,7 +714,7 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
     all_ORF_scores.clear();
     all_TIS_scores.clear();
 
-    return {colour_ORF_map, colour_edge_map, cluster_map};
+    return {colour_ORF_map, colour_edge_map};
 }
 
 
@@ -813,4 +822,15 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                           const std::vector<std::string>& input_colours)
 {
     _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours, _RefSet));
+}
+
+ORFClusterMap read_cluster_file(const std::string& cluster_file)
+{
+    ORFClusterMap cluster_map;
+
+    std::ifstream ifs(cluster_file);
+    boost::archive::text_iarchive ia(ifs);
+    ia >> cluster_map;
+
+    return cluster_map;
 }

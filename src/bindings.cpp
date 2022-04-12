@@ -27,4 +27,7 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     m.def("get_distances_pa", &get_distances_pa, "Get distances based on feature presence/absence.",
         py::arg("matrix_in"),
         py::arg("no_threads"));
+
+    m.def("read_cluster_file", &read_cluster_file, "Read cluster map file",
+        py::arg("cluster_file"));
 }
