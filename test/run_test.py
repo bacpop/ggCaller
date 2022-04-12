@@ -36,7 +36,7 @@ subprocess.run(
 ### reference read workflow ###
 sys.stderr.write("Running reference read workflow with custom annotation dbs\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --diamonddb ../db/diamond/Uniprot_test.fasta --hmmdb ../db/hmm/HAMAP.hmm --annotation sensitive",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --diamonddb db_test.fasta --annotation fast",
     shell=True,
     check=True)
 
