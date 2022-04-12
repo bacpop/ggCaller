@@ -7,27 +7,17 @@ ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
 
-    // generate a vector which maps ORF colour/ID to column in eigen matrix
-//    ORFMatrixMap ORF_mat_map;
-
     // initialise length list for sorting of ORFs by length
     std::vector<std::pair<size_t, std::pair<size_t, size_t>>> ORF_length_list;
-
-    // create a mapping between ORF_ID and hash to determine centroids that have same length
-//    robin_hood::unordered_map<size_t, size_t> ID_hash_map;
 
     // initialise vector to hold all centroid IDs in, and dynamic bitset to determine which centroids have been assigned
     std::vector<std::tuple<int, int, size_t>> centroid_vector(head_kmer_arr.size(), {-1, -1, 0});
 
     // iterate over each ORF sequence with specific colours combination
-    size_t ORF_ID = 0;
     for (const auto& colour : colour_ORF_map)
     {
         for (const auto& ORF_entry : colour.second)
         {
-            // add to ORF_mat_map, initialising empty vector
-//            ORF_mat_map[ORF_ID] = {colour.first, ORF_entry.first};
-
             // extract info from ORF_entry
             const auto& ORF_info = ORF_entry.second;
 
@@ -81,7 +71,6 @@ ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                 {
                     auto& centroid_ID = centroid_vector[node_ID];
                     const auto& centroid_info = colour_ORF_map.at(std::get<0>(centroid_ID)).at(std::get<1>(centroid_ID));
-//                    const auto& centroid_entry = ORF_mat_map.at(centroid_ID);
                     const auto& centroid_length = std::get<2>(centroid_info);
 
                     // determine if current ORF is larger than current centroid
@@ -113,8 +102,6 @@ ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                     centroid_vector[node_ID] = {colour.first, ORF_entry.first, ORF_hash};
                 }
             }
-            // increment ORF_ID
-            ORF_ID++;
         }
     }
 
@@ -151,16 +138,15 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
         // create set to keep track of assigned ORFs to avoid ORFs being added to other groups
         tbb::concurrent_unordered_set<std::string> encountered_set;
 
-        //create a copy of group_indices for updating from within the for loop
-        std::vector<size_t> group_indices_iter;
+        // create map to hold centroid for unassigned nodes
+        tbb::concurrent_unordered_map<size_t, std::tuple<size_t, size_t, size_t>> centroid_vector_sizes;
 
-        // create vector to hold centroid sizes
-        std::vector<std::vector<std::pair<size_t, size_t>>> centroid_vector_sizes(centroid_vector.size());
+        //create a copy of group_indices for updating from within the for loop
+        std::unordered_set<size_t> group_indices_iter;
 
         #pragma omp parallel
         {
-            std::vector<std::vector<std::pair<size_t, size_t>>> centroid_vector_sizes_private(centroid_vector.size());
-            std::vector<size_t> group_indices_private;
+            std::unordered_set<size_t> group_indices_private;
 
             #pragma omp parallel for
             for (int index = 0; index < group_indices.size(); index++)
@@ -251,71 +237,20 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                 {
                     // if singleton and not centroid, add the current ORF as a centroid for all groups it is part of
                     // enabling searching in next iteration
-                    for (const auto& node_ID : std::get<0>(ORF2_info))
+
+                    // hold indices that are complete unitigs i.e. start/end not in overlap
+                    std::vector<size_t> complete_nodes;
+
+                    // generate a hash for ORF entry
+                    size_t ORF_hash;
                     {
-                        // add ORF as new centroid of group
-                        centroid_vector_sizes_private[abs(node_ID) - 1].push_back({ORF2_len, ORF_ID});
-                    }
-                    // add entry to group_indices_private to re-cluster in next pass
-                    group_indices_private.push_back(ORF_ID);
-                }
-                // add to encountered_set
-                encountered_set.insert(ORF2_entry_str);
-            }
-
-            #pragma omp critical
-            {
-                // clear centroid vector and reset with all new centroids
-                for (int i = 0; i < centroid_vector_sizes_private.size(); i++)
-                {
-                    centroid_vector_sizes[i].insert(centroid_vector_sizes[i].end(), std::make_move_iterator(centroid_vector_sizes_private[i].begin()), std::make_move_iterator(centroid_vector_sizes_private[i].end()));
-                }
-
-                // update group_indices
-                group_indices_iter.insert(group_indices_iter.end(), std::make_move_iterator(group_indices_private.begin()), std::make_move_iterator(group_indices_private.end()));
-            }
-        }
-
-        // update group_indices with group_indices_iter
-        group_indices = std::move(group_indices_iter);
-        if (!group_indices.size())
-        {
-            break;
-        } else
-        {
-            // reset centroid vector
-            for (int i = 0; i < centroid_vector.size(); i++)
-            {
-                centroid_vector[i] = {-1, -1, 0};
-            }
-
-            // add only longest sequences to centroid_vector
-            for (int i = 0; i < centroid_vector_sizes.size(); i++)
-            {
-                // sort each entry by size, take largest
-                auto& group_entry = centroid_vector_sizes[i];
-                // if group_entry not empty, sort and then take largest
-                if (!group_entry.empty())
-                {
-                    std::stable_sort(group_entry.rbegin(), group_entry.rend());
-                    auto& largest = group_entry[0];
-                    auto& largest_entry = ORF_length_list.at(largest.second).second;
-
-                    // generate a hash for largest entry
-                    size_t largest_hash;
-                    {
-                        const auto& ORF_info = colour_ORF_map.at(largest_entry.first).at(largest_entry.second);
-
                         // generate a hash based on kmer string
                         std::string ORF_kmer;
 
-                        // hold indices that are complete unitigs i.e. start/end not in overlap
-                        std::vector<size_t> complete_nodes;
-
                         // traverse to generate hash
-                        for (int k = 0; k < std::get<0>(ORF_info).size(); k++)
+                        for (int k = 0; k < std::get<0>(ORF2_info).size(); k++)
                         {
-                            const auto& node_indices = std::get<1>(ORF_info).at(k);
+                            const auto& node_indices = std::get<1>(ORF2_info).at(k);
                             // determine if at end and in overlap region of unitigs, if so pass
                             if (node_indices.second - node_indices.first < DBG_overlap)
                             {
@@ -331,88 +266,88 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                 }
                             }
                             // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
-                            const int& node_traversed = std::get<0>(ORF_info).at(k);
+                            const int& node_traversed = std::get<0>(ORF2_info).at(k);
                             const size_t node_ID = abs(node_traversed) - 1;
                             ORF_kmer += head_kmer_arr.at(node_ID).toString();
                             complete_nodes.push_back(node_ID);
                         }
 
                         // get hash to hash map
-                        largest_hash = hasher{}(ORF_kmer);
+                        ORF_hash = hasher{}(ORF_kmer);
                     }
 
-                    for (int j = 1; j < group_entry.size(); j++)
+                    for (const auto& node_ID : complete_nodes)
                     {
-                        if (group_entry[j].first < largest.first)
-                        {
-                            break;
-                        } else if (group_entry[j].first == largest.first)
-                        {
-                            // if size is equal, then take lowest hash as centroid
-                            const auto& new_entry = ORF_length_list.at(group_entry[j].second).second;
+                        // check if current centroid present
+                        const auto present = centroid_vector_sizes.find(node_ID);
 
-                            // generate new hash for ORF
-                            size_t new_entry_hash;
+                        if (present == centroid_vector_sizes.end())
+                        {
+                            centroid_vector_sizes[node_ID] = {ORF2_len, ORF_ID, ORF_hash};
+                        } else
+                        {
+                            // if centroid already present, check size, hash and ORF colour
+                            const auto& centroid_length = std::get<0>(present->second);
+                            const auto& centroid_ID = std::get<1>(present->second);
+                            const auto& centroid_hash = std::get<2>(present->second);
+
+                            if (ORF2_len > centroid_length)
                             {
-                                const auto& ORF_info = colour_ORF_map.at(new_entry.first).at(new_entry.second);
-
-                                // generate a hash based on kmer string
-                                std::string ORF_kmer;
-
-                                // hold indices that are complete unitigs i.e. start/end not in overlap
-                                std::vector<size_t> complete_nodes;
-
-                                // traverse to generate hash
-                                for (int k = 0; k < std::get<0>(ORF_info).size(); k++)
+                                centroid_vector_sizes[node_ID] = {ORF2_len, ORF_ID, ORF_hash};
+                            } else if (ORF2_len == centroid_length)
+                            {
+                                if (ORF_hash < centroid_hash)
                                 {
-                                    const auto& node_indices = std::get<1>(ORF_info).at(k);
-                                    // determine if at end and in overlap region of unitigs, if so pass
-                                    if (node_indices.second - node_indices.first < DBG_overlap)
+                                    centroid_vector_sizes[node_ID] = {ORF2_len, ORF_ID, ORF_hash};
+                                } else if (ORF_hash == centroid_hash)
+                                {
+                                    const auto& centroid_entry = ORF_length_list.at(centroid_ID).second;
+                                    if (ORF2_entry.first < centroid_entry.first)
                                     {
-                                        // if no entries added, then at start so break
-                                        if (complete_nodes.empty())
-                                        {
-                                            continue;
-                                        }
-                                            // else at end, so break
-                                        else
-                                        {
-                                            break;
-                                        }
+                                        centroid_vector_sizes[node_ID] = {ORF2_len, ORF_ID, ORF_hash};
                                     }
-                                    // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
-                                    const int& node_traversed = std::get<0>(ORF_info).at(k);
-                                    const size_t node_ID = abs(node_traversed) - 1;
-                                    ORF_kmer += head_kmer_arr.at(node_ID).toString();
-                                    complete_nodes.push_back(node_ID);
-                                }
-
-                                // get hash to hash map
-                                new_entry_hash = hasher{}(ORF_kmer);
-                            }
-
-                            if (new_entry_hash < largest_hash)
-                            {
-                                largest = group_entry[j];
-                                largest_hash = new_entry_hash;
-                            } else if (new_entry_hash == largest_hash)
-                            {
-                                if (new_entry.first < largest_entry.first)
-                                {
-                                    largest = group_entry[j];
-                                    largest_hash = new_entry_hash;
                                 }
                             }
+
                         }
                     }
-
-                    // assign ID to centroid vector
-                    centroid_vector[i] = {largest_entry.first, largest_entry.second, largest_hash};
-
-                    // add the entry to cluster_map
-                    std::string largest_str = std::to_string(largest_entry.first) + "_" + std::to_string(largest_entry.second);
-                    cluster_map[largest_str].insert(largest.second);
+                    // add entry to group_indices_private to re-cluster in next pass
+                    group_indices_private.insert(ORF_ID);
                 }
+                // add to encountered_set
+                encountered_set.insert(ORF2_entry_str);
+            }
+
+            #pragma omp critical
+            {
+                // update group_indices
+                group_indices_iter.insert(std::make_move_iterator(group_indices_private.begin()), std::make_move_iterator(group_indices_private.end()));
+            }
+        }
+
+        if (!group_indices_iter.size())
+        {
+            break;
+        } else
+        {
+            // update group_indices with group_indices_iter
+            group_indices.assign(std::make_move_iterator(group_indices_iter.begin()), std::make_move_iterator(group_indices_iter.end()));
+
+            // reset centroid vector
+            for (int i = 0; i < centroid_vector.size(); i++)
+            {
+                centroid_vector[i] = {-1, -1, 0};
+            }
+
+            // iterate over centroid_vector_sizes, updating centroid_vector
+            for (const auto& entry : centroid_vector_sizes)
+            {
+                const auto& centroid_ID = std::get<1>(entry.second);
+                const auto& centroid_hash = std::get<2>(entry.second);
+
+                const auto& centroid_entry = ORF_length_list.at(centroid_ID).second;
+
+                centroid_vector[entry.first] = {centroid_entry.first, centroid_entry.second, centroid_hash};
             }
         }
     }
@@ -470,6 +405,8 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                     continue;
                 }
             }
+            // erase from cluster_map
+            cluster_map.unsafe_erase(ORF_ID_str);
         }
         cluster_id++;
     }
