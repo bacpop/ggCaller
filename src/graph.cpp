@@ -343,18 +343,11 @@ std::tuple<ColourORFMap, ColourEdgeMap, ORFClusterMap> Graph::findGenes (const b
         // scope for clustering variables
         {
             // group ORFs together based on single shared k-mer
-            auto ORF_group_tuple = group_ORFs(colour_ORF_vec_map, _KmerArray, overlap);
-
-            //unpack ORF_group_tuple
-            auto& ORF_mat_map = std::get<0>(ORF_group_tuple);
-            auto& centroid_vector = std::get<1>(ORF_group_tuple);
-            auto& ID_hash_map = std::get<2>(ORF_group_tuple);
-            auto& ORF_length_list = std::get<3>(ORF_group_tuple);
+            auto ORF_group_pair = group_ORFs(colour_ORF_vec_map, _KmerArray, overlap);
 
             // generate clusters for ORFs based on identity
-            cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap, ORF_mat_map,
-                                           centroid_vector, ID_hash_map, ORF_length_list,
-                                           id_cutoff, len_diff_cutoff);
+            cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap,
+                                           ORF_group_pair, id_cutoff, len_diff_cutoff);
         }
 
         if (!no_filter)
