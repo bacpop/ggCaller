@@ -15,17 +15,17 @@ jobs:
 
     steps:
     - name: checkout source
-      uses: actions/checkout@v2
-    - name: generate lfs file list
-      run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-    - name: restore lfs cache
-      uses: actions/cache@v2
-      id: lfs-cache
+      uses: actions/checkout@v3
+    - name: Cache node modules
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-node-modules
       with:
-        path: .git/lfs
-        key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}-v1
-    - name: pull lfs files
-      run: git lfs pull
+        path: models/ggCallerdb
+        key: ${{ runner.os }}-build-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
