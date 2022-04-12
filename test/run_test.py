@@ -68,7 +68,7 @@ subprocess.run(
     check=True)
 
 ### reference read workflow ###
-sys.stderr.write("Running reference read workflow without balrog\n")
+sys.stderr.write("Running reference read workflow without models\n")
 subprocess.run(
     python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --no-filter --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --truncation-threshold 0.7 --ignore-pseduogenes --no-variants",
     shell=True,

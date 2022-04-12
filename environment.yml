@@ -48,3 +48,4 @@ dependencies:
   - joblib
   - gffutils
   - cd-hit
+  - python-wget

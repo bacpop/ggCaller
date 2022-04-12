@@ -3,7 +3,7 @@ import argparse
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 import shutil
-from balrog.__main__ import *
+from models.__main__ import *
 from ggCaller.shared_memory import *
 from Bio import Seq
 from panaroo_runner.set_default_args import *
@@ -431,6 +431,9 @@ def main():
     # unpack ORF pair into overlap dictionary and list for gene scoring
     input_colours, nb_colours, overlap, ref_list = graph_tuple
 
+    # download balrog and annotation files
+    db_dir = download_db()
+
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
     annotation_db = options.annotation_db
@@ -444,13 +447,13 @@ def main():
         # unpack annotation database
         if annotation_db == "Bacteria" or annotation_db == "Viruses":
             db_id = annotation_db
-            db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "diamond")
-            annotation_db = os.path.join(db_dir, annotation_db)
+            diamond_dir = os.path.join(db_dir, "diamond")
+            annotation_db = os.path.join(diamond_dir, annotation_db)
 
             if not os.path.exists(annotation_db):
                 print("Unzipping protein annotation file...")
                 tar = tarfile.open(annotation_db + ".tar.gz", mode="r:gz")
-                tar.extractall(db_dir)
+                tar.extractall(diamond_dir)
                 tar.close()
 
             annotation_db = os.path.join(annotation_db, db_id + ".dmnd")
@@ -464,8 +467,8 @@ def main():
 
         # set-up hmm_db
         if hmm_db == "default":
-            db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "db", "hmm")
-            hmm_db = os.path.join(db_dir, "HAMAP.hmm")
+            hmm_dir = os.path.join(db_dir, "hmm")
+            hmm_db = os.path.join(hmm_dir, "HAMAP.hmm")
         else:
             hmm_db = os.path.abspath(hmm_db)
 
@@ -479,10 +482,10 @@ def main():
     # Create temp_file for cluster_map
     cluster_file = os.path.join(temp_dir, "cluster_map.dat")
 
-    # load balrog models if required
+    # load models models if required
     if not options.no_filter:
         print("Loading gene models...")
-        ORF_model_file, TIS_model_file = load_gene_models()
+        ORF_model_file, TIS_model_file = load_balrog_models()
 
     else:
         ORF_model_file, TIS_model_file = "NA", "NA"
