@@ -353,7 +353,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
     }
 
     // generate set to determine which ORFs have already been assigned clusters
-    std::set<std::pair<size_t, size_t>> cluster_assigned;
+    std::unordered_set<std::string> cluster_assigned;
 
     // initialise map as intermediate to hold cluster IDs
     ORFClusterMap final_clusters;
@@ -364,12 +364,12 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
     {
         const auto& ORF_ID = ORF_length_list.at(i).second;
 
-        if (cluster_assigned.find(ORF_ID) != cluster_assigned.end())
+        std::string ORF_ID_str = std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
+
+        if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
         {
             continue;
         }
-
-        std::string ORF_ID_str = std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
 
         // check if entry is a centroid, if so add to final_clusters along with all of its attached ORFs that are unassigned
         if (cluster_map.find(ORF_ID_str) != cluster_map.end())
@@ -394,7 +394,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                 }
 
                 // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
-                if (cluster_assigned.find(homolog_ID) == cluster_assigned.end())
+                if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
                 {
                     final_clusters[cluster_id].push_back(homolog_ID);
                     cluster_assigned.insert(homolog_ID);
