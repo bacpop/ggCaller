@@ -378,7 +378,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
             final_clusters[cluster_id].push_back(ORF_ID);
 
             // add the centroid to the cluster_assigned set
-            cluster_assigned.insert(ORF_ID);
+            cluster_assigned.insert(ORF_ID_str);
 
             // add rest of homologs to centroid entry
             for (const auto& homolog_alias : cluster_map.at(ORF_ID_str))
@@ -397,7 +397,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                 if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
                 {
                     final_clusters[cluster_id].push_back(homolog_ID);
-                    cluster_assigned.insert(homolog_ID);
+                    cluster_assigned.insert(homolog_ID_str);
                 }
                 // if homolog already assigned to a cluster, skip
                 else
