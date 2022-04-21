@@ -366,7 +366,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             bar.set_closing_bracket_char("|");
 
             // score centroid and apply score to all ORFs in group
-            #pragma omp parallel for schedule(dynamic)
+            #pragma omp parallel for
             for (int i = 0; i < cluster_map.size(); i++)
             {
                 // get index in map
