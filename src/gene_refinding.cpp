@@ -200,12 +200,11 @@ PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check against fm-idx for last two nodes
-            if (is_ref)
+            // check against fm-idx every other node, pass if not present
+            if (is_ref && node_vector.size() % 2 == 1)
             {
-                std::vector<int> check_vector(2);
-                check_vector[0] = node_vector.back();
-                check_vector[1] = neighbour_id;
+                std::vector<int> check_vector = node_vector;
+                check_vector.push_back(neighbour_id);
                 std::pair<bool, bool> present = path_search(check_vector, fm_idx);
                 if (!present.first)
                 {
