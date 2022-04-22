@@ -21,32 +21,13 @@ void generate_ORFs(const int& colour_ID,
                    const bool is_ref,
                    const fm_index_coll& fm_idx,
                    torch::jit::script::Module& ORF_model,
-                   torch::jit::script::Module& TIS_model,
                    const float& minimum_ORF_score,
                    const bool no_filter,
-                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
+                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores);
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,
                            const std::vector<std::vector<size_t>>& node_ranges);
-
-//ORFVector call_ORFs(const int colour_ID,
-//                    PathVector& all_paths,
-//                    const ColoredCDBG<MyUnitigMap>& ccdbg,
-//                    const std::vector<Kmer>& head_kmer_arr,
-//                    const std::vector<std::string>& stop_codons_for,
-//                    const std::vector<std::string>& start_codons_for,
-//                    const int overlap,
-//                    const size_t min_ORF_length,
-//                    const bool is_ref,
-//                    const fm_index_coll& fm_idx,
-//                    torch::jit::script::Module& ORF_model,
-//                    torch::jit::script::Module& TIS_model,
-//                    const float& minimum_ORF_score,
-//                    const bool no_filter,
-//                    tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores,
-//                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
 
 ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
