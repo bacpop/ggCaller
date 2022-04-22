@@ -485,16 +485,15 @@ def main():
     # load models models if required
     if not options.no_filter:
         print("Loading gene models...")
-        ORF_model_file, TIS_model_file = load_balrog_models()
+        ORF_model_file = load_balrog_models()
 
     else:
-        ORF_model_file, TIS_model_file = "NA", "NA"
+        ORF_model_file = "NA"
 
     gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
-                                 options.max_ORF_overlap, input_colours, ORF_model_file,
-                                 TIS_model_file, options.min_orf_score, options.min_path_score,
-                                 options.max_orf_orf_distance, not options.no_clustering,
+                                 options.max_ORF_overlap, input_colours, ORF_model_file, options.min_orf_score,
+                                 options.min_path_score, options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file)
 
     high_scoring_ORFs, high_scoring_ORF_edges = gene_tuple
