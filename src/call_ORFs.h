@@ -20,10 +20,8 @@ void generate_ORFs(const int& colour_ID,
                    const size_t min_len,
                    const bool is_ref,
                    const fm_index_coll& fm_idx,
-                   torch::jit::script::Module& ORF_model,
                    const float& minimum_ORF_score,
-                   const bool no_filter,
-                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores);
+                   const bool no_filter);
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,

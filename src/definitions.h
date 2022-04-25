@@ -74,10 +74,8 @@ typedef sdsl::csa_wt<> fm_index_coll;
 typedef robin_hood::hash<std::string> hasher;
 // mapping of each colour to component nodes in graph
 typedef std::vector<std::vector<size_t>> NodeColourVector;
-// vector of contig mappings for a node in the graph
-typedef std::vector<std::pair<size_t, std::tuple<size_t, size_t, size_t, size_t, bool>>> NodeContigMapping;
 //a pair of start and end coordinates for an ORF across a node
-typedef std::pair<unsigned short int, unsigned short int> indexPair;
+typedef std::pair<unsigned int, unsigned int> indexPair;
 // pair that describes the contig locations of an ORF, 1-indexed for contig id (first) and locations within contig (second)
 typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates

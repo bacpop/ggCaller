@@ -15,10 +15,8 @@ void generate_ORFs(const int& colour_ID,
                    const size_t min_len,
                    const bool is_ref,
                    const fm_index_coll& fm_idx,
-                   torch::jit::script::Module& ORF_model,
                    const float& minimum_ORF_score,
-                   const bool no_filter,
-                   tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores)
+                   const bool no_filter)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -384,8 +382,8 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 
     for (size_t i = 0; i < nodelist.size(); i++)
     {
-        unsigned short int traversed_node_start;
-        unsigned short int traversed_node_end;
+        unsigned int traversed_node_start = 0;
+        unsigned int traversed_node_end = 0;
         bool start_assigned = false;
         bool end_assigned = false;
 
@@ -413,7 +411,6 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
         // if the ORF traverses node, update coordinates
         if (start_assigned && end_assigned)
         {
-
             indexPair node_coords = std::make_pair(traversed_node_start, traversed_node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));
