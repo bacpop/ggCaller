@@ -31,9 +31,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& start_codons_for,
                              const size_t min_ORF_length,
-                             torch::jit::script::Module& ORF_model,
                              const double& minimum_ORF_score,
-                             const bool no_filter,
-                             tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores);
+                             const bool no_filter);
 
 #endif //TRAVERSAL_H

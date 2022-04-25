@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
     const size_t max_overlap = 60;
     const bool no_filter = false;
 
-    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.gfa";
-    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.bfg_colors";
+    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/P_aeruginosa_5.gfa";
+    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/P_aeruginosa_5.bfg_colors";
     const std::string listfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/plasmid_clique_556_list.txt";
     const std::string ORF_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/geneTCN_jit.pt";
     const std::string TIS_model_file = "/mnt/c/Users/sth19/CLionProjects/ggCaller/balrog/tisTCN_jit.pt";
@@ -145,8 +145,8 @@ int main(int argc, char *argv[]) {
 
     const auto gene_tuple = unitig_graph.findGenes (repeat, overlap, max_path_length,
             no_filter, stop_codons_for, start_codons_for, min_ORF_length, max_overlap, input_colours,
-            ORF_model_file, TIS_model_file, minimum_ORF_score, minimum_path_score, max_ORF_ORF_distance,
-            clustering, id_cutoff, len_diff_cutoff, num_threads);
+            ORF_model_file, minimum_ORF_score, minimum_path_score, max_ORF_ORF_distance,
+            clustering, id_cutoff, len_diff_cutoff, num_threads, "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/cluster_file.dat");
 
     const auto& colour_ORF_map = std::get<0>(gene_tuple);
 

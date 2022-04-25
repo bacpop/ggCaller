@@ -199,10 +199,8 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          const std::vector<std::string>& stop_codons_for,
                          const std::vector<std::string>& start_codons_for,
                          const size_t min_ORF_length,
-                         torch::jit::script::Module& ORF_model,
                          const double& minimum_ORF_score,
-                         const bool no_filter,
-                         tbb::concurrent_unordered_map<size_t, float>& all_ORF_scores)
+                         const bool no_filter)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -264,7 +262,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, ORF_model, minimum_ORF_score, no_filter, all_ORF_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, minimum_ORF_score, no_filter);
             }
         }
     }
@@ -321,7 +319,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, ORF_model, minimum_ORF_score, no_filter, all_ORF_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, minimum_ORF_score, no_filter);
             }
         }
     }

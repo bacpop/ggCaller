@@ -229,27 +229,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         num_threads = 1;
     }
 
-    // load Balrog models
-    torch::jit::script::Module ORF_model;
-    bool error = false;
-
-    if (!no_filter)
-    {
-        try {
-            // Deserialize the ScriptModule from a file using torch::jit::load().
-            ORF_model = torch::jit::load(ORF_model_file);
-        }
-        catch (const c10::Error& e) {
-            std::cerr << "error loading the ORF model\n";
-            error = true;
-        }
-    }
-
     // set OMP number of threads
     omp_set_num_threads(num_threads);
-
-    // initialise maps to store ORF scores across threads
-    tbb::concurrent_unordered_map<size_t, float> all_ORF_scores;
 
     {
         // set up progress bar
@@ -260,7 +241,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         bar.set_closing_bracket_char("|");
 
         cout << "Traversing graph to identify ORFs..." << endl;
-        #pragma omp parallel for schedule(dynamic)
+        #pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
             // get whether colour is reference or not
@@ -294,16 +275,10 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     }
                 }
 
-                // recursive traversal and ORF calling
-                if (error)
-                {
-                    no_filter = true;
-                }
-
                 // convert this to map to make removal easier
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      ORF_model, minimum_ORF_score, no_filter, all_ORF_scores));
+                                                      minimum_ORF_score, no_filter));
 
             }
 
@@ -324,11 +299,32 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
     // add new line to account for progress bar
     cout << endl;
 
+    // load determine if error loading Balrog model
+    bool error = false;
+
     // generate clusters if required
     if (clustering || !no_filter)
     {
         cout << "Generating clusters of high-scoring ORFs..." << endl;
         ORFClusterMap cluster_map;
+
+        // load Balrog models
+        torch::jit::script::Module ORF_model;
+
+        if (!no_filter)
+        {
+            try {
+                // Deserialize the ScriptModule from a file using torch::jit::load().
+                ORF_model = torch::jit::load(ORF_model_file);
+            }
+            catch (const c10::Error& e) {
+                std::cerr << "error loading the ORF model\n";
+                error = true;
+            }
+        }
+
+        // initialise maps to store ORF scores across threads
+        tbb::concurrent_unordered_map<size_t, float> all_ORF_scores;
 
         // scope for clustering variables
         {
@@ -340,7 +336,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                            ORF_group_pair, id_cutoff, len_diff_cutoff);
         }
 
-        if (!no_filter)
+        if (!no_filter && !error)
         {
             cout << "Scoring ORF clusters..." << endl;
 
@@ -518,7 +514,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
         cout << "Identifying high-scoring ORFs..." << endl;
         // after clustering, determing highest scoring gene set
-        #pragma omp parallel for schedule(dynamic)
+        #pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
             // pull ORF_map for colour
@@ -535,6 +531,20 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 is_ref = false;
             }
 
+            // generate FM_index if is_ref
+            fm_index_coll fm_idx;
+
+            if (is_ref)
+            {
+                //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
+                const auto idx_file_name = FM_fasta_file + ".fmp";
+                if (!load_from_file(fm_idx, idx_file_name))
+                {
+                    cout << "FM-Index not available for " << FM_fasta_file << endl;
+                    is_ref = false;
+                }
+            }
+
             // initialise values for gene information
             std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
             ORFNodeMap gene_map;
@@ -546,25 +556,12 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 ORFOverlapMap ORF_overlap_map;
                 //        cout << "Determining overlaps: " << to_string(colour_ID) << endl;
                 {
-                    // generate FM_index if is_ref
-                    fm_index_coll fm_idx;
-
-                    if (is_ref)
-                    {
-                        //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
-                        const auto idx_file_name = FM_fasta_file + ".fmp";
-                        if (!load_from_file(fm_idx, idx_file_name))
-                        {
-                            cout << "FM-Index not available for " << FM_fasta_file << endl;
-                            is_ref = false;
-                        }
-                    }
                     ORF_overlap_map = std::move(calculate_overlaps(_ccdbg, _KmerArray, ORF_map, overlap, max_overlap, is_ref, fm_idx));
                 }
 
                 if (!error)
                 {
-                    gene_paths = call_true_genes (ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
+                    gene_paths = call_true_genes(ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
 
                     // get high scoring genes
                     for (const auto& path : gene_paths)
@@ -629,28 +626,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // initialise prev_node_set to avoid same ORFs being traversed from again
                 std::unordered_set<int> prev_node_set;
 
-                const auto& FM_fasta_file = input_colours.at(colour_ID);
-
-                // if no FM_fasta_file specified, cannot generate FM Index
-                if (FM_fasta_file == "NA")
-                {
-                    is_ref = false;
-                }
-
-                // generate FM_index if is_ref
-                fm_index_coll fm_idx;
-
-                // reload fm-index if required
-                if (is_ref)
-                {
-                    const auto idx_file_name = FM_fasta_file + ".fmp";
-                    if (!load_from_file(fm_idx, idx_file_name))
-                    {
-                        cout << "FM-Index not available for " << FM_fasta_file << endl;
-                        is_ref = false;
-                    }
-                }
-
                 // conduct DBG traversal for upstream...
                 auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, -1, prev_node_set, overlap, is_ref, fm_idx);
                 connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
@@ -698,9 +673,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
     // add line for progress bar
     cout << endl;
-
-    // clear score maps
-    all_ORF_scores.clear();
 
     return {colour_ORF_map, colour_edge_map};
 }
