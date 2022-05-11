@@ -15,8 +15,10 @@ void generate_ORFs(const int& colour_ID,
                    const size_t min_len,
                    const bool is_ref,
                    const fm_index_coll& fm_idx,
+                   torch::jit::script::Module& TIS_model,
                    const float& minimum_ORF_score,
-                   const bool no_filter)
+                   const bool no_filter,
+                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -256,6 +258,8 @@ void generate_ORFs(const int& colour_ID,
                     size_t best_ORF_len = 0;
                     ORFCoords best_ORF_coords;
                     size_t best_start_coverage = 0;
+                    std::string best_TIS_seq = "";
+                    std::string best_Downstream_seq = "";
 
                     // unpack all ORFs with same stop codon
                     for (const auto& ORF_entry : stop_codon.second)
@@ -292,7 +296,8 @@ void generate_ORFs(const int& colour_ID,
 
                         // generate hash for ORF sequence and ORF sequence
                         std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
-                        std::string TIS_seq;
+                        std::string TIS_seq = "";
+                        std::string Downstream_seq = ORF_seq.substr (0,19);
 
                         if (TIS_present)
                         {
@@ -313,6 +318,8 @@ void generate_ORFs(const int& colour_ID,
                             best_hash = ORF_hash;
                             best_start_coverage = start_coverage;
                             best_ORF_coords = std::move(ORF_coords);
+                            best_TIS_seq = TIS_seq;
+                            best_Downstream_seq = Downstream_seq;
                         }
                     }
 
@@ -326,11 +333,18 @@ void generate_ORFs(const int& colour_ID,
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
-                        // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, 0.5);
+                        // score the TIS
+                        auto score_pair = score_TIS(best_Downstream_seq, best_TIS_seq, best_ORF_len, TIS_model, minimum_ORF_score, all_TIS_scores);
 
-                        // think about if there is no TIS, then can ignore ORF?
-                        update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
+                        // if ORF looks unlikely to be real, do not add
+                        if (score_pair.second)
+                        {
+                            // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
+                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, score_pair.first);
+
+                            // think about if there is no TIS, then can ignore ORF?
+                            update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
+                        }
                     }
                 } else
                 {
@@ -382,8 +396,8 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 
     for (size_t i = 0; i < nodelist.size(); i++)
     {
-        unsigned int traversed_node_start = 0;
-        unsigned int traversed_node_end = 0;
+        unsigned short int traversed_node_start;
+        unsigned short int traversed_node_end;
         bool start_assigned = false;
         bool end_assigned = false;
 
@@ -411,6 +425,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
         // if the ORF traverses node, update coordinates
         if (start_assigned && end_assigned)
         {
+
             indexPair node_coords = std::make_pair(traversed_node_start, traversed_node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));

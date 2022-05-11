@@ -28,5 +28,6 @@ def load_balrog_models():
         tar.close()
 
     geneTCN = os.path.join(balrog_model_dir, "geneTCN_jit.pt")
+    tisTCN = os.path.join(balrog_model_dir, "tisTCN_jit.pt")
 
-    return geneTCN
+    return (geneTCN, tisTCN)

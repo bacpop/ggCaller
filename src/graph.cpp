@@ -211,6 +211,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                                          const size_t max_overlap,
                                                          const std::vector<std::string>& input_colours,
                                                          const std::string& ORF_model_file,
+                                                         const std::string& TIS_model_file,
                                                          const float& minimum_ORF_score,
                                                          const float& minimum_path_score,
                                                          const size_t max_ORF_path_length,
@@ -232,6 +233,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
     // set OMP number of threads
     omp_set_num_threads(num_threads);
 
+    // set global error for Balrog model loading
+    bool error = false;
+
     {
         // set up progress bar
         progressbar bar(input_colours.size());
@@ -239,6 +243,24 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         bar.set_done_char("█");
         bar.set_opening_bracket_char("|");
         bar.set_closing_bracket_char("|");
+
+        // load Balrog model for TIS
+        torch::jit::script::Module TIS_model;
+
+        if (!no_filter)
+        {
+            try {
+                // Deserialize the ScriptModule from a file using torch::jit::load().
+                TIS_model = torch::jit::load(TIS_model_file);
+            }
+            catch (const c10::Error& e) {
+                std::cerr << "error loading the TIS model\n";
+                error = true;
+            }
+        }
+
+        // initialise maps to store ORF TIS scores across threads
+        tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
         cout << "Traversing graph to identify ORFs..." << endl;
         #pragma omp parallel for
@@ -275,10 +297,16 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     }
                 }
 
+                // recursive traversal and ORF calling
+                if (error)
+                {
+                    no_filter = true;
+                }
+
                 // convert this to map to make removal easier
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      minimum_ORF_score, no_filter));
+                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
 
             }
 
@@ -299,16 +327,13 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
     // add new line to account for progress bar
     cout << endl;
 
-    // load determine if error loading Balrog model
-    bool error = false;
-
     // generate clusters if required
     if (clustering || !no_filter)
     {
         cout << "Generating clusters of high-scoring ORFs..." << endl;
         ORFClusterMap cluster_map;
 
-        // load Balrog models
+        // load Balrog gene model
         torch::jit::script::Module ORF_model;
 
         if (!no_filter)
@@ -336,7 +361,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                            ORF_group_pair, id_cutoff, len_diff_cutoff);
         }
 
-        if (!no_filter && !error)
+        if (!no_filter)
         {
             cout << "Scoring ORF clusters..." << endl;
 
