@@ -573,7 +573,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             // initialise values for gene information
             std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
             ORFNodeMap gene_map;
-            std::vector<std::vector<size_t>> gene_paths;
+            robin_hood::unordered_set<size_t> target_ORFs;
 
             // if no filtering required, do not calculate overlaps, score genes or get gene_paths
             if (!no_filter)
@@ -586,10 +586,10 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
                 if (!error)
                 {
-                    gene_paths = call_true_genes(ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
+                    const auto paths = call_true_genes(ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
 
                     // get high scoring genes
-                    for (const auto& path : gene_paths)
+                    for (const auto& path : paths)
                     {
                         for (const auto& ORF_ID : path)
                         {
@@ -597,6 +597,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                             {
                                 gene_map[ORF_ID] = std::move(ORF_map[ORF_ID]);
                             }
+                            target_ORFs.insert(ORF_ID);
                         }
                     }
                 } else
@@ -605,7 +606,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     for (auto& entry : ORF_map)
                     {
                         gene_map[entry.first] = std::move(entry.second);
-                        gene_paths.push_back({entry.first});
+                        target_ORFs.insert(entry.first);
                     }
                 }
             } else
@@ -614,7 +615,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 for (auto& entry : ORF_map)
                 {
                     gene_map[entry.first] = std::move(entry.second);
-                    gene_paths.push_back({entry.first});
+                    target_ORFs.insert(entry.first);
                 }
             }
 
@@ -622,28 +623,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             ORF_map.clear();
 
             // connect ORFs
+            std::vector<std::vector<size_t>> gene_paths;
             {
                 std::set<std::pair<size_t, size_t>> connected_ORFs;
-
-                // determine target_ORFs to connect and redundant edges
-                std::set<std::pair<size_t, size_t>> redundant_edges;
-                robin_hood::unordered_set<size_t> target_ORFs;
-                for (const auto& path : gene_paths)
-                {
-                    const auto& first = path.at(0);
-                    const auto& second = path.back();
-                    target_ORFs.insert(first);
-                    target_ORFs.insert(second);
-
-                    // add redundant edges by ordering first and second ORF
-                    if (first <= second)
-                    {
-                        redundant_edges.insert({first, second});
-                    } else
-                    {
-                        redundant_edges.insert({second, first});
-                    }
-                }
 
                 // add ORF info for colour to graph
                 const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, gene_map);
@@ -662,11 +644,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // check edges found in connected_ORFs against redundant edges
                 for (const auto& edge : connected_ORFs)
                 {
-                    if (redundant_edges.find(edge) == redundant_edges.end())
-                    {
-                        std::vector<size_t> edge_vec = {edge.first, edge.second};
-                        gene_paths.push_back(edge_vec);
-                    }
+                    std::vector<size_t> edge_vec = {edge.first, edge.second};
+                    gene_paths.push_back(edge_vec);
                 }
             }
 
