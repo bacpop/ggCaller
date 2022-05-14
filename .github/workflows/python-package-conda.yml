@@ -22,7 +22,7 @@ jobs:
         cache-name: cache-node-modules
       with:
         path: models/ggCallerdb
-        key: ${{ runner.os }}-build-${{ github.sha }}
+        key: ${{ runner.os }}-${{ env.cache-name }}-
         restore-keys: |
           ${{ runner.os }}-build-
           ${{ runner.os }}-
@@ -37,5 +37,5 @@ jobs:
       run: |
         PATH=$CONDA/bin/bin:$PATH
         source $CONDA/bin/activate base
-        $CONDA/bin/python -m pip install --no-deps --ignore-installed --use-feature=in-tree-build .
+        $CONDA/bin/python -m pip install --no-deps --ignore-installed .
         cd test && export GGCALLER_PYTHON=$CONDA/bin/python && $CONDA/bin/python run_test.py
