@@ -506,7 +506,7 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
             size_t abs_overlap = 0;
 
             // work out if node 1 is negative by checking strand
-            bool negative = ORF1_strand;
+            const bool negative = !ORF1_strand;
 
             // initilise 5p and 3p information
             std::pair<int, size_t> ORF1_5p;
@@ -661,8 +661,8 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                                 }
                             }
                         }
-                            // if no intersection detection, determine how ORFs are ordered
-                        else if ((ORF1_start > ORF2_end && !negative) || (ORF2_start > ORF1_end && negative))
+                        // if no intersection detection, determine how ORFs are ordered
+                        else if ((ORF1_start > ORF2_end && !negative) || (ORF1_end > ORF2_start && negative))
                         {
                             first_ORF = 2;
                         }
