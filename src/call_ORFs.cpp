@@ -251,21 +251,45 @@ void generate_ORFs(const int& colour_ID,
 
                 if (!no_filter)
                 {
+                    // Get TIS score for all entries
+                    std::vector<float> TIS_scores(stop_codon.second.size());
+                    std::vector<std::tuple<std::string, std::string, size_t>> TIS_list(stop_codon.second.size());
+
+                    // create vector of all entries
+                    for (int i = 0; i < stop_codon.second.size(); i++)
+                    {
+                        const auto& ORF_entry = stop_codon.second.at(i);
+                        const auto& ORF_len = ORF_entry.first;
+                        const auto& codon_pair = ORF_entry.second;
+                        std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                        std::string TIS_seq = "";
+                        if (codon_pair.first >= 16)
+                        {
+                            TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
+                        }
+                        std::string Downstream_seq = ORF_seq.substr (0,19);
+
+                        TIS_list[i] = std::make_tuple(TIS_seq, Downstream_seq, ORF_len);
+                    }
+
+                    auto score_vector = score_TIS(TIS_list, TIS_model, minimum_ORF_score, all_TIS_scores);
+
                     // set variables to determine highest scoring ORF with same stop codon
                     std::pair<size_t, size_t> best_codon = {0,0};
                     size_t best_hash;
                     bool best_TIS_present;
                     size_t best_ORF_len = 0;
                     ORFCoords best_ORF_coords;
-                    size_t best_start_coverage = 0;
-                    std::string best_TIS_seq = "";
-                    std::string best_Downstream_seq = "";
+                    float best_overall_score = 0;
+                    float best_TIS_score = 0;
 
                     // unpack all ORFs with same stop codon
-                    for (const auto& ORF_entry : stop_codon.second)
+                    for (int i = 0; i < stop_codon.second.size(); i++)
                     {
+                        const auto& ORF_entry = stop_codon.second.at(i);
                         const auto& ORF_len = ORF_entry.first;
                         const auto& codon_pair = ORF_entry.second;
+                        const auto& TIS_score = score_vector.at(i);
 
                         // get ORF coords for current iteration
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
@@ -285,41 +309,35 @@ void generate_ORFs(const int& colour_ID,
                         auto& um_data = um_pair.second;
                         size_t start_coverage = um_data->full_colour().count();
 
-                        // initialise TIS_present
-                        bool TIS_present = true;
-
-                        // get ORF seqeunce and pull 16bp upstream of start codon for TIS model if possible. If not, do not and set TIS_present as false
-                        if (codon_pair.first < 16)
+                        // calculate length as proportion of previous ORF in list
+                        float prev_len_prop = 1.0;
+                        if (best_ORF_len > 0)
                         {
-                            TIS_present = false;
+                            prev_len_prop = ORF_len / best_ORF_len;
                         }
 
-                        // generate hash for ORF sequence and ORF sequence
-                        std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
-                        std::string TIS_seq = "";
-                        std::string Downstream_seq = ORF_seq.substr (0,19);
-
-                        if (TIS_present)
-                        {
-                            TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
-                        }
-
-                        // create hash including TIS sequence
-                        ORF_seq = TIS_seq + ORF_seq;
-
-                        size_t ORF_hash = hasher{}(ORF_seq);
+                        // generate score based on start coverage multiplied by dataset size, TIS score and size proportion to previous ORF
+                        const float overall_score = start_coverage * TIS_score * prev_len_prop;
 
                         // determine if score is better and start site is better supported
-                        if (start_coverage > best_start_coverage)
+                        if (overall_score > best_overall_score)
                         {
                             best_codon = codon_pair;
-                            best_TIS_present = TIS_present;
+                            best_TIS_present = (codon_pair.first >= 16);
                             best_ORF_len = ORF_len;
-                            best_hash = ORF_hash;
-                            best_start_coverage = start_coverage;
+                            best_overall_score = overall_score;
+                            best_TIS_score = TIS_score;
                             best_ORF_coords = std::move(ORF_coords);
-                            best_TIS_seq = TIS_seq;
-                            best_Downstream_seq = Downstream_seq;
+
+                            // generate hash
+                            std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
+                            std::string TIS_seq = "";
+                            if (best_TIS_present)
+                            {
+                                TIS_seq = path_sequence.substr((codon_pair.first - 16), 16);
+                            }
+                            ORF_seq = TIS_seq + ORF_seq;
+                            best_hash = hasher{}(ORF_seq);
                         }
                     }
 
@@ -333,14 +351,11 @@ void generate_ORFs(const int& colour_ID,
                             hashes_to_remove.insert(hash_to_remove);
                         }
 
-                        // score the TIS
-                        auto score_pair = score_TIS(best_Downstream_seq, best_TIS_seq, best_ORF_len, TIS_model, minimum_ORF_score, all_TIS_scores);
-
                         // if ORF looks unlikely to be real, do not add
-                        if (score_pair.second)
+                        if (best_overall_score)
                         {
                             // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, score_pair.first);
+                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, best_TIS_score);
 
                             // think about if there is no TIS, then can ignore ORF?
                             update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
@@ -396,8 +411,8 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
 
     for (size_t i = 0; i < nodelist.size(); i++)
     {
-        unsigned short int traversed_node_start;
-        unsigned short int traversed_node_end;
+        unsigned int traversed_node_start;
+        unsigned int traversed_node_end;
         bool start_assigned = false;
         bool end_assigned = false;
 
@@ -425,7 +440,6 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
         // if the ORF traverses node, update coordinates
         if (start_assigned && end_assigned)
         {
-
             indexPair node_coords = std::make_pair(traversed_node_start, traversed_node_end);
             ORF_node_id.push_back(nodelist[i]);
             ORF_node_coords.push_back(std::move(node_coords));

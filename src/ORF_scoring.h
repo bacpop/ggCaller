@@ -26,12 +26,10 @@ torch::Tensor predict(torch::jit::script::Module& module,
                       const torch::Tensor& seq_tensor,
                       const bool gene);
 
-std::pair<float, bool> score_TIS (const std::string& downstream,
-                                  const std::string& upstream,
-                                  const size_t& ORF_len,
-                                  torch::jit::script::Module& TIS_model,
-                                  const float& minimum_ORF_score,
-                                  tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
+std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::string, size_t>>& TIS_list,
+                              torch::jit::script::Module& TIS_model,
+                              const float& minimum_ORF_score,
+                              tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
 
 float score_gene (float& curr_prob,
                   const std::string& ORF_DNA,

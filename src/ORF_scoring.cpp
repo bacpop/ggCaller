@@ -35,76 +35,121 @@ torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
     return torch::stack(padded_stack);
 }
 
-std::pair<float, bool> score_TIS (const std::string& downstream,
-                                  const std::string& upstream,
-                                  const size_t& ORF_len,
-                                  torch::jit::script::Module& TIS_model,
-                                  const float& minimum_ORF_score,
-                                  tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
+std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::string, size_t>>& TIS_list,
+                              torch::jit::script::Module& TIS_model,
+                              const float& minimum_ORF_score,
+                              tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
+    std::vector<float> TIS_scores(TIS_list.size());
+
     bool confident = true;
 
-    // set TIS_prob as 0.5
-    float TIS_prob = 0.5;
+    // create index to hold positions of scores when added to padded_stack
+    std::vector<size_t> pos_idx;
+    std::vector<size_t> hash_idx;
+
+    // hold size of vector in case padding required
+    long tensor_size = 0;
+
+    // create stack for batch processing
+    std::vector<torch::Tensor> padded_stack;
 
     // score TIS
-    if (upstream.size())
+    for (int pos = 0; pos < TIS_list.size(); pos++)
     {
-        // reverse and encode the combined upstream + downstream sequences for scoring
-        std::string combined = upstream + downstream.substr(3, downstream.size() - 3);
-        std::reverse(combined.begin(), combined.end());
+        const auto& entry = TIS_list.at(pos);
+        const auto& upstream = std::get<0>(entry);
+        const auto& downstream = std::get<1>(entry);
 
-        size_t TIS_hash = hasher{}(combined);
-
-        auto TIS_found = all_TIS_scores.find(TIS_hash);
-        if (TIS_found != all_TIS_scores.end())
+        if (upstream.size())
         {
-            TIS_prob = TIS_found->second;
+            // reverse and encode the combined upstream + downstream sequences for scoring
+            std::string combined = upstream + downstream.substr(3, downstream.size() - 3);
+            std::reverse(combined.begin(), combined.end());
+
+            size_t TIS_hash = hasher{}(combined);
+
+            auto TIS_found = all_TIS_scores.find(TIS_hash);
+            if (TIS_found != all_TIS_scores.end())
+            {
+                TIS_scores[pos] = TIS_found->second;
+            } else
+            {
+                std::vector<int> encoded;
+
+                for (const auto &c : combined)
+                {
+                    encoded.push_back(nuc_encode(c).out());
+                }
+                torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
+
+                if (!tensor_size)
+                {
+                    tensor_size = t.size(0);
+                }
+
+                padded_stack.push_back(std::move(t));
+                pos_idx.push_back(pos);
+                hash_idx.push_back(TIS_hash);
+            }
         } else
         {
-            std::vector<int> encoded;
-
-            for (const auto &c : combined)
-            {
-                encoded.push_back(nuc_encode(c).out());
-            }
-            torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
-
-            torch::Tensor zeroes = torch::zeros({t.size(0)}, torch::kInt64);
-
-            std::vector<torch::Tensor> padded_stack;
-            padded_stack.push_back(std::move(t));
-            padded_stack.push_back(std::move(zeroes));
-
-            torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
-            TIS_prob = pred[0].item<float>();
-
-            all_TIS_scores.emplace(TIS_hash, TIS_prob);
+            // if no upstream sequence, set TIS score as 0.5
+            TIS_scores[pos] = 0.5;
         }
     }
 
-    // encode start codon
-    const auto start_codon = start_encode(downstream.substr(0,3)).out();
-
-    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
-    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
-    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
-
-
-    // conduct check to ensure if max score for gene prob = 1, will be higher than prev_score
+    if (!pos_idx.empty())
     {
-        const float comb_prob = (1 * weight_gene_prob) + (TIS_prob * weight_TIS_prob) + ATG + GTG + TTG;
-
-        float score = (comb_prob - probthresh) * ORF_len;
-
-        // if score less than minimum, ignore
-        if (score < minimum_ORF_score)
+        // pad tensor if only single sequence
+        if (pos_idx.size() == 1)
         {
-            return {0, false};
+            torch::Tensor zeroes = torch::zeros({tensor_size}, torch::kInt64);
+            padded_stack.push_back(std::move(zeroes));
+        }
+        torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
+
+        for (int idx = 0; idx < pos_idx.size(); idx++)
+        {
+            const auto& pos = pos_idx.at(idx);
+            TIS_scores[pos] = pred[idx].item<float>();
+
+            // add to shared map
+            all_TIS_scores[hash_idx[idx]] = TIS_scores[pos];
         }
     }
 
-    return {TIS_prob, confident};
+    // check if ORF scores are high enough
+    for (int pos = 0; pos < TIS_list.size(); pos++)
+    {
+        const auto& entry = TIS_list.at(pos);
+        const auto& downstream = std::get<1>(entry);
+        const auto& ORF_len = std::get<2>(entry);
+
+        auto& TIS_prob = TIS_scores[pos];
+
+        // encode start codon
+        const auto start_codon = start_encode(downstream.substr(0,3)).out();
+
+        const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
+        const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
+        const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
+
+        // conduct check to ensure if max score for gene prob = 1, will be higher than prev_score
+        {
+            const float comb_prob = (1 * weight_gene_prob) + (TIS_prob * weight_TIS_prob) + ATG + GTG + TTG;
+
+            float score = (comb_prob - probthresh) * ORF_len;
+
+            // if score less than minimum, ignore
+            if (score < minimum_ORF_score)
+            {
+                TIS_prob = 0;
+            }
+        }
+    }
+
+    return TIS_scores;
 }
 
 float score_gene (float& curr_prob,
