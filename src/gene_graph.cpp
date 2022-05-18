@@ -157,14 +157,17 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
         // get start score
         const float start_score = -std::get<4>(ORF_map.at(vertex_mapping.at(start)));
 
-        // check if start is also end vertex
+        // if starting node is highest scorer, set as path
+        if (start_score < high_score)
+        {
+            high_score = start_score;
+            gene_path = {vertex_mapping.at(start)};
+        }
+
+        // check if start is also end vertex, if so move on
         if (std::find(end_vertices.begin(), end_vertices.end(), start) != end_vertices.end())
         {
-            if (start_score < high_score)
-            {
-                high_score = start_score;
-                gene_path = {vertex_mapping.at(start)};
-            }
+            continue;
         } else
         {
             std::vector<float> distances(numVertices);
