@@ -668,7 +668,6 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                         }
                     }
 
-
                     // convert overlap_start and overlap_end to string to enable creation of ID for switch
                     // check if any overlap detected.
                     std::string overlap_ID_str = std::to_string(overlap_start) + std::to_string(overlap_end);
@@ -777,7 +776,9 @@ ORFOverlapMap calculate_overlaps(const ColoredCDBG<MyUnitigMap>& ccdbg,
                     overlap_type = 'i';
                 } else if (abs_overlap == 0)
                 {
+                    // if no overlap detected, pass
                     overlap_type = 'n';
+                    continue;
                 }
 
                 // add overlap type to map, where the first ORF on the positive strand is the second key,
