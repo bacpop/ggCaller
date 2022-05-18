@@ -71,9 +71,9 @@ def get_options():
     Settings = parser.add_argument_group('ggCaller traversal and gene-calling cut-off settings')
     Settings.add_argument('--max-path-length',
                           type=int,
-                          default=10000,
+                          default=20000,
                           help='Maximum path length during ORF finding (bp). '
-                               '[Default = 10000] ')
+                               '[Default = 20000] ')
     Settings.add_argument('--min-orf-length',
                           type=int,
                           default=90,
