@@ -137,7 +137,10 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
 
         // conduct check to ensure if max score for gene prob = 1, will be higher than prev_score
         {
-            const float comb_prob = (1 * weight_gene_prob) + (TIS_prob * weight_TIS_prob) + ATG + GTG + TTG;
+            // update TIS_prob to take into account start codon
+            TIS_prob = (TIS_prob * weight_TIS_prob) + ATG + GTG + TTG;
+
+            const float comb_prob = (1 * weight_gene_prob) + TIS_prob;
 
             float score = (comb_prob - probthresh) * ORF_len;
 
@@ -163,13 +166,6 @@ float score_gene (float& curr_prob,
     const auto& encode_len = (ORF_len / 3) - 2;
 
     float gene_prob = 0;
-
-    // encode start codon
-    const auto start_codon = start_encode(downstream.substr(0,3)).out();
-
-    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
-    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
-    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
 
     // get gene score either from stored scores or calculate it
     {
@@ -200,7 +196,7 @@ float score_gene (float& curr_prob,
     gene_prob *= weight_gene_prob;
 
     // curr_prob is TIS prob, use this to determine overall score
-    const float comb_prob = gene_prob + (curr_prob *= weight_TIS_prob) + ATG + GTG + TTG;
+    const float comb_prob = gene_prob + curr_prob;
 
     // edit current probability in place
     curr_prob = (comb_prob - probthresh) * ORF_len;
@@ -217,15 +213,8 @@ void score_cluster(float& curr_prob,
     const auto downstream = ORF_DNA.substr (0,19);
     const auto& encode_len = (ORF_len / 3) - 2;
 
-    // encode start codon
-    const auto start_codon = start_encode(downstream.substr(0,3)).out();
-
-    const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
-    const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
-    const float TTG = ((start_codon == 2) ? 1 : 0) * weight_TTG;
-
     // curr_prob is TIS prob, use this to determine overall score
-    const float comb_prob = gene_prob + (curr_prob *= weight_TIS_prob) + ATG + GTG + TTG;
+    const float comb_prob = gene_prob + curr_prob;
 
     // edit current probability in place
     curr_prob = (comb_prob - probthresh) * ORF_len;
