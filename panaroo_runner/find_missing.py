@@ -251,10 +251,6 @@ def search_graph(search_pair,
                                             pairwise_id_thresh,
                                             refind=True)
 
-            # work out how ORF is orientated with respect to original sequence (only if FM-index used)
-            if rev_comp and path_rev_comp and is_ref:
-                rev_comp = False
-
             # convert linear coordinates into node coordinates
             ORF_graph_loc = convert_coords(loc, nodelist, node_ranges, kmer - 1)
 
