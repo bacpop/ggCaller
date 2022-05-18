@@ -86,14 +86,14 @@ def get_options():
                                '[Default = 60] ')
     Settings.add_argument('--min-path-score',
                           type=int,
-                          default=40,
+                          default=100,
                           help='Minimum total Balrog score for a path of ORFs to be returned. '
-                               '[Default = 40] ')
+                               '[Default = 100] ')
     Settings.add_argument('--min-orf-score',
                           type=int,
-                          default=40,
+                          default=100,
                           help='Minimum individual Balrog score for an ORF to be returned. '
-                               '[Default = 40] ')
+                               '[Default = 100] ')
     Settings.add_argument('--max-orf-orf-distance',
                           type=int,
                           default=10000,
