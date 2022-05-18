@@ -338,7 +338,6 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> node_overlaps(const C
     int ORF2_start_node = ORF2_nodes.first[0];
     int ORF2_end_node = ORF2_nodes.first.back();
 
-
     // determine if ORF2 should be reversed or not by looking at orientation of component nodes
     auto start_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_start_node);
     auto end_iter = std::find(std::get<0>(ORF1_nodes).begin(), std::get<0>(ORF1_nodes).end(), ORF2_end_node);
@@ -357,20 +356,6 @@ std::tuple<bool, std::vector<size_t>, std::vector<size_t>> node_overlaps(const C
     else if (start_iter == std::get<0>(ORF1_nodes).end() && end_iter == std::get<0>(ORF1_nodes).end())
     {
         reversed = true;
-    }
-
-    // check if 3p matches between the two ORFs and node is in the same strand without reversal.
-    // If so, set as incompatible, and the overlap as the shorter of the two ORFS
-    if (ORF1_3p == ORF2_3p && ORF1_3p_strand == ORF2_3p_strand && !reversed)
-    {
-        overlap_type = 'i';
-        overlap_complete = true;
-        abs_overlap = (ORF1_len >= ORF2_len) ? ORF2_len : ORF1_len;
-
-        // set the first ORF to be the longest, regardless of strand
-        first_ORF = (ORF1_len >= ORF2_len) ? 1 : 2;
-
-        return {overlap_complete, {}, {}};
     }
 
     // if not bidirectional, run as normal
