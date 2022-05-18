@@ -100,6 +100,8 @@ typedef std::stack<NodeTuple> NodeStack;
 typedef std::stack<std::tuple<size_t, int, boost::dynamic_bitset<>, size_t>> ORFStack;
 // A vector of paths
 typedef std::vector<std::vector<int>> PathVector;
+// A vector of paths, with associated lengths
+typedef std::vector<std::pair<size_t, std::vector<int>>> RefindPathVector;
 // mapping of node ID to a orientation for a specific strand, used in overlap analysis
 typedef std::map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap

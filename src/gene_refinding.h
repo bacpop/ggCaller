@@ -5,30 +5,29 @@
 #include "match_string.h"
 #include "ORF_clustering.h"
 
-std::vector<std::vector<size_t>> calculate_node_ranges(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                                       const std::vector<Kmer>& head_kmer_arr,
-                                                       const int& overlap,
-                                                       const std::vector<int>& full_nodelist);
+std::pair<std::vector<std::vector<size_t>>, std::string> calculate_node_ranges(const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                               const std::vector<Kmer>& head_kmer_arr,
+                                                                               const int& overlap,
+                                                                               const std::vector<int>& full_nodelist);
 
 std::pair<std::vector<int>, bool> assign_seq(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                              const std::vector<Kmer>& head_kmer_arr,
-                                              const PathVector& unitig_complete_paths,
-                                              const int kmer,
-                                              const bool is_ref,
-                                              const fm_index_coll& fm_idx,
-                                              std::string& stream_seq,
-                                              const size_t& ORF_end,
-                                              const std::string& ORF_seq);
+                                             const std::vector<Kmer>& head_kmer_arr,
+                                             RefindPathVector& unitig_complete_paths,
+                                             const int kmer,
+                                             const bool is_ref,
+                                             const fm_index_coll& fm_idx,
+                                             const std::vector<int>& curr_nodelist,
+                                             const bool downstream);
 
-PathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
-                              const std::vector<Kmer>& head_kmer_arr,
-                              const NodeTuple& head_node_tuple,
-                              const size_t& current_colour,
-                              const size_t& radius,
-                              const bool& repeat,
-                              const bool& is_ref,
-                              const fm_index_coll& fm_idx,
-                              const int overlap);
+RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                  const std::vector<Kmer>& head_kmer_arr,
+                                  const NodeTuple& head_node_tuple,
+                                  const size_t& current_colour,
+                                  const size_t& radius,
+                                  const bool& repeat,
+                                  const bool& is_ref,
+                                  const fm_index_coll& fm_idx,
+                                  const int overlap);
 
 RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,

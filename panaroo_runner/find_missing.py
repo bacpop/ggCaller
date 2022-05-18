@@ -103,14 +103,15 @@ def find_missing(G,
                 # check if node is negative and needs reversing
                 # make copies to avoid editing in place
                 temp_DBG_node = DBG_node
+                # get size of node
+                node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
                 if temp_DBG_node < 0:
                     temp_DBG_node *= -1
-                    node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
                     temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
                 else:
                     temp_node_coords = node_coords
                 if temp_DBG_node not in seq_coverage:
-                    seq_coverage[temp_DBG_node] = np.zeros(temp_node_coords[1] + 1, dtype=bool)
+                    seq_coverage[temp_DBG_node] = np.zeros(node_end + 1, dtype=bool)
                 else:
                     node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
             # negate coverage from node overlaps in DBG
@@ -130,7 +131,7 @@ def find_missing(G,
                         temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
                     else:
                         temp_node_coords = node_coords
-                    seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]] = True
+                    seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1] + 1] = True
 
     for node in G.nodes():
         if len(G.nodes[node]['members']) <= 0:
@@ -241,8 +242,8 @@ def search_graph(search_pair,
             db_seq, nodelist, node_ranges, path_rev_comp = entry
 
             # check if no sequence found
-            if db_seq == "":
-                pass
+            if not nodelist:
+                continue
 
             hit, loc, rev_comp = search_dna(db_seq,
                                             search,
