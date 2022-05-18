@@ -262,7 +262,7 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                     if ORF_len < (length_centroid * truncation_threshold) or (
                             ORF_ID < 0 and (ORF_info[3] is True
                                             or ORF_len % 3 != 0)):
-                        gene_annotation += "(potential psuedogene)"
+                        gene_annotation += " (potential psuedogene)"
                     if gene_annotation != "":
                         f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
                             5) + " " + gene_annotation + "\n" + gene + "\n")
