@@ -283,6 +283,9 @@ void generate_ORFs(const int& colour_ID,
                     float best_overall_score = 0;
                     float best_TIS_score = 0;
 
+                    // set maximum ORF length for stop codon frame
+                    const size_t max_ORF_length = stop_codon.second.at(0).first;
+
                     // unpack all ORFs with same stop codon
                     for (int i = 0; i < stop_codon.second.size(); i++)
                     {
@@ -310,11 +313,7 @@ void generate_ORFs(const int& colour_ID,
                         size_t start_coverage = um_data->full_colour().count();
 
                         // calculate length as proportion of previous ORF in list
-                        float prev_len_prop = 1.0;
-                        if (best_ORF_len > 0)
-                        {
-                            prev_len_prop = ORF_len / best_ORF_len;
-                        }
+                        float prev_len_prop = (float)ORF_len / (float)max_ORF_length;
 
                         // generate score based on start coverage multiplied by dataset size, TIS score and size proportion to previous ORF
                         const float overall_score = start_coverage * TIS_score * prev_len_prop;
