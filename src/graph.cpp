@@ -586,7 +586,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
                 if (!error)
                 {
-                    const auto paths = call_true_genes(ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
+                    gene_paths = call_true_genes(ORF_map, ORF_overlap_map, minimum_path_score, _KmerArray);
 
                     // get high scoring genes
                     for (const auto& path : gene_paths)
