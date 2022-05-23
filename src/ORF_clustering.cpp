@@ -1,8 +1,9 @@
 #include "ORF_clustering.h"
 
 ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
-                         const std::vector<Kmer>& head_kmer_arr,
-                         const size_t& overlap)
+                        const ColoredCDBG<MyUnitigMap>& ccdbg,
+                        const std::vector<Kmer>& head_kmer_arr,
+                        const size_t& overlap)
 {
     // intialise Eigen Triplet
     std::vector<ET> tripletList;
@@ -27,38 +28,37 @@ ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
             ORF_length_list.push_back({std::get<2>(ORF_info), {colour.first, ORF_entry.first}});
 
             // generate a hash based on kmer string
-            std::string ORF_kmer;
+            size_t ORF_hash;
 
             // hold indices that are complete unitigs i.e. start/end not in overlap
             std::vector<size_t> complete_nodes;
 
-            // traverse to generate hash
-            for (int i = 0; i < ORF_nodes.size(); i++)
+            // traverse to get non-overlap nodes
             {
-                const auto& node_indices = std::get<1>(ORF_info).at(i);
-                // determine if at end and in overlap region of unitigs, if so pass
-                if (node_indices.second - node_indices.first < overlap)
+                for (int i = 0; i < ORF_nodes.size(); i++)
                 {
-                    // if no entries added, then at start so break
-                    if (complete_nodes.empty())
+                    const auto& node_indices = std::get<1>(ORF_info).at(i);
+                    // determine if at end and in overlap region of unitigs, if so pass
+                    if (node_indices.second - node_indices.first < overlap)
                     {
-                       continue;
+                        // if no entries added, then at start so break
+                        if (complete_nodes.empty())
+                        {
+                           continue;
+                        }
+                        // else at end, so break
+                        else
+                        {
+                            break;
+                        }
                     }
-                    // else at end, so break
-                    else
-                    {
-                        break;
-                    }
+                    // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
+                    complete_nodes.push_back(abs(ORF_nodes.at(i)) - 1);
                 }
-                // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
-                const int& node_traversed = ORF_nodes.at(i);
-                const size_t node_ID = abs(node_traversed) - 1;
-                ORF_kmer += head_kmer_arr.at(node_ID).toString();
-                complete_nodes.push_back(node_ID);
+                // get hash to hash map
+                std::string ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, ccdbg, head_kmer_arr);
+                ORF_hash = hasher{}(ORF_seq);
             }
-
-            // get hash to hash map
-            size_t ORF_hash = hasher{}(ORF_kmer);
 
             // get length of ORF entry
             const size_t& ORF_length = std::get<2>(ORF_info);
@@ -244,9 +244,6 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                     // generate a hash for ORF entry
                     size_t ORF_hash;
                     {
-                        // generate a hash based on kmer string
-                        std::string ORF_kmer;
-
                         // traverse to generate hash
                         for (int k = 0; k < std::get<0>(ORF2_info).size(); k++)
                         {
@@ -266,14 +263,13 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
                                 }
                             }
                             // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
-                            const int& node_traversed = std::get<0>(ORF2_info).at(k);
-                            const size_t node_ID = abs(node_traversed) - 1;
-                            ORF_kmer += head_kmer_arr.at(node_ID).toString();
+                            const size_t node_ID = abs(std::get<0>(ORF2_info).at(k)) - 1;
                             complete_nodes.push_back(node_ID);
                         }
 
                         // get hash to hash map
-                        ORF_hash = hasher{}(ORF_kmer);
+                        std::string ORF_seq = generate_sequence_nm(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, ccdbg, head_kmer_arr);
+                        ORF_hash = hasher{}(ORF_seq);
                     }
 
                     for (const auto& node_ID : complete_nodes)

@@ -354,7 +354,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         // scope for clustering variables
         {
             // group ORFs together based on single shared k-mer
-            auto ORF_group_pair = group_ORFs(colour_ORF_vec_map, _KmerArray, overlap);
+            auto ORF_group_pair = group_ORFs(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap);
 
             // generate clusters for ORFs based on identity
             cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap,
