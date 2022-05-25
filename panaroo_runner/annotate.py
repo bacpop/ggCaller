@@ -2,7 +2,7 @@ import re
 import sys
 import subprocess
 from functools import partial
-from .generate_output import get_unannotated_nodes, output_aa_sequence
+from .generate_output import get_unannotated_nodes, output_aa_sequence, output_dna_sequence
 from Bio import SeqIO
 import pandas as pd
 from Bio import SearchIO
@@ -71,28 +71,28 @@ def generate_diamond_index(infile):
 
 def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotate, annotation_db, evalue, pool):
     # list of sequence records
-    all_centroid_aa = []
+    all_centroid_dna = []
 
     # get unannotated nodes
     unannotated_nodes = get_unannotated_nodes(G)
 
     # Multithread writing amino acid sequences to disk (temp directory)
-    for centroid_aa in pool.map(partial(output_aa_sequence, shd_arr_tup=shd_arr_tup, overlap=overlap),
+    for centroid_dna in pool.map(partial(output_dna_sequence, shd_arr_tup=shd_arr_tup, overlap=overlap),
                                 unannotated_nodes):
-        all_centroid_aa = all_centroid_aa + centroid_aa
+        all_centroid_dna = all_centroid_dna + centroid_dna
 
     # write all sequences to single file
-    all_centroid_aa = (x for x in all_centroid_aa)
-    SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_d.fasta", 'fasta')
+    all_centroid_aa = (x for x in all_centroid_dna)
+    SeqIO.write(all_centroid_aa, annotation_temp_dir + "dna_d.fasta", 'fasta')
 
     if annotate == "fast":
-        command = ["diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
+        command = ["diamond", "blastx", "--iterate", "--evalue", str(evalue), "-d",
                    annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
-                   annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
+                   annotation_temp_dir + "dna_d.fasta", "-o", annotation_temp_dir + "dna_d.tsv"]
     else:
-        command = ["diamond", "blastp", "--sensitive", "--iterate", "--evalue", str(evalue), "-d",
+        command = ["diamond", "blastx", "--sensitive", "--evalue", str(evalue), "-d",
                    annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
-                   annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
+                   annotation_temp_dir + "dna_d.fasta", "-o", annotation_temp_dir + "dna_d.tsv"]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
@@ -101,7 +101,7 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
 
     # read in file, map highest scoring annotation and bitscore to query
     try:
-        df = pd.read_csv(annotation_temp_dir + "aa_d.tsv", sep='\t', header=None)
+        df = pd.read_csv(annotation_temp_dir + "dna_d.tsv", sep='\t', header=None)
     except pd.errors.EmptyDataError:
         return G, high_scoring_ORFs
     df.set_axis(['query_id', 'id', 'bitscore', 'description'], axis=1, inplace=True)

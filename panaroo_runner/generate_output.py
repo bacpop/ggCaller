@@ -356,6 +356,25 @@ def output_aa_sequence(node_pair, shd_arr_tup, overlap):
 
     return ref_output_sequences
 
+def output_dna_sequence(node_pair, shd_arr_tup, overlap):
+    # load shared memory items
+    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
+    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
+
+    # unpack node_pair
+    node = node_pair[1]
+
+    ref_output_sequences = []
+
+    # iterate over centroids to generate fasta files
+    for i in range(0, len(node["centroid"])):
+        name = str(node_pair[0]) + ";" + node["centroid"][i]
+        ORF_info = node["ORF_info"][i]
+
+        seq = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap))
+        ref_output_sequences.append(SeqRecord(seq, id=name, description=""))
+
+    return ref_output_sequences
 
 def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
                               ref_aln, ignore_pseduogenes, truncation_threshold):
