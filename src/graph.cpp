@@ -646,17 +646,18 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 }
 
                 // add ORF info for colour to graph
-                const auto node_to_ORFs = add_ORF_info(_KmerArray, target_ORFs, gene_map);
+                auto node_to_ORFs = add_ORF_info(_ccdbg, _KmerArray, target_ORFs, gene_map);
 
                 // initialise prev_node_set to avoid same ORFs being traversed from again
-                std::unordered_set<int> prev_node_set;
+                robin_hood::unordered_set<size_t> downstream_ORF_set;
+                robin_hood::unordered_set<size_t> upstream_ORF_set;
 
                 // conduct DBG traversal for upstream...
-                auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, -1, prev_node_set, overlap, is_ref, fm_idx);
+                auto new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, -1, downstream_ORF_set, upstream_ORF_set, overlap, is_ref, fm_idx);
                 connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
                 // ... and downstream
-                new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, 1, repeat, prev_node_set, overlap, is_ref, fm_idx);
+                new_connections = pair_ORF_nodes(_ccdbg, _KmerArray, node_to_ORFs, colour_ID, target_ORFs, gene_map, max_ORF_path_length, repeat, 1, downstream_ORF_set, upstream_ORF_set, overlap, is_ref, fm_idx);
                 connected_ORFs.insert(std::make_move_iterator(new_connections.begin()), std::make_move_iterator(new_connections.end()));
 
                 // check edges found in connected_ORFs against redundant edges

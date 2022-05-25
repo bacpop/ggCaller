@@ -1,120 +1,72 @@
 #include "ORF_connection.h"
-robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>> add_ORF_info (const std::vector<Kmer>& head_kmer_arr,
-                                                                                     const robin_hood::unordered_set<size_t>& target_ORFs,
-                                                                                     const ORFNodeMap& gene_map)
+robin_hood::unordered_map<size_t, std::vector<size_t>> add_ORF_info (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                                                                       const std::vector<Kmer>& head_kmer_arr,
+                                                                       const robin_hood::unordered_set<size_t>& target_ORFs,
+                                                                       const ORFNodeMap& gene_map)
 {
-    robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>> node_to_ORFs;
+
+    robin_hood::unordered_map<size_t, std::vector<std::pair<unsigned int, size_t>>> ORF_coords_in_nodes;
 
     for (const auto & source : target_ORFs)
     {
-        {
-            // get graph information for source node
-            const auto & ORF_info = gene_map.at(source);
+        // get graph information for source node
+        const auto & ORF_info = gene_map.at(source);
 
-            const auto source_node_id = std::get<0>(ORF_info).at(0);
-            const auto sink_node_id = std::get<0>(ORF_info).back();
+        // get start and stop node of ORF to add to node_to_ORFs
+        std::unordered_set<size_t> front_back_index = {0, std::get<0>(ORF_info).size() - 1};
+
+        for (const auto i : front_back_index)
+        {
+            const auto& node_id = std::get<0>(ORF_info).at(i);
+            const auto& node_indices = std::get<1>(ORF_info).at(i);
+
+            auto index_start = node_indices.first;
+            auto index_end = node_indices.second;
+
+            auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+            auto& um = um_pair.first;
+
+            size_t node_end = um.size - 1;
+
+            // if negative, get first reverse start ORF
+            if (node_id < 0)
+            {
+                index_start = node_end - index_end;
+            }
 
             // add the ORF ID to node_to_ORFs
-            node_to_ORFs[abs(source_node_id) - 1].insert(source);
-            node_to_ORFs[abs(sink_node_id) - 1].insert(source);
+            ORF_coords_in_nodes[abs(node_id) - 1].push_back({index_start, source});
         }
     }
+
+    robin_hood::unordered_map<size_t, std::vector<size_t>> node_to_ORFs;
+
+    // iterate over ORF_coords_in_nodes, sorting and then filling node_to_ORFs
+    for (auto& entry : ORF_coords_in_nodes)
+    {
+        // sort based on position in node
+        std::stable_sort(entry.second.begin(), entry.second.end());
+        for (const auto& node_id_pair : entry.second)
+        {
+            node_to_ORFs[entry.first].push_back(node_id_pair.second);
+        }
+    }
+
 
     return node_to_ORFs;
 }
 
-std::vector<size_t> order_ORFs_in_node(const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                       const std::vector<Kmer>& head_kmer_arr,
-                                       const robin_hood::unordered_set<size_t>& node_ORFs,
-                                       const int node_id,
-                                       const ORFNodeMap& gene_map)
-{
-    std::vector<size_t> overlapping_ORF_IDs;
-    std::vector<std::pair<bool, indexPair>> overlapping_ORF_coords;
-    // iterate over ORFs in node_ORFs
-    for (const auto& ORF_ID : node_ORFs)
-    {
-        // add to return vector overlapping ORF vector
-        overlapping_ORF_IDs.push_back(ORF_ID);
-
-        // get reference to gene_map entry
-        const auto & ORF_info = gene_map.at(ORF_ID);
-
-        // get the index of the node in ORFNodeVector for that ORF
-        auto it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), node_id);
-
-        // if not present, search for reversed node
-        if (it == std::get<0>(ORF_info).end())
-        {
-            it = find(std::get<0>(ORF_info).begin(), std::get<0>(ORF_info).end(), (node_id * -1));
-        }
-
-        // get strand from sign of node id (true if positive, false if negative)
-        bool strand = (*it > 0) ? true : false;
-
-        // get index of node in ORF coords
-//        size_t index = std::distance(std::get<0>(ORF_info).begin(), it);
-        size_t index = it - std::get<0>(ORF_info).begin();
-
-        // add coords for node traversal to overlapping_ORF_coords
-        overlapping_ORF_coords.push_back(std::pair<bool, indexPair>(strand, std::get<1>(ORF_info).at(index)));
-    }
-
-    // initialse vector to work out order of nodes
-    std::vector<std::pair<size_t,size_t>> ordered_ORFs;
-
-    // may not be upstream ORFs called, so check if overlapping_ORF_coords is empty
-    if (!overlapping_ORF_coords.empty())
-    {
-        // ensure all coordinates are in the same strand, set the strand of the target node
-        bool overall_strand = (node_id > 0) ? true : false;
-
-        // get length of node if reversal is needed
-        // get a reference to the unitig map object
-        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-        auto& um = um_pair.first;
-
-        size_t node_end = um.size - 1;
-
-        // iterate over entries and flip coords if needed (ignore first as this is the reference)
-        for (int i = 0; i < overlapping_ORF_coords.size(); i++)
-        {
-            if (overlapping_ORF_coords.at(i).first != overall_strand)
-            {
-                // get difference from original end to absolute last node index
-                size_t reversed_end = node_end - overlapping_ORF_coords.at(i).second.first;
-                // get difference from original end to absolute last node index
-                size_t reversed_start = node_end - overlapping_ORF_coords.at(i).second.second;
-                // reassigned the entry in-place in ORF2_nodes.second
-                overlapping_ORF_coords[i].second = std::make_pair(reversed_start, reversed_end);
-            }
-
-            // add to ordered_ORFs
-            ordered_ORFs.push_back(std::pair<size_t,size_t>(overlapping_ORF_coords.at(i).second.first, overlapping_ORF_IDs.at(i)));
-        }
-
-        // sort based on first entry in ordered_ORFs
-        sort(ordered_ORFs.begin(), ordered_ORFs.end());
-
-        // return ordered_ORFs with ORF_IDs only
-        overlapping_ORF_IDs.clear();
-        std::transform(ordered_ORFs.begin(), ordered_ORFs.end(), std::back_inserter(overlapping_ORF_IDs),
-                       [] (auto const& pair) {return pair.second; });
-    }
-
-    return overlapping_ORF_IDs;
-}
-
 std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                     const std::vector<Kmer>& head_kmer_arr,
-                                                    const robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>>& node_to_ORFs,
+                                                    robin_hood::unordered_map<size_t, std::vector<size_t>>& node_to_ORFs,
                                                     const size_t colour_ID,
                                                     const robin_hood::unordered_set<size_t>& target_ORFs,
                                                     const ORFNodeMap& gene_map,
                                                     const size_t& max_ORF_path_length,
                                                     const bool repeat,
                                                     const int stream,
-                                                    std::unordered_set<int>& prev_node_set,
+                                                    robin_hood::unordered_set<size_t>& downstream_ORF_set,
+                                                    robin_hood::unordered_set<size_t>& upstream_ORF_set,
                                                     const int overlap,
                                                     const bool is_ref,
                                                     const fm_index_coll& fm_idx)
@@ -135,8 +87,25 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
         // decide whether to traverse from source (upstream) or sink (downstream)
         int start_node = (stream > 0) ? sink_node_id : source_node_id;
 
+        // check if ORF has already been pair
+        bool prev_paired = false;
+
+        if (stream > 0)
+        {
+            if (downstream_ORF_set.find(source) != downstream_ORF_set.end())
+            {
+                prev_paired = true;
+            }
+        } else
+        {
+            if (upstream_ORF_set.find(source) != upstream_ORF_set.end())
+            {
+                prev_paired = true;
+            }
+        }
+
         // check if node has been traversed previously in opposite direction i.e. ORF has already been paired up/downstream
-        if (prev_node_set.find(start_node * stream * -1) == prev_node_set.end())
+        if (!prev_paired)
         {
             // get source_node and sink_node info
             // get a reference to the unitig map object
@@ -145,30 +114,122 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
             auto& start_um_data = start_um_pair.second;
 
             // check if there are any overlapping ORFs on current node and order...
-            const auto& start_node_ORFs = node_to_ORFs.at(abs(start_node) - 1);
+            auto& start_node_ORFs = node_to_ORFs.at(abs(start_node) - 1);
 
-            // check if there are overlapping ORFs on the source and sink node, as these will not be picked up
-            std::vector<size_t> ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, start_node_ORFs, start_node, gene_map);
-            if (ordered_ORFs.size() >= 2)
+            // if moving in reverse direction, then reverse start_node_ORFs
+            if (start_node_ORFs.size() > 1)
             {
-                // if 2 or more ORFs overlapping, order and then add each connecting edge
-                for (size_t i = 0; i < ordered_ORFs.size() - 1; i++)
+                if (start_node * stream < 0)
                 {
-                    ORF_edges.insert({ordered_ORFs.at(i), ordered_ORFs.at(i + 1)});
+                    std::reverse(start_node_ORFs.begin(), start_node_ORFs.end());
+                }
+                // find index of entry
+                auto index = std::find(start_node_ORFs.begin(), start_node_ORFs.end(), source) - start_node_ORFs.begin();
+
+                // if at end of path, then can't add anything
+                if (index + 1 != start_node_ORFs.size())
+                {
+                    bool pair_assigned = false;
+                    size_t correct_next_ORF;
+
+                    if (is_ref)
+                    {
+                        // make vector to search with, one less than ORF_nodes
+                        std::vector<int> search_vector;
+                        const auto & source_info = gene_map.at(source);
+                        const auto & source_nodes = std::get<0>(source_info);
+
+                        if (stream == -1)
+                        {
+                            for (int i = source_nodes.size() - 1; i > 0; i--)
+                            {
+                                search_vector.push_back(source_nodes.at(i) * -1);
+                            }
+                        } else
+                        {
+                            search_vector.insert(search_vector.end(), source_nodes.begin(), source_nodes.end() - 1);
+                        }
+
+                        // check that next ORFs are correct
+                        auto search_vector_temp = search_vector;
+                        for (int j = index + 1; j < start_node_ORFs.size(); j++)
+                        {
+                            const auto& ORF = start_node_ORFs.at(j);
+                            auto search_vector_temp_iter = search_vector_temp;
+                            const auto & ORF_info = gene_map.at(ORF);
+                            const auto & ORF_nodes = std::get<0>(ORF_info);
+
+                            if (source_nodes.back() == ORF_nodes.at(0))
+                            {
+                                search_vector_temp_iter.insert(search_vector_temp_iter.end(), ORF_nodes.begin(), ORF_nodes.end());
+                            } else
+                            {
+                                for (int i = ORF_nodes.size() - 1; i > -1; i--)
+                                {
+                                    search_vector_temp_iter.push_back(ORF_nodes.at(i) * -1);
+                                }
+                            }
+
+                            const auto present = path_search(search_vector_temp_iter, fm_idx);
+                            if (present.first)
+                            {
+                                correct_next_ORF = ORF;
+                                pair_assigned = true;
+                                break;
+                            }
+                        }
+                    } else
+                    {
+                        correct_next_ORF = start_node_ORFs.at(index + 1);
+                        pair_assigned = true;
+                    }
+
+                    if (pair_assigned)
+                    {
+                        if (source <= correct_next_ORF)
+                        {
+                            ORF_edges.insert({source, correct_next_ORF});
+                        } else
+                        {
+                            ORF_edges.insert({correct_next_ORF, source});
+                        }
+
+                        // determine how next ORF is orientated
+                        const auto & ORF_info = gene_map.at(correct_next_ORF);
+                        const auto & ORF_nodes = std::get<0>(ORF_info);
+
+                        // if match between strands, then must be upstream of current ORF
+                        if (start_node * stream == ORF_nodes.at(0))
+                        {
+                            upstream_ORF_set.insert(correct_next_ORF);
+                        } else
+                        {
+                            downstream_ORF_set.insert(correct_next_ORF);
+                        }
+
+                        // assign previously paired
+                        if (stream > 0)
+                        {
+                            downstream_ORF_set.insert(source);
+                        } else
+                        {
+                            upstream_ORF_set.insert(source);
+                        }
+
+                        // continue for loop
+                        continue;
+                    }
                 }
             }
 
-            // now traverse graph using DFS, finding next ORFs upstream and downstream of source and sink node respectively
-            // check that sink hasn't been traversed in reverse (downstream) or source hasn't been traverse forward (downstream
-
             // if going downstream (stream > 0), check that ORF is last, or upstream (stream < 0), check it is first
-            if ((stream > 0 && source == ordered_ORFs.back()) || stream < 0 && source == ordered_ORFs.at(0))
-            {
-                auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, repeat, prev_node_set, overlap, is_ref, fm_idx);
-                ORF_edges.insert(make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
-            }
+            auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, repeat, downstream_ORF_set, upstream_ORF_set, overlap, is_ref, fm_idx);
 
-            prev_node_set.insert(start_node);
+            const auto & source_info = gene_map.at(source);
+
+            const auto ORF_seq = generate_sequence_nm(std::get<0>(source_info), std::get<1>(source_info), 30, ccdbg, head_kmer_arr);
+
+            ORF_edges.insert(make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
         }
     }
     return ORF_edges;
@@ -176,7 +237,7 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
 
 std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                      const std::vector<Kmer>& head_kmer_arr,
-                                                     const robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>>& node_to_ORFs,
+                                                     const robin_hood::unordered_map<size_t, std::vector<size_t>>& node_to_ORFs,
                                                      const int& head_node,
                                                      const size_t stream_source,
                                                      const size_t current_colour,
@@ -184,7 +245,8 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
                                                      const ORFNodeMap& gene_map,
                                                      const size_t max_ORF_path_length,
                                                      const bool repeat,
-                                                     std::unordered_set<int>& prev_node_set,
+                                                     robin_hood::unordered_set<size_t>& downstream_ORF_set,
+                                                     robin_hood::unordered_set<size_t>& upstream_ORF_set,
                                                      const int overlap,
                                                      const bool is_ref,
                                                      const fm_index_coll& fm_idx)
@@ -225,7 +287,6 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             search_vector.insert(search_vector.end(), ORF_nodes.begin(), ORF_nodes.end() - 1);
         }
     }
-
 
     // create first item in stack, multiply by stream - upstream (stream = -1) or downstream (stream = 1) and add stream ORF
     ORF_stack.push(std::make_tuple(0, head_node * stream, colour_arr, 0));
@@ -324,10 +385,21 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             {
                 //pull out next ORFs
                 auto next_ORFs = ORF_found->second;
+
+                // if moving in reverse direction, then reverse start_node_ORFs
+                if (!neighbour_strand)
+                {
+                    std::reverse(next_ORFs.begin(), next_ORFs.end());
+                }
+
+                // hold correct_next_ORF
+                size_t correct_next_ORF;
+                bool pair_found = false;
+
+                // iterate over ORFs in node, determine which are correct in terms of genome
                 // check full gene paths against fm-index, if not present then pass
                 if (is_ref)
                 {
-                    std::vector<size_t> to_remove;
                     auto search_vector_temp = search_vector;
                     search_vector_temp.insert(search_vector_temp.end(), node_vector.begin(), node_vector.end());
                     for (const auto & ORF : next_ORFs)
@@ -348,43 +420,46 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
                         }
 
                         const auto present = path_search(search_vector_temp_iter, fm_idx);
-                        if (!present.first)
+                        if (present.first)
                         {
-                            to_remove.push_back(ORF);
-                        }
-                    }
-
-                    if (next_ORFs.size() == to_remove.size())
-                    {
-                        continue;
-                    } else
-                    {
-                        for (const auto& ORF : to_remove)
-                        {
-                            next_ORFs.erase(ORF);
+                            correct_next_ORF = ORF;
+                            pair_found = true;
+                            break;
                         }
                     }
                 }
 
-                // pull out next ORFs and order them
-                const auto ordered_ORFs = order_ORFs_in_node(ccdbg, head_kmer_arr, next_ORFs, neighbour_id, gene_map);
-
-                // add first entry and stream_source
-                // add ORFs so that lowest ORF_ID is added first (to remove redundant edges)
-                std::pair<size_t, size_t> ORF_pair;
-                ORF_pair.first = (stream_source < ordered_ORFs.at(0)) ? stream_source : ordered_ORFs.at(0);
-                ORF_pair.second = (stream_source < ordered_ORFs.at(0)) ? ordered_ORFs.at(0) : stream_source;
-                connected_ORFs.insert(std::move(ORF_pair));
-
-                // pair all entries
-                if (ordered_ORFs.size() > 1)
+                // if pair found, add to connected ORFs
+                if (pair_found)
                 {
-                    for (int i = 0; i < ordered_ORFs.size() - 1; i++)
+                    // determine how next ORF is orientated
+                    const auto & ORF_info = gene_map.at(correct_next_ORF);
+                    const auto & ORF_nodes = std::get<0>(ORF_info);
+
+                    // if match between strands, then must be upstream of current ORF
+                    if (neighbour_id == ORF_nodes.at(0))
                     {
-                        ORF_pair.first = (ordered_ORFs.at(i) < ordered_ORFs.at(i + 1)) ? ordered_ORFs.at(i) : ordered_ORFs.at(i + 1);
-                        ORF_pair.second = (ordered_ORFs.at(i) < ordered_ORFs.at(i + 1)) ? ordered_ORFs.at(i + 1) : ordered_ORFs.at(i);
-                        connected_ORFs.insert(std::move(ORF_pair));;
+                        upstream_ORF_set.insert(correct_next_ORF);
+                    } else
+                    {
+                        downstream_ORF_set.insert(correct_next_ORF);
                     }
+
+                    // assign previously paired
+                    if (stream > 0)
+                    {
+                        downstream_ORF_set.insert(stream_source);
+                    } else
+                    {
+                        upstream_ORF_set.insert(stream_source);
+                    }
+
+                    // add first entry and stream_source
+                    // add ORFs so that lowest ORF_ID is added first (to remove redundant edges)
+                    std::pair<size_t, size_t> ORF_pair;
+                    ORF_pair.first = (stream_source <= correct_next_ORF) ? stream_source : correct_next_ORF;
+                    ORF_pair.second = (stream_source <= correct_next_ORF) ? correct_next_ORF : stream_source;
+                    connected_ORFs.insert(std::move(ORF_pair));
                 }
             }
             else
@@ -398,8 +473,6 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             }
         }
     }
-    // update previous nodes encountered
-    prev_node_set.insert(std::make_move_iterator(node_set.begin()), std::make_move_iterator(node_set.end()));
     return connected_ORFs;
 }
 
