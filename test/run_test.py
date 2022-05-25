@@ -33,17 +33,10 @@ subprocess.run(
     shell=True,
     check=True)
 
-### reference read workflow ###
-sys.stderr.write("Running reference read workflow with custom annotation dbs\n")
-subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --diamonddb db_test.fasta --annotation fast",
-    shell=True,
-    check=True)
-
 ### read build workflow ###
 sys.stderr.write("Running read build workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --reads pneumo_CL_group2.txt --kmer 31 --out test_dir --min-orf-score 150 --max-orf-orf-distance 5000 --identity-cutoff 0.99 --clean-mode moderate --length-outlier-support-proportion 0.15 --min-edge-support-sv 1",
+    python_cmd + " ../ggcaller-runner.py --reads pneumo_CL_group2.txt --kmer 31 --out test_dir --min-orf-score 150 --max-orf-orf-distance 5000 --identity-cutoff 0.99 --annotation ultrasensitive --clean-mode moderate --length-outlier-support-proportion 0.15 --min-edge-support-sv 1",
     shell=True,
     check=True)
 

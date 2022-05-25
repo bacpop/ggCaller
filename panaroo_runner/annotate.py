@@ -69,7 +69,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool):
+def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotate, annotation_db, evalue, pool):
     # list of sequence records
     all_centroid_aa = []
 
@@ -85,9 +85,14 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
     all_centroid_aa = (x for x in all_centroid_aa)
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_d.fasta", 'fasta')
 
-    command = ["diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
-               annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
-               annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
+    if annotate == "fast":
+        command = ["diamond", "blastp", "--iterate", "--evalue", str(evalue), "-d",
+                   annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
+                   annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
+    else:
+        command = ["diamond", "blastp", "--sensitive", "--iterate", "--evalue", str(evalue), "-d",
+                   annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
+                   annotation_temp_dir + "aa_d.fasta", "-o", annotation_temp_dir + "aa_d.tsv"]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
@@ -197,14 +202,13 @@ def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_di
 
 
 def iterative_annotation_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db,
-                                evalue,
-                                annotate, n_cpu, pool):
+                                evalue, annotate, n_cpu, pool):
     # run initial iterative search
     G, high_scoring_ORFs = run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
-                                              annotation_db, evalue, pool)
+                                              annotate, annotation_db, evalue, pool)
 
     # run ultra-sensitive search
-    if annotate == "sensitive":
+    if annotate == "ultrasensitive":
         G, high_scoring_ORFs = run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
                                              hmm_db, evalue, pool, n_cpu)
 
