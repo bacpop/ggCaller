@@ -176,7 +176,16 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # Iterate over all nodes in graph, and add edges
     for node in G.nodes():
+        # hold set to determine which ORFs have less than two edges
+        single_edge = set()
+
         for ORF_id in G.nodes[node]['seqIDs']:
+            # add to single_edge if not present, remove if present
+            if ORF_id not in single_edge:
+                single_edge.add(ORF_id)
+            else:
+                single_edge.remove(ORF_id)
+
             parsed_id = ORF_id.split("_")
             genome_id = int(parsed_id[0])
             local_id = int(parsed_id[-1])
@@ -185,8 +194,6 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
             if local_id in high_scoring_ORF_edges[genome_id]:
                 edge_set = high_scoring_ORF_edges[genome_id][local_id]
             else:
-                # if not present, then assume at end of contig as only has single/no linkage
-                if G.nodes[node]['hasEnd'] == False: G.nodes[node]['hasEnd'] = True
                 continue
 
             for neighbour in edge_set:
@@ -203,5 +210,7 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                neighbour_cluster,
                                size=1,
                                members=intbitset([genome_id]))
+        if not single_edge:
+            G.nodes[node]['hasEnd'] = True
 
     return G, centroid_context
