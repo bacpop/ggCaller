@@ -7,7 +7,8 @@
 robin_hood::unordered_map<size_t, std::vector<size_t>> add_ORF_info (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                                      const std::vector<Kmer>& head_kmer_arr,
                                                                      const robin_hood::unordered_set<size_t>& target_ORFs,
-                                                                     const ORFNodeMap& gene_map);
+                                                                     ORFNodeMap& gene_map,
+                                                                     const int& overlap);
 
 std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                                     const std::vector<Kmer>& head_kmer_arr,

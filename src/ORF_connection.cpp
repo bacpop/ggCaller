@@ -1,8 +1,9 @@
 #include "ORF_connection.h"
 robin_hood::unordered_map<size_t, std::vector<size_t>> add_ORF_info (const ColoredCDBG<MyUnitigMap>& ccdbg,
-                                                                       const std::vector<Kmer>& head_kmer_arr,
-                                                                       const robin_hood::unordered_set<size_t>& target_ORFs,
-                                                                       const ORFNodeMap& gene_map)
+                                                                     const std::vector<Kmer>& head_kmer_arr,
+                                                                     const robin_hood::unordered_set<size_t>& target_ORFs,
+                                                                     ORFNodeMap& gene_map,
+                                                                     const int& overlap)
 {
 
     robin_hood::unordered_map<size_t, std::vector<std::pair<unsigned int, size_t>>> ORF_coords_in_nodes;
@@ -10,7 +11,10 @@ robin_hood::unordered_map<size_t, std::vector<size_t>> add_ORF_info (const Color
     for (const auto & source : target_ORFs)
     {
         // get graph information for source node
-        const auto & ORF_info = gene_map.at(source);
+        auto & ORF_info = gene_map.at(source);
+
+        // remove regions in unitig overlaps
+        simplify_ORFNodeVector(ORF_info, overlap);
 
         // get start and stop node of ORF to add to node_to_ORFs
         std::unordered_set<size_t> front_back_index = {0, std::get<0>(ORF_info).size() - 1};
@@ -226,8 +230,6 @@ std::set<std::pair<size_t, size_t>> pair_ORF_nodes (const ColoredCDBG<MyUnitigMa
             auto next_ORFs = check_next_ORFs(ccdbg, head_kmer_arr, node_to_ORFs, start_node, source, colour_ID, stream, gene_map, max_ORF_path_length, repeat, downstream_ORF_set, upstream_ORF_set, overlap, is_ref, fm_idx);
 
             const auto & source_info = gene_map.at(source);
-
-            const auto ORF_seq = generate_sequence_nm(std::get<0>(source_info), std::get<1>(source_info), 30, ccdbg, head_kmer_arr);
 
             ORF_edges.insert(make_move_iterator(next_ORFs.begin()), make_move_iterator(next_ORFs.end()));
         }

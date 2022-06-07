@@ -39,7 +39,7 @@ ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
                 {
                     const auto& node_indices = std::get<1>(ORF_info).at(i);
                     // determine if at end and in overlap region of unitigs, if so pass
-                    if (node_indices.second - node_indices.first < overlap)
+                    if ((node_indices.second - node_indices.first) < overlap)
                     {
                         // if no entries added, then at start so break
                         if (complete_nodes.empty())

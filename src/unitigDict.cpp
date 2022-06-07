@@ -276,3 +276,47 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
     }
     return sequence;
 }
+
+// non member function to remove overlap ends of ORFNodeVector
+void simplify_ORFNodeVector (ORFNodeVector& ORF_info,
+                             const int& overlap)
+{
+    // hold indices that are complete unitigs i.e. start/end not in overlap
+    std::vector<int> complete_nodes;
+
+    // traverse to get non-overlap nodes
+    for (int i = 0; i < std::get<0>(ORF_info).size(); i++)
+    {
+        const auto& node_indices = std::get<1>(ORF_info).at(i);
+        // determine if at end and in overlap region of unitigs, if so pass
+        if ((node_indices.second - node_indices.first) < overlap)
+        {
+            // if no entries added, then at start so break
+            if (complete_nodes.empty())
+            {
+               continue;
+            }
+            // else at end, so break
+            else
+            {
+                break;
+            }
+        }
+        // convert node_traversed to size_t, minus 1 as unitigs are one-based, needs to be zero based
+        complete_nodes.push_back(i);
+    }
+
+    // only update if change present
+    if (complete_nodes.size() < std::get<0>(ORF_info).size())
+    {
+        // make new vectors
+        std::vector<int> new_nodes;
+        std::vector<indexPair> new_indices;
+
+        new_nodes.insert(new_nodes.end(), make_move_iterator(std::get<0>(ORF_info).begin() + complete_nodes[0]), make_move_iterator(std::get<0>(ORF_info).begin() + complete_nodes.back() + 1));
+        new_indices.insert(new_indices.end(), make_move_iterator(std::get<1>(ORF_info).begin() + complete_nodes[0]), make_move_iterator(std::get<1>(ORF_info).begin() + complete_nodes.back() + 1));
+
+        std::get<0>(ORF_info) = std::move(new_nodes);
+        std::get<1>(ORF_info) = std::move(new_indices);
+    }
+}

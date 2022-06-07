@@ -646,7 +646,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 }
 
                 // add ORF info for colour to graph
-                auto node_to_ORFs = add_ORF_info(_ccdbg, _KmerArray, target_ORFs, gene_map);
+                auto node_to_ORFs = add_ORF_info(_ccdbg, _KmerArray, target_ORFs, gene_map, overlap);
 
                 // initialise prev_node_set to avoid same ORFs being traversed from again
                 robin_hood::unordered_set<size_t> downstream_ORF_set;
