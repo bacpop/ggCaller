@@ -199,13 +199,11 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # write out roary like gene_presence_absence.csv
     # get original annotation IDs, lengths and whether or
     # not an internal stop codon is present
-    orig_ids = {}
     ids_len_stop = {}
     contig_annotation = defaultdict(list)
     for node in G.nodes():
         length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
         for sid in G.nodes[node]['seqIDs']:
-            orig_ids[sid] = sid
             mem = int(sid.split("_")[0])
             ORF_ID = int(sid.split("_")[-1])
             ORF_info = high_scoring_ORFs[mem][ORF_ID]
@@ -240,7 +238,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,
                                              mems_to_isolates=mems_to_isolates,
-                                             orig_ids=orig_ids,
                                              ids_len_stop=ids_len_stop,
                                              output_dir=output_dir,
                                              threads=n_cpu)

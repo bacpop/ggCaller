@@ -226,7 +226,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                     aligned_dna += to_add
                     dna_idx += 3
 
-            id = isolate_names[mem] + "_" + str(ORF_ID).zfill(5)
+            id = isolate_names[mem] + "_" + str(ORF_ID).zfill(6)
             output_sequences.append(SeqRecord(Seq(aligned_dna), id=id, description=""))
 
     # overwrite existing alignment file
@@ -245,7 +245,7 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
             for colour, gene_dict in high_scoring_ORFs.items():
                 for ORF_ID, ORFNodeVector in gene_dict.items():
                     gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
+                    f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + "\n" + gene + "\n")
     else:
         with open(outfile, "w") as f:
             for node in G.nodes():
@@ -264,10 +264,9 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                                             or ORF_len % 3 != 0)):
                         gene_annotation += " (potential psuedogene)"
                     if gene_annotation != "":
-                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(
-                            5) + " " + gene_annotation + "\n" + gene + "\n")
+                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + " " + gene_annotation + "\n" + gene + "\n")
                     else:
-                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(5) + "\n" + gene + "\n")
+                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + "\n" + gene + "\n")
 
     return
 
@@ -312,7 +311,7 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                     strand = 1 if entry[1][1] else -1
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
-                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(5),
+                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(6),
                         "inference": entry[2][0],
                         "score": entry[2][2],
                         "annotation": [entry[2][3].replace(",", " ").replace("|", "-")
@@ -627,7 +626,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
             pFile.write("\n")
 
     # run rapidnj
-    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
                tree_filename, "-c", str(threads)]
 
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -641,7 +640,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
     return
 
 
-def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
+def generate_roary_gene_presence_absence(G, mems_to_isolates,
                                          ids_len_stop, output_dir, threads):
     # hold gene proportions for gene frequency histogram
     gene_frequencies = []
@@ -651,10 +650,8 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
 
     # arange isolates
     isolates = []
-    mems_to_index = {}
     for i, mem in enumerate(mems_to_isolates):
         isolates.append(mems_to_isolates[mem])
-        mems_to_index[str(mem)] = i
 
     noSamples = len(isolates)
     # Layout categories
@@ -736,24 +733,16 @@ def generate_roary_gene_presence_absence(G, mems_to_isolates, orig_ids,
                 pres_abs_ext = [""] * len(isolates)
                 entry_size = 0
                 for seq in G.nodes[node]['seqIDs']:
-                    sample_id = mems_to_index["_".join(seq.split("_")[:-2])]
+                    sample_id = int(seq.split("_")[0])
                     if pres_abs[
                         sample_id] == "":  # ensures we only take the first one
-                        if seq in orig_ids:
-                            pres_abs[sample_id] = orig_ids[seq]
-                            pres_abs_ext[sample_id] = orig_ids[seq]
-                        else:
-                            pres_abs[sample_id] = seq
-                            pres_abs_ext[sample_id] = seq
+                        pres_abs[sample_id] = seq
+                        pres_abs_ext[sample_id] = seq
                         entry_size += 1
                     else:
                         # this is similar to PIRATE output
-                        if seq in orig_ids:
-                            pres_abs[sample_id] += ";" + orig_ids[seq]
-                            pres_abs_ext[sample_id] += ";" + orig_ids[seq]
-                        else:
-                            pres_abs[sample_id] += ";" + seq
-                            pres_abs_ext[sample_id] += ";" + seq
+                        pres_abs[sample_id] += ";" + seq
+                        pres_abs_ext[sample_id] += ";" + seq
                     if (abs(ids_len_stop[seq][0] - len_mode) /
                         len_mode) > (0.05 * len_mode):
                         pres_abs_ext[sample_id] += "_len"
