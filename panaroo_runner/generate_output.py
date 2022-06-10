@@ -626,7 +626,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
             pFile.write("\n")
 
     # run rapidnj
-    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
+    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
                tree_filename, "-c", str(threads)]
 
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
