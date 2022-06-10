@@ -16,6 +16,8 @@ import ast
 import tempfile
 import json
 
+from .__init__ import __version__
+
 def get_options():
     description = 'Generates ORFs from a Bifrost graph.'
     parser = argparse.ArgumentParser(description=description,
@@ -341,6 +343,9 @@ def get_options():
                       default=1,
                       help='Number of threads to use. '
                            '[Default = 1] ')
+    Misc.add_argument('--version', '-v',
+                        action='version',
+                        version='%(prog)s ' + __version__)
 
     return parser.parse_args()
 
