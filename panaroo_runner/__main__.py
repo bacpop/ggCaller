@@ -258,7 +258,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     if verbose:
         print("writing gene fasta...")
-    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls.fasta"),
+    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
                     input_colours, overlap, shd_arr[0], truncation_threshold, G)
 
     # Write out core/pan-genome alignments

@@ -240,34 +240,39 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
+    DNA_records = []
+    aa_records = []
     if G == None:
-        with open(outfile, "w") as f:
-            for colour, gene_dict in high_scoring_ORFs.items():
-                for ORF_ID, ORFNodeVector in gene_dict.items():
-                    gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + "\n" + gene + "\n")
+        for colour, gene_dict in high_scoring_ORFs.items():
+            for ORF_ID, ORFNodeVector in gene_dict.items():
+                gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                             description=""))
+                aa_records.append(SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                            description=""))
     else:
-        with open(outfile, "w") as f:
-            for node in G.nodes():
-                node_annotation = G.nodes[node]["description"]
-                length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
-                for sid in G.nodes[node]['seqIDs']:
-                    # if sid not in centroid_sequence_ids:
-                    colour = int(sid.split("_")[0])
-                    ORF_ID = int(sid.split("_")[-1])
-                    ORF_info = high_scoring_ORFs[colour][ORF_ID]
-                    gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
-                    ORF_len = ORF_info[2]
-                    gene_annotation = node_annotation
-                    if ORF_len < (length_centroid * truncation_threshold) or (
-                            ORF_ID < 0 and (ORF_info[3] is True
-                                            or ORF_len % 3 != 0)):
-                        gene_annotation += " (potential psuedogene)"
-                    if gene_annotation != "":
-                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + " " + gene_annotation + "\n" + gene + "\n")
-                    else:
-                        f.write(">" + isolate_names[colour] + "_" + str(ORF_ID).zfill(6) + "\n" + gene + "\n")
-
+        for node in G.nodes():
+            node_annotation = G.nodes[node]["description"]
+            length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
+            for sid in G.nodes[node]['seqIDs']:
+                # if sid not in centroid_sequence_ids:
+                colour = int(sid.split("_")[0])
+                ORF_ID = int(sid.split("_")[-1])
+                ORF_info = high_scoring_ORFs[colour][ORF_ID]
+                gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
+                ORF_len = ORF_info[2]
+                gene_annotation = node_annotation
+                if ORF_len < (length_centroid * truncation_threshold) or (
+                        ORF_ID < 0 and (ORF_info[3] is True
+                                        or ORF_len % 3 != 0)):
+                    gene_annotation += " (potential psuedogene)"
+                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                   description=gene_annotation))
+                aa_records.append(
+                    SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                    description=gene_annotation))
+    SeqIO.write(DNA_records, outfile + ".ffn", "fasta")
+    SeqIO.write(aa_records, outfile + ".faa", "fasta")
     return
 
 
