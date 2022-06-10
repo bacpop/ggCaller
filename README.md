@@ -162,7 +162,7 @@ Input/Output options:
 
 ggCaller traversal and gene-calling cut-off settings:
   --max-path-length MAX_PATH_LENGTH
-                        Maximum path length during ORF finding (bp). [Default = 10000]
+                        Maximum path length during ORF finding (bp). [Default = 20000]
   --min-orf-length MIN_ORF_LENGTH
                         Minimum ORF length to return (bp). [Default = 90]
   --max-ORF-overlap MAX_ORF_OVERLAP
@@ -201,8 +201,8 @@ Panaroo run mode options:
                         disguish from contamination. Results will likely include higher number of spurious annotations.
 
 Panaroo gene cluster annotation options:
-  --annotation {fast,sensitive}
-                        Annotate genes using diamond (fast) or diamond and HMMscan (sensitive).If not specified, no annotation done
+  --annotation {fast,sensitive,ultrasensitive}
+                        Annotate genes using diamond default (fast), diamond sensitive (sensitive) or diamond and HMMscan (ultrasensitive).If not specified, no annotation done
   --diamonddb ANNOTATION_DB
                         Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also specify path to fasta file for custom database generation
   --hmmdb HMM_DB        HMMER hmm profile file. Default is Uniprot HAMAP. Can alsospecify path to pre-built hmm profile file generated using hmmbuild
@@ -248,6 +248,7 @@ Gene alignment options:
 Misc. options:
   --quiet               suppress additional output
   --threads THREADS     Number of threads to use. [Default = 1]
+  --version, -v         show program's version number and exit
 ```
 
 ## Citation
