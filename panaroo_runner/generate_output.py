@@ -268,9 +268,14 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                     gene_annotation += " (potential psuedogene)"
                 DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
                                    description=gene_annotation))
-                aa_records.append(
-                    SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
-                                    description=gene_annotation))
+                if (ORF_ID < 0):
+                    aa_records.append(
+                        SeqRecord(Seq(ORF_info[4]), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                        description=gene_annotation))
+                else:
+                    aa_records.append(
+                        SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                                        description=gene_annotation))
     SeqIO.write(DNA_records, outfile + ".ffn", "fasta")
     SeqIO.write(aa_records, outfile + ".faa", "fasta")
     return
