@@ -294,7 +294,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     while ((l = kseq_read(seq)) >= 0) {
         std::string entry = seq->seq.s;
 
-        const size_t num_kmers = entry.length() - kmer + 1;
+        const int num_kmers = entry.length() - kmer + 1;
 
         // roll through the sequence, generating k-mers and querying them in graph
         if (num_kmers > 0) {
