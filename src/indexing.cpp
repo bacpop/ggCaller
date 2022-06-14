@@ -384,7 +384,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
     {
         NodeColourVector node_colour_vector_private(nb_colours);
         std::unordered_map<std::string, size_t> head_kmer_map_private;
-        #pragma omp for nowait
+        #pragma omp for
         for (auto it = head_kmer_arr.begin(); it < head_kmer_arr.end(); it++)
         {
             // convert Kmer defined in *it to unitig
@@ -430,7 +430,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
         cout << "Mapping contigs to graph..." << endl;
         #pragma omp parallel
         {
-            #pragma omp for nowait
+            #pragma omp for
             for (int i = 0; i < ref_index.size(); i++)
             {
                 calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);

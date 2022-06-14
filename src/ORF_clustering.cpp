@@ -148,7 +148,7 @@ ORFClusterMap produce_clusters(const ColourORFVectorMap& colour_ORF_map,
         {
             std::unordered_set<size_t> group_indices_private;
 
-            #pragma omp for nowait
+            #pragma omp for
             for (int index = 0; index < group_indices.size(); index++)
             {
                 // get entry information for the current ORF
