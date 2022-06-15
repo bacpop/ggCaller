@@ -338,6 +338,17 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
             auto neighbour_um_data = neighbour_da->getData(neighbour_um);
             const bool neighbour_strand = neighbour_um.strand;
 
+            // calculate colours array
+            auto updated_colours_arr = colour_arr;
+            auto neighbour_colour = neighbour_um_data->full_colour();
+            updated_colours_arr &= neighbour_colour;
+
+            // determine if neighbour is in same colour as iteration, if not pass
+            if (!(bool)updated_colours_arr[current_colour])
+            {
+                continue;
+            }
+
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
@@ -359,17 +370,6 @@ std::set<std::pair<size_t, size_t>> check_next_ORFs (const ColoredCDBG<MyUnitigM
                 {
                     continue;
                 }
-            }
-
-            // calculate colours array
-            auto updated_colours_arr = colour_arr;
-            auto neighbour_colour = neighbour_um_data->full_colour();
-            updated_colours_arr &= neighbour_colour;
-
-            // determine if neighbour is in same colour as iteration, if not pass
-            if (!(bool)updated_colours_arr[current_colour])
-            {
-                continue;
             }
 
             // if not is_ref, check that unitig is shared in at least one other colour

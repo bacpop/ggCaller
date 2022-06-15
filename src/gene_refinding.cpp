@@ -185,6 +185,31 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto neighbour_um_data = neighbour_da->getData(neighbour_um);
             const bool neighbour_strand = neighbour_um.strand;
 
+            // calculate colours array
+            auto updated_colours_arr = colour_arr;
+            auto neighbour_colour = neighbour_um_data->full_colour();
+            updated_colours_arr &= neighbour_colour;
+
+            // determine if neighbour is in same colour as iteration, if not return and pass
+            if (!(bool)updated_colours_arr[current_colour])
+            {
+                // update path_list to enable to return all nodes up to point where stop encountered
+                path_list.push_back({path_length, node_vector});
+                continue;
+            } else
+            {
+                // if not is_ref, check that unitig is shared in at least one other colour
+                if (!is_ref)
+                {
+                    if (neighbour_colour.count() < 2)
+                    {
+                        // update path_list to enable to return all nodes up to point where stop encountered
+                        path_list.push_back({path_length, node_vector});
+                        continue;
+                    }
+                }
+            }
+
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
@@ -209,31 +234,6 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                     // update path_list to enable to return all nodes up to point where stop encountered
                     path_list.push_back({path_length, node_vector});
                     continue;
-                }
-            }
-
-            // calculate colours array
-            auto updated_colours_arr = colour_arr;
-            auto neighbour_colour = neighbour_um_data->full_colour();
-            updated_colours_arr &= neighbour_colour;
-
-            // determine if neighbour is in same colour as iteration, if not return and pass
-            if (!(bool)updated_colours_arr[current_colour])
-            {
-                // update path_list to enable to return all nodes up to point where stop encountered
-                path_list.push_back({path_length, node_vector});
-                continue;
-            } else
-            {
-                // if not is_ref, check that unitig is shared in at least one other colour
-                if (!is_ref)
-                {
-                    if (neighbour_colour.count() < 2)
-                    {
-                        // update path_list to enable to return all nodes up to point where stop encountered
-                        path_list.push_back({path_length, node_vector});
-                        continue;
-                    }
                 }
             }
 
