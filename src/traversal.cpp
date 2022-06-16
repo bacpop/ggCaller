@@ -249,7 +249,7 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
         // if not found, treat as end contig
         if (edge_it == edge_map.end())
         {
-            path_list.push_back(std::move(node_vector));
+            path_list.push_back(node_vector);
             continue;
         }
         for (auto& neighbour_id : edge_it->second)
