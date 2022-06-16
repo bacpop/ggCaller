@@ -272,14 +272,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             // get whether colour is reference or not
             bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
 
-//            const auto& FM_fasta_file = input_colours.at(colour_ID);
-//
-//            // if no FM_fasta_file specified, cannot generate FM Index
-//            if (FM_fasta_file == "NA")
-//            {
-//                is_ref = false;
-//            }
-
             // initialise ORF_vector
             ORFNodeRobMap ORF_map;
 

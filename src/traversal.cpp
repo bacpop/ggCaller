@@ -194,7 +194,7 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
                             const size_t length_max,
                             const size_t overlap,
                             const fm_index_coll& fm_idx,
-                            const robin_hood::unordered_map<int, std::vector<int>>& edge_map,
+                            const robin_hood::unordered_map<int, robin_hood::unordered_set<int>>& edge_map,
                             const bool ref_strand)
 {
     // generate path list, vector for path and the stack
@@ -257,7 +257,7 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
             auto neighbour_da_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
             auto& neighbour_um = um_pair.first;
             auto& neighbour_um_data = um_pair.second;
-            const bool neighbour_strand = (neighbour_id >= 0) ? true : false;;
+            const bool neighbour_strand = (neighbour_id >= 0) ? true : false;
 
             // calculate colours array
             auto updated_colours_arr = colour_arr;
@@ -270,12 +270,12 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 continue;
             }
 
-            if (node_vector.size() % 2 == 1)
+            // check if real path
             {
                 std::vector<int> check_vector = node_vector;
                 check_vector.push_back(neighbour_id);
-                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
-                if (!present.first)
+                bool present = path_search_strand(check_vector, fm_idx, ref_strand);
+                if (!present)
                 {
                     continue;
                 }
@@ -381,7 +381,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     while ((l = kseq_read(seq)) >= 0)
     {
         // generate map to hold true edges from contig
-        robin_hood::unordered_map<int, std::vector<int>> edge_map;
+        robin_hood::unordered_map<int, robin_hood::unordered_set<int>> edge_map;
 
         // generate set to hold nodes to start traversal from
         robin_hood::unordered_set<int> forward_stop_nodes;
@@ -439,8 +439,8 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                                 forward_stop_nodes.insert(node_ID);
                             } else
                             {
-                                edge_map[prev_head].push_back(node_ID);
-                                edge_map[node_ID * -1].push_back(prev_head * -1);
+                                edge_map[prev_head].insert(node_ID);
+                                edge_map[node_ID * -1].insert(prev_head * -1);
                             }
 
                             // set prev_head to new node
@@ -451,12 +451,12 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             contig_path += node_entry + ",";
                         }
                     }
-
-                    // add delimiter between contigs
-                    genome_path += contig_path;
-                    genome_path += ";";
-                    contig_ID++;
                 }
+
+                // add delimiter between contigs
+                genome_path += contig_path;
+                genome_path += ";";
+                contig_ID++;
 
                 // map to last entry and assign end-contig
                 auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
