@@ -20,4 +20,8 @@ std::vector<int> reverse_unitig_path(const std::vector<int>& unitig_path);
 std::pair<bool, bool> path_search(const std::vector<int>& query_path,
                                   const fm_index_coll& ref_idx);
 
+bool path_search_strand(const std::vector<int>& query_path,
+                        const fm_index_coll& ref_idx,
+                        const bool strand);
+
 #endif //MATCH_STRING_H

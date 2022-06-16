@@ -236,6 +236,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
     // set global error for Balrog model loading
     bool error = false;
 
+    // get the number of colours
+    size_t nb_colours = _ccdbg.getNbColors();
+
     {
         // set up progress bar
         progressbar bar(input_colours.size());
@@ -269,13 +272,13 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             // get whether colour is reference or not
             bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
 
-            const auto& FM_fasta_file = input_colours.at(colour_ID);
-
-            // if no FM_fasta_file specified, cannot generate FM Index
-            if (FM_fasta_file == "NA")
-            {
-                is_ref = false;
-            }
+//            const auto& FM_fasta_file = input_colours.at(colour_ID);
+//
+//            // if no FM_fasta_file specified, cannot generate FM Index
+//            if (FM_fasta_file == "NA")
+//            {
+//                is_ref = false;
+//            }
 
             // initialise ORF_vector
             ORFNodeRobMap ORF_map;
@@ -287,27 +290,25 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // generate FM_index if is_ref
                 fm_index_coll fm_idx;
 
-                if (is_ref)
-                {
-                    const auto idx_file_name = FM_fasta_file + ".fmp";
-                    if (!load_from_file(fm_idx, idx_file_name))
-                    {
-                        cout << "FM-Index not available for " << FM_fasta_file << endl;
-                        is_ref = false;
-                    }
-                }
-
                 // recursive traversal and ORF calling
                 if (error)
                 {
                     no_filter = true;
                 }
 
-                // convert this to map to make removal easier
-                ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
-                                                      overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
-
+                // generate FM-indexes of all reference fasta in node-space
+                if (is_ref)
+                {
+                    ORF_map =  std::move(calculate_genome_paths(_KmerArray, _ccdbg, input_colours[colour_ID], overlap + 1, colour_ID, nb_colours,
+                                                                max_path_length, stop_codons_for, start_codons_for, min_ORF_length, TIS_model,
+                                                                minimum_ORF_score, no_filter, all_TIS_scores));
+                } else
+                {
+                    // convert this to map to make removal easier
+                    ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
+                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
+                                                       TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
+                }
             }
 
             // update colour_orf_vec_map

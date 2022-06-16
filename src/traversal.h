@@ -18,6 +18,31 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                               const boost::dynamic_bitset<>& ref_set,
                               const fm_index_coll& fm_idx);
 
+PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
+                            const std::vector<Kmer>& head_kmer_arr,
+                            const NodeTuple& head_node_tuple,
+                            const size_t current_colour,
+                            const size_t length_max,
+                            const size_t overlap,
+                            const fm_index_coll& fm_idx,
+                            const robin_hood::unordered_map<int, std::vector<int>>& edge_map,
+                            const bool ref_strand);
+
+ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
+                                     ColoredCDBG<MyUnitigMap>& ccdbg,
+                                     const std::string& fasta_file,
+                                     const int kmer,
+                                     const int colour_ID,
+                                     const size_t nb_colours,
+                                     const size_t& max_path_length,
+                                     const std::vector<std::string>& stop_codons_for,
+                                     const std::vector<std::string>& start_codons_for,
+                                     const size_t min_ORF_length,
+                                     torch::jit::script::Module& TIS_model,
+                                     const double& minimum_ORF_score,
+                                     const bool no_filter,
+                                     tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
+
 ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,
                              const size_t colour_ID,

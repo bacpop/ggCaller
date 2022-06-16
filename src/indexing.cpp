@@ -262,102 +262,6 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     um_data->add_codon(false, part_binary_neg);
 }
 
-void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
-                            ColoredCDBG<MyUnitigMap>& ccdbg,
-                            const std::string& fasta_file,
-                            const int kmer,
-                            const int colour_ID,
-                            const size_t nb_colours)
-{
-    // generate the index
-    fm_index_coll ref_index;
-
-    // create fm index file name
-    std::string idx_file_name = fasta_file + ".fmp";
-
-    // initialise string of nodes for FM-index generation
-    std::string genome_path;
-
-    // open the file handler
-    gzFile fp = gzopen(fasta_file.c_str(), "r");
-
-    if (fp == 0) {
-        perror("fopen");
-        exit(1);
-    }
-    // initialize seq
-    kseq_t *seq = kseq_init(fp);
-
-    // read sequence
-    size_t contig_ID = 1;
-    int l;
-    while ((l = kseq_read(seq)) >= 0) {
-        std::string entry = seq->seq.s;
-
-        const int num_kmers = entry.length() - kmer + 1;
-
-        // roll through the sequence, generating k-mers and querying them in graph
-        if (num_kmers > 0) {
-            // initialise variables for contig, add initial delimeter
-            std::string contig_path = ",";
-
-            const char *query_str = entry.c_str();
-
-            // create int to identify if head and tail kmers in unitig have been traversed
-            int prev_head = 0;
-
-            for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
-            {
-                auto um = ccdbg.find(it_km->first);
-
-                // if found, add to FM-index string
-                if (!um.isEmpty) {
-                    int strand = um.strand ? 1 : -1;
-
-                    DataAccessor<MyUnitigMap>* da = um.getData();
-                    MyUnitigMap* um_data = da->getData(um);
-
-                    // look for the head in the graph, determine node ID and add to genome_path
-                    int node_ID = um_data->get_id() * strand;
-
-                    if (prev_head != node_ID) {
-                        // if at start of contig i.e. prev_head==0, set as end_contig
-                        if (!prev_head)
-                        {
-                            um_data->set_end_contig(colour_ID, nb_colours);
-                        }
-
-                        // set prev_head to new node
-                        prev_head = node_ID;
-
-                        // add new node
-                        const std::string node_entry = std::to_string(node_ID);
-                        contig_path += node_entry + ",";
-                    }
-                }
-            }
-
-            // map to last entry and assign end-contig
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
-            auto& um_data = um_pair.second;
-
-            um_data->set_end_contig(colour_ID, nb_colours);
-
-            // add delimiter between contigs
-            genome_path += contig_path;
-            genome_path += ";";
-            contig_ID++;
-        }
-    }
-
-    // destroy seq and fp objects
-    kseq_destroy(seq);
-    gzclose(fp);
-
-    sdsl::construct_im(ref_index, genome_path, 1); // generate index
-    store_to_file(ref_index, idx_file_name); // save it
-}
-
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<std::string>& stop_codons_for,
@@ -410,30 +314,6 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             for (int i = 0; i < node_colour_vector_private.size(); i++)
             {
                 node_colour_vector[i].insert(node_colour_vector[i].end(), make_move_iterator(node_colour_vector_private[i].begin()), make_move_iterator(node_colour_vector_private[i].end()));
-            }
-        }
-    }
-
-    // generate index of references within ref_set
-    std::vector<size_t> ref_index;
-    for (int i = 0; i < input_colours.size(); i++)
-    {
-        if ((bool)ref_set[i])
-        {
-            ref_index.push_back(i);
-        }
-    }
-
-    // generate FM-indexes of all reference fasta in node-space
-    if (ref_set.any())
-    {
-        cout << "Mapping contigs to graph..." << endl;
-        #pragma omp parallel
-        {
-            #pragma omp for
-            for (int i = 0; i < ref_index.size(); i++)
-            {
-                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);
             }
         }
     }

@@ -171,3 +171,42 @@ std::pair<bool, bool> path_search(const std::vector<int>& query_path,
     }
     return {present, rev_comp};
 }
+
+//search for a specific sequence within an fm index array
+bool path_search_strand(const std::vector<int>& query_path,
+                        const fm_index_coll& ref_idx,
+                        const bool strand)
+{
+    bool present = false;
+
+    // convert query into string
+    std::ostringstream oss;
+    std::copy(query_path.begin(), query_path.end(),
+              std::ostream_iterator<int>(oss, ","));
+
+    // add start delimeter
+    std::string query = "," + oss.str();
+
+    size_t count = 0;
+
+    if (strand)
+    {
+        //count number of occurrences in positive strand
+        count = sdsl::count(ref_idx, query);
+    } else
+    {
+        const auto rev_query_path = reverse_unitig_path(query_path);
+        oss.str(std::string());
+        std::copy(rev_query_path.begin(), rev_query_path.end(),
+                  std::ostream_iterator<int>(oss, ","));
+        query = "," + oss.str();
+        count = sdsl::count(ref_idx, query);
+    }
+
+    // take first entry from locations
+    if (count > 0)
+    {
+        present = true;
+    }
+    return present;
+}
