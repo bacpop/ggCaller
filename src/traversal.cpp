@@ -195,7 +195,8 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
                             const size_t overlap,
                             const fm_index_coll& fm_idx,
                             const robin_hood::unordered_map<int, robin_hood::unordered_set<int>>& edge_map,
-                            const bool ref_strand)
+                            const bool ref_strand,
+                            const std::pair<int, int>& start_end_nodes)
 {
     // generate path list, vector for path and the stack
     PathVector path_list;
@@ -304,7 +305,7 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
             std::bitset<3> updated_codon_arr = (codon_arr & ~(neighbour_um_data->get_codon_arr(false, neighbour_strand, modulus)));
 
             // return path if end of contig found or if stop indexes paired
-            if (neighbour_um_data->end_contig(current_colour) || updated_codon_arr.none())
+            if (abs(neighbour_id) == abs(start_end_nodes.first) || abs(neighbour_id) == abs(start_end_nodes.second) || updated_codon_arr.none())
             {
                 // create temporary path to account for reaching end of contig
                 std::vector<int> return_path = node_vector;
@@ -314,7 +315,7 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 path_list.push_back(std::move(return_path));
 
                 // if node is end_contig, continue to add to path
-                if (neighbour_um_data->end_contig(current_colour) && !updated_codon_arr.none())
+                if ((abs(neighbour_id) == abs(start_end_nodes.first) || abs(neighbour_id) == abs(start_end_nodes.second)) && !updated_codon_arr.none())
                 {
                     // if no previous conditions are satisfied, prepare tuple for stack
                     NodeTuple new_node_tuple(new_pos_idx, neighbour_id, updated_codon_arr, updated_colours_arr, updated_path_length);
@@ -397,6 +398,9 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             // initialise small local fm-index
             fm_index_coll local_index;
 
+            // initialise start and end contigs node
+            std::pair<int, int> start_end_nodes;
+
             // scope for contig path
             {
                 // initialise variables for contig, add initial delimeter
@@ -409,7 +413,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
                 for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
                 {
-                    auto um = ccdbg.find(it_km->first);
+                    auto um = ccdbg.find(it_km->first, true);
 
                     // if found, add to FM-index string
                     if (!um.isEmpty) {
@@ -428,7 +432,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
                         if (um_data->reverse_stop())
                         {
-                            reverse_stop_nodes.insert(node_ID * -1);
+                            reverse_stop_nodes.insert(node_ID);
                         }
 
                         if (prev_head != node_ID) {
@@ -436,6 +440,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             if (!prev_head)
                             {
                                 um_data->set_end_contig(colour_ID, nb_colours);
+                                start_end_nodes.first = node_ID;
                                 forward_stop_nodes.insert(node_ID);
                             } else
                             {
@@ -463,7 +468,8 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 auto& um_data = um_pair.second;
 
                 um_data->set_end_contig(colour_ID, nb_colours);
-                reverse_stop_nodes.insert(prev_head * -1);
+                start_end_nodes.second = prev_head;
+                reverse_stop_nodes.insert(prev_head);
 
                 // construct small fm-index for ORF calling
                 sdsl::construct_im(local_index, contig_path, 1);
@@ -474,12 +480,15 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             full_binary.set();
 
             // traverse graph in forward direction
-            for (const auto& head_id : forward_stop_nodes)
+            for (auto head_id : forward_stop_nodes)
             {
                 // get unitig data
                 const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
                 const auto& um = um_pair.first;
                 const auto& um_data = um_pair.second;
+
+                const bool ref_strand = (head_id >= 0) ? true : false;
+                head_id = abs(head_id);
 
                 // gather unitig information from graph_vector
                 std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
@@ -487,7 +496,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
                 // if end contig, set to full array
-                if (um_data->end_contig(colour_ID))
+                if (head_id == start_end_nodes.first)
                 {
                     codon_arr = full_binary;
                 }
@@ -496,7 +505,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
                 // recur paths
-                PathVector unitig_complete_paths = iter_nodes_path(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, kmer -1, local_index, edge_map, true);
+                PathVector unitig_complete_paths = iter_nodes_path(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, kmer -1, local_index, edge_map, ref_strand, start_end_nodes);
 
                 // iterate over paths, calling ORFs
                 if (!unitig_complete_paths.empty())
@@ -512,20 +521,23 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             }
 
             // traverse graph in forward and reverse direction
-            for (const auto& head_id : reverse_stop_nodes)
+            for (auto head_id : reverse_stop_nodes)
             {
                 // get unitig data
                 const auto um_pair = get_um_data(ccdbg, head_kmer_arr, head_id);
                 const auto& um = um_pair.first;
                 const auto& um_data = um_pair.second;
 
+                const bool ref_strand = (head_id >= 0) ? false : true;
+                head_id = abs(head_id) * -1;
+
                 // gather unitig information from graph_vector
-                std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
+                std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
                 const size_t unitig_len = um.size;
                 const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
                 // if end contig, set to full array
-                if (um_data->end_contig(colour_ID))
+                if (head_id == (start_end_nodes.second * -1))
                 {
                     codon_arr = full_binary;
                 }
@@ -534,7 +546,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
 
                 // recur paths
-                PathVector unitig_complete_paths = iter_nodes_path(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, kmer -1, local_index, edge_map, false);
+                PathVector unitig_complete_paths = iter_nodes_path(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, max_path_length, kmer -1, local_index, edge_map, ref_strand, start_end_nodes);
 
                 // iterate over paths, calling ORFs
                 if (!unitig_complete_paths.empty())

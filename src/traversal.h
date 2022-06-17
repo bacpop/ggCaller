@@ -26,7 +26,8 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
                             const size_t overlap,
                             const fm_index_coll& fm_idx,
                             const robin_hood::unordered_map<int, robin_hood::unordered_set<int>>& edge_map,
-                            const bool ref_strand);
+                            const bool ref_strand,
+                            const std::pair<int, int>& start_end_nodes);
 
 ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                                      ColoredCDBG<MyUnitigMap>& ccdbg,
