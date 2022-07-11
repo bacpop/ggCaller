@@ -18,6 +18,7 @@ void generate_ORFs(const int& colour_ID,
                    torch::jit::script::Module& TIS_model,
                    const float& minimum_ORF_score,
                    const bool no_filter,
+                   const size_t nb_colours,
                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
@@ -310,7 +311,7 @@ void generate_ORFs(const int& colour_ID,
                         // determine coverage for start_site
                         auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF_coords.first[index]);
                         auto& um_data = um_pair.second;
-                        size_t start_coverage = um_data->full_colour().count();
+                        float start_coverage = (float)um_data->full_colour().count() / (float)nb_colours;
 
                         // calculate length as proportion of previous ORF in list
                         float prev_len_prop = (float)ORF_len / (float)max_ORF_length;
