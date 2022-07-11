@@ -256,8 +256,8 @@ PathVector iter_nodes_path (const ColoredCDBG<MyUnitigMap>& ccdbg,
         for (auto& neighbour_id : edge_it->second)
         {
             auto neighbour_da_pair = get_um_data(ccdbg, head_kmer_arr, neighbour_id);
-            auto& neighbour_um = um_pair.first;
-            auto& neighbour_um_data = um_pair.second;
+            auto& neighbour_um = neighbour_da_pair.first;
+            auto& neighbour_um_data = neighbour_da_pair.second;
             const bool neighbour_strand = (neighbour_id >= 0) ? true : false;
 
             // calculate colours array
@@ -487,19 +487,21 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 const auto& um = um_pair.first;
                 const auto& um_data = um_pair.second;
 
-                const bool ref_strand = (head_id >= 0) ? true : false;
-                head_id = abs(head_id);
-
                 // gather unitig information from graph_vector
                 std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
                 const size_t unitig_len = um.size;
                 const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
+                // determine how to traverse graph
+                const bool ref_strand = (head_id >= 0) ? true : false;
+
                 // if end contig, set to full array
-                if (head_id == start_end_nodes.first)
+                if (abs(head_id) == abs(start_end_nodes.first) || abs(head_id) == abs(start_end_nodes.second))
                 {
                     codon_arr = full_binary;
                 }
+
+                head_id = abs(head_id);
 
                 // generate node tuple for iteration
                 NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
@@ -515,7 +517,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     {
                         // generate all ORFs within the path for start and stop codon pairs
                         generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], kmer -1, min_ORF_length,
-                                      true, local_index, TIS_model, minimum_ORF_score, no_filter, all_TIS_scores);
+                                      true, local_index, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
                     }
                 }
             }
@@ -528,19 +530,21 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                 const auto& um = um_pair.first;
                 const auto& um_data = um_pair.second;
 
-                const bool ref_strand = (head_id >= 0) ? false : true;
-                head_id = abs(head_id) * -1;
-
                 // gather unitig information from graph_vector
                 std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
                 const size_t unitig_len = um.size;
                 const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
+                // determine how to traverse graph
+                const bool ref_strand = (head_id >= 0) ? false : true;
+
                 // if end contig, set to full array
-                if (head_id == (start_end_nodes.second * -1))
+                if (abs(head_id) == abs(start_end_nodes.first) || abs(head_id) == abs(start_end_nodes.second))
                 {
                     codon_arr = full_binary;
                 }
+
+                head_id = abs(head_id) * -1;
 
                 // generate node tuple for iteration
                 NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, unitig_len);
@@ -556,7 +560,7 @@ ORFNodeRobMap calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     {
                         // generate all ORFs within the path for start and stop codon pairs
                         generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], kmer -1, min_ORF_length,
-                                      true, local_index, TIS_model, minimum_ORF_score, no_filter, all_TIS_scores);
+                                      true, local_index, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
                     }
                 }
             }
@@ -605,6 +609,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          torch::jit::script::Module& TIS_model,
                          const double& minimum_ORF_score,
                          const bool no_filter,
+                         const size_t nb_colours,
                          tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
@@ -614,8 +619,6 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     // set for any end contigs
     std::bitset<3> full_binary;
     full_binary.set();
-
-    const size_t nb_colours = ccdbg.getNbColors();
 
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)

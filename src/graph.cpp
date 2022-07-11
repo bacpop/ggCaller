@@ -291,7 +291,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // generate FM-indexes of all reference fasta in node-space
                 if (is_ref)
                 {
-                    ORF_map =  std::move(calculate_genome_paths(_KmerArray, _ccdbg, input_colours[colour_ID], overlap + 1, colour_ID, nb_colours,
+                    ORF_map = std::move(calculate_genome_paths(_KmerArray, _ccdbg, input_colours[colour_ID], overlap + 1, colour_ID, nb_colours,
                                                                 max_path_length, stop_codons_for, start_codons_for, min_ORF_length, TIS_model,
                                                                 minimum_ORF_score, no_filter, all_TIS_scores));
                 } else
@@ -299,7 +299,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     // convert this to map to make removal easier
                     ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
                                                        overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                       TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
+                                                       TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores));
                 }
             }
 
