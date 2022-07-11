@@ -23,6 +23,7 @@ void generate_ORFs(const int& colour_ID,
                    torch::jit::script::Module& TIS_model,
                    const float& minimum_ORF_score,
                    const bool no_filter,
+                   const size_t nb_colours,
                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,

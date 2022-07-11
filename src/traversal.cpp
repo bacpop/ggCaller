@@ -615,6 +615,8 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     std::bitset<3> full_binary;
     full_binary.set();
 
+    const size_t nb_colours = ccdbg.getNbColors();
+
     // traverse nodes in forward direction
     for (const auto& node_id : node_ids)
     {
@@ -667,7 +669,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
             }
         }
     }
@@ -724,7 +726,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
             }
         }
     }
