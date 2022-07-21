@@ -16,9 +16,6 @@ include_directories(${Boost_INCLUDE_DIRS})
 find_package(pybind11 REQUIRED)
 pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp src/ORF_scoring.cpp src/gene_graph.cpp)
 
-# try to find TBB
-find_package( TBB QUIET )
-
 # check for conda environment
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
@@ -53,13 +50,12 @@ SET( MKL_LIBRARIES ${bifrost_LIBRARY} )
 SET(MKL_FOUND TRUE)
 
 # find TBB if not found already
-if(NOT TBB_FOUND)
-  FIND_PATH(tbb_INCLUDE_DIR tbb/concurrent_unordered_map.h HINTS ${CONDA_DIR}/include NO_DEFAULT_PATH)
-  FIND_LIBRARY(tbb_LIBRARY NAMES tbb libtbb.so libtbb.so.0 libtbb.so.1 libtbb.so.2 HINTS ${CONDA_DIR}/lib REQUIRED)
-  FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
-  SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
-  SET( tbb_LIBRARIES ${tbb_LIBRARY} )
-ENDIF()
+FIND_PATH(tbb_INCLUDE_DIR concurrent_unordered_map.h HINTS ${CONDA_DIR}/include/tbb NO_DEFAULT_PATH)
+FIND_LIBRARY(tbb_LIBRARY NAMES tbb libtbb.so libtbb.so.0 libtbb.so.1 libtbb.so.2 HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
+SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
+SET( tbb_LIBRARIES ${tbb_LIBRARY} )
+
 
 # add torch libraries
 FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
