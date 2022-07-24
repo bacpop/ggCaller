@@ -8,6 +8,7 @@ void generate_ORFs(const int& colour_ID,
                    std::unordered_set<size_t>& hashes_to_remove,
                    const ColoredCDBG<MyUnitigMap>& ccdbg,
                    const std::vector<Kmer>& head_kmer_arr,
+                   const float& stop_codon_freq,
                    const std::vector<std::string>& stop_codons,
                    const std::vector<std::string>& start_codons,
                    const std::vector<int>& nodelist,
@@ -135,7 +136,7 @@ void generate_ORFs(const int& colour_ID,
 
         // iterate over each stop codon
         for (const auto &codon : stop_codons) {
-            found_indices = findIndex(path_sequence, codon, 0, 0, false);
+            found_indices = findIndex(path_sequence, codon, 0,  false);
             stop_codon_indices.insert(stop_codon_indices.end(), std::make_move_iterator(found_indices.begin()),
                                       std::make_move_iterator(found_indices.end()));
             found_indices.clear();
@@ -143,7 +144,7 @@ void generate_ORFs(const int& colour_ID,
 
         // iterate over each start codon
         for (const auto &codon : start_codons) {
-            found_indices = findIndex(path_sequence, codon, 0, 0, false);
+            found_indices = findIndex(path_sequence, codon, 0, false);
             start_codon_indices.insert(start_codon_indices.end(), std::make_move_iterator(found_indices.begin()),
                                        std::make_move_iterator(found_indices.end()));
             found_indices.clear();
@@ -253,7 +254,6 @@ void generate_ORFs(const int& colour_ID,
                 if (!no_filter)
                 {
                     // Get TIS score for all entries
-                    std::vector<float> TIS_scores(stop_codon.second.size());
                     std::vector<std::tuple<std::string, std::string, size_t>> TIS_list(stop_codon.second.size());
 
                     // create vector of all entries
@@ -279,13 +279,12 @@ void generate_ORFs(const int& colour_ID,
                     std::pair<size_t, size_t> best_codon = {0,0};
                     size_t best_hash;
                     bool best_TIS_present;
-                    size_t best_ORF_len = 0;
                     ORFCoords best_ORF_coords;
                     float best_overall_score = 0;
                     float best_TIS_score = 0;
 
-                    // set maximum ORF length for stop codon frame
-                    const size_t max_ORF_length = stop_codon.second.at(0).first;
+                    // set best ORF length as longest possible ORF
+                    size_t best_ORF_len = stop_codon.second.at(0).first;
 
                     // unpack all ORFs with same stop codon
                     for (int i = 0; i < stop_codon.second.size(); i++)
@@ -313,11 +312,11 @@ void generate_ORFs(const int& colour_ID,
                         auto& um_data = um_pair.second;
                         float start_coverage = (float)um_data->full_colour().count() / (float)nb_colours;
 
-                        // calculate length as proportion of previous ORF in list
-                        float prev_len_prop = (float)ORF_len / (float)max_ORF_length;
+                        // calculate delta length from max ORF in codon space
+                        float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
 
                         // generate score based on start coverage multiplied by dataset size, TIS score and size proportion to previous ORF
-                        const float overall_score = start_coverage * TIS_score * prev_len_prop;
+                        const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);
 
                         // determine if score is better and start site is better supported
                         if (overall_score > best_overall_score)

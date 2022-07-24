@@ -59,31 +59,26 @@ ColoredCDBG<MyUnitigMap> buildGraph (const std::string& infile_1,
 std::vector<std::size_t> findIndex(const std::string& seq,
                                    const std::string& subseq,
                                    const int start_index,
-                                   const int overlap,
                                    const bool reverse)
 {
-    // search in forward direction from start index forwards
-    if (!reverse)
+    std::vector<std::size_t> index_list;
+    size_t pos = seq.find(subseq, start_index);
+
+    while(pos != string::npos)
     {
-        std::vector<std::size_t> index_list;
-        size_t pos = seq.find(subseq, start_index);
-        while(pos != string::npos)
-        {
-            index_list.push_back(pos - overlap);
-            pos = seq.find(subseq,pos+1);
-        }
-        return index_list;
-    } else // search in reverse direction from start index backwards
-    {
-        std::vector<std::size_t> index_list;
-        size_t pos = seq.rfind(subseq, start_index);
-        while(pos != string::npos && pos != 0)
-        {
-            index_list.push_back(start_index - pos);
-            pos = seq.rfind(subseq,pos - 1);
-        }
-        return index_list;
+        index_list.push_back(pos);
+        pos = seq.find(subseq,pos+1);
     }
+
+    if (reverse)
+    {
+        for (auto& entry : index_list)
+        {
+            // reverse by adding 3 (two to start from start of stop codon, 1 to make zero indexed)
+            entry = seq.size() - (entry + 3);
+        }
+    }
+    return index_list;
 }
 
 // calculate stop codon frames for each reading frame
@@ -174,6 +169,8 @@ std::vector<std::pair<Kmer, bool>> get_neighbours (const T& neighbour_iterator)
 template <class T, class U, bool is_const>
 void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                             UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
+                            size_t& num_stops,
+                            size_t& num_codons,
                             const std::vector<std::string>& codon_for,
                             const std::vector<std::string>& codon_rev,
                             const int& kmer,
@@ -186,6 +183,10 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     // generate string from unitig
     const std::string unitig = um.referenceUnitigToString();
     const size_t unitig_len = unitig.size();
+
+    // number of 3-mers is sequence length negate 2, multiplied by two for forward and reverse strand
+    #pragma omp atomic
+    num_codons += (unitig_len - 2) * 2;
 
     // get head kmer for unitig, add to kmer dictionary
     const Kmer head_kmer_binary = um.getUnitigHead();
@@ -209,40 +210,50 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     std::vector<std::size_t> full_indices_neg;
     std::vector<std::size_t> part_indices_neg;
 
-    std::vector<std::size_t> found_indices;
+    // use overlap - 2, taking into account unitigs where stop codon is split at end
+    const int overlap = kmer - 3;
 
     // find the full and part indices of each of the codons in the unitig in positive strand
     for (const auto& codon : codon_for)
     {
         // full positive strand
-        found_indices = findIndex(unitig, codon, 0, 0, false);
-        full_indices_pos.insert(full_indices_pos.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-        found_indices.clear();
+        std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, false);
 
-        // part positive strand, ensure that unitig length is sufficient to have at least 1 codon length once overlap negated
-        if (unitig_len > kmer + 2) {
-            found_indices = findIndex(unitig, codon, kmer - 1, kmer - 1,false);
-            part_indices_pos.insert(part_indices_pos.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-            found_indices.clear();
+        #pragma omp atomic
+        num_stops += found_indices.size();
+
+        full_indices_pos.insert(full_indices_pos.end(), found_indices.begin(), found_indices.end());
+
+        // part positive strand, take off overlap - 2, as may be case that codon in upstream node is split at end of unitig
+        for (const auto& entry : found_indices)
+        {
+            if (entry >= (overlap))
+            {
+                part_indices_pos.push_back(entry - (overlap));
+            }
         }
     }
 
     // find the full and part indices of each of the codons in the unitig in negative strand
+
+    // get this working, now working without rfind, need to determine correct coorindates for partial unitigs
     for (const auto& codon : codon_rev)
     {
         // full negative strand
+        std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, true);
 
-        // issue here when actually find a match
-        found_indices = findIndex(unitig, codon, unitig_len - 3, 0, true);
-        full_indices_neg.insert(full_indices_neg.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-        found_indices.clear();
+        #pragma omp atomic
+        num_stops += found_indices.size();
 
-        // part negative strand, ensure that unitig length is sufficient to have at least 1 codon length once overlap negated
-        if (unitig_len > kmer + 2)
+        full_indices_neg.insert(full_indices_neg.end(), found_indices.begin(), found_indices.end());
+
+        // part negative strand, taking into account potential for stop codon to be cut off from previous unitig
+        for (const auto& entry : found_indices)
         {
-            found_indices = findIndex(unitig, codon, (unitig_len - 3) - (kmer - 1), 0, true);
-            part_indices_neg.insert(part_indices_neg.end(), make_move_iterator(found_indices.begin()), make_move_iterator(found_indices.end()));
-            found_indices.clear();
+            if (entry >= (overlap))
+            {
+                part_indices_neg.push_back(entry - (overlap));
+            }
         }
     }
 
@@ -360,6 +371,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              ColoredCDBG<MyUnitigMap>& ccdbg,
+                             float& stop_codon_freq,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,
                              const int kmer,
@@ -379,6 +391,10 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
 
     NodeColourVector node_colour_vector(nb_colours);
 
+    // determine number of stops and codons
+    size_t num_stops = 0;
+    size_t num_codons = 0;
+
     // run unitig indexing in parallel
     #pragma omp parallel
     {
@@ -391,7 +407,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             UnitigColorMap<MyUnitigMap> um = ccdbg.find(*it, true);
 
             // generate results per unitig
-            analyse_unitigs_binary(ccdbg, um, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+            analyse_unitigs_binary(ccdbg, um, num_stops, num_codons, stop_codons_for, stop_codons_rev, kmer, nb_colours);
             DataAccessor<MyUnitigMap>* da = um.getData();
             MyUnitigMap* um_data = da->getData(um);
 
@@ -413,6 +429,9 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             }
         }
     }
+
+    // determine average stop codon frequency per codon
+    stop_codon_freq = (float)num_stops / (float)num_codons;
 
     // generate index of references within ref_set
     std::vector<size_t> ref_index;

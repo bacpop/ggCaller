@@ -20,6 +20,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
 ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,
+                             const float& stop_codon_freq,
                              const size_t colour_ID,
                              const std::vector<size_t>& node_ids,
                              const bool repeat,

@@ -16,7 +16,6 @@ ColoredCDBG<MyUnitigMap> buildGraph (const std::string& infile_1,
 std::vector<std::size_t> findIndex(const std::string& seq,
                                    const std::string& subseq,
                                    const int start_index,
-                                   const int overlap,
                                    const bool reverse);
 
 std::bitset<3> calculateFrame_binary_full (const std::vector<std::size_t>& index_list);
@@ -34,6 +33,8 @@ std::vector<std::pair<Kmer, bool>> get_neighbours (const T& neighbour_iterator);
 template <class T, class U, bool is_const>
 void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                              UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
+                             size_t& num_stops,
+                             size_t& num_codons,
                              const std::vector<std::string>& codon_for,
                              const std::vector<std::string>& codon_rev,
                              const int& kmer,
@@ -48,6 +49,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              ColoredCDBG<MyUnitigMap>& ccdbg,
+                             float& stop_codon_freq,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,
                              const int kmer,

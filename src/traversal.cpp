@@ -138,8 +138,8 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 continue;
             }
 
-            // calculate modulus for path and updated cached path reading frame
-            int modulus = path_length % 3;
+            // calculate modulus for path and updated cached path reading frame, adjust for case where stop codon is split at end of contig
+            int modulus = (path_length - 2) % 3;
             std::bitset<3> updated_codon_arr = (codon_arr & ~(neighbour_um_data->get_codon_arr(false, neighbour_strand, modulus)));
 
             // return path if end of contig found or if stop indexes paired
@@ -189,6 +189,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
 
 ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          const std::vector<Kmer>& head_kmer_arr,
+                         const float& stop_codon_freq,
                          const size_t colour_ID,
                          const std::vector<size_t>& node_ids,
                          const bool repeat,
@@ -267,7 +268,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
             }
         }
     }
@@ -324,7 +325,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
             }
         }
     }

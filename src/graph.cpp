@@ -304,7 +304,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 }
 
                 // convert this to map to make removal easier
-                ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, colour_ID, node_ids, repeat, max_path_length,
+                ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, _stop_freq, colour_ID, node_ids, repeat, max_path_length,
                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
                                                       TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
 
@@ -807,7 +807,9 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                           const size_t& nb_colours,
                           const std::vector<std::string>& input_colours)
 {
-    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours, _RefSet));
+    float stop_codon_freq = 0;
+    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codon_freq, stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours, _RefSet));
+    _stop_freq= stop_codon_freq;
 }
 
 ORFClusterMap read_cluster_file(const std::string& cluster_file)
