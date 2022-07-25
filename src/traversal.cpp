@@ -220,9 +220,9 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     for (const auto& node_id : node_ids)
     {
         // get unitig data
-        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-        const auto& um = um_pair.first;
-        const auto& um_data = um_pair.second;
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
         if (!um_data->forward_stop() && !um_data->end_contig(colour_ID))
@@ -230,19 +230,61 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             continue;
         }
 
-        // generate integer version of unitig_id for recursion
-        const int head_id = (int) node_id;
-
-        // gather unitig information from graph_vector
-        std::bitset<3> codon_arr = um_data->get_codon_arr(true, true, 0);
-        const size_t unitig_len = um.size;
-        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
+        // determine with stop codon array to use
+        std::bitset<3> codon_arr;
 
         // if end contig, set to full array
         if (um_data->end_contig(colour_ID))
         {
             codon_arr = full_binary;
+        } else
+        {
+            // check if node has predecessor, with same colour and present in fm-index. If so, take partial codon, otherwise full
+            bool predecessor = false;
+
+            // reverse the strand of the unitig
+            um.strand = false;
+
+            // iterate over neighbours, recurring through incomplete paths
+            for (auto& neighbour_um : um.getSuccessors())
+            {
+                auto neighbour_da = neighbour_um.getData();
+                auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+
+                // calculate colours array
+                auto neighbour_colour = neighbour_um_data->full_colour();
+
+                // determine if neighbour is in same colour as iteration, if it is then assume predecessor present
+                if ((bool)neighbour_colour[colour_ID])
+                {
+                    predecessor = true;
+                    break;
+                }
+            }
+
+            // if predecessor present, then use partial stop codon to avoid re-traversing from stops in overlaps
+            if (predecessor)
+            {
+                codon_arr = um_data->get_codon_arr(false, true, 0);
+            } else
+            {
+                codon_arr = um_data->get_codon_arr(true, true, 0);
+            }
+
+            // check if codon_arr is empty
+            if (codon_arr.none())
+            {
+                continue;
+            }
         }
+
+
+        // generate integer version of unitig_id for recursion
+        const int head_id = (int) node_id;
+
+        // gather unitig information from graph_vector
+        const size_t unitig_len = um.size;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // check if end node is reference sequence
         if (!is_ref)
@@ -277,9 +319,9 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     for (const auto& node_id : node_ids)
     {
         // get unitig data
-        const auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
-        const auto& um = um_pair.first;
-        const auto& um_data = um_pair.second;
+        auto um_pair = get_um_data(ccdbg, head_kmer_arr, node_id);
+        auto& um = um_pair.first;
+        auto& um_data = um_pair.second;
 
         // check if stop codons present. If not, pass
         if (!um_data->reverse_stop() && !um_data->end_contig(colour_ID))
@@ -287,19 +329,60 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             continue;
         }
 
-        // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
-        const int head_id = ((int) node_id) * -1;
-
-        // gather unitig information from graph_vector
-        std::bitset<3> codon_arr = um_data->get_codon_arr(true, false, 0);
-        const size_t unitig_len = um.size;
-        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
+        // determine with stop codon array to use
+        std::bitset<3> codon_arr;
 
         // if end contig, set to full array
         if (um_data->end_contig(colour_ID))
         {
             codon_arr = full_binary;
+        } else
+        {
+            // check if node has predecessor, with same colour and present in fm-index. If so, take partial codon, otherwise full
+            bool predecessor = false;
+
+            // get forward strand of the unitig
+            um.strand = true;
+
+            // iterate over neighbours, recurring through incomplete paths
+            for (auto& neighbour_um : um.getSuccessors())
+            {
+                auto neighbour_da = neighbour_um.getData();
+                auto neighbour_um_data = neighbour_da->getData(neighbour_um);
+
+                // calculate colours array
+                auto neighbour_colour = neighbour_um_data->full_colour();
+
+                // determine if neighbour is in same colour as iteration, if it is then assume predecessor present
+                if ((bool)neighbour_colour[colour_ID])
+                {
+                    predecessor = true;
+                    break;
+                }
+            }
+
+            // if predecessor present, then use partial stop codon to avoid re-traversing from stops in overlaps
+            if (predecessor)
+            {
+                codon_arr = um_data->get_codon_arr(false, true, 0);
+            } else
+            {
+                codon_arr = um_data->get_codon_arr(true, true, 0);
+            }
+
+            // check if codon_arr is empty
+            if (codon_arr.none())
+            {
+                continue;
+            }
         }
+
+        // generate integer version of unitig_id for recursion, multiplied by -1 to indicate reversal
+        const int head_id = ((int) node_id) * -1;
+
+        // gather unitig information from graph_vector
+        const size_t unitig_len = um.size;
+        const boost::dynamic_bitset<> colour_arr = um_data->full_colour();
 
         // check if end node is reference sequence
         if (!is_ref)
