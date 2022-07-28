@@ -27,7 +27,8 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                   const bool& repeat,
                                   const bool& is_ref,
                                   const fm_index_coll& fm_idx,
-                                  const int overlap);
+                                  const int overlap,
+                                  const std::unordered_set<int>& to_avoid);
 
 RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,
@@ -37,7 +38,8 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const bool is_ref,
                              const int kmer,
                              const fm_index_coll& fm_idx,
-                             const bool repeat);
+                             const bool repeat,
+                             const std::unordered_set<int>& to_avoid);
 
 RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
                           const std::vector<Kmer>& head_kmer_arr,
@@ -47,6 +49,7 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
                           const bool is_ref,
                           const int kmer,
                           const fm_index_coll& fm_idx,
-                          const bool repeat);
+                          const bool repeat,
+                          const std::unordered_set<int>& to_avoid);
 
 #endif //GENE_REFINDING_H

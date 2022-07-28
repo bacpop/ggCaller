@@ -74,7 +74,8 @@ class Graph {
                                           const size_t radius,
                                           const int kmer,
                                           const std::string& FM_fasta_file,
-                                          const bool repeat);
+                                          const bool repeat,
+                                          const std::unordered_set<int>& to_avoid);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,

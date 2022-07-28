@@ -215,11 +215,20 @@ def search_graph(search_pair,
 
     node_locs = {}
 
+    # keep track of regions already with genes to avoid re-traversal
+    to_avoid = set()
+
     # mask regions that already have genes
     for node, ORF_info in conflicts.items():
         # determine sequence overlap of ORFs
         total_overlap = 0
         for i, node_coords in enumerate(ORF_info[1]):
+            node_overlap = (node_coords[1] - node_coords[0]) + 1
+
+            # if node is fully traversed for given strand, add to nodes to avoid
+            if node_overlap == graph_shd_arr[0].node_size(ORF_info[0][i]):
+                to_avoid.add(ORF_info[0][i])
+
             if i != 0:
                 if node_coords[1] >= kmer - 1:
                     total_overlap += ((kmer - 1) - node_coords[0])
@@ -229,7 +238,7 @@ def search_graph(search_pair,
 
     # get sequences to search
     refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
-                                                      repeat)
+                                                      repeat, to_avoid)
 
     # search for matches
     hits = []

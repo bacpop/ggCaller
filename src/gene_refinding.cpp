@@ -135,7 +135,8 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                                   const bool& repeat,
                                   const bool& is_ref,
                                   const fm_index_coll& fm_idx,
-                                  const int overlap)
+                                  const int overlap,
+                                  const std::unordered_set<int>& to_avoid)
 {
     // generate path list, vector for path and the stack
     RefindPathVector path_list;
@@ -196,22 +197,16 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 // update path_list to enable to return all nodes up to point where stop encountered
                 path_list.push_back({path_length, node_vector});
                 continue;
-            } else
-            {
-                // if not is_ref, check that unitig is shared in at least one other colour
-                if (!is_ref)
-                {
-                    if (neighbour_colour.count() < 2)
-                    {
-                        // update path_list to enable to return all nodes up to point where stop encountered
-                        path_list.push_back({path_length, node_vector});
-                        continue;
-                    }
-                }
             }
 
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
+
+            // check if node is already fully traversed by another gene
+            if (to_avoid.find(neighbour_id) != to_avoid.end())
+            {
+                continue;
+            }
 
             // check against fm-idx every node, pass if not present
             if (is_ref)
@@ -225,11 +220,22 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                     path_list.push_back({path_length, node_vector});
                     continue;
                 }
-            } else if (!is_ref && !repeat)
+            } else
             {
-                // if using reads, check if unitig has already been traversed, and pass if repeat not specified
-                const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
-                if (is_in)
+                if (!repeat)
+                {
+                    // if using reads, check if unitig has already been traversed, and pass if repeat not specified
+                    const bool is_in = std::find(node_vector.begin(), node_vector.end(), neighbour_id) != node_vector.end();
+                    if (is_in)
+                    {
+                        // update path_list to enable to return all nodes up to point where stop encountered
+                        path_list.push_back({path_length, node_vector});
+                        continue;
+                    }
+                }
+
+                // if not is_ref, check that unitig is shared in at least one other colour
+                if (neighbour_colour.count() < 2)
                 {
                     // update path_list to enable to return all nodes up to point where stop encountered
                     path_list.push_back({path_length, node_vector});
@@ -281,7 +287,8 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const bool is_ref,
                              const int kmer,
                              const fm_index_coll& fm_idx,
-                             const bool repeat)
+                             const bool repeat,
+                             const std::unordered_set<int>& to_avoid)
 {
     // initialise upstream and downstream strings
     std::string upstream_seq;
@@ -326,7 +333,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1);
+            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1, to_avoid);
         }
 
         if (!unitig_complete_paths.empty())
@@ -399,7 +406,7 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
             NodeTuple head_node_tuple(0, head_id, codon_arr, colour_arr, path_length);
 
             // recur paths
-            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1);
+            unitig_complete_paths = iter_nodes_length(ccdbg, head_kmer_arr, head_node_tuple, colour_ID, radius, repeat, is_ref, fm_idx, kmer - 1, to_avoid);
         }
 
         if (!unitig_complete_paths.empty())
@@ -445,7 +452,8 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
                           const bool is_ref,
                           const int kmer,
                           const fm_index_coll& fm_idx,
-                          const bool repeat)
+                          const bool repeat,
+                          const std::unordered_set<int>& to_avoid)
 {
     RefindMap refind_map;
 
@@ -459,7 +467,7 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
         for (const auto& ORF_info : seq_search.second)
         {
             refind_map[node].push_back(std::move(traverse_outward(ccdbg, head_kmer_arr, colour_ID, ORF_info, radius, is_ref,
-                                                         kmer, fm_idx, repeat)));
+                                                         kmer, fm_idx, repeat, to_avoid)));
         }
     }
     return refind_map;
