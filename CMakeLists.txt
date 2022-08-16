@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
