@@ -21,7 +21,7 @@ jobs:
       env:
         cache-name: cache-node-modules
       with:
-        path: models/ggCallerdb
+        path: models/ggCallerdb.tar.bz2
         key: ${{ runner.os }}-${{ env.cache-name }}-
         restore-keys: |
           ${{ runner.os }}-build-
