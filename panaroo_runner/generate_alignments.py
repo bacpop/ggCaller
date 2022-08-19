@@ -27,6 +27,7 @@ def run_snpsites(file, annotation_dir, vcf_dir):
     if result.returncode != 0:
         find_err = re.search(r'No SNPs were detected', str(result))
         if find_err is None:
+            print("Failing command: " + " ".join(command))
             raise Exception("Snp-sites failed to run on file: " + file)
 
     return
@@ -105,6 +106,7 @@ def align_sequences(command, outdir, aligner):
         with open(command[0][-1], 'w+') as handle:
             result = subprocess.run(command[0][:-1], stdout=handle, stderr=subprocess.DEVNULL)
             if result.returncode != 0:
+                print("Failing command: " + " ".join(command[0][:-1]))
                 raise Exception("Mafft-ref failed to run on file: " + command[0][-1].split("/")[-1])
 
     if isinstance(command[1], tuple):
