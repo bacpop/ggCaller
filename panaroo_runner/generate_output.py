@@ -216,7 +216,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
             aligned_dna = ""
             dna_idx = 0
             for aa_idx in range(len(protein)):
-                if protein[aa_idx] == "-":
+                if protein[aa_idx] == "-" or protein[aa_idx] == "X":
                     aligned_dna += "---"
                 else:
                     to_add = dna[dna_idx: dna_idx + 3]
