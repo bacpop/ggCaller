@@ -45,7 +45,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
                 split_ID = ORF.split("_")
                 colour = int(split_ID[0])
                 ORF_ID = int(split_ID[1])
-                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(5)
+                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(6)
                 ORF_info = high_scoring_ORFs[colour][ORF_ID]
                 seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
                 # add annotation if available
