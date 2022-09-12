@@ -163,6 +163,7 @@ def get_options():
     Panaroo_mode_opts.add_argument(
         "--clean-mode",
         dest="mode",
+        default="moderate",
         help=
         ('''R|The stringency mode at which to run panaroo. Must be one of 'strict',\
     'moderate' or 'sensitive'. Each of these modes can be fine tuned using the\
