@@ -267,7 +267,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
         cout << "Traversing graph to identify ORFs..." << endl;
-        //#pragma omp parallel for
+        #pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
             // get whether colour is reference or not
