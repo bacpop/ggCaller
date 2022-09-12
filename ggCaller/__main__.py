@@ -373,14 +373,16 @@ def main():
         with open(options.codons, "r") as json_file:
             try:
                 data = json.load(json_file)
-                start_codons = data["codons"]["start"]
+                start_codons_for = data["codons"]["start"]
+                start_codons_rev = [str((Seq(i)).reverse_complement()) for i in start_codons_for]
                 stop_codons_for = data["codons"]["stop"]
                 stop_codons_rev = [str((Seq(i)).reverse_complement()) for i in stop_codons_for]
             except:
                 print("Please specify codons in the format shown in codons.json.")
                 sys.exit(1)
     else:
-        start_codons = ["ATG", "GTG", "TTG"]
+        start_codons_for = ["ATG", "GTG", "TTG"]
+        start_codons_rev = ["CAT", "CAC", "CAA"]
         stop_codons_for = ["TAA", "TGA", "TAG"]
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
@@ -397,7 +399,7 @@ def main():
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 options.threads, is_ref, ref_set)
+                                 start_codons_for, start_codons_rev, options.threads, is_ref, ref_set)
     # query unitigs in previous saved ggc graph
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
             (options.query is not None):
@@ -412,18 +414,18 @@ def main():
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is None) and (
             options.query is None):
-        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, True, options.no_write_graph, "NA", ref_set)
+        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
+                                  start_codons_rev, options.threads, True, options.no_write_graph, "NA", ref_set)
     # if reads file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
             options.reads is not None) and (options.query is None):
-        graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, "NA", ref_set)
+        graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
+                                  start_codons_rev, options.threads, False, options.no_write_graph, "NA", ref_set)
     # if both reads and refs file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is not None) and (options.query is None):
-        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev,
-                                  options.threads, False, options.no_write_graph, options.reads, ref_set)
+        graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
+                                  start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file (with/without list of reference files)\n"
@@ -496,7 +498,7 @@ def main():
         ORF_model_file, TIS_model_file = "NA", "NA"
 
     gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
-                                 options.no_filter, stop_codons_for, start_codons, options.min_orf_length,
+                                 options.no_filter, stop_codons_for, start_codons_for, options.min_orf_length,
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
