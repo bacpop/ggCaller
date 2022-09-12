@@ -8,6 +8,8 @@ GraphTuple Graph::build (const std::string& infile1,
                         const int kmer,
                         const std::vector<std::string>& stop_codons_for,
                         const std::vector<std::string>& stop_codons_rev,
+                        const std::vector<std::string>& start_codons_for,
+                        const std::vector<std::string>& start_codons_rev,
                         size_t num_threads,
                         bool is_ref,
                         const bool write_graph,
@@ -62,7 +64,7 @@ GraphTuple Graph::build (const std::string& infile1,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours);
 
     // create vector bool for reference sequences
     std::vector<bool> ref_list(nb_colours, false);
@@ -85,6 +87,8 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::string& coloursfile,
                     const std::vector<std::string>& stop_codons_for,
                     const std::vector<std::string>& stop_codons_rev,
+                    const std::vector<std::string>& start_codons_for,
+                    const std::vector<std::string>& start_codons_rev,
                     size_t num_threads,
                     const bool is_ref,
                     const std::unordered_set<std::string>& ref_set) {
@@ -133,7 +137,7 @@ GraphTuple Graph::read (const std::string& graphfile,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours);
 
     // create vector bool for reference sequences
     std::vector<bool> ref_list(nb_colours, false);
@@ -263,7 +267,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
         cout << "Traversing graph to identify ORFs..." << endl;
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
             // get whether colour is reference or not
@@ -306,7 +310,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // convert this to map to make removal easier
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, _stop_freq, colour_ID, node_ids, repeat, max_path_length,
                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores));
+                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq));
 
             }
 
@@ -804,12 +808,14 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
 
 void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                           const std::vector<std::string>& stop_codons_rev,
+                          const std::vector<std::string>& start_codons_for,
+                          const std::vector<std::string>& start_codons_rev,
                           const int& kmer,
                           const size_t& nb_colours,
                           const std::vector<std::string>& input_colours)
 {
     float stop_codon_freq = 0;
-    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codon_freq, stop_codons_for, stop_codons_rev, kmer, nb_colours, input_colours, _RefSet));
+    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codon_freq, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours, _RefSet, _StartFreq));
     _stop_freq= stop_codon_freq;
 }
 

@@ -204,7 +204,8 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          torch::jit::script::Module& TIS_model,
                          const double& minimum_ORF_score,
                          const bool no_filter,
-                         tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
+                         tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
+                         const tbb::concurrent_unordered_map<size_t, size_t>& start_freq)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -268,7 +269,10 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq,
+                              stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length,
+                              is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores,
+                              start_freq);
             }
         }
     }
@@ -325,7 +329,10 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
             for (int i = 0; i < unitig_complete_paths.size(); i++)
             {
                 // generate all ORFs within the path for start and stop codon pairs
-                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq, stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length, is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores);
+                generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq,
+                              stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length,
+                              is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores,
+                              start_freq);
             }
         }
     }

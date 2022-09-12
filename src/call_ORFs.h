@@ -25,7 +25,8 @@ void generate_ORFs(const int& colour_ID,
                    const float& minimum_ORF_score,
                    const bool no_filter,
                    const size_t nb_colours,
-                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores);
+                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
+                   const tbb::concurrent_unordered_map<size_t, size_t>& start_freq);
 
 ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair,
                            const std::vector<int>& nodelist,

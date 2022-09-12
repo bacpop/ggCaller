@@ -20,20 +20,24 @@ class Graph {
     public:
     // build new bifrost graph and index
     GraphTuple build (const std::string& infile1,
-                             const int kmer,
-                             const std::vector<std::string>& stop_codons_for,
-                             const std::vector<std::string>& stop_codons_rev,
-                             size_t num_threads,
-                             bool is_ref,
-                             const bool write_graph,
-                             const std::string& infile2,
-                             const std::unordered_set<std::string>& ref_set);
+                      const int kmer,
+                      const std::vector<std::string>& stop_codons_for,
+                      const std::vector<std::string>& stop_codons_rev,
+                      const std::vector<std::string>& start_codons_for,
+                      const std::vector<std::string>& start_codons_rev,
+                      size_t num_threads,
+                      bool is_ref,
+                      const bool write_graph,
+                      const std::string& infile2,
+                      const std::unordered_set<std::string>& ref_set);
 
     // read existing graph and index
     GraphTuple read (const std::string& graphfile,
                      const std::string& coloursfile,
                      const std::vector<std::string>& stop_codons_for,
                      const std::vector<std::string>& stop_codons_rev,
+                     const std::vector<std::string>& start_codons_for,
+                     const std::vector<std::string>& start_codons_rev,
                      size_t num_threads,
                      const bool is_ref,
                      const std::unordered_set<std::string>& ref_set);
@@ -112,12 +116,13 @@ class Graph {
     // index graph
     void _index_graph (const std::vector<std::string>& stop_codons_for,
                        const std::vector<std::string>& stop_codons_rev,
+                       const std::vector<std::string>& start_codons_for,
+                       const std::vector<std::string>& start_codons_rev,
                        const int& kmer,
                        const size_t& nb_colours,
                        const std::vector<std::string>& input_colours);
 
-
-
+    
     // stored bifrost DBG
     ColoredCDBG<MyUnitigMap> _ccdbg;
 
@@ -129,6 +134,9 @@ class Graph {
 
     // nodes to colours
     NodeColourVector _NodeColourVector;
+
+    // mapping of start site sequences to frequency
+    tbb::concurrent_unordered_map<size_t, size_t> _StartFreq;
 
     // bitset to determine if colours are refs or reads
     boost::dynamic_bitset<> _RefSet;

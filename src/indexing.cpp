@@ -171,10 +171,13 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                             UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
                             size_t& num_stops,
                             size_t& num_codons,
-                            const std::vector<std::string>& codon_for,
-                            const std::vector<std::string>& codon_rev,
+                            const std::vector<std::string>& stop_codon_for,
+                            const std::vector<std::string>& stop_codon_rev,
+                            const std::vector<std::string>& start_codon_for,
+                            const std::vector<std::string>& start_codon_rev,
                             const int& kmer,
-                            const size_t& nb_colours)
+                            const size_t& nb_colours,
+                            tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_freq_set)
 {
     // initialise unitig_dict
     DataAccessor<MyUnitigMap>* da = um.getData();
@@ -214,7 +217,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     const int overlap = kmer - 3;
 
     // find the full and part indices of each of the codons in the unitig in positive strand
-    for (const auto& codon : codon_for)
+    for (const auto& codon : stop_codon_for)
     {
         // full positive strand
         std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, false);
@@ -237,7 +240,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
     // find the full and part indices of each of the codons in the unitig in negative strand
 
     // get this working, now working without rfind, need to determine correct coorindates for partial unitigs
-    for (const auto& codon : codon_rev)
+    for (const auto& codon : stop_codon_rev)
     {
         // full negative strand
         std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, true);
@@ -271,6 +274,75 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
 
     um_data->add_codon(true, part_binary_pos);
     um_data->add_codon(false, part_binary_neg);
+
+    // look for start codons forward
+    for (const auto& codon : start_codon_for)
+    {
+        // full positive strand
+        std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, false);
+        // if no start codons found, pass
+        if (found_indices.size() == 0)
+        {
+            continue;
+        }
+
+        // pull out start codon positions
+        for (const auto& pos : found_indices)
+        {
+            if ((unitig.size() - 1) - pos >= kmer)
+            {
+                std::string start_site_DNA = unitig.substr(pos, kmer);
+                std::string start_site_AA = (translate(start_site_DNA)).aa();
+
+                size_t start_hash = hasher{}(start_site_AA);
+
+                // add colours to start_freq_set
+                for (int i = 0; i < nb_colours; i++)
+                {
+                    if ((bool)full_unitig_colour[i])
+                    {
+                        start_freq_set[start_hash].insert(i);
+                    }
+                }
+            }
+        }
+    }
+
+    // reverse complement unitig
+    const std::string rev_unitig = reverse_complement(unitig);
+
+    // look for start codons forward
+    for (const auto& codon : start_codon_rev)
+    {
+        // full positive strand
+        std::vector<std::size_t> found_indices = findIndex(unitig, codon, 0, true);
+        // if no start codons found, pass
+        if (found_indices.size() == 0)
+        {
+            continue;
+        }
+
+        // pull out start codon positions
+        for (const auto& pos : found_indices)
+        {
+            if ((unitig.size() - 1) - pos >= kmer)
+            {
+                std::string start_site_DNA = rev_unitig.substr(pos, kmer);
+                std::string start_site_AA = (translate(start_site_DNA)).aa();
+
+                size_t start_hash = hasher{}(start_site_AA);
+
+                // add colours to start_freq_set
+                for (int i = 0; i < nb_colours; i++)
+                {
+                    if ((bool)full_unitig_colour[i])
+                    {
+                        start_freq_set[start_hash].insert(i);
+                    }
+                }
+            }
+        }
+    }
 }
 
 void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
@@ -374,10 +446,13 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              float& stop_codon_freq,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,
+                             const std::vector<std::string>& start_codons_for,
+                             const std::vector<std::string>& start_codons_rev,
                              const int kmer,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
-                             const boost::dynamic_bitset<>& ref_set)
+                             const boost::dynamic_bitset<>& ref_set,
+                             tbb::concurrent_unordered_map<size_t, size_t>& start_freq)
 {
     // get all head kmers and add IDs
     size_t unitig_id = 1;
@@ -395,6 +470,9 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
     size_t num_stops = 0;
     size_t num_codons = 0;
 
+    // determine sharing of start positions
+    tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_freq_set;
+
     // run unitig indexing in parallel
     #pragma omp parallel
     {
@@ -407,7 +485,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             UnitigColorMap<MyUnitigMap> um = ccdbg.find(*it, true);
 
             // generate results per unitig
-            analyse_unitigs_binary(ccdbg, um, num_stops, num_codons, stop_codons_for, stop_codons_rev, kmer, nb_colours);
+            analyse_unitigs_binary(ccdbg, um, num_stops, num_codons, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, start_freq_set);
             DataAccessor<MyUnitigMap>* da = um.getData();
             MyUnitigMap* um_data = da->getData(um);
 
@@ -455,6 +533,12 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                 calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);
             }
         }
+    }
+
+    // go through start_freq_set, determine coverage of start
+    for (const auto& entry : start_freq_set)
+    {
+        start_freq[entry.first] = entry.second.size();
     }
 
     // return node_colour vector

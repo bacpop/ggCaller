@@ -20,7 +20,8 @@ void generate_ORFs(const int& colour_ID,
                    const float& minimum_ORF_score,
                    const bool no_filter,
                    const size_t nb_colours,
-                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores)
+                   tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
+                   const tbb::concurrent_unordered_map<size_t, size_t>& start_freq)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -297,23 +298,18 @@ void generate_ORFs(const int& colour_ID,
                         // get ORF coords for current iteration
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
-                        // determine first 'complete unitig' i.e. with start not in overlap region
-                        int index = 0;
-                        for (; index < ORF_coords.second.size(); index++)
+                        // determine coverage of start
+                        size_t site_hash;
                         {
-                            if (ORF_coords.second.at(index).second - ORF_coords.second.at(index).first >= overlap)
-                            {
-                                break;
-                            }
+                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
+                            std::string start_site_AA = (translate(start_site_DNA)).aa();
+                            size_t site_hash = hasher{}(start_site_AA);
                         }
 
-                        // determine coverage for start_site
-                        auto um_pair = get_um_data(ccdbg, head_kmer_arr, ORF_coords.first[index]);
-                        auto& um_data = um_pair.second;
-                        float start_coverage = (float)um_data->full_colour().count() / (float)nb_colours;
+                        const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
 
                         // calculate delta length from max ORF in codon space
-                        float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
+                        const float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
 
                         // generate score based on start coverage multiplied by dataset size, TIS score and stop codon frequency
                         const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);

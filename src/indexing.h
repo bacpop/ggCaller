@@ -3,6 +3,7 @@
 
 #include "unitigDict.h"
 #include "kseq.h"
+#include "translation.h"
 
 ColoredCDBG<MyUnitigMap> buildGraph (const std::string& infile_1,
                                      const std::string& infile_2,
@@ -35,10 +36,13 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                              UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
                              size_t& num_stops,
                              size_t& num_codons,
-                             const std::vector<std::string>& codon_for,
-                             const std::vector<std::string>& codon_rev,
+                             const std::vector<std::string>& stop_codon_for,
+                             const std::vector<std::string>& stop_codon_rev,
+                             const std::vector<std::string>& start_codon_for,
+                             const std::vector<std::string>& start_codon_rev,
                              const int& kmer,
-                             const size_t& nb_colours);
+                             const size_t& nb_colours,
+                             tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_freq_set);
 
 void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -52,9 +56,12 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              float& stop_codon_freq,
                              const std::vector<std::string>& stop_codons_for,
                              const std::vector<std::string>& stop_codons_rev,
+                             const std::vector<std::string>& start_codons_for,
+                             const std::vector<std::string>& start_codons_rev,
                              const int kmer,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
-                             const boost::dynamic_bitset<>& ref_set);
+                             const boost::dynamic_bitset<>& ref_set,
+                             tbb::concurrent_unordered_map<size_t, size_t>& start_freq);
 
 #endif //INDEXING_H
