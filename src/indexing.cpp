@@ -289,10 +289,15 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            if ((unitig.size() - 1) - pos >= kmer)
+            if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = unitig.substr(pos, kmer);
                 std::string start_site_AA = (translate(start_site_DNA)).aa();
+
+                if (start_site_AA.find('*') != std::string::npos)
+                {
+                    continue;
+                }
 
                 size_t start_hash = hasher{}(start_site_AA);
 
@@ -325,10 +330,15 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            if ((unitig.size() - 1) - pos >= kmer)
+            if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = rev_unitig.substr(pos, kmer);
                 std::string start_site_AA = (translate(start_site_DNA)).aa();
+
+                if (start_site_AA.find('*') != std::string::npos)
+                {
+                    continue;
+                }
 
                 size_t start_hash = hasher{}(start_site_AA);
 
