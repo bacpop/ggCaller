@@ -308,11 +308,10 @@ void generate_ORFs(const int& colour_ID,
 
                         const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
 
-                        // calculate delta length from max ORF in codon space
-                        const float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
+                        const float prop_length = (float)(best_ORF_len / 3) / (float)(ORF_len / 3);
 
                         // generate score based on start coverage multiplied by dataset size, TIS score and stop codon frequency
-                        const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);
+                        const float overall_score = start_coverage * TIS_score * prop_length;
 
                         // determine if score is better and start site is better supported
                         if (overall_score > best_overall_score)
