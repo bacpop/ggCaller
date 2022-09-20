@@ -83,10 +83,10 @@ def get_options():
                                '[Default = 90] ')
     Settings.add_argument('--score-tolerance',
                           type=float,
-                          default=0.05,
-                          help='Score tolerance for shorter alternative start sites. If within tolerance, ggCaller'
-                               'will check if start coverage and BALROG score are both higher in shorter ORF. '
-                               '[Default = 0.05] ')
+                          default=0.5,
+                          help='Length probability tolerance for shorter alternative start sites. If within tolerance,'
+                               'ggCaller will check if start coverage and BALROG score are both higher in shorter ORF. '
+                               '[Default = 0.5] ')
     Settings.add_argument('--max-ORF-overlap',
                           type=int,
                           default=60,
@@ -394,9 +394,6 @@ def main():
         stop_codons_for = ["TAA", "TGA", "TAG"]
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
-    # set score tolerance
-    score_tolerance = 1 - options.score_tolerance
-
     # initialise graph
     graph = ggCaller_cpp.create_graph()
 
@@ -514,7 +511,7 @@ def main():
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
-                                 score_tolerance)
+                                 options.score_tolerance)
 
     high_scoring_ORFs, high_scoring_ORF_edges = gene_tuple
 

@@ -323,11 +323,11 @@ void generate_ORFs(const int& colour_ID,
                         // calculate delta length from max ORF in codon space
                         const float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
 
-                        // generate score based on start coverage multiplied by dataset size, TIS score and stop codon frequency
-                        const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);
+                        // calculate length difference probability
+                        const float len_diff_prob = std::pow((1 - stop_codon_freq), delta_length);
 
-                        // determine if score is better and start site is better supported within level of tolerance
-                        if (overall_score > best_overall_score || (overall_score > best_overall_score * score_tolerance && start_coverage >= best_coverage && TIS_score >= best_TIS_score))
+                        // determine if score is better and start site is better supported within level of length tolerance
+                        if (len_diff_prob >= score_tolerance && start_coverage >= best_coverage && TIS_score >= best_TIS_score)
                         {
                             best_codon = codon_pair;
                             best_TIS_present = (codon_pair.first >= 16);
