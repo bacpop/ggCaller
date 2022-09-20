@@ -298,20 +298,31 @@ void generate_ORFs(const int& colour_ID,
                         // get ORF coords for current iteration
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
-                        // determine coverage of start
-                        size_t site_hash;
+//                        // determine coverage of start
+//                        size_t site_hash;
+//                        {
+//                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
+//                            std::string start_site_AA = (translate(start_site_DNA)).aa();
+//                            size_t site_hash = hasher{}(start_site_AA);
+//                        }
+                        std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
+                        std::string start_site_AA = (translate(start_site_DNA)).aa();
+                        size_t site_hash = hasher{}(start_site_AA);
+
+                        if (start_freq.find(site_hash) == start_freq.end())
                         {
-                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-                            std::string start_site_AA = (translate(start_site_DNA)).aa();
-                            size_t site_hash = hasher{}(start_site_AA);
+                            cout << start_site_DNA << endl;
+                            cout << start_site_AA << endl;
+                            cout << colour_ID << endl;
                         }
 
                         const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
 
-                        const float prop_length = (float)(best_ORF_len / 3) / (float)(ORF_len / 3);
+                        // calculate delta length from max ORF in codon space
+                        const float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);
 
                         // generate score based on start coverage multiplied by dataset size, TIS score and stop codon frequency
-                        const float overall_score = start_coverage * TIS_score * prop_length;
+                        const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);
 
                         // determine if score is better and start site is better supported
                         if (overall_score > best_overall_score)
