@@ -9,7 +9,7 @@ from Bio import SearchIO
 from collections import defaultdict
 
 def check_diamond_install():
-    command = ["diamond", "help"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "help"]
 
     p = str(
         subprocess.run(command,
@@ -30,7 +30,7 @@ def check_diamond_install():
 
 
 def check_HMMER_install():
-    command = ["hmmscan", "-h"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan", "-h"]
 
     p = str(
         subprocess.run(command,
@@ -51,7 +51,7 @@ def check_HMMER_install():
 
 
 def generate_HMMER_index(infile):
-    command = ["hmmpress", infile]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmpress", infile]
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
         raise Exception("hmmpress failed to run on file: " + infile)
@@ -59,7 +59,7 @@ def generate_HMMER_index(infile):
 
 def generate_diamond_index(infile):
     outfile = infile.split(".")[0] + ".dmnd"
-    command = ["diamond", "makedb", "--in", infile, "-d",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "makedb", "--in", infile, "-d",
                infile.split(".")[0]]
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode != 0:
@@ -69,7 +69,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotate, annotation_db, evalue, pool):
+def run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir, annotate, annotation_db, evalue, pool):
     # list of sequence records
     all_centroid_dna = []
 
@@ -77,8 +77,7 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
     unannotated_nodes = get_unannotated_nodes(G)
 
     # Multithread writing amino acid sequences to disk (temp directory)
-    for centroid_dna in pool.map(partial(output_dna_sequence, shd_arr_tup=shd_arr_tup, overlap=overlap),
-                                unannotated_nodes):
+    for centroid_dna in pool.map(output_dna_sequence, unannotated_nodes):
         all_centroid_dna = all_centroid_dna + centroid_dna
 
     # write all sequences to single file
@@ -86,11 +85,11 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "dna_d.fasta", 'fasta')
 
     if annotate == "fast":
-        command = ["diamond", "blastx", "--iterate", "--evalue", str(evalue), "-d",
+        command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "blastx", "--iterate", "--evalue", str(evalue), "-d",
                    annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
                    annotation_temp_dir + "dna_d.fasta", "-o", annotation_temp_dir + "dna_d.tsv"]
     else:
-        command = ["diamond", "blastx", "--sensitive", "--evalue", str(evalue), "-d",
+        command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "blastx", "--sensitive", "--evalue", str(evalue), "-d",
                    annotation_db, "--outfmt", "6", "qseqid", "sseqid", "bitscore", "stitle", "-q",
                    annotation_temp_dir + "dna_d.fasta", "-o", annotation_temp_dir + "dna_d.tsv"]
 
@@ -133,7 +132,7 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
     return G, high_scoring_ORFs
 
 
-def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool, n_cpu):
+def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool, n_cpu):
     # list of sequence records
     all_centroid_aa = []
 
@@ -141,15 +140,14 @@ def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_di
     unannotated_nodes = get_unannotated_nodes(G)
 
     # Multithread writing amino acid sequences to disk (temp directory)
-    for centroid_aa in pool.map(partial(output_aa_sequence, shd_arr_tup=shd_arr_tup, overlap=overlap),
-                                unannotated_nodes):
+    for centroid_aa in pool.map(output_aa_sequence, unannotated_nodes):
         all_centroid_aa = all_centroid_aa + centroid_aa
 
     # write all sequences to single file
     all_centroid_aa = (x for x in all_centroid_aa)
     SeqIO.write(all_centroid_aa, annotation_temp_dir + "aa_h.fasta", 'fasta')
 
-    command = ["hmmscan", "-E", str(evalue), "--tblout",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/hmmscan", "-E", str(evalue), "--tblout",
                annotation_temp_dir + "aa_h.tsv",
                "--cpu", str(n_cpu), annotation_db, annotation_temp_dir + "aa_h.fasta"]
 
@@ -201,15 +199,15 @@ def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_di
     return G, high_scoring_ORFs
 
 
-def iterative_annotation_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db,
+def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db,
                                 evalue, annotate, n_cpu, pool):
     # run initial iterative search
-    G, high_scoring_ORFs = run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
+    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir,
                                               annotate, annotation_db, evalue, pool)
 
     # run ultra-sensitive search
     if annotate == "ultrasensitive":
-        G, high_scoring_ORFs = run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
+        G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir,
                                              hmm_db, evalue, pool, n_cpu)
 
     return G, high_scoring_ORFs

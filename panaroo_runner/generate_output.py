@@ -347,11 +347,7 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
 
     return
 
-def output_aa_sequence(node_pair, shd_arr_tup, overlap):
-    # load shared memory items
-    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
-    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
-
+def output_aa_sequence(node_pair):
     # unpack node_pair
     node = node_pair[1]
 
@@ -360,18 +356,12 @@ def output_aa_sequence(node_pair, shd_arr_tup, overlap):
     # iterate over centroids to generate fasta files
     for i in range(0, len(node["centroid"])):
         name = str(node_pair[0]) + ";" + node["centroid"][i]
-        ORF_info = node["ORF_info"][i]
-
-        seq = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
+        seq = Seq(node["protein"][i])
         ref_output_sequences.append(SeqRecord(seq, id=name, description=""))
 
     return ref_output_sequences
 
-def output_dna_sequence(node_pair, shd_arr_tup, overlap):
-    # load shared memory items
-    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
-    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
-
+def output_dna_sequence(node_pair):
     # unpack node_pair
     node = node_pair[1]
 
@@ -380,9 +370,7 @@ def output_dna_sequence(node_pair, shd_arr_tup, overlap):
     # iterate over centroids to generate fasta files
     for i in range(0, len(node["centroid"])):
         name = str(node_pair[0]) + ";" + node["centroid"][i]
-        ORF_info = node["ORF_info"][i]
-
-        seq = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap))
+        seq = Seq(node["dna"][i])
         ref_output_sequences.append(SeqRecord(seq, id=name, description=""))
 
     return ref_output_sequences
@@ -638,7 +626,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
             pFile.write("\n")
 
     # run rapidnj
-    command = ["rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", phylip_name, "-n", "-i", "pd", "-o", "t", "-x",
                tree_filename, "-c", str(threads)]
 
     result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -994,7 +982,7 @@ def get_core_gene_nodes(G, threshold, num_isolates):
 
 
 def check_rapidnj_install():
-    command = ["rapidnj", "-h"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/rapidnj", "-h"]
 
     p = str(
         subprocess.run(command,
