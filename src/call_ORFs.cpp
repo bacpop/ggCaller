@@ -21,7 +21,8 @@ void generate_ORFs(const int& colour_ID,
                    const bool no_filter,
                    const size_t nb_colours,
                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
-                   const tbb::concurrent_unordered_map<size_t, size_t>& start_freq)
+                   const tbb::concurrent_unordered_map<size_t, size_t>& start_freq,
+                   const float& score_tolerance)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -283,6 +284,7 @@ void generate_ORFs(const int& colour_ID,
                     ORFCoords best_ORF_coords;
                     float best_overall_score = 0;
                     float best_TIS_score = 0;
+                    float best_coverage = 0;
 
                     // set best ORF length as longest possible ORF
                     size_t best_ORF_len = stop_codon.second.at(0).first;
@@ -324,8 +326,8 @@ void generate_ORFs(const int& colour_ID,
                         // generate score based on start coverage multiplied by dataset size, TIS score and stop codon frequency
                         const float overall_score = start_coverage * TIS_score * std::pow((1 - stop_codon_freq), delta_length);
 
-                        // determine if score is better and start site is better supported
-                        if (overall_score > best_overall_score)
+                        // determine if score is better and start site is better supported within level of tolerance
+                        if (overall_score > best_overall_score || (overall_score > best_overall_score * score_tolerance && start_coverage >= best_coverage && TIS_score >= best_TIS_score))
                         {
                             best_codon = codon_pair;
                             best_TIS_present = (codon_pair.first >= 16);
@@ -333,6 +335,7 @@ void generate_ORFs(const int& colour_ID,
                             best_overall_score = overall_score;
                             best_TIS_score = TIS_score;
                             best_ORF_coords = std::move(ORF_coords);
+                            best_coverage = start_coverage;
 
                             // generate hash
                             std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));

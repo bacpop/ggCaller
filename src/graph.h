@@ -70,7 +70,8 @@ class Graph {
                                                      const double& id_cutoff,
                                                      const double& len_diff_cutoff,
                                                      size_t num_threads,
-                                                     const std::string& cluster_file);
+                                                     const std::string& cluster_file,
+                                                     const float& score_tolerance);
 
 
     std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,

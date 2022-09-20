@@ -223,7 +223,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                                          const double& id_cutoff,
                                                          const double& len_diff_cutoff,
                                                          size_t num_threads,
-                                                         const std::string& cluster_file)
+                                                         const std::string& cluster_file,
+                                                         const float& score_tolerance)
 {
     // initilise intermediate colour ORF vector
     ColourORFVectorMap colour_ORF_vec_map;
@@ -310,7 +311,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // convert this to map to make removal easier
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, _stop_freq, colour_ID, node_ids, repeat, max_path_length,
                                                       overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq));
+                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq, score_tolerance));
 
             }
 
