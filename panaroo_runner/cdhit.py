@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix
 from joblib import Parallel, delayed
 
 
-def check_cdhit_version(cdhit_exec='cd-hit'):
+def check_cdhit_version(cdhit_exec='/home/sth19/miniconda3/envs/ggCaller/bin/cd-hit'):
     """Checks that cd-hit can be run, and returns version.
 
     Args:
@@ -54,7 +54,7 @@ def run_cdhit(
         word_length=None,
         min_length=None,
         quiet=False):
-    cmd = "cd-hit"
+    cmd = "/home/sth19/miniconda3/envs/ggCaller/bin/cd-hit"
     cmd += " -T " + str(n_cpu)
     cmd += " -i " + input_file
     cmd += " -o " + output_file
@@ -105,7 +105,7 @@ def run_cdhit_est(
         word_length=None,
         mask=True,
         quiet=False):
-    cmd = "cd-hit-est"
+    cmd = "/home/sth19/miniconda3/envs/ggCaller/bin/cd-hit-est"
     cmd += " -T " + str(n_cpu)
     cmd += " -i " + input_file
     cmd += " -o " + output_file
@@ -145,8 +145,6 @@ def run_cdhit_est(
 
 def cluster_nodes_cdhit(
         G,
-        DBG,
-        overlap,
         nodes,
         outdir,
         id=0.95,
@@ -171,12 +169,13 @@ def cluster_nodes_cdhit(
     with open(temp_input_file.name, 'w') as outfile:
         for node in nodes:
             outfile.write(">" + str(node) + "\n")
-            ORFNodeVector = G.nodes[node]["ORF_info"][G.nodes[node]['maxLenId']]
-            seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            centroid_idx = G.nodes[node]['maxLenId']
             if dna:
+                seq = G.nodes[node]["dna"][centroid_idx]
                 outfile.write(seq)
             else:
-                outfile.write(str(Seq(seq).translate()))
+                seq = G.nodes[node]["protein"][centroid_idx]
+                outfile.write(seq)
 
     # run cd-hit
     if dna:
@@ -361,8 +360,6 @@ def align_dna_cdhit(
 
 def iterative_cdhit(
         G,
-        DBG,
-        overlap,
         outdir,
         dna=False,
         s=0.0,  # length difference cutoff (%), default 0.0
@@ -385,13 +382,13 @@ def iterative_cdhit(
 
     centroid_to_seq = {}
     for node in G.nodes():
-        for sid, ORFNodeVector in zip(G.nodes[node]["centroid"],
-                                      G.nodes[node]["ORF_info"]):
-            seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        for sid, DNA, prot in zip(G.nodes[node]["centroid"],
+                                  G.nodes[node]["dna"],
+                                  G.nodes[node]["protein"]):
             if dna:
-                centroid_to_seq[sid] = seq
+                centroid_to_seq[sid] = DNA
             else:
-                centroid_to_seq[sid] = str(Seq(seq).translate())
+                centroid_to_seq[sid] = prot
 
     clusters = []
     with open(temp_input_file.name, 'w') as outfile:
@@ -467,17 +464,17 @@ def iterative_cdhit(
     return (clusters)
 
 
-def pwdist_edlib(G, DBG, overlap, cdhit_clusters, threshold, dna=False, n_cpu=1):
+def pwdist_edlib(G, cdhit_clusters, threshold, dna=False, n_cpu=1):
     # Prepare sequences
     centroid_to_seq = {}
     for node in G.nodes():
-        for sid, ORFNodeVector in zip(G.nodes[node]["centroid"],
-                                      G.nodes[node]["ORF_info"]):
-            seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+        for sid, DNA, prot in zip(G.nodes[node]["centroid"],
+                                  G.nodes[node]["dna"],
+                                  G.nodes[node]["protein"]):
             if dna:
-                centroid_to_seq[sid] = seq
+                centroid_to_seq[sid] = DNA
             else:
-                centroid_to_seq[sid] = str(Seq(seq).translate())
+                centroid_to_seq[sid] = prot
 
     ncentroids = len(centroid_to_seq)
 

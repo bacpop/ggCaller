@@ -90,8 +90,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # clean up translation errors
     G = collapse_families(G,
-                          DBG=shd_arr[0],
-                          overlap=overlap,
                           outdir=temp_dir,
                           dna_error_threshold=0.98,
                           correct_mistranslations=True,
@@ -121,8 +119,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # collapse gene families
     G, distances_bwtn_centroids, centroid_to_index = collapse_families(
         G,
-        DBG=shd_arr[0],
-        overlap=overlap,
         outdir=temp_dir,
         family_threshold=family_threshold,
         correct_mistranslations=False,
@@ -164,8 +160,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose:
             print("collapse gene families with refound genes...")
         G = collapse_families(G,
-                              DBG=shd_arr[0],
-                              overlap=overlap,
                               outdir=temp_dir,
                               family_threshold=family_threshold,
                               correct_mistranslations=False,

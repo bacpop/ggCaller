@@ -142,6 +142,10 @@ def merge_node_cluster(G,
     centroid = [element for index, element in enumerate(centroid) if index not in to_remove]
     ORF_info = [item for sublist in gen_node_iterables(G, nodes, 'ORF_info') for item in sublist]
     ORF_info = [element for index, element in enumerate(ORF_info) if index not in to_remove]
+    dna = [item for sublist in gen_node_iterables(G, nodes, 'dna') for item in sublist]
+    dna = [element for index, element in enumerate(dna) if index not in to_remove]
+    protein = [item for sublist in gen_node_iterables(G, nodes, 'protein') for item in sublist]
+    protein = [element for index, element in enumerate(protein) if index not in to_remove]
     hash = [item for sublist in gen_node_iterables(G, nodes, 'hash') for item in sublist]
     hash = [element for index, element in enumerate(hash) if index not in to_remove]
     seqIDs = set(iter_del_dups(gen_node_iterables(G, nodes, 'seqIDs')))
@@ -192,6 +196,8 @@ def merge_node_cluster(G,
         seqIDs=seqIDs,
         hasEnd=any(gen_node_iterables(G, nodes, 'hasEnd')),
         ORF_info=ORF_info,
+        dna=dna,
+        protein=protein,
         hash=hash,
         annotation=";".join(
             iter_del_dups(gen_node_iterables(G, nodes, 'annotation',
@@ -302,8 +308,6 @@ def single_linkage(G, distances_bwtn_centroids, centroid_to_index, neighbours):
 
 # @profile
 def collapse_families(G,
-                      DBG,
-                      overlap,
                       outdir,
                       family_threshold=0.7,
                       dna_error_threshold=0.99,
@@ -325,8 +329,6 @@ def collapse_families(G,
     # precluster for speed
     if correct_mistranslations:
         cdhit_clusters = iterative_cdhit(G,
-                                         DBG,
-                                         overlap,
                                          outdir,
                                          thresholds=threshold,
                                          n_cpu=n_cpu,
@@ -335,18 +337,16 @@ def collapse_families(G,
                                          word_length=7,
                                          accurate=False)
         distances_bwtn_centroids, centroid_to_index = pwdist_edlib(
-            G, DBG, overlap, cdhit_clusters, dna_error_threshold, dna=True, n_cpu=n_cpu)
+            G, cdhit_clusters, dna_error_threshold, dna=True, n_cpu=n_cpu)
     elif distances_bwtn_centroids is None:
         cdhit_clusters = iterative_cdhit(G,
-                                         DBG,
-                                         overlap,
                                          outdir,
                                          thresholds=threshold,
                                          n_cpu=n_cpu,
                                          quiet=True,
                                          dna=False)
         distances_bwtn_centroids, centroid_to_index = pwdist_edlib(
-            G, DBG, overlap, cdhit_clusters, family_threshold, dna=False, n_cpu=n_cpu)
+            G, cdhit_clusters, family_threshold, dna=False, n_cpu=n_cpu)
 
     # keep track of centroids for each sequence. Need this to resolve clashes
     seqid_to_index = {}

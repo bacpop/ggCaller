@@ -2,6 +2,7 @@ from collections import defaultdict
 import networkx as nx
 from intbitset import intbitset
 import ggCaller_cpp
+from Bio.Seq import Seq
 
 
 def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file):
@@ -10,7 +11,6 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # associate sequences with their clusters
     seq_to_cluster = {}
-    seqid_to_centroid = {}
     cluster_centroids = {}
     cluster_members = defaultdict(list)
     cluster_centroid_data = {}
@@ -72,8 +72,11 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # add information to cluster_centroid_data
         cluster_centroid_data[cluster_id] = {
+            # remove at end
             'ORF_info': ORFNodeVector,
             'hash': current_hash,
+            'prot_sequence': str(Seq(seq).translate()),
+            'dna_sequence': seq
         }
 
         # append centroid to cluster
@@ -151,14 +154,23 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     members=intbitset([genome_id]),
                     seqIDs=set([ORF_id]),
                     hasEnd=False,
+                    # remove this at end
                     ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
                                cluster_centroid_data[current_cluster]['ORF_info'][1])],
-                    hash=[cluster_centroid_data[current_cluster]['hash']],
+                    hash=[
+                        cluster_centroid_data[current_cluster]['hash']
+                    ],
+                    protein=[
+                        cluster_centroid_data[current_cluster]['prot_sequence']
+                    ],
+                    dna=[
+                        cluster_centroid_data[current_cluster]['dna_sequence']
+                    ],
                     annotation='',
                     bitscore=0,
                     description='',
                     lengths=[
-                        cluster_centroid_data[current_cluster]['ORF_info'][2]
+                        len(cluster_centroid_data[current_cluster]['dna_sequence'])
                     ],
                     paralog=has_paralogs,
                     mergedDNA=False)
