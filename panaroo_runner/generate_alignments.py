@@ -20,7 +20,7 @@ def run_snpsites(file, annotation_dir, vcf_dir):
     outfile = os.path.join(vcf_dir, file.split(".")[0] + ".vcf")
     file = os.path.join(annotation_dir, file)
 
-    command = ["snp-sites", "-v", "-o", outfile, file]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-v", "-o", outfile, file]
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -34,7 +34,7 @@ def run_snpsites(file, annotation_dir, vcf_dir):
 
 
 def check_snpsites_install():
-    command = ["snp-sites", "-V"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/snp-sites", "-V"]
 
     p = str(
         subprocess.run(command,
@@ -63,7 +63,7 @@ def check_aligner_install():
         presence (bool)
             True/False aligner present
     """
-    command = ["mafft", "--help"]
+    command = ["/home/sth19/miniconda3/envs/ggCaller/bin/mafft", "--help"]
 
     p = str(
         subprocess.run(command,
@@ -90,7 +90,7 @@ def get_alignment_commands(fastafile_name, outdir, aligner):
     elif aligner == "ref":
         ref_file, seq_file = fastafile_name
         outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
-        command = ["mafft", "--amino", "--6merpair", "--addfragments",
+        command = ["/home/sth19/miniconda3/envs/ggCaller/bin/mafft", "--amino", "--6merpair", "--addfragments",
                    seq_file, ref_file, outfile]
 
     return (command, fastafile_name)

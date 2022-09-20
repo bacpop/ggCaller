@@ -27,16 +27,12 @@ class SmartFormatter(argparse.HelpFormatter):
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 
-def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file, overlap,
+def run_panaroo(DBG, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file, overlap,
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, ref_list, write_idx, kmer, repeat,
                 remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
                 call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
-
-    # load shared memory items
-    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
-    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
     # check if reference-guided alignment specified
     ref_aln = False
@@ -58,7 +54,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts = generate_network(shd_arr[0], overlap, high_scoring_ORFs,
+    G, centroid_contexts = generate_network(DBG, overlap, high_scoring_ORFs,
                                             high_scoring_ORF_edges, cluster_file)
 
     # check if G is empty before proceeding
@@ -111,7 +107,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # generate annotations
         G, high_scoring_ORFs = iterative_annotation_search(G, high_scoring_ORFs,
                                                            annotation_temp_dir, annotation_db,
-                                                           hmm_db, evalue, annotate, n_cpu, pool)
+                                                           hmm_db, evalue, annotate, n_cpu)
 
     if verbose:
         print("collapse gene families...")
@@ -140,7 +136,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # find genes that Prokka has missed
         G, high_scoring_ORFs = find_missing(G,
-                                            shd_arr_tup,
+                                            DBG,
                                             high_scoring_ORFs,
                                             kmer=kmer,
                                             repeat=repeat,
@@ -150,7 +146,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             search_radius=search_radius,
                                             prop_match=refind_prop_match,
                                             pairwise_id_thresh=identity_cutoff,
-                                            pool=pool,
                                             n_cpu=n_cpu,
                                             verbose=verbose)
 
@@ -226,7 +221,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if annotate is not None and any(ref_list):
         if verbose:
             print("writing GFF files...")
-        generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
+        generate_GFF(DBG, high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
                      overlap, write_idx, ref_list, n_cpu)
 
     # write roary output and summary stats file
@@ -238,7 +233,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     # write pan genome reference fasta file
     generate_pan_genome_reference(G,
-                                  shd_arr[0],
+                                  DBG,
                                   overlap,
                                   output_dir=output_dir,
                                   split_paralogs=False)
@@ -253,24 +248,24 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if verbose:
         print("writing gene fasta...")
     print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
-                    input_colours, overlap, shd_arr[0], truncation_threshold, G)
+                    input_colours, overlap, DBG, truncation_threshold, G)
 
     # Write out core/pan-genome alignments
     # determine if reference-guided alignment being done
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
-        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
+        generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, DBG,
                                       high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
-                                      ignore_pseduogenes, truncation_threshold, pool)
+                                      ignore_pseduogenes, truncation_threshold, n_cpu)
         core_nodes = get_core_gene_nodes(G, core, len(input_colours))
         core_gene_names = [G.nodes[x[0]]["name"] for x in core_nodes]
         concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpu)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
-                                       n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
+                                       n_cpu, isolate_names, core, len(input_colours), DBG,
                                        high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
-                                       ignore_pseduogenes, truncation_threshold, pool)
+                                       ignore_pseduogenes, truncation_threshold, n_cpu)
 
 
     # add helpful attributes and write out graph in GML format
@@ -299,7 +294,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
                 # access ORF information for each ORF from high_scoring_ORFs
                 ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
-                seq = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 G.nodes[node]['dna'].append(seq)
                 if local_id < 0:
                     G.nodes[node]['protein'].append(ORFNodeVector[4])
@@ -330,7 +325,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         objects_dir = os.path.join(objects_dir, "")
 
         # serialise graph object and high scoring ORFs to future reading
-        shd_arr[0].data_out(objects_dir + "ggc_graph.dat")
+        DBG.data_out(objects_dir + "ggc_graph.dat")
         with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
             cPickle.dump(high_scoring_ORFs, o)
 

@@ -7,6 +7,7 @@ from Bio import SeqIO
 import pandas as pd
 from Bio import SearchIO
 from collections import defaultdict
+from multiprocessing import Pool
 
 def check_diamond_install():
     command = ["/home/sth19/miniconda3/envs/ggCaller/bin/diamond", "help"]
@@ -200,14 +201,15 @@ def run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, eval
 
 
 def iterative_annotation_search(G, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db,
-                                evalue, annotate, n_cpu, pool):
+                                evalue, annotate, n_cpu):
     # run initial iterative search
-    G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir,
-                                              annotate, annotation_db, evalue, pool)
+    with Pool(processes=n_cpu) as pool:
+        G, high_scoring_ORFs = run_diamond_search(G, high_scoring_ORFs, annotation_temp_dir,
+                                                  annotate, annotation_db, evalue, pool)
 
-    # run ultra-sensitive search
-    if annotate == "ultrasensitive":
-        G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir,
-                                             hmm_db, evalue, pool, n_cpu)
+        # run ultra-sensitive search
+        if annotate == "ultrasensitive":
+            G, high_scoring_ORFs = run_HMMERscan(G, high_scoring_ORFs, annotation_temp_dir,
+                                                 hmm_db, evalue, pool, n_cpu)
 
     return G, high_scoring_ORFs

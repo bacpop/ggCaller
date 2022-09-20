@@ -520,21 +520,16 @@ def main():
 
     # generate ORF clusters
     if not options.no_clustering:
-        with SharedMemoryManager() as smm:
-            # generate shared numpy arrays
-            total_arr = np.array([graph])
-            array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
-            with Pool(processes=options.threads) as pool:
-                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
-                            cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
-                            options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
-                            options.family_threshold, options.min_trailing_support, options.trailing_recursive,
-                            options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, ref_list,
-                            options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
-                            options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                            annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save, options.refind)
+            run_panaroo(graph, high_scoring_ORFs, high_scoring_ORF_edges,
+                        cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
+                        options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
+                        options.family_threshold, options.min_trailing_support, options.trailing_recursive,
+                        options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
+                        options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, ref_list,
+                        options.no_write_idx, overlap + 1, options.repeat, options.remove_by_consensus,
+                        options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
+                        annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
+                        options.truncation_threshold, options.save, options.refind)
 
     else:
         print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),

@@ -375,12 +375,8 @@ def output_dna_sequence(node_pair):
 
     return ref_output_sequences
 
-def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+def output_alignment_sequence(node_pair, temp_directory, outdir, DBG, high_scoring_ORFs, overlap,
                               ref_aln, ignore_pseduogenes, truncation_threshold):
-    # load shared memory items
-    existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
-    shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
-
     # unpack node_pair
     node = node_pair[1]
 
@@ -427,7 +423,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
                 if ORF_ID < 0:
                     protein = Seq(ORF_info[4])
                 else:
-                    protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
+                    protein = Seq(DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
                 ref_output_sequences.append(SeqRecord(protein, id=centroid_id, description=""))
 
         centroid_no = len(ref_output_sequences)
@@ -464,7 +460,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         if ORF_ID < 0:
             protein = Seq(ORF_info[4])
         else:
-            protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
+            protein = Seq(DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
 
         output_sequences.append(
             SeqRecord(Seq(protein), id=seq, description=""))
@@ -875,8 +871,8 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
-                                  isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, ref_aln,
-                                  call_variants, verbose, ignore_pseduogenes, truncation_threshold, pool):
+                                  isolate_names, DBG, high_scoring_ORFs, overlap, ref_aln,
+                                  call_variants, verbose, ignore_pseduogenes, truncation_threshold, n_cpu):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments, clear if present and remake
@@ -887,14 +883,15 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
         os.mkdir(output_dir + "aligned_gene_sequences")
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
-                                                 ignore_pseduogenes=ignore_pseduogenes,
-                                                 truncation_threshold=truncation_threshold),
-                                         G.nodes(data=True)):
-        unaligned_sequence_files.append(outname)
-        unaligned_reference_files.append(ref_outname)
+    with Pool(processes=n_cpu) as pool:
+        for outname, ref_outname in pool.map(partial(output_alignment_sequence,
+                                                     temp_directory=temp_dir, outdir=output_dir, DBG=DBG,
+                                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
+                                                     ignore_pseduogenes=ignore_pseduogenes,
+                                                     truncation_threshold=truncation_threshold),
+                                             G.nodes(data=True)):
+            unaligned_sequence_files.append(outname)
+            unaligned_reference_files.append(ref_outname)
     if ref_aln:
         # centroid files with paired sequence files
         ref_seq_pairs = [
@@ -1050,9 +1047,9 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
-                                   isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
+                                   isolate_names, threshold, num_isolates, DBG, high_scoring_ORFs,
                                    overlap, ref_aln, call_variants, verbose,
-                                   ignore_pseduogenes, truncation_threshold, pool):
+                                   ignore_pseduogenes, truncation_threshold, n_cpu):
     unaligned_sequence_files = []
     unaligned_reference_files = []
     # Make a folder for the output alignments, clear if present and remake
@@ -1067,14 +1064,15 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
-    for outname, ref_outname in pool.map(partial(output_alignment_sequence,
-                                                 temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
-                                                 ignore_pseduogenes=ignore_pseduogenes,
-                                                 truncation_threshold=truncation_threshold),
-                                         core_genes):
-        unaligned_sequence_files.append(outname)
-        unaligned_reference_files.append(ref_outname)
+    with Pool(processes=n_cpu) as pool:
+        for outname, ref_outname in pool.map(partial(output_alignment_sequence,
+                                                     temp_directory=temp_dir, outdir=output_dir, DBG=DBG,
+                                                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
+                                                     ignore_pseduogenes=ignore_pseduogenes,
+                                                     truncation_threshold=truncation_threshold),
+                                             core_genes):
+            unaligned_sequence_files.append(outname)
+            unaligned_reference_files.append(ref_outname)
 
     if ref_aln:
         # centroid files with paired sequence files

@@ -10,7 +10,7 @@ from functools import partial
 
 
 def find_missing(G,
-                 graph_shd_arr_tup,
+                 DBG,
                  high_scoring_ORFs,
                  kmer,
                  repeat,
@@ -20,13 +20,8 @@ def find_missing(G,
                  prop_match,
                  pairwise_id_thresh,
                  n_cpu,
-                 pool,
                  remove_by_consensus=False,
                  verbose=True):
-    # load shared memory items
-    graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
-    graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
-
     # iterate through nodes to identify accessory genes for searching
     # these are nodes missing a member with at least one neighbour that has that member
     n_searches = 0
@@ -59,18 +54,19 @@ def find_missing(G,
     all_hits = [None] * len(isolate_names)
     all_node_locs = [None] * len(isolate_names)
 
-    for member, hits, node_locs in pool.map(partial(search_graph,
-                                                    graph_shd_arr_tup=graph_shd_arr_tup,
-                                                    isolate_names=isolate_names,
-                                                    search_radius=search_radius,
-                                                    overlap=overlap,
-                                                    prop_match=prop_match,
-                                                    pairwise_id_thresh=pairwise_id_thresh,
-                                                    kmer=kmer,
-                                                    repeat=repeat),
-                                            search_dict.items()):
-        all_hits[member] = hits
-        all_node_locs[member] = node_locs
+    with Pool(processes=n_cpu) as pool:
+        for member, hits, node_locs in pool.map(partial(search_graph,
+                                                        DBG=DBG,
+                                                        isolate_names=isolate_names,
+                                                        search_radius=search_radius,
+                                                        overlap=overlap,
+                                                        prop_match=prop_match,
+                                                        pairwise_id_thresh=pairwise_id_thresh,
+                                                        kmer=kmer,
+                                                        repeat=repeat),
+                                                search_dict.items()):
+            all_hits[member] = hits
+            all_node_locs[member] = node_locs
 
     if verbose:
         print("translating hits...")
@@ -79,7 +75,7 @@ def find_missing(G,
     for member, hits in enumerate(all_hits):
         hits_trans_dict[member] = Parallel(n_jobs=n_cpu)(
             delayed(translate_to_match)(hit[1],
-                                        str(Seq(graph_shd_arr[0].generate_sequence(G.nodes[hit[0]]["ORF_info"][0][0],
+                                        str(Seq(DBG.generate_sequence(G.nodes[hit[0]]["ORF_info"][0][0],
                                                                                    G.nodes[hit[0]]["ORF_info"][0][1],
                                                                                    overlap)).translate()))
             for hit in hits)
@@ -104,7 +100,7 @@ def find_missing(G,
                 # make copies to avoid editing in place
                 temp_DBG_node = DBG_node
                 # get size of node
-                node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
+                node_end = DBG.node_size(temp_DBG_node) - 1
                 if temp_DBG_node < 0:
                     temp_DBG_node *= -1
                     temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
@@ -127,7 +123,7 @@ def find_missing(G,
                     temp_DBG_node = DBG_node
                     if temp_DBG_node < 0:
                         temp_DBG_node *= -1
-                        node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
+                        node_end = DBG.node_size(temp_DBG_node) - 1
                         temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
                     else:
                         temp_node_coords = node_coords
@@ -193,7 +189,7 @@ def find_missing(G,
 
 
 def search_graph(search_pair,
-                 graph_shd_arr_tup,
+                 DBG,
                  isolate_names,
                  kmer,
                  repeat,
@@ -204,10 +200,6 @@ def search_graph(search_pair,
     # unpack search_pair and assign fasta
     member, dicts = search_pair
     fasta = isolate_names[member]
-
-    # load shared memory items
-    graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
-    graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
     # sort items to preserve order
     conflicts = {k: v for k, v in sorted(dicts["conflicts"].items(), key=lambda item: item[0])}
@@ -226,7 +218,7 @@ def search_graph(search_pair,
             node_overlap = (node_coords[1] - node_coords[0]) + 1
 
             # if node is fully traversed for given strand, add to nodes to avoid
-            if node_overlap == graph_shd_arr[0].node_size(ORF_info[0][i]):
+            if node_overlap == DBG.node_size(ORF_info[0][i]):
                 to_avoid.add(ORF_info[0][i])
 
             if i != 0:
@@ -237,7 +229,7 @@ def search_graph(search_pair,
         node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # get sequences to search
-    refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
+    refind_map, is_ref = DBG.refind_gene(member, node_search_dict, search_radius, kmer, fasta,
                                                       repeat, to_avoid)
 
     # search for matches
@@ -245,7 +237,7 @@ def search_graph(search_pair,
     for node in node_search_dict:
         best_hit = ""
         best_loc = None
-        search = graph_shd_arr[0].generate_sequence(node_search_dict[node][0][0],
+        search = DBG.generate_sequence(node_search_dict[node][0][0],
                                                     node_search_dict[node][0][1], overlap)
         for entry in refind_map[node]:
             db_seq, nodelist, node_ranges, path_rev_comp = entry
@@ -269,7 +261,7 @@ def search_graph(search_pair,
                 reversed_loci = []
                 for node_ID, node_coords in zip(ORF_graph_loc[0], ORF_graph_loc[1]):
                     rev_node_ID = node_ID * -1
-                    node_end = graph_shd_arr[0].node_size(rev_node_ID) - 1
+                    node_end = DBG.node_size(rev_node_ID) - 1
                     reversed_end = node_end - node_coords[0]
                     reversed_start = node_end - node_coords[1]
                     reversed_nodes.append(rev_node_ID)
