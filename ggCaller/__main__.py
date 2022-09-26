@@ -83,10 +83,10 @@ def get_options():
                                '[Default = 90] ')
     Settings.add_argument('--score-tolerance',
                           type=float,
-                          default=0.5,
+                          default=0.05,
                           help='Length probability tolerance for shorter alternative start sites. If within tolerance,'
                                'ggCaller will check if start coverage and BALROG score are both higher in shorter ORF. '
-                               '[Default = 0.5] ')
+                               '[Default = 0.05] ')
     Settings.add_argument('--max-ORF-overlap',
                           type=int,
                           default=60,
