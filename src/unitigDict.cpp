@@ -277,6 +277,76 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
     return sequence;
 }
 
+// non member function to remove portion of 5' end of ORF
+void shorten_ORF (ORFNodeVector& ORF_info,
+                  const int& to_remove,
+                  const int& overlap,
+                  const float& shortest_TIS)
+{
+    auto& nodelist = std::get<0>(ORF_info);
+    auto& node_coords = std::get<1>(ORF_info);
+    auto& ORF_len = std::get<2>(ORF_info) -= to_remove;
+    std::get<4>(ORF_info) = shortest_TIS;
+
+    int remaining = to_remove;
+
+    int nodes_removed = 0;
+    bool removed = false;
+    for (size_t i = 0; i < nodelist.size(); i++)
+    {
+        // parse information
+        auto& id = nodelist[i];
+        auto& coords = node_coords[i];
+
+        // determine if in overlap
+        bool in_overlap = false;
+        if ((coords.second - coords.first) < overlap)
+        {
+            in_overlap = true;
+        }
+
+        int node_len = (coords.second - coords.first) + 1;
+
+        if (node_len <= remaining)
+        {
+            nodes_removed = i;
+            removed = true;
+        } else
+        {
+            coords.first += remaining;
+        }
+
+        // only remove if not in overlap
+        if (!in_overlap)
+        {
+            // determine if run into next overlap. May cause issue if last node is also just an overlap node.
+            int overlap_region = (coords.second - coords.first) + 1;
+            if (overlap_region < overlap)
+            {
+                remaining = (overlap - overlap_region);
+            } else
+            {
+                node_len -= overlap;
+                remaining -= node_len;
+            }
+        }
+
+        // if no more to remove, break
+        if (remaining <= 0)
+        {
+            break;
+        }
+    }
+    if (removed)
+    {
+        nodelist.erase(nodelist.begin(), nodelist.begin() + nodes_removed + 1);
+        node_coords.erase(node_coords.begin(), node_coords.begin() + nodes_removed + 1);
+    }
+
+
+    int test = 1;
+}
+
 // non member function to remove overlap ends of ORFNodeVector
 void simplify_ORFNodeVector (ORFNodeVector& ORF_info,
                              const int& overlap)

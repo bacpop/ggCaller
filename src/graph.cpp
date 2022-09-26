@@ -389,9 +389,37 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 std::advance(datIt, i);
                 auto& ORF_entries = datIt->second;
 
+                // determine shortest ORF in cluster. Any ORFs longer than this
+                //  will be shortened to this size to ensure consistent annotation
+                int shortest_ORF = 0;
+                float shortest_TIS = 0;
+                for (int j = 0; j < ORF_entries.size(); j++)
+                {
+                    auto& ORF_ID_pair = ORF_entries.at(j);
+                    auto& ORF_info = colour_ORF_vec_map.at(ORF_ID_pair.first).at(ORF_ID_pair.second);
+
+                    const auto& ORF_len = std::get<2>(ORF_info);
+
+                    if (j == 0 || ORF_len < shortest_ORF)
+                    {
+                        shortest_ORF = ORF_len;
+                        shortest_TIS = std::get<4>(ORF_info);
+                    }
+                }
+
                 // get centroid info
                 auto& centroid_ID_pair = ORF_entries.at(0);
                 auto& centroid_info = colour_ORF_vec_map.at(centroid_ID_pair.first).at(centroid_ID_pair.second);
+
+                const auto centroid_seq1 = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
+
+                const int len_diff = std::get<2>(centroid_info) - shortest_ORF;
+
+                // if different, update centroid sequence in place
+                if (len_diff)
+                {
+                    shorten_ORF(centroid_info, len_diff, overlap, shortest_TIS);
+                }
 
                 // get centroid sequence
                 const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
@@ -423,6 +451,14 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     auto& ORF_ID_pair = ORF_entries.at(j);
 
                     auto& ORF_info = colour_ORF_vec_map.at(ORF_ID_pair.first).at(ORF_ID_pair.second);
+
+                    const int len_diff = std::get<2>(ORF_info) - shortest_ORF;
+
+                    // if different, update ORF sequence in place
+                    if (len_diff)
+                    {
+                        shorten_ORF(ORF_info, len_diff, overlap, shortest_TIS);
+                    }
 
                     // get centroid sequence
                     const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
