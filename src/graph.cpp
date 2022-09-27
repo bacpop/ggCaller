@@ -267,6 +267,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         // initialise maps to store ORF TIS scores across threads
         tbb::concurrent_unordered_map<size_t, float> all_TIS_scores;
 
+        // create map to hold number of times start codons chosen
+        tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_chosen;
+
         cout << "Traversing graph to identify ORFs..." << endl;
         #pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
@@ -310,8 +313,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
                 // convert this to map to make removal easier
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, _stop_freq, colour_ID, node_ids, repeat, max_path_length,
-                                                      overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
-                                                      TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq, score_tolerance));
+                                                   overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
+                                                   TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq, score_tolerance,
+                                                   start_chosen));
 
             }
 

@@ -37,6 +37,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const bool no_filter,
                              tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
                              const tbb::concurrent_unordered_map<size_t, size_t>& start_freq,
-                             const float& score_tolerance);
+                             const float& score_tolerance,
+                             tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_chosen);
 
 #endif //TRAVERSAL_H

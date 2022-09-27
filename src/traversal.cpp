@@ -206,7 +206,8 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          const bool no_filter,
                          tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
                          const tbb::concurrent_unordered_map<size_t, size_t>& start_freq,
-                         const float& score_tolerance)
+                         const float& score_tolerance,
+                         tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_chosen)
 {
     //initialise ORF_nodes_paths to add ORF sequences to
     ORFNodeMap ORF_node_map;
@@ -215,9 +216,6 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     // set for any end contigs
     std::bitset<3> full_binary;
     full_binary.set();
-
-    // create map to hold number of times start codons chosen
-    tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_chosen;
 
     const size_t nb_colours = ccdbg.getNbColors();
 
