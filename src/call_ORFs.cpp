@@ -306,10 +306,10 @@ void generate_ORFs(const int& colour_ID,
 //                        {
 //                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
 //                            std::string start_site_AA = (translate(start_site_DNA)).aa();
-//                            size_t site_hash = hasher{}(start_site_AA);
+//                            site_hash = hasher{}(start_site_AA);
 //                        }
-                        std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-                        std::string start_site_AA = (translate(start_site_DNA)).aa();
+                        const std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
+                        const std::string start_site_AA = (translate(start_site_DNA)).aa();
                         size_t site_hash = hasher{}(start_site_AA);
 
                         if (start_freq.find(site_hash) == start_freq.end())
@@ -319,8 +319,22 @@ void generate_ORFs(const int& colour_ID,
                             cout << colour_ID << endl;
                         }
 
-                        auto& num_chosen = start_chosen[site_hash];
-                        auto& num_chosen_prev = start_chosen[best_site_hash];
+                        // determine number of times each start chosen
+                        size_t num_chosen = 0;
+                        size_t num_chosen_prev = 0;
+                        {
+                            const auto& num_chosen_set = start_chosen.find(site_hash);
+                            const auto& num_chosen_prev_set = start_chosen.find(best_site_hash);
+
+                            if (num_chosen_set != start_chosen.end())
+                            {
+                                num_chosen = num_chosen_set->second.size();
+                            }
+                            if (num_chosen_prev_set != start_chosen.end())
+                            {
+                                num_chosen_prev = num_chosen_prev_set->second.size();
+                            }
+                        }
 
                         const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
 
@@ -336,7 +350,7 @@ void generate_ORFs(const int& colour_ID,
                         {
                             bool better_cov = start_coverage >= best_coverage;
                             bool better_TIS = TIS_score >= best_TIS_score;
-                            bool better_chosen = num_chosen.size() >= num_chosen_prev.size();
+                            bool better_chosen = num_chosen >= num_chosen_prev;
                             // ensure two of three parameters are satisfied
                             if ((better_cov && better_TIS) || (better_cov && better_chosen) || (better_TIS && better_chosen))
                             {
@@ -354,9 +368,6 @@ void generate_ORFs(const int& colour_ID,
                             best_ORF_coords = std::move(ORF_coords);
                             best_coverage = start_coverage;
                             best_site_hash = site_hash;
-
-                            // add one more to chosen
-                            num_chosen.insert(colour_ID);
 
                             // generate hash
                             std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));
@@ -379,6 +390,9 @@ void generate_ORFs(const int& colour_ID,
                             size_t hash_to_remove = hasher{}(path_sequence.substr((best_codon.first), (best_ORF_len)));
                             hashes_to_remove.insert(hash_to_remove);
                         }
+
+                        // add one more to chosen
+                        start_chosen[best_site_hash].insert(colour_ID);
 
                         // if ORF looks unlikely to be real, do not add
                         if (best_coverage)
