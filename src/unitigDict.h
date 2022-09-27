@@ -100,11 +100,6 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
                                  const ColoredCDBG<MyUnitigMap>& ccdbg,
                                  const std::vector<Kmer>& head_kmer_arr);
 
-void shorten_ORF (ORFNodeVector& ORF_info,
-                  const int& to_remove,
-                  const int& overlap,
-                  const float& shortest_TIS);
-
 // non member function to remove overlap ends of ORFNodeVector
 void simplify_ORFNodeVector (ORFNodeVector& ORF_info,
                              const int& overlap);

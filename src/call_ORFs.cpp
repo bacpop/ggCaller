@@ -22,7 +22,8 @@ void generate_ORFs(const int& colour_ID,
                    const size_t nb_colours,
                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
                    const tbb::concurrent_unordered_map<size_t, size_t>& start_freq,
-                   const float& score_tolerance)
+                   const float& score_tolerance,
+                   tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_chosen)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -284,6 +285,7 @@ void generate_ORFs(const int& colour_ID,
                     ORFCoords best_ORF_coords;
                     float best_TIS_score = 0;
                     float best_coverage = 0;
+                    size_t best_site_hash;
 
                     // set best ORF length as longest possible ORF
                     size_t best_ORF_len = stop_codon.second.at(0).first;
@@ -317,6 +319,9 @@ void generate_ORFs(const int& colour_ID,
                             cout << colour_ID << endl;
                         }
 
+                        auto& num_chosen = start_chosen[site_hash];
+                        auto& num_chosen_prev = start_chosen[best_site_hash];
+
                         const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
 
                         // calculate delta length from max ORF in codon space
@@ -325,8 +330,22 @@ void generate_ORFs(const int& colour_ID,
                         // calculate length difference probability
                         const float len_diff_prob = std::pow((1 - stop_codon_freq), delta_length);
 
+                        // determine if to update start site
+                        bool update = false;
+                        if (len_diff_prob >= score_tolerance)
+                        {
+                            bool better_cov = start_coverage >= best_coverage;
+                            bool better_TIS = TIS_score >= best_TIS_score;
+                            bool better_chosen = num_chosen.size() >= num_chosen_prev.size();
+                            // ensure two of three parameters are satisfied
+                            if ((better_cov && better_TIS) || (better_cov && better_chosen) || (better_TIS && better_chosen))
+                            {
+                                update = true;
+                            }
+                        }
+
                         // determine if score is better and start site is better supported within level of length tolerance
-                        if (len_diff_prob >= score_tolerance && start_coverage >= best_coverage && TIS_score >= best_TIS_score)
+                        if (update)
                         {
                             best_codon = codon_pair;
                             best_TIS_present = (codon_pair.first >= 16);
@@ -334,6 +353,10 @@ void generate_ORFs(const int& colour_ID,
                             best_TIS_score = TIS_score;
                             best_ORF_coords = std::move(ORF_coords);
                             best_coverage = start_coverage;
+                            best_site_hash = site_hash;
+
+                            // add one more to chosen
+                            num_chosen.insert(colour_ID);
 
                             // generate hash
                             std::string ORF_seq = path_sequence.substr((codon_pair.first), (ORF_len));

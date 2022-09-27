@@ -216,6 +216,9 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     std::bitset<3> full_binary;
     full_binary.set();
 
+    // create map to hold number of times start codons chosen
+    tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_chosen;
+
     const size_t nb_colours = ccdbg.getNbColors();
 
     // traverse nodes in forward direction
@@ -273,7 +276,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                 generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq,
                               stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length,
                               is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores,
-                              start_freq, score_tolerance);
+                              start_freq, score_tolerance, start_chosen);
             }
         }
     }
@@ -333,7 +336,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                 generate_ORFs(colour_ID, ORF_node_map, hashes_to_remove, ccdbg, head_kmer_arr, stop_codon_freq,
                               stop_codons_for, start_codons_for, unitig_complete_paths[i], overlap, min_ORF_length,
                               is_ref, fm_idx, TIS_model, minimum_ORF_score, no_filter, nb_colours, all_TIS_scores,
-                              start_freq, score_tolerance);
+                              start_freq, score_tolerance, start_chosen);
             }
         }
     }
