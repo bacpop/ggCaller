@@ -281,11 +281,11 @@ void generate_ORFs(const int& colour_ID,
                     // set variables to determine highest scoring ORF with same stop codon
                     std::pair<size_t, size_t> best_codon = {0,0};
                     size_t best_hash;
-                    bool best_TIS_present;
+                    bool best_TIS_present = false;
                     ORFCoords best_ORF_coords;
                     float best_TIS_score = 0;
                     float best_coverage = 0;
-                    size_t best_site_hash;
+                    size_t best_site_hash = 0;
 
                     // set best ORF length as longest possible ORF
                     size_t best_ORF_len = stop_codon.second.at(0).first;
@@ -323,16 +323,21 @@ void generate_ORFs(const int& colour_ID,
                         size_t num_chosen = 0;
                         size_t num_chosen_prev = 0;
                         {
-                            const auto& num_chosen_set = start_chosen.find(site_hash);
-                            const auto& num_chosen_prev_set = start_chosen.find(best_site_hash);
+                            auto num_chosen_set = start_chosen.find(site_hash);
 
                             if (num_chosen_set != start_chosen.end())
                             {
                                 num_chosen = num_chosen_set->second.size();
                             }
-                            if (num_chosen_prev_set != start_chosen.end())
+
+                            // determine if previous start encountered
+                            if (best_codon.second)
                             {
-                                num_chosen_prev = num_chosen_prev_set->second.size();
+                                auto num_chosen_prev_set = start_chosen.find(best_site_hash);
+                                if (num_chosen_prev_set != start_chosen.end())
+                                {
+                                    num_chosen_prev = num_chosen_prev_set->second.size();
+                                }
                             }
                         }
 
