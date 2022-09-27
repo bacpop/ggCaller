@@ -354,8 +354,8 @@ void generate_ORFs(const int& colour_ID,
                         if (len_diff_prob >= score_tolerance)
                         {
                             bool better_cov = start_coverage >= best_coverage;
-                            bool better_TIS = TIS_score >= best_TIS_score;
-                            bool better_chosen = num_chosen >= num_chosen_prev;
+                            bool better_TIS = TIS_score > best_TIS_score;
+                            bool better_chosen = num_chosen > num_chosen_prev;
                             // ensure two of three parameters are satisfied
                             if ((better_cov && better_TIS) || (better_cov && better_chosen) || (better_TIS && better_chosen))
                             {
