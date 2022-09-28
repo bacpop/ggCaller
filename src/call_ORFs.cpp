@@ -301,22 +301,12 @@ void generate_ORFs(const int& colour_ID,
                         // get ORF coords for current iteration
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
-//                        // determine coverage of start
-//                        size_t site_hash;
-//                        {
-//                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-//                            std::string start_site_AA = (translate(start_site_DNA)).aa();
-//                            site_hash = hasher{}(start_site_AA);
-//                        }
-                        const std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-                        const std::string start_site_AA = (translate(start_site_DNA)).aa();
-                        size_t site_hash = hasher{}(start_site_AA);
-
-                        if (start_freq.find(site_hash) == start_freq.end())
+                        // determine coverage of start
+                        size_t site_hash;
                         {
-                            cout << start_site_DNA << endl;
-                            cout << start_site_AA << endl;
-                            cout << colour_ID << endl;
+                            std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
+                            std::string start_site_AA = (translate(start_site_DNA)).aa();
+                            site_hash = hasher{}(start_site_AA);
                         }
 
                         // determine number of times each start chosen
