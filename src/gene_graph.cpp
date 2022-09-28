@@ -123,19 +123,15 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                                        T weight_pmap,
                                        const std::vector<Kmer>& head_kmer_arr)
 {
-    // determine start (in-degree = 0) and end (out-degree = 0) vertices
+    // set all vertices as source and sink
     std::vector<VertexDescriptor> start_vertices;
     std::vector<VertexDescriptor> end_vertices;
+
+    // push all vertices onto vertex list to test all possible paths
     for (const auto& v : vertex_list)
     {
-        if (in_degree(v, g) == 0)
-        {
-            start_vertices.push_back(v);
-        }
-        if (out_degree(v, g) == 0)
-        {
-            end_vertices.push_back(v);
-        }
+        start_vertices.push_back(v);
+        end_vertices.push_back(v);
     }
 
     // catch issue if no vertices in start or end
@@ -164,80 +160,79 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
             gene_path = {vertex_mapping.at(start)};
         }
 
-        // check if start is also end vertex, if so move on
-        if (std::find(end_vertices.begin(), end_vertices.end(), start) != end_vertices.end())
-        {
-            continue;
-        } else
-        {
-            std::vector<float> distances(numVertices);
-            std::vector<VertexDescriptor> pMap(numVertices);
+        std::vector<float> distances(numVertices);
+        std::vector<VertexDescriptor> pMap(numVertices);
 
-            // call to the algorithm, searching all paths from start
-            bellman_ford_shortest_paths(g, numVertices,
-                                        weight_map(weight_pmap).
-                                                root_vertex(start).
-                                                predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
-                                                distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))));
+        // call to the algorithm, searching all paths from start
+        bellman_ford_shortest_paths(g, numVertices,
+                                    weight_map(weight_pmap).
+                                            root_vertex(start).
+                                            predecessor_map(make_iterator_property_map(pMap.begin(), get(vertex_index, g))).
+                                            distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))));
 
-            // determine shortest path to each end
-            for (const auto& end : end_vertices)
+        // determine shortest path to each end
+        for (const auto& end : end_vertices)
+        {
+            // pass if start and end are the same
+            if (start == end)
             {
-                float path_score = start_score;
+                continue;
+            }
 
-                auto path = getPath(g, pMap, distances, start, end, path_score, vertex_mapping);
+            float path_score = start_score;
 
-                if (path_score < high_score)
+            auto path = getPath(g, pMap, distances, start, end, path_score, vertex_mapping);
+
+            if (path_score < high_score)
+            {
+                gene_path = std::move(path);
+                high_score = path_score;
+            }
+            // if path_score is the same, take longest path
+            else if (path_score == high_score)
+            {
+                if (path.size() > gene_path.size())
                 {
                     gene_path = std::move(path);
                     high_score = path_score;
                 }
-                // if path_score is the same, take longest path
-                else if (path_score == high_score)
+                // if same size, then take lowest hash
+                else if (path.size() == gene_path.size())
                 {
-                    if (path.size() > gene_path.size())
+                    size_t curr_hash;
+                    {
+                        std::string seq;
+                        for (const auto& ORF_ID : gene_path)
+                        {
+                            const auto& ORF_info = ORF_map.at(ORF_ID);
+                            for (const auto& node_traversed : std::get<0>(ORF_info))
+                            {
+                                const size_t node_ID = abs(node_traversed) - 1;
+                                seq += head_kmer_arr.at(node_ID).toString();
+                            }
+                        }
+                        curr_hash = hasher{}(seq);
+                    }
+
+                    size_t new_hash;
+                    {
+                        std::string seq;
+                        for (const auto& ORF_ID : path)
+                        {
+                            const auto& ORF_info = ORF_map.at(ORF_ID);
+                            for (const auto& node_traversed : std::get<0>(ORF_info))
+                            {
+                                const size_t node_ID = abs(node_traversed) - 1;
+                                seq += head_kmer_arr.at(node_ID).toString();
+                            }
+                        }
+                        new_hash = hasher{}(seq);
+                    }
+
+                    if (new_hash < curr_hash)
                     {
                         gene_path = std::move(path);
                         high_score = path_score;
-                    }
-                    // if same size, then take lowest hash
-                    else if (path.size() == gene_path.size())
-                    {
-                        size_t curr_hash;
-                        {
-                            std::string seq;
-                            for (const auto& ORF_ID : gene_path)
-                            {
-                                const auto& ORF_info = ORF_map.at(ORF_ID);
-                                for (const auto& node_traversed : std::get<0>(ORF_info))
-                                {
-                                    const size_t node_ID = abs(node_traversed) - 1;
-                                    seq += head_kmer_arr.at(node_ID).toString();
-                                }
-                            }
-                            curr_hash = hasher{}(seq);
-                        }
-
-                        size_t new_hash;
-                        {
-                            std::string seq;
-                            for (const auto& ORF_ID : path)
-                            {
-                                const auto& ORF_info = ORF_map.at(ORF_ID);
-                                for (const auto& node_traversed : std::get<0>(ORF_info))
-                                {
-                                    const size_t node_ID = abs(node_traversed) - 1;
-                                    seq += head_kmer_arr.at(node_ID).toString();
-                                }
-                            }
-                            new_hash = hasher{}(seq);
-                        }
-
-                        if (new_hash < curr_hash)
-                        {
-                            gene_path = std::move(path);
-                            high_score = path_score;
-                        }
                     }
                 }
             }
