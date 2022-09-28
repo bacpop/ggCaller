@@ -155,6 +155,7 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
         // unpack tuple
         const size_t & pos_idx = std::get<0>(node_tuple);
         const int & node_id = std::get<1>(node_tuple);
+        const auto & avoid_arr = std::get<2>(node_tuple);
         const boost::dynamic_bitset<> & colour_arr = std::get<3>(node_tuple);
         const size_t & path_length = std::get<4>(node_tuple);
 
@@ -202,10 +203,19 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // parse neighbour information. Frame is next stop codon, with first dictating orientation and second the stop codon index
             const int neighbour_id = (neighbour_strand) ? neighbour_um_data->get_id() : neighbour_um_data->get_id() * -1;
 
-            // check if node is already fully traversed by another gene
+            // check if node is already fully traversed by another gene. If two in a row, then ignore node
+            std::bitset<3> updated_avoid_arr = avoid_arr;
             if (to_avoid.find(neighbour_id) != to_avoid.end())
             {
-                continue;
+                updated_avoid_arr[avoid_arr.count()] = 1;
+                if (updated_avoid_arr.count() > 1)
+                {
+                    continue;
+                }
+            } else
+            {
+                // otherwise reset all bits
+                updated_avoid_arr.reset();
             }
 
             // check against fm-idx every node, pass if not present
@@ -260,7 +270,7 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
                 if (neighbour_um_data->end_contig(current_colour) && !(updated_path_length >= radius))
                 {
                     // if no previous conditions are satisfied, prepare tuple for stack
-                    NodeTuple new_node_tuple(new_pos_idx, neighbour_id, 0, updated_colours_arr, updated_path_length);
+                    NodeTuple new_node_tuple(new_pos_idx, neighbour_id, updated_avoid_arr, updated_colours_arr, updated_path_length);
 
                     // add to stack
                     node_stack.push(new_node_tuple);
@@ -270,7 +280,7 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
             }
 
             // if no previous conditions are satisfied, prepare tuple for stack
-            NodeTuple new_node_tuple(new_pos_idx, neighbour_id, 0, updated_colours_arr, updated_path_length);
+            NodeTuple new_node_tuple(new_pos_idx, neighbour_id, updated_avoid_arr, updated_colours_arr, updated_path_length);
 
             // add to stack
             node_stack.push(new_node_tuple);
