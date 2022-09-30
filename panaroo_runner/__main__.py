@@ -283,37 +283,37 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     for node in G.nodes():
         G.nodes[node]['size'] = len(G.nodes[node]['members'])
         G.nodes[node]['centroid'] = ";".join(G.nodes[node]['centroid'])
-        # G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        # G.nodes[node]['protein'] = ";".join(conv_list(
-        #     G.nodes[node]['protein']))
         G.nodes[node]['genomeIDs'] = ";".join(
             [str(m) for m in G.nodes[node]['members']])
         G.nodes[node]['geneIDs'] = ";".join(G.nodes[node]['seqIDs'])
         G.nodes[node]['degrees'] = G.degree[node]
         G.nodes[node]['members'] = list(G.nodes[node]['members'])
         G.nodes[node]['seqIDs'] = list(G.nodes[node]['seqIDs'])
+        G.nodes[node]['lengths'] = []
 
-        # if all seq in graph specified, generate DNA sequences and protein sequences for all seq_IDs
         if all_seq_in_graph:
             G.nodes[node]['dna'] = []
             G.nodes[node]['protein'] = []
-            for seq_ID in G.nodes[node]['seqIDs']:
-                # parse genome id and local ORF id from centroid
-                parsed_id = seq_ID.split("_")
-                genome_id = int(parsed_id[0])
-                local_id = int(parsed_id[-1])
 
-                # access ORF information for each ORF from high_scoring_ORFs
-                ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+        for seq_ID in G.nodes[node]['seqIDs']:
+            parsed_id = seq_ID.split("_")
+            genome_id = int(parsed_id[0])
+            local_id = int(parsed_id[-1])
+            ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+
+            G.nodes[node]['lengths'].append(ORFNodeVector[2])
+
+            # if all seq in graph specified, generate DNA sequences and protein sequences for all seq_IDs
+            if all_seq_in_graph:
                 seq = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 G.nodes[node]['dna'].append(seq)
                 if local_id < 0:
                     G.nodes[node]['protein'].append(ORFNodeVector[4])
                 else:
                     G.nodes[node]['protein'].append(str(Seq(seq).translate()))
-            # convert to printable format
-            G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-            G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
+                # convert to printable format
+                G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+                G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
