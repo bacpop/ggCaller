@@ -292,7 +292,7 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
 RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,
                              const size_t& colour_ID,
-                             const std::pair<std::vector<int>, std::vector<indexPair>>& ORF_info,
+                             const std::pair<std::vector<int>, std::vector<indexPair>>& ORF_info_const,
                              const size_t& radius,
                              const bool is_ref,
                              const int kmer,
@@ -311,6 +311,10 @@ RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
     //bool for determining if upstream or downstream empty
     bool upstream_empty = true;
     bool downstream_empty = true;
+
+    // remove regions in unitig overlaps
+    std::pair<std::vector<int>, std::vector<indexPair>> ORF_info = ORF_info_const;
+    simplify_ORFNodeVector(ORF_info, overlap);
 
     // traverse start node in reverse direction
     {
