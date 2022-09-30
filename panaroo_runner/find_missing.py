@@ -37,7 +37,7 @@ def find_missing(G,
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
                 ORF_ID = int(sid.split("_")[-1])
-                ORF_info = G.nodes[neigh]["ORF_info"][G.nodes[neigh]['maxLenId']]
+                ORF_info = (high_scoring_ORFs[member][ORF_ID][0], high_scoring_ORFs[member][ORF_ID][1])
                 search_dict[member]["conflicts"][neigh] = ORF_info
 
                 if member not in G.nodes[node]['members']:
