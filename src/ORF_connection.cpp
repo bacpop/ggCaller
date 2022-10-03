@@ -14,7 +14,7 @@ robin_hood::unordered_map<size_t, std::vector<size_t>> add_ORF_info (const Color
         auto & ORF_info = gene_map.at(source);
 
         // remove regions in unitig overlaps
-        simplify_ORFNodeVector(ORF_info, overlap);
+        //simplify_ORFNodeVector(ORF_info, overlap);
 
         // get start and stop node of ORF to add to node_to_ORFs
         std::unordered_set<size_t> front_back_index = {0, std::get<0>(ORF_info).size() - 1};

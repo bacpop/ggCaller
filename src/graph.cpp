@@ -604,6 +604,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                         {
                             if (gene_map.find(ORF_ID) == gene_map.end())
                             {
+                                // simplify ORF_info
+                                simplify_ORFNodeVector(ORF_map[ORF_ID], overlap);
                                 gene_map[ORF_ID] = std::move(ORF_map[ORF_ID]);
                             }
                         }
@@ -613,6 +615,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     // return unfiltered genes
                     for (auto& entry : ORF_map)
                     {
+                        // simplify ORF_info
+                        simplify_ORFNodeVector(entry.second, overlap);
                         gene_map[entry.first] = std::move(entry.second);
                         gene_paths.push_back({entry.first});
                     }
@@ -622,6 +626,8 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // return unfiltered genes
                 for (auto& entry : ORF_map)
                 {
+                    // simplify ORF_info
+                    simplify_ORFNodeVector(entry.second, overlap);
                     gene_map[entry.first] = std::move(entry.second);
                     gene_paths.push_back({entry.first});
                 }
