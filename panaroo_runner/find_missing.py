@@ -84,80 +84,6 @@ def find_missing(G,
                                                                                    overlap)).translate()))
             for hit in hits)
 
-    # remove nodes that conflict (overlap)
-    nodes_by_size = sorted([(G.nodes[node]['size'], node)
-                            for node in G.nodes()],
-                           reverse=True)
-    nodes_by_size = [n[1] for n in nodes_by_size]
-    bad_node_mem_pairs = set()
-    bad_nodes = set()
-    for member, node_locs in enumerate(all_node_locs):
-        seq_coverage = {}
-        # iterate over all nodes and add sequence information
-        for node in nodes_by_size:
-            # if node in bad_nodes: continue
-            if node not in node_locs: continue
-            # iterate over all the nodes present for the current ORF
-            node_coverage = 0
-            for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
-                # check if node is negative and needs reversing
-                # make copies to avoid editing in place
-                temp_DBG_node = DBG_node
-                # get size of node
-                node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
-                if temp_DBG_node < 0:
-                    temp_DBG_node *= -1
-                    temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
-                else:
-                    temp_node_coords = node_coords
-                if temp_DBG_node not in seq_coverage:
-                    seq_coverage[temp_DBG_node] = np.zeros(node_end + 1, dtype=bool)
-                else:
-                    node_coverage += np.sum(seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1]])
-            # negate coverage from node overlaps in DBG
-            node_coverage -= node_locs[node][2]
-            # check if node coverage is exceeded
-            if node_coverage >= 0.5 * (max(G.nodes[node]['lengths'])):
-                if member in G.nodes[node]['members']:
-                    remove_member_from_node(G, node, member)
-                bad_node_mem_pairs.add((node, member))
-            else:
-                # if sequence coverage is less than threshold, iterate again and add sequence information
-                for DBG_node, node_coords in zip(node_locs[node][0], node_locs[node][1]):
-                    temp_DBG_node = DBG_node
-                    if temp_DBG_node < 0:
-                        temp_DBG_node *= -1
-                        node_end = graph_shd_arr[0].node_size(temp_DBG_node) - 1
-                        temp_node_coords = (node_end - node_coords[1], node_end - node_coords[0])
-                    else:
-                        temp_node_coords = node_coords
-                    seq_coverage[temp_DBG_node][temp_node_coords[0]:temp_node_coords[1] + 1] = True
-
-    for node in G.nodes():
-        if len(G.nodes[node]['members']) <= 0:
-            bad_nodes.add(node)
-    for node in bad_nodes:
-        if node in G.nodes():
-            delete_node(G, node)
-
-    # remove by consensus
-    if remove_by_consensus:
-        if verbose:
-            print("removing by consensus...")
-        node_hit_counter = Counter()
-        for member, hits in enumerate(all_hits):
-            for node, dna_hit in hits:
-                if dna_hit == "": continue
-                if node in bad_nodes: continue
-                if (node, member) in bad_node_mem_pairs: continue
-                node_hit_counter[node] += 1
-        for node in G:
-            if node_hit_counter[node] > G.nodes[node]['size']:
-                bad_nodes.add(node)
-        for node in bad_nodes:
-            if node in G.nodes():
-                delete_node(G, node)
-
     if verbose:
         print("Updating output...")
 
@@ -168,8 +94,6 @@ def find_missing(G,
         for node, dna_hit in hits:
             i += 1
             if dna_hit == "": continue
-            if node in bad_nodes: continue
-            if (node, member) in bad_node_mem_pairs: continue
             n_found += 1
             hit_protein, hit_dna = hits_trans_dict[member][i]
             G.nodes[node]['members'].add(member)
@@ -221,20 +145,12 @@ def search_graph(search_pair,
     # mask regions that already have genes
     for node, ORF_info in conflicts.items():
         # determine sequence overlap of ORFs
-        total_overlap = 0
         for i, node_coords in enumerate(ORF_info[1]):
             node_overlap = (node_coords[1] - node_coords[0]) + 1
 
             # if node is fully traversed for given strand, add to nodes to avoid
             if node_overlap == graph_shd_arr[0].node_size(ORF_info[0][i]):
                 to_avoid.add(ORF_info[0][i])
-
-            if i != 0:
-                if node_coords[1] >= kmer - 1:
-                    total_overlap += ((kmer - 1) - node_coords[0])
-                else:
-                    total_overlap += (node_coords[1] - node_coords[0]) + 1
-        node_locs[node] = (ORF_info[0], ORF_info[1], total_overlap)
 
     # get sequences to search
     refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
