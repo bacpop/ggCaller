@@ -226,7 +226,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                     aligned_dna += to_add
                     dna_idx += 3
 
-            id = isolate_names[mem] + "_" + str(ORF_ID).zfill(6)
+            id = isolate_names[mem] + "_" + str(ORF_ID)
             output_sequences.append(SeqRecord(Seq(aligned_dna), id=id, description=""))
 
     # overwrite existing alignment file
@@ -246,9 +246,9 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
         for colour, gene_dict in high_scoring_ORFs.items():
             for ORF_ID, ORFNodeVector in gene_dict.items():
                 gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID),
                                              description=""))
-                aa_records.append(SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                aa_records.append(SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID),
                                             description=""))
     else:
         for node in G.nodes():
@@ -266,15 +266,15 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                         ORF_ID < 0 and (ORF_info[3] is True
                                         or ORF_len % 3 != 0)):
                     gene_annotation += " (potential psuedogene)"
-                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID),
                                    description="ggcID=" + sid + ";" + gene_annotation))
                 if (ORF_ID < 0):
                     aa_records.append(
-                        SeqRecord(Seq(ORF_info[4]), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                        SeqRecord(Seq(ORF_info[4]), id=isolate_names[colour] + "_" + str(ORF_ID),
                                         description="ggcID=" + sid + ";" + gene_annotation))
                 else:
                     aa_records.append(
-                        SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID).zfill(6),
+                        SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID),
                                         description="ggcID=" + sid + ";" + gene_annotation))
     SeqIO.write(DNA_records, outfile + ".ffn", "fasta")
     SeqIO.write(aa_records, outfile + ".faa", "fasta")
@@ -321,7 +321,7 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                     strand = 1 if entry[1][1] else -1
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
-                        "ID": isolate_names[colour] + "_" + str(entry[0]).zfill(6),
+                        "ID": isolate_names[colour] + "_" + str(entry[0]),
                         "inference": entry[2][0],
                         "score": entry[2][2],
                         "annotation": [entry[2][3].replace(",", " ").replace("|", "-")
