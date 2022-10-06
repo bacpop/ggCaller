@@ -268,7 +268,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
                                       high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
                                       ignore_pseduogenes, truncation_threshold, pool)
-        core_nodes = get_core_gene_nodes(G, core, len(input_colours))
+        core_nodes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, high_scoring_ORFs,
+                                         truncation_threshold)
         core_gene_names = [G.nodes[x[0]]["name"] for x in core_nodes]
         concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpu)
     elif aln == "core":
