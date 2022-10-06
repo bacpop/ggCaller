@@ -388,7 +388,7 @@ def output_dna_sequence(node_pair, shd_arr_tup, overlap):
     return ref_output_sequences
 
 def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
-                              ref_aln, ignore_pseduogenes, truncation_threshold):
+                              ref_aln, ignore_pseduogenes, truncation_threshold, threshold=0, num_isolates=0):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
@@ -424,9 +424,20 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
                                                                   high_scoring_ORFs[int(x.split("_")[0])][
                                                                       int(x.split("_")[-1])][2] % 3 != 0
                                                                   )))])
+
     else:
         sequence_ids = node["seqIDs"]
         centroid_sequence_ids = set(node["centroid"])
+
+    # check if threshold exceeded if conducting core genome alignment
+    if num_isolates > 0:
+        colour_set = set()
+
+        colour_set.update([int(x.split("_")[0]) for x in sequence_ids])
+        colour_set.update([int(x.split("_")[0]) for x in centroid_sequence_ids])
+
+        if len(colour_set) / num_isolates < threshold:
+            return None, None
 
     # if reference-guided alignment being done, separate centroids and other sequences
     if ref_aln:
@@ -1083,7 +1094,8 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
                                                  high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseduogenes=ignore_pseduogenes,
-                                                 truncation_threshold=truncation_threshold),
+                                                 truncation_threshold=truncation_threshold, threshold=threshold,
+                                                 num_isolates=num_isolates),
                                          core_genes):
         unaligned_sequence_files.append(outname)
         unaligned_reference_files.append(ref_outname)
