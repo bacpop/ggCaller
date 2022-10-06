@@ -1044,7 +1044,6 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
     ]
     # Read in all these alignments
     gene_alignments = []
-    isolates = set()
     for filename in core_filenames:
         #ensure file exists
         if not os.path.exists(alignments_dir + filename):
@@ -1061,11 +1060,10 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
             else:
                 gene_dict[genome_id] = (record.id, record.seq)
             gene_length = len(record.seq)
-            isolates.add(genome_id)
         gene_alignments.append((gene_name, gene_dict, gene_length))
     # Combine them
     isolate_aln = []
-    for iso in isolates:
+    for iso in isolate_names:
         seq = ""
         for gene in gene_alignments:
             if iso in gene[1]:
