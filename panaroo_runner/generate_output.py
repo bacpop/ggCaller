@@ -1036,6 +1036,9 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
     gene_alignments = []
     isolates = set()
     for filename in core_filenames:
+        #ensure file exists
+        if not os.path.exists(alignments_dir + filename):
+            continue
         gene_name = os.path.splitext(os.path.basename(filename))[0]
         alignment = AlignIO.read(alignments_dir + filename, 'fasta')
         gene_dict = {}
