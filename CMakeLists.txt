@@ -33,6 +33,7 @@ FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
 
 # Find libraries
+include(FindPackageHandleStandardArgs)
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
 
@@ -43,7 +44,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifros
 # Set dirs if multiple include/libraries found
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
-SET( bifrost_INCLUDE_DIRS ${z_INCLUDE_DIR} )
+SET( bifrost_INCLUDE_DIRS ${bifrost_INCLUDE_DIR} )
 # hack to avoid local MKL being linked
 SET( MKL_LIBRARIES ${bifrost_LIBRARY} )
 # avoid local MKL
