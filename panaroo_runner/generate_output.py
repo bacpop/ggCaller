@@ -989,10 +989,11 @@ def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_sco
     # Get the core genes based on percent threshold
     core_nodes = []
     for node in G.nodes(data=True):
-        if float(G.nodes[node[0]]["size"]) / float(num_isolates) >= threshold:
+        node_data = node[1]
+        if float(node_data["size"]) / float(num_isolates) >= threshold:
             if ignore_pseudogenes:
-                length_centroid = node['lengths'][node['maxLenId']]
-                sequence_ids = [x for x in node["seqIDs"] if
+                length_centroid = node_data['lengths'][node_data['maxLenId']]
+                sequence_ids = [x for x in node_data["seqIDs"] if
                             not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                                   < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
                                                                                 (high_scoring_ORFs[
