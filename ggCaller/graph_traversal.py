@@ -45,15 +45,11 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
                 split_ID = ORF.split("_")
                 colour = int(split_ID[0])
                 ORF_ID = int(split_ID[1])
-                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID).zfill(6)
+                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID)
                 ORF_info = high_scoring_ORFs[colour][ORF_ID]
                 seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
-                # add annotation if available
-                if len(ORF_info) > 6 or ORF_ID < 0:
-                    ORF_annotation = ORF_info[-1]
-                    f.write(
-                        ">" + fasta_ID + " " + ORF_annotation[-1] + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
-                else:
-                    f.write(">" + fasta_ID + " QUERY=" + query_vec[i] + "\n" + seq + "\n")
+                # add annotation
+                f.write(
+                    ">" + fasta_ID + " ggcID=" + ORF + " QUERY=" + query_vec[i] + " annotation=" + ORF_info[-1] + "\n" + seq + "\n")
 
     return

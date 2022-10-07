@@ -316,6 +316,12 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
                 G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
+            # add node annotation
+            if save_objects:
+                high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
+                high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
+
+
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
             [str(m) for m in G.edges[edge[0], edge[1]]['members']])
@@ -336,18 +342,27 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # make sure trailing forward slash is present
         objects_dir = os.path.join(objects_dir, "")
 
+        to_remove = set()
+
+        # create index of all high_scoring_ORFs node_IDs, remove if not in panaroo graph
+        node_index = defaultdict(list)
+        for colour, gene_dict in high_scoring_ORFs.items():
+            for ORF_ID, ORF_info in gene_dict.items():
+                if not isinstance(ORF_info, list):
+                    to_remove.add((colour, ORF_ID))
+                    continue
+                entry_ID = str(colour) + "_" + str(ORF_ID)
+                for node in ORF_info[0]:
+                    node_index[abs(node)].append(entry_ID)
+
+        # remove genes not in panaroo graph
+        for entry in to_remove:
+            del high_scoring_ORFs[entry[0]][entry[1]]
+
         # serialise graph object and high scoring ORFs to future reading
         shd_arr[0].data_out(objects_dir + "ggc_graph.dat")
         with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
             cPickle.dump(high_scoring_ORFs, o)
-
-        # create index of all high_scoring_ORFs node_IDs
-        node_index = defaultdict(list)
-        for colour, gene_dict in high_scoring_ORFs.items():
-            for ORF_ID, ORF_info in gene_dict.items():
-                entry_ID = str(colour) + "_" + str(ORF_ID)
-                for node in ORF_info[0]:
-                    node_index[abs(node)].append(entry_ID)
 
         with open(objects_dir + "node_index.dat", "wb") as o:
             cPickle.dump(node_index, o)
