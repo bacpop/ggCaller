@@ -2,6 +2,19 @@
 
 #include "call_ORFs.h"
 
+float CalcMHWScore(std::vector<int> hWScores)
+{
+    assert(!hWScores.empty());
+    const auto middleItr = hWScores.begin() + hWScores.size() / 2;
+    std::nth_element(hWScores.begin(), middleItr, hWScores.end());
+    if (hWScores.size() % 2 == 0) {
+        const auto leftMiddleItr = std::max_element(hWScores.begin(), middleItr);
+        return ((float)*leftMiddleItr + (float)*middleItr) / 2;
+    } else {
+        return (float)*middleItr;
+    }
+}
+
 // generate ORFs from paths
 void generate_ORFs(const int& colour_ID,
                    ORFNodeMap& ORF_node_map,
@@ -21,9 +34,10 @@ void generate_ORFs(const int& colour_ID,
                    const bool no_filter,
                    const size_t nb_colours,
                    tbb::concurrent_unordered_map<size_t, float>& all_TIS_scores,
-                   const tbb::concurrent_unordered_map<size_t, size_t>& start_freq,
+                   const robin_hood::unordered_map<std::string, size_t>& start_freq,
                    const float& score_tolerance,
-                   tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_chosen)
+                   tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_chosen,
+                   const int& aa_kmer)
 {
     // Set as present and not-reverse complement if is_ref. If false positive slipped through, remove
     std::pair<bool, bool> present(true, false);
@@ -302,11 +316,21 @@ void generate_ORFs(const int& colour_ID,
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
                         // determine coverage of start
+                        std::vector<int> site_coverage;
                         size_t site_hash;
                         {
                             std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
                             std::string start_site_AA = (translate(start_site_DNA)).aa();
                             site_hash = hasher{}(start_site_AA);
+
+                            const int num_kmers = start_site_AA.size() - aa_kmer;
+
+                            site_coverage.resize(num_kmers);
+
+                            for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
+                            {
+                                site_coverage[kmer_index] = start_freq.at(get_kmers(start_site_AA, kmer_index, aa_kmer));
+                            }
                         }
 
                         // determine number of times each start chosen
@@ -331,7 +355,7 @@ void generate_ORFs(const int& colour_ID,
                             }
                         }
 
-                        const float start_coverage = (float)start_freq.at(site_hash) / (float)nb_colours;
+                        const float start_coverage = (float)CalcMHWScore(site_coverage) / (float)nb_colours;
 
                         // calculate delta length from max ORF in codon space
                         const float delta_length = (float)(best_ORF_len / 3) - (float)(ORF_len / 3);

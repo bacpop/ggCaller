@@ -320,3 +320,8 @@ void simplify_ORFNodeVector (ORFNodeVector& ORF_info,
         std::get<1>(ORF_info) = std::move(new_indices);
     }
 }
+
+std::string get_kmers(std::string& seq, int i, int k)
+{
+    return seq.substr(i, k);
+}

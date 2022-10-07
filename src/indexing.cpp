@@ -177,7 +177,8 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                             const std::vector<std::string>& start_codon_rev,
                             const int& kmer,
                             const size_t& nb_colours,
-                            tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>>& start_freq_set)
+                            tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_set<int>>& start_freq_set,
+                            const int& aa_kmer)
 {
     // initialise unitig_dict
     DataAccessor<MyUnitigMap>* da = um.getData();
@@ -299,14 +300,24 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                     continue;
                 }
 
-                size_t start_hash = hasher{}(start_site_AA);
+                const int num_kmers = start_site_AA.size() - aa_kmer;
+
+                std::vector<std::string> AA_kmers(num_kmers);
+
+                for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
+                {
+                    AA_kmers[kmer_index] = get_kmers(start_site_AA, kmer_index, aa_kmer);
+                }
 
                 // add colours to start_freq_set
                 for (int i = 0; i < nb_colours; i++)
                 {
                     if ((bool)full_unitig_colour[i])
                     {
-                        start_freq_set[start_hash].insert(i);
+                        for (const auto& entry_aa : AA_kmers)
+                        {
+                            start_freq_set[entry_aa].insert(i);
+                        }
                     }
                 }
             }
@@ -340,14 +351,24 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                     continue;
                 }
 
-                size_t start_hash = hasher{}(start_site_AA);
+                const int num_kmers = start_site_AA.size() - aa_kmer;
+
+                std::vector<std::string> AA_kmers(num_kmers);
+
+                for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
+                {
+                    AA_kmers[kmer_index] = get_kmers(start_site_AA, kmer_index, aa_kmer);
+                }
 
                 // add colours to start_freq_set
                 for (int i = 0; i < nb_colours; i++)
                 {
                     if ((bool)full_unitig_colour[i])
                     {
-                        start_freq_set[start_hash].insert(i);
+                        for (const auto& entry_aa : AA_kmers)
+                        {
+                            start_freq_set[entry_aa].insert(i);
+                        }
                     }
                 }
             }
@@ -462,7 +483,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
                              const boost::dynamic_bitset<>& ref_set,
-                             tbb::concurrent_unordered_map<size_t, size_t>& start_freq)
+                             robin_hood::unordered_map<std::string, size_t>& start_freq)
 {
     // get all head kmers and add IDs
     size_t unitig_id = 1;
@@ -481,7 +502,10 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
     size_t num_codons = 0;
 
     // determine sharing of start positions
-    tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_freq_set;
+    tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_set<int>> start_freq_set;
+
+    // get amino acid k-mer length. Make it so that mutation in middle of string won't affect all k-mers.
+    const int aa_kmer = std::round((float) kmer / (float) 6) - 1;
 
     // run unitig indexing in parallel
     #pragma omp parallel
@@ -495,7 +519,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             UnitigColorMap<MyUnitigMap> um = ccdbg.find(*it, true);
 
             // generate results per unitig
-            analyse_unitigs_binary(ccdbg, um, num_stops, num_codons, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, start_freq_set);
+            analyse_unitigs_binary(ccdbg, um, num_stops, num_codons, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, start_freq_set, aa_kmer);
             DataAccessor<MyUnitigMap>* da = um.getData();
             MyUnitigMap* um_data = da->getData(um);
 

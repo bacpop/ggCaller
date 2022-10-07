@@ -137,7 +137,7 @@ class Graph {
     NodeColourVector _NodeColourVector;
 
     // mapping of start site sequences to frequency
-    tbb::concurrent_unordered_map<size_t, size_t> _StartFreq;
+    robin_hood::unordered_map<std::string, size_t> _StartFreq;
 
     // bitset to determine if colours are refs or reads
     boost::dynamic_bitset<> _RefSet;

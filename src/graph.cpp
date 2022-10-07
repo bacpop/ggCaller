@@ -271,6 +271,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         tbb::concurrent_unordered_map<size_t, tbb::concurrent_unordered_set<int>> start_chosen;
 
         cout << "Traversing graph to identify ORFs..." << endl;
+
+        const int aa_kmer = std::round((float) (overlap + 1) / (float) 6) - 1;
+
         #pragma omp parallel for
         for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
         {
@@ -315,7 +318,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 ORF_map = std::move(traverse_graph(_ccdbg, _KmerArray, _stop_freq, colour_ID, node_ids, repeat, max_path_length,
                                                    overlap, is_ref, _RefSet, fm_idx, stop_codons_for, start_codons_for, min_ORF_length,
                                                    TIS_model, minimum_ORF_score, no_filter, all_TIS_scores, _StartFreq, score_tolerance,
-                                                   start_chosen));
+                                                   start_chosen, aa_kmer));
 
             }
 
@@ -330,8 +333,9 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         }
     }
 
-    //clear _NodeColourVector
+    //clear objects no longer used
     _NodeColourVector.clear();
+    _StartFreq.clear();
 
     // add new line to account for progress bar
     cout << endl;

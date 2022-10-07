@@ -104,4 +104,6 @@ std::string generate_sequence_nm(const std::vector<int>& nodelist,
 void simplify_ORFNodeVector (ORFNodeVector& ORF_info,
                              const int& overlap);
 
+std::string get_kmers(std::string& seq, int i, int k);
+
 #endif //UNITIG_DICT_H
