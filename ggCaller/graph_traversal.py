@@ -36,20 +36,27 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
 
     outfile = output_dir + "matched_queries.fasta"
     print("Matching overlapping ORFs...")
+
+    ORF_dict = {}
+    for i in range(len(query_nodes)):
+        for node in query_nodes[i]:
+            for ORF_ID in node_index[node]:
+                if ORF_ID not in ORF_dict:
+                    ORF_dict[ORF_ID] = []
+                ORF_dict[ORF_ID].append(i)
+
     with open(outfile, "w") as f:
-        for i in range(len(query_nodes)):
-            query_set = set()
-            for node in query_nodes[i]:
-                query_set.update(node_index[node])
-            for ORF in query_set:
-                split_ID = ORF.split("_")
-                colour = int(split_ID[0])
-                ORF_ID = int(split_ID[1])
-                fasta_ID = isolate_names[colour] + "_" + str(ORF_ID)
-                ORF_info = high_scoring_ORFs[colour][ORF_ID]
-                seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
-                # add annotation
-                f.write(
-                    ">" + fasta_ID + " ggcID=" + ORF + " QUERY=" + query_vec[i] + " annotation=" + ORF_info[-1] + "\n" + seq + "\n")
+        for ORF, aligned in ORF_dict.items():
+            split_ID = ORF.split("_")
+            colour = int(split_ID[0])
+            ORF_ID = int(split_ID[-1])
+            fasta_ID = isolate_names[colour] + "_" + str(ORF_ID)
+            ORF_info = high_scoring_ORFs[colour][ORF_ID]
+            seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
+            queries = ";".join([query_vec[i] for i in aligned])
+
+            # add annotation
+            f.write(
+                    ">" + fasta_ID + " ggcID=" + ORF + " QUERY=" + queries + " annotation=" + ORF_info[-1] + "\n" + seq + "\n")
 
     return

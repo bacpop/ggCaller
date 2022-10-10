@@ -351,7 +351,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 if not isinstance(ORF_info, list):
                     to_remove.add((colour, ORF_ID))
                     continue
-                entry_ID = str(colour) + "_" + str(ORF_ID)
+                delim = "_0_" if ORF_ID > 0 else "_refound_"
+                entry_ID = str(colour) + delim + str(ORF_ID)
                 for node in ORF_info[0]:
                     node_index[abs(node)].append(entry_ID)
 
