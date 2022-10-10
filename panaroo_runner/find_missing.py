@@ -102,13 +102,8 @@ def find_missing(G,
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
-            if G.nodes[node]['bitscore'] != 0:
-                annotation = ("refound", G.nodes[node]['annotation'],
-                              G.nodes[node]['bitscore'], G.nodes[node]['description'])
-            else:
-                annotation = ("refound", "hypothetical protein", 0, "hypothetical protein")
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, annotation)
+                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein)
 
     if verbose:
         print("Number of refound genes: ", n_found)

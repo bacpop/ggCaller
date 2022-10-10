@@ -69,7 +69,7 @@ def generate_diamond_index(infile):
     return outfile
 
 
-def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotate, annotation_db, evalue, pool):
+def run_diamond_search(G, shd_arr_tup, overlap, annotation_temp_dir, annotate, annotation_db, evalue, pool):
     # list of sequence records
     all_centroid_dna = []
 
@@ -103,7 +103,7 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
     try:
         df = pd.read_csv(annotation_temp_dir + "dna_d.tsv", sep='\t', header=None)
     except pd.errors.EmptyDataError:
-        return G, high_scoring_ORFs
+        return G
     df.set_axis(['query_id', 'id', 'bitscore', 'description'], axis=1, inplace=True)
 
     # split node in which query is found
@@ -122,18 +122,10 @@ def run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_te
         G.nodes[entry[0]]['bitscore'] = entry[2]
         G.nodes[entry[0]]['description'] = entry[3]
 
-        # add list for each seqid entry for annotation
-        for seqID in G.nodes[entry[0]]['seqIDs']:
-            # add entries for node to annotation_list
-            genome = int(seqID.split("_")[0])
-            gene_ID = int(seqID.split("_")[-1])
-            high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
-            ("diamond", entry[1], entry[2], entry[3]),)
-
-    return G, high_scoring_ORFs
+    return G
 
 
-def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, evalue, pool, n_cpu):
+def run_HMMERscan(G, shd_arr_tup, overlap, annotation_temp_dir, annotation_db, evalue, pool, n_cpu):
     # list of sequence records
     all_centroid_aa = []
 
@@ -172,7 +164,7 @@ def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_di
 
     # check if empty
     if df.empty:
-        return G, high_scoring_ORFs
+        return G
 
     # split node in which query is found
     df['node'] = df['query_id'].str.split(';').str[0]
@@ -190,26 +182,18 @@ def run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_di
         G.nodes[entry[0]]['bitscore'] = entry[2]
         G.nodes[entry[0]]['description'] = entry[3]
 
-        # add list for each seqid entry for annotation
-        for seqID in G.nodes[entry[0]]['seqIDs']:
-            # add entries for node to annotation_list
-            genome = int(seqID.split("_")[0])
-            gene_ID = int(seqID.split("_")[-1])
-            high_scoring_ORFs[genome][gene_ID] = high_scoring_ORFs[genome][gene_ID] + (
-            ("hmmscan", entry[1], entry[2], entry[3]),)
-
-    return G, high_scoring_ORFs
+    return G
 
 
-def iterative_annotation_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir, annotation_db, hmm_db,
+def iterative_annotation_search(G, shd_arr_tup, overlap, annotation_temp_dir, annotation_db, hmm_db,
                                 evalue, annotate, n_cpu, pool):
     # run initial iterative search
-    G, high_scoring_ORFs = run_diamond_search(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
+    G = run_diamond_search(G, shd_arr_tup, overlap, annotation_temp_dir,
                                               annotate, annotation_db, evalue, pool)
 
     # run ultra-sensitive search
     if annotate == "ultrasensitive":
-        G, high_scoring_ORFs = run_HMMERscan(G, shd_arr_tup, overlap, high_scoring_ORFs, annotation_temp_dir,
+        G = run_HMMERscan(G, shd_arr_tup, overlap, annotation_temp_dir,
                                              hmm_db, evalue, pool, n_cpu)
 
-    return G, high_scoring_ORFs
+    return G

@@ -327,7 +327,8 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                         "annotation": [entry[2][3].replace(",", " ").replace("|", "-")
                                            .replace("=", "-").replace("(", "").replace(")", "")
                                            .replace("[", "").replace("]", "").replace("'", "")
-                                           .replace("<", "").replace(">", "")],
+                                           .replace("<", "").replace(">", "").replace("~", "-")
+                                           .replace(";", " ")],
                     }
                     feature = SeqFeature(
                         FeatureLocation(entry[1][0][0], entry[1][0][1]),

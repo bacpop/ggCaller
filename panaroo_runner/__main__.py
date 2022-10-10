@@ -111,9 +111,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         annotation_temp_dir = os.path.join(annotation_temp_dir, "")
 
         # generate annotations
-        G, high_scoring_ORFs = iterative_annotation_search(G, shd_arr_tup, overlap, high_scoring_ORFs,
-                                                           annotation_temp_dir, annotation_db,
-                                                           hmm_db, evalue, annotate, n_cpu, pool)
+        G = iterative_annotation_search(G, shd_arr_tup, overlap,
+                                       annotation_temp_dir, annotation_db,
+                                       hmm_db, evalue, annotate, n_cpu, pool)
 
     if verbose:
         print("collapse gene families...")
@@ -203,6 +203,9 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     contig_annotation = defaultdict(list)
     for node in G.nodes():
         length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
+        node_annotation = G.nodes[node]['annotation']
+        node_bitscore = G.nodes[node]['bitscore']
+        node_description = G.nodes[node]['description']
         for sid in G.nodes[node]['seqIDs']:
             mem = int(sid.split("_")[0])
             ORF_ID = int(sid.split("_")[-1])
@@ -214,17 +217,21 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             else:
                 ids_len_stop[sid] = (ORF_len / 3, False)
             if annotate is not None and ref_list[mem]:
-                # annotated genes
-                if len(ORF_info) > 5 or ORF_ID < 0:
-                    # add each sequence to its respective contig for each gff file.
-                    annotation = ORF_info[-1]
-                else:
-                    annotation = ("prediction", "hypothetical protein", 0, "hypothetical protein")
+                # annotate genes
+                source = "annotation"
+                if node_bitscore == 0:
+                    source = "prediction"
+                    node_annotation = "hypothetical protein"
+                    node_description = "hypothetical protein"
+                if ORF_ID < 0:
+                    source = "refound"
+
+                annotation = (source, node_annotation, node_bitscore, node_description)
 
                 # annotate potential pseudogene if fits criteria of length, premature stop codon or length not multiple of 3
                 if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
                                                                                           or ORF_len % 3 != 0)):
-                    description = annotation[-1] + ", potential psuedogene"
+                    description = annotation[-1] + " potential psuedogene"
                     annotation = annotation[0:3] + (description,)
                 contig_annotation[mem].append((ORF_ID, annotation))
 
