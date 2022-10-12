@@ -300,8 +300,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         G.nodes[node]['lengths'] = []
 
         if all_seq_in_graph:
-            G.nodes[node]['dna'] = []
-            G.nodes[node]['protein'] = []
+            G.nodes[node]['dna'] = list()
+            G.nodes[node]['protein'] = list()
 
         for seq_ID in G.nodes[node]['seqIDs']:
             parsed_id = seq_ID.split("_")
@@ -319,14 +319,15 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     G.nodes[node]['protein'].append(ORFNodeVector[4])
                 else:
                     G.nodes[node]['protein'].append(str(Seq(seq).translate()))
-                # convert to printable format
-                G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-                G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
-            # add node annotation
-            if save_objects:
-                high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
-                high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
+        # convert to printable format
+        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+        G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
+
+        # add node annotation
+        if save_objects:
+            high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
+            high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
 
 
     for edge in G.edges():
