@@ -320,9 +320,10 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 else:
                     G.nodes[node]['protein'].append(str(Seq(seq).translate()))
 
-        # convert to printable format
-        G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
-        G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
+        if all_seq_in_graph:
+            # convert to printable format
+            G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
+            G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
         # add node annotation
         if save_objects:
