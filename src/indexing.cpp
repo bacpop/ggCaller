@@ -406,61 +406,69 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     size_t contig_ID = 1;
     int l;
     while ((l = kseq_read(seq)) >= 0) {
-        std::string entry = seq->seq.s;
+        std::string contig = seq->seq.s;
 
-        const int num_kmers = entry.length() - kmer + 1;
+        // remove N from assembly
+        std::vector<std::string> contig_vec;
+        boost::split(contig_vec, contig, boost::is_any_of("N"));
+        contig_vec.erase( remove( contig_vec.begin(), contig_vec.end(), "" ), contig_vec.end() );
 
-        // roll through the sequence, generating k-mers and querying them in graph
-        if (num_kmers > 0) {
-            // initialise variables for contig, add initial delimeter
-            std::string contig_path = ",";
+        for (const auto& entry : contig_vec)
+        {
+            const int num_kmers = entry.length() - kmer + 1;
 
-            const char *query_str = entry.c_str();
+            // roll through the sequence, generating k-mers and querying them in graph
+            if (num_kmers > 0) {
+                // initialise variables for contig, add initial delimeter
+                std::string contig_path = ",";
 
-            // create int to identify if head and tail kmers in unitig have been traversed
-            int prev_head = 0;
+                const char *query_str = entry.c_str();
 
-            for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
-            {
-                auto um = ccdbg.find(it_km->first);
+                // create int to identify if head and tail kmers in unitig have been traversed
+                int prev_head = 0;
 
-                // if found, add to FM-index string
-                if (!um.isEmpty) {
-                    int strand = um.strand ? 1 : -1;
+                for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
+                {
+                    auto um = ccdbg.find(it_km->first);
 
-                    DataAccessor<MyUnitigMap>* da = um.getData();
-                    MyUnitigMap* um_data = da->getData(um);
+                    // if found, add to FM-index string
+                    if (!um.isEmpty) {
+                        int strand = um.strand ? 1 : -1;
 
-                    // look for the head in the graph, determine node ID and add to genome_path
-                    int node_ID = um_data->get_id() * strand;
+                        DataAccessor<MyUnitigMap>* da = um.getData();
+                        MyUnitigMap* um_data = da->getData(um);
 
-                    if (prev_head != node_ID) {
-                        // if at start of contig i.e. prev_head==0, set as end_contig
-                        if (!prev_head)
-                        {
-                            um_data->set_end_contig(colour_ID, nb_colours);
+                        // look for the head in the graph, determine node ID and add to genome_path
+                        int node_ID = um_data->get_id() * strand;
+
+                        if (prev_head != node_ID) {
+                            // if at start of contig i.e. prev_head==0, set as end_contig
+                            if (!prev_head)
+                            {
+                                um_data->set_end_contig(colour_ID, nb_colours);
+                            }
+
+                            // set prev_head to new node
+                            prev_head = node_ID;
+
+                            // add new node
+                            const std::string node_entry = std::to_string(node_ID);
+                            contig_path += node_entry + ",";
                         }
-
-                        // set prev_head to new node
-                        prev_head = node_ID;
-
-                        // add new node
-                        const std::string node_entry = std::to_string(node_ID);
-                        contig_path += node_entry + ",";
                     }
                 }
+
+                // map to last entry and assign end-contig
+                auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
+                auto& um_data = um_pair.second;
+
+                um_data->set_end_contig(colour_ID, nb_colours);
+
+                // add delimiter between contigs
+                genome_path += contig_path;
+                genome_path += ";";
+                contig_ID++;
             }
-
-            // map to last entry and assign end-contig
-            auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
-            auto& um_data = um_pair.second;
-
-            um_data->set_end_contig(colour_ID, nb_colours);
-
-            // add delimiter between contigs
-            genome_path += contig_path;
-            genome_path += ";";
-            contig_ID++;
         }
     }
 

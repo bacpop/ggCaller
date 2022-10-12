@@ -27,8 +27,9 @@
 // sdsl header
 #include <sdsl/suffix_arrays.hpp>
 
-// boost dynamic_bitset header
+// boost algorithm headers
 #include <boost/dynamic_bitset.hpp>
+#include <boost/algorithm/string.hpp>
 
 // boost serialising headers
 #include <boost/archive/text_oarchive.hpp>

@@ -375,6 +375,10 @@ void generate_ORFs(const int& colour_ID,
                             {
                                 update = true;
                             }
+                        } else
+                        {
+                            // break as no shorter orf will have larger len_diff_prob
+                            break;
                         }
 
                         // determine if score is better and start site is better supported within level of length tolerance
