@@ -94,14 +94,14 @@ def get_options():
                                '[Default = 60] ')
     Settings.add_argument('--min-path-score',
                           type=int,
-                          default=100,
+                          default=45,
                           help='Minimum total Balrog score for a path of ORFs to be returned. '
-                               '[Default = 100] ')
+                               '[Default = 45] ')
     Settings.add_argument('--min-orf-score',
                           type=int,
-                          default=100,
+                          default=45,
                           help='Minimum individual Balrog score for an ORF to be returned. '
-                               '[Default = 100] ')
+                               '[Default = 45] ')
     Settings.add_argument('--max-orf-orf-distance',
                           type=int,
                           default=10000,
@@ -178,13 +178,11 @@ def get_options():
 
     strict: 
     Requires fairly strong evidence (present in  at least 5%% of genomes)\
-     to keep likely contaminant genes. Will remove genes that are refound more often than\
-     they were called originally.
+     to keep likely contaminant genes.
 
     moderate: 
     Requires moderate evidence (present in  at least 1%% of genomes)\
-     to keep likely contaminant genes. Keeps genes that are refound more often than\
-     they were called originally.
+     to keep likely contaminant genes.
 
     sensitive: 
     Does not delete any genes and only performes merge and refinding\
