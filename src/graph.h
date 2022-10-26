@@ -18,6 +18,73 @@
 
 class Graph {
     public:
+//    // constructors for debugging
+//    // default constructor
+//    Graph()
+//    {
+//        cout << "Graph default constructor" << endl;
+//    };
+//
+//    // copy
+//    Graph(const Graph & rhs)
+//    {
+//          std::cout << "Graph copy constructor" << std::endl;
+//          _ccdbg = rhs._ccdbg;
+//          _stop_freq = rhs._stop_freq;
+//          _KmerArray = rhs._KmerArray;
+//          _NodeColourVector = rhs._NodeColourVector;
+//          _StartFreq = rhs._StartFreq;
+//          _RefSet = rhs._RefSet;
+//    };
+//    // copy operator
+//    Graph & operator = (const Graph & rhs)
+//    {
+//          std::cout << "Graph copy operator" << std::endl;
+//          if(this != &rhs)
+//          {
+//              _ccdbg = rhs._ccdbg;
+//              _stop_freq = rhs._stop_freq;
+//              _KmerArray = rhs._KmerArray;
+//              _NodeColourVector = rhs._NodeColourVector;
+//              _StartFreq = rhs._StartFreq;
+//              _RefSet = rhs._RefSet;
+//          }
+//          return *this;
+//    };
+//
+//    // move
+//    Graph(const Graph && rhs) noexcept
+//    {
+//          std::cout << "Graph move constructor" << std::endl;
+//          _ccdbg = std::move(rhs._ccdbg);
+//          _stop_freq = std::move(rhs._stop_freq);
+//          _KmerArray = std::move(rhs._KmerArray);
+//          _NodeColourVector = std::move(rhs._NodeColourVector);
+//          _StartFreq = std::move(rhs._StartFreq);
+//          _RefSet = std::move(rhs._RefSet);
+//    };
+//    // move operator
+//    Graph & operator = (const Graph && rhs) noexcept
+//    {
+//          std::cout << "Graph move operator" << std::endl;
+//          if(this != &rhs)
+//          {
+//              _ccdbg = std::move(rhs._ccdbg);
+//              _stop_freq = std::move(rhs._stop_freq);
+//              _KmerArray = std::move(rhs._KmerArray);
+//              _NodeColourVector = std::move(rhs._NodeColourVector);
+//              _StartFreq = std::move(rhs._StartFreq);
+//              _RefSet = std::move(rhs._RefSet);
+//          }
+//          return *this;
+//    };
+//
+//    // destructor
+//    ~Graph()
+//    {
+//        std::cout << "Graph destructor" << std::endl;
+//    };
+
     // build new bifrost graph and index
     GraphTuple build (const std::string& infile1,
                       const int kmer,
@@ -144,5 +211,9 @@ class Graph {
 };
 
 ORFClusterMap read_cluster_file(const std::string& cluster_file);
+
+void clear_graph(Graph& g);
+
+//void use_count(std::shared_ptr<Graph> sp);
 
 #endif //GRAPH_H

@@ -393,7 +393,7 @@ def main():
         stop_codons_rev = ["TTA", "TCA", "CTA"]
 
     # initialise graph
-    graph = ggCaller_cpp.create_graph()
+    graph = ggCaller_cpp.Graph()
 
     # create directory if it isn't present already
     if not os.path.exists(options.out):
@@ -562,6 +562,9 @@ def main():
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
+
+    #call graph destructor
+    ggCaller_cpp.clear_graph(graph)
 
     print("Finished.")
 

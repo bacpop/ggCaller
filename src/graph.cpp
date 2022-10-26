@@ -844,3 +844,13 @@ ORFClusterMap read_cluster_file(const std::string& cluster_file)
 
     return cluster_map;
 }
+
+void clear_graph(Graph& g)
+{
+    g.~Graph();
+}
+
+//void use_count(std::shared_ptr<Graph> sp)
+//{
+//    std::cout << "use_count() == " << sp.use_count() << endl;
+//}
