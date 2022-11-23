@@ -1,12 +1,12 @@
-# ggCaller: a gene caller for Bifrost graphs
+# ggCaller: a bacterial gene caller for pangenome graphs <img src='docs/images/ggCaller_logo.png' align="right" height="100" />
 
-ggCaller traverses [Bifrost](https://github.com/pmelsted/bifrost) graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs). 
+ggCaller traverses [Bifrost](https://github.com/pmelsted/bifrost) graphs constructed from bacterial genomes to identify putative gene sequences, known as open reading frames (ORFs). 
 
 ggCaller incorporates [Balrog](https://github.com/salzberg-lab/Balrog) to filter ORFs to improve specificity of calls and [Panaroo](https://github.com/gtonkinhill/panaroo) for pangenome analysis and quality control.
 
 ## Installation
 
-ggCaller is currently only available for Linux. If you are running Windows 10, it can be installed via the Windows Subsystem for Linux ([WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10))
+ggCaller is available on Linux and MacOS. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux ([WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10))
 
 ### Installation via conda (recommended)
 
@@ -95,7 +95,7 @@ Note: Ensure the sequences used to build the graph are in the same directories a
 
 ```ggcaller --graph graph.gfa --colours colours.bfg_colours --not-ref --out output_dir```
 
-Test data is available in the ```data``` directory.
+Test data from [Bentley et al. 2006](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.0020031) is available in the ```data``` directory.
 
 ### Outputs
 
@@ -141,6 +141,16 @@ ggCaller generates a fasta file detailing the genes overlapping with each query,
 
 ## All I/O options
 ```
+usage: ggcaller [-h] [--graph GRAPH] [--colours COLOURS] [--not-ref] [--refs REFS] [--reads READS] [--query QUERY] [--codons CODONS] [--kmer KMER] [--save] [--data DATA] [--all-seq-in-graph] [--out OUT]
+                [--max-path-length MAX_PATH_LENGTH] [--min-orf-length MIN_ORF_LENGTH] [--score-tolerance SCORE_TOLERANCE] [--max-ORF-overlap MAX_ORF_OVERLAP] [--min-path-score MIN_PATH_SCORE]
+                [--min-orf-score MIN_ORF_SCORE] [--max-orf-orf-distance MAX_ORF_ORF_DISTANCE] [--query-id QUERY_ID] [--no-filter] [--no-write-idx] [--no-write-graph] [--repeat] [--no-clustering] [--no-refind]
+                [--identity-cutoff IDENTITY_CUTOFF] [--len-diff-cutoff LEN_DIFF_CUTOFF] [--family-threshold FAMILY_THRESHOLD] [--merge-paralogs] [--clean-mode {strict,moderate,sensitive}]
+                [--annotation {fast,sensitive,ultrasensitive}] [--diamonddb ANNOTATION_DB] [--hmmdb HMM_DB] [--evalue EVALUE] [--truncation-threshold TRUNCATION_THRESHOLD] [--search-radius SEARCH_RADIUS]
+                [--refind-prop-match REFIND_PROP_MATCH] [--remove-invalid-genes] [--min-trailing-support MIN_TRAILING_SUPPORT] [--trailing-recursive TRAILING_RECURSIVE]
+                [--edge-support-threshold EDGE_SUPPORT_THRESHOLD] [--length-outlier-support-proportion LENGTH_OUTLIER_SUPPORT_PROPORTION] [--remove-by-consensus {True,False}]
+                [--high-var-flag CYCLE_THRESHOLD_MIN] [--min-edge-support-sv MIN_EDGE_SUPPORT_SV] [--no-clean-edges] [--alignment {core,pan}] [--aligner {def,ref}] [--core-threshold CORE] [--no-variants]
+                [--ignore-pseduogenes] [--quiet] [--threads THREADS] [--version]
+
 Generates ORFs from a Bifrost graph.
 
 optional arguments:
@@ -165,6 +175,9 @@ ggCaller traversal and gene-calling cut-off settings:
                         Maximum path length during ORF finding (bp). [Default = 20000]
   --min-orf-length MIN_ORF_LENGTH
                         Minimum ORF length to return (bp). [Default = 90]
+  --score-tolerance SCORE_TOLERANCE
+                        Length probability tolerance for shorter alternative start sites. If within tolerance,ggCaller will check if start coverage and BALROG score are both higher in shorter ORF. [Default =
+                        0.2]
   --max-ORF-overlap MAX_ORF_OVERLAP
                         Maximum overlap allowed between overlapping ORFs. [Default = 60]
   --min-path-score MIN_PATH_SCORE
@@ -195,10 +208,9 @@ Gene clustering options.:
 Panaroo run mode options:
   --clean-mode {strict,moderate,sensitive}
                         R|The stringency mode at which to run panaroo. Must be one of 'strict', 'moderate' or 'sensitive'. Each of these modes can be fine tuned using the additional parameters in the 'Graph
-                        correction' section. strict: Requires fairly strong evidence (present in at least 5% of genomes) to keep likely contaminant genes. Will remove genes that are refound more often than
-                        they were called originally. moderate: Requires moderate evidence (present in at least 1% of genomes) to keep likely contaminant genes. Keeps genes that are refound more often than they
-                        were called originally. sensitive: Does not delete any genes and only performes merge and refinding operations. Useful if rare plasmids are of interest as these are often hard to
-                        disguish from contamination. Results will likely include higher number of spurious annotations.
+                        correction' section. strict: Requires fairly strong evidence (present in at least 5% of genomes) to keep likely contaminant genes. moderate: Requires moderate evidence (present in at
+                        least 1% of genomes) to keep likely contaminant genes. sensitive: Does not delete any genes and only performes merge and refinding operations. Useful if rare plasmids are of interest as
+                        these are often hard to disguish from contamination. Results will likely include higher number of spurious annotations.
 
 Panaroo gene cluster annotation options:
   --annotation {fast,sensitive,ultrasensitive}
