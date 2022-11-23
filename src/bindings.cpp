@@ -30,8 +30,8 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     m.def("read_cluster_file", &read_cluster_file, "Read cluster map file",
         py::arg("cluster_file"));
 
-    m.def("clear_graph", &clear_graph, "Call graph destructor",
-        py::arg("graph"));
+//    m.def("clear_graph", &clear_graph, "Call graph destructor",
+//        py::arg("graph"));
 
 //    m.def("use_count", &use_count, "Get pointer count",
 //        py::arg("graph_ptr"));

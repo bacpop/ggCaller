@@ -1,5 +1,7 @@
 # imports
 import argparse
+import sys
+
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
 import shutil
@@ -15,6 +17,10 @@ from collections import defaultdict
 import ast
 import tempfile
 import json
+import weakref
+import objgraph
+from pympler.tracker import SummaryTracker
+import gc
 
 from .__init__ import __version__
 
@@ -562,9 +568,6 @@ def main():
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
-
-    #call graph destructor
-    ggCaller_cpp.clear_graph(graph)
 
     print("Finished.")
 
