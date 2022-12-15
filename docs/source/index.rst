@@ -8,3 +8,16 @@ using temporal convolutional network from [Balrog](https://github.com/salzberg-l
 .. image:: images/ggCaller_logo.png
    :alt:  ggCaller (Graph Gene Caller)
    :align: center
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
