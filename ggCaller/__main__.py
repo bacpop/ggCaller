@@ -17,10 +17,6 @@ from collections import defaultdict
 import ast
 import tempfile
 import json
-import weakref
-import objgraph
-from pympler.tracker import SummaryTracker
-import gc
 
 from .__init__ import __version__
 
