@@ -13,8 +13,6 @@ using temporal convolutional network from [Balrog](https://github.com/salzberg-l
    :maxdepth: 2
    :caption: Contents:
 
-
-
 Indices and tables
 ==================
 
