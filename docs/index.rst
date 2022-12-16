@@ -18,6 +18,7 @@ Why ggCaller?
 -------------
 ggCaller is a novel approach to gene annotation and pangenome analysis, using population frequency information at
 several stages of gene annotation and pangenome analysis. This has several benefits:
+
 - Consistent identification of start and stop codons across orthologs, improving clustering accuracy.
 - Reduced gene-annotation sensitivity to assembly fragmentation.
 - Reduced runtime verses existing gene-annotation and pangenome analysis workflows.
