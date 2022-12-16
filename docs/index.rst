@@ -1,8 +1,8 @@
 ggCaller documentation
 ==================================
-ggCaller is a bacterial gene identification, annotation and pangenome analysis tool.
-ggCaller uses population-frequency information to enable fast, accurate pangenome analysis of large single-species genome datasets.
-ggCaller traverses de Bruijn graphs (DBGs) built by `Bifrost <https://github.com/pmelsted/bifrost>`_
+ggCaller is a novel bacterial gene annotation and pangenome analysis tool, designed to enable fast, accurate analysis of large single-species genome datasets.
+
+ggCaller traverses de Bruijn graphs (DBGs) built by `Bifrost <https://github.com/pmelsted/bifrost>`_,
 using temporal convolutional networks from `Balrog <https://github.com/salzberg-lab/Balrog>`_ for gene filtering
 and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis and quality control.
 
@@ -16,8 +16,7 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
 
 Why ggCaller?
 -------------
-ggCaller is a novel approach to gene annotation and pangenome analysis, using population frequency information at
-several stages of gene annotation and pangenome analysis. This has several benefits:
+ggCaller uses population-frequency information at several stages of gene annotation and pangenome analysis. This has several benefits:
 
 - Consistent identification of start and stop codons across orthologs, improving clustering accuracy.
 - Reduced gene-annotation sensitivity to assembly fragmentation.
