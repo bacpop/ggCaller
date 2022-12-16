@@ -1,9 +1,10 @@
 ggCaller documentation
 ==================================
 ggCaller is a bacterial gene identification, annotation and pangenome analysis tool.
-ggCaller uses population-level information to enable fast, accurate pangenome analysis of large genome datasets.
-ggCaller traverses de Bruijn graphs (DBGs) built by [Bifrost](https://github.com/pmelsted/bifrost),
-using temporal convolutional network from [Balrog](https://github.com/salzberg-lab/Balrog) for gene filtering and [Panaroo](https://github.com/gtonkinhill/panaroo) for pangenome analysis and quality control.
+ggCaller uses population-frequency information to enable fast, accurate pangenome analysis of large single-species genome datasets.
+ggCaller traverses de Bruijn graphs (DBGs) built by `Bifrost <https://github.com/pmelsted/bifrost>`_
+using temporal convolutional networks from `Balrog <https://github.com/salzberg-lab/Balrog>`_ for gene filtering
+and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis and quality control.
 
 .. image:: images/ggCaller_logo.png
    :alt:  ggCaller (Graph Gene Caller)
@@ -13,8 +14,18 @@ using temporal convolutional network from [Balrog](https://github.com/salzberg-l
    :maxdepth: 2
    :caption: Contents:
 
-Indices and tables
-==================
+Why ggCaller?
+-------------
+ggCaller is a novel approach to gene annotation and pangenome analysis, using population frequency information at
+several stages of gene annotation and pangenome analysis. This has several benefits:
+- Consistent identification of start and stop codons across orthologs, improving clustering accuracy.
+- Reduced gene-annotation sensitivity to assembly fragmentation.
+- Reduced runtime verses existing gene-annotation and pangenome analysis workflows.
+- One-line command from fasta -> gene annotations, gene frequency matrices, clusters of orthologous genes (COGs), core genome/pangenome alignments, phylogenetic trees, small/structural variants and more!
+- Annotated DBG-querying for functional PanGenome-Wide Association Studies (PGWAS), compatible with results from `Pyseer <https://github.com/mgalardini/pyseer>`_.
+
+Contents
+---------
 
 * :ref:`genindex`
 * :ref:`modindex`
