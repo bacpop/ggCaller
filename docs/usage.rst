@@ -165,3 +165,12 @@ For example, to run ggCaller in strict mode::
     ggcaller --refs input.txt --clean-mode strict
 
 More information can be found `here <https://gtonkinhill.github.io/panaroo/#/gettingstarted/params>`_.
+
+Parallelisation
+^^^^^^^^^^^^^^^
+
+ggCaller is fully parallelised using OpenMP and python multiprocessing. By default ggCaller runs single-threaded.
+
+To specify the number of threads::
+
+    ggcaller --refs input.txt --threads 8
