@@ -16,6 +16,7 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
 
    self
    installation.rst
+   usage.rst
 
 Why ggCaller?
 -------------
