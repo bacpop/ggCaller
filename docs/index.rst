@@ -11,8 +11,11 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
    :align: center
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
+
+   self
+   installation.rst
 
 Why ggCaller?
 -------------
