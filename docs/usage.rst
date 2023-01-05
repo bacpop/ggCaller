@@ -12,6 +12,9 @@ the query overlaps with.
 Gene calling
 ------------
 
+Predicting genes
+^^^^^^^^^^^^^^^^
+
 To generate an input for ggCaller, create a directory containing of all the sequences you wish to analyses.
 We recommend placing all samples of the same type in a single directory; place read and assembly files in
 separate directories.
@@ -44,3 +47,51 @@ To run ggCaller with reads and assemblies::
 
 This will save results to a directory called ``ggCaller_output`` by default. To change this, specify ``--out``.
 Note that ggCaller will overwrite results if an already existing directory is specified.
+
+By default, ggCaller will generate:
+- Predicted genes (nucleotide and amino-acid) in FASTA format
+- Gene presence/absence matrix in CSV and RTAB formats
+- Pre/post Panaroo quality control gene graphs in GML format
+- Structural variant presence/absence in RTAB format
+- Summary graph: gene frequency, cluster size and rarefaction curve
+- Roary-style gene frequency statistics
+- A pangenome reference FASTA, containing all cluster centroids
+- A gene presence/absence neighbour joining tree in NWK format
+
+Annotating genes
+^^^^^^^^^^^^^^^^
+
+ggCaller comes with two default databases for functional annotation of genes.
+- Bacterial and Viral databases from `Uniprot <https://www.uniprot.org/>`_, used by `DIAMOND <https://github.com/bbuchfink/diamond>`_
+- HMM profiles from `Prokka <https://github.com/tseemann/prokka>`_, used by `HMMER3 <https://github.com/EddyRivasLab/hmmer>`_
+
+.. important::
+    Ensure you are connected to the internet
+    when first running ggCaller as these databases
+    are downloaded automatically. Subsequent runs
+    can be conducted offline.
+
+There are three sensitivity levels for annotation:
+- ``fast``: only DIAMOND  in fast mode
+- ``sensitive``: only DIAMOND in sensitive mode
+- ``ultrasensitive``: HMMER3 and DIAMOND in sensitive mode
+
+For example, to run DIAMOND only in fast mode, run::
+
+    ggcaller --refs input.txt --annotation fast
+
+By default these commands will annotate using DIAMOND with the ``Bacteria`` uniprot database.
+To change this to the ``Viruses`` database, run::
+
+    ggcaller --refs input.txt --annotation fast --diamonddb Viruses
+
+Custom databases can also be specified for both DIAMOND using ``--diamonddb`` and HMMER3 using ``--hmmdb``.
+DIAMOND databases must be amino-acid FASTA files. HMMER3 databases must be HMM-profile ``.HAMAP`` files built using
+``hmmbuild`` which is part of the HMMER3 package.
+
+To run with custom DIAMOND and HMMER3 databases::
+
+    ggcaller --refs input.txt --annotation ultrasensitive --diamonddb annotation.fasta --hmmdb annotation.HAMAP
+
+Annotation is not on by default. If annotation is specified, GFF files for each input genome are generated in the output
+directory in a separate directory called ``GFF``. Annotations will also be added to FASTA files.
