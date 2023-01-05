@@ -1072,7 +1072,7 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
                 seq += gene[1][iso][1]
             else:
                 seq += "-" * gene[2]
-        isolate_aln.append(SeqRecord(seq, id=iso, description=""))
+        isolate_aln.append(SeqRecord(Seq(seq), id=iso, description=""))
 
     # generate nwk tree from core genome alignment if alignments present
     if isolate_aln:
