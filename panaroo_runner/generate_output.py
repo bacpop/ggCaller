@@ -450,7 +450,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         if len(sequence_ids) == centroid_no and centroid_no == 1:
             # If only one sequence, output it to aligned directory and break
             # if no other sequences, then just output with no alignment
-            ref_outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".aln.fas"
+            ref_outname = outdir + "/alignments/" + node["name"].split("~")[0] + ".aln.fas"
             if len(ref_outname) >= 248:
                 ref_outname = ref_outname[:248] + ".fasta"
             SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
@@ -458,9 +458,9 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         else:
             # if centroid is on it's own, give name aln for aligned, otherwise ref
             if centroid_no > 1:
-                ref_outname = temp_directory + node["name"] + "_ref.fasta"
+                ref_outname = temp_directory + node["name"].split("~")[0] + "_ref.fasta"
             else:
-                ref_outname = temp_directory + node["name"] + "_ref.aln.fas"
+                ref_outname = temp_directory + node["name"].split("~")[0] + "_ref.aln.fas"
         if len(ref_outname) >= 248:
             ref_outname = ref_outname[:248] + ".fasta"
         SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
@@ -487,12 +487,12 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
     output_sequences = (x for x in output_sequences)
     # set filename to gene name, if more than one sequence to be aligned
     if (not ref_aln and seq_no > 1) or (ref_aln and seq_no > 0):
-        outname = temp_directory + node["name"] + ".fasta"
+        outname = temp_directory + node["name"].split("~")[0] + ".fasta"
     else:
         # if number sequences is 0, do not output
         if seq_no > 0:
             # If only one sequence, output it to aligned directory and break
-            outname = outdir + "/aligned_gene_sequences/" + node["name"] + ".aln.fas"
+            outname = outdir + "/alignments/" + node["name"].split("~")[0] + ".aln.fas"
             if len(outname) >= 248:
                 outname = outname[:248] + ".fasta"
             SeqIO.write(output_sequences, outname, 'fasta')
@@ -840,7 +840,7 @@ def generate_pan_genome_reference(G, DBG, overlap, output_dir, split_paralogs=Fa
         for centroid in G.nodes[node]['centroid']:
             centroids.add(centroid)
 
-    with open(output_dir + "pan_genome_reference.fa", 'w') as outfile:
+    with open(output_dir + "pangenome_reference.fa", 'w') as outfile:
         SeqIO.write(records, outfile, "fasta")
 
     return
@@ -895,10 +895,10 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
     unaligned_reference_files = []
     # Make a folder for the output alignments, clear if present and remake
     try:
-        os.mkdir(output_dir + "aligned_gene_sequences")
+        os.mkdir(output_dir + "alignments")
     except FileExistsError:
-        shutil.rmtree(output_dir + "aligned_gene_sequences")
-        os.mkdir(output_dir + "aligned_gene_sequences")
+        shutil.rmtree(output_dir + "alignments")
+        os.mkdir(output_dir + "alignments")
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
@@ -928,7 +928,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
 
     # create set of files not to be used for variant calling
     if call_variants:
-        no_vc_set = set(os.listdir(output_dir + "aligned_gene_sequences"))
+        no_vc_set = set(os.listdir(output_dir + "alignments"))
 
     # Get Biopython command calls for each output gene sequences
     # check if ref_alignment being done
@@ -943,7 +943,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
-            os.rename(file, output_dir + "aligned_gene_sequences/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
+            os.rename(file, output_dir + "alignments/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
 
         # repeat with reference-guided alignment
         commands = [
@@ -951,7 +951,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
             for fastapair in ref_seq_pairs
         ]
         if verbose: print("Aligning remaining sequences...")
-        multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
+        multi_align_sequences(commands, output_dir + "alignments/",
                               threads, "ref", not verbose)
     else:
         commands = [
@@ -959,11 +959,11 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
             for fastafile in unaligned_sequence_files
         ]
         # Run these commands in a multi-threaded way
-        multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
+        multi_align_sequences(commands, output_dir + "alignments/",
                               threads, "def", not verbose)
 
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
+    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
                        pool)
 
     # call variants using snp-sites
@@ -972,7 +972,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
             os.mkdir(output_dir + "VCF")
         except FileExistsError:
             None
-        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
+        run_snpsites_dir(output_dir + "alignments", output_dir + "VCF", no_vc_set, pool)
 
     return
 
@@ -1038,7 +1038,7 @@ def check_rapidnj_install():
 
 
 def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, threads):
-    alignments_dir = output_dir + "/aligned_gene_sequences/"
+    alignments_dir = output_dir + "/alignments/"
     # Open up each alignment that is associated with a core node
     alignment_filenames = os.listdir(alignments_dir)
     core_filenames = [
@@ -1093,14 +1093,14 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
     unaligned_reference_files = []
     # Make a folder for the output alignments, clear if present and remake
     try:
-        os.mkdir(output_dir + "aligned_gene_sequences")
+        os.mkdir(output_dir + "alignments")
     except FileExistsError:
-        shutil.rmtree(output_dir + "aligned_gene_sequences")
-        os.mkdir(output_dir + "aligned_gene_sequences")
+        shutil.rmtree(output_dir + "alignments")
+        os.mkdir(output_dir + "alignments")
 
     # Get core nodes
     core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold)
-    core_gene_names = [G.nodes[x[0]]["name"] for x in core_genes]
+    core_gene_names = [G.nodes[x[0]]["name"].split("~")[0] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
@@ -1131,7 +1131,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
 
     # create set of files not to be used for variant calling
     if call_variants:
-        no_vc_set = set(os.listdir(output_dir + "aligned_gene_sequences/"))
+        no_vc_set = set(os.listdir(output_dir + "alignments/"))
 
     # Get Biopython command calls for each output gene sequences
     # check if ref_alignment being done
@@ -1146,7 +1146,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
 
         # move any centroid alignments which do not have associated sequence files
         for file in ref_seq_singles:
-            os.rename(file, output_dir + "aligned_gene_sequences/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
+            os.rename(file, output_dir + "alignments/" + file.split("/")[-1].split("_ref.")[0] + '.aln.fas')
 
         # repeat with reference-guided alignment
         commands = [
@@ -1154,7 +1154,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
             for fastapair in ref_seq_pairs
         ]
         if verbose: print("Aligning remaining sequences...")
-        multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
+        multi_align_sequences(commands, output_dir + "alignments/",
                               threads, "ref", not verbose)
     else:
         # Get alignment commands
@@ -1163,10 +1163,10 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
             for fastafile in unaligned_sequence_files
         ]
         # Run alignment commands
-        multi_align_sequences(commands, output_dir + "aligned_gene_sequences/",
+        multi_align_sequences(commands, output_dir + "alignments/",
                               threads, "def", not verbose)
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "aligned_gene_sequences/", overlap, shd_arr_tup,
+    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
                        pool)
 
     # call variants using snp-sites
@@ -1175,7 +1175,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
             os.mkdir(output_dir + "VCF")
         except FileExistsError:
             None
-        run_snpsites_dir(output_dir + "aligned_gene_sequences", output_dir + "VCF", no_vc_set, pool)
+        run_snpsites_dir(output_dir + "alignments", output_dir + "VCF", no_vc_set, pool)
 
     # Concatenate them together to produce the two output files
     concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, threads)

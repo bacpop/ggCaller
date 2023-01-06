@@ -89,7 +89,7 @@ def get_alignment_commands(fastafile_name, outdir, aligner):
                                    amino=True)
     elif aligner == "ref":
         ref_file, seq_file = fastafile_name
-        outfile = outdir + "aligned_gene_sequences/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
+        outfile = outdir + "alignments/" + seq_file.split('/')[-1].split('.')[0] + '.aln.fas'
         command = ["mafft", "--amino", "--6merpair", "--addfragments",
                    seq_file, ref_file, outfile]
 
