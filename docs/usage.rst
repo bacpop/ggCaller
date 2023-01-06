@@ -1,16 +1,15 @@
 Usage
 ==================================
 
-ggCaller has two main modes; gene-calling and querying.
+ggCaller has two main modes: :ref:`Gene-calling` and :ref:`Querying`.
+
+.. _gene-calling:
+
+Gene-calling
+-------------
 
 Gene-calling predicts and annotates genes within a pangenome de Bruijn Graph (DBG), before
 conducting orthologue clustering and pangenome analysis using Panaroo.
-
-Querying maps a set of query DNA sequences to an annotated DBG, identifying genes that
-the query overlaps with.
-
-Gene calling
-------------
 
 Predicting genes
 ^^^^^^^^^^^^^^^^
@@ -166,12 +165,18 @@ For example, to run ggCaller in strict mode::
 
 More information can be found `here <https://gtonkinhill.github.io/panaroo/#/gettingstarted/params>`_.
 
+.. _querying:
+
 Querying
 --------
 
-ggCaller supports querying of sequences within an annotated DBG.
+Querying maps a set of query DNA sequences to an annotated DBG, identifying genes that
+the query overlaps with.
 
-To do this, annotate a DBG as before, adding the ``--save`` flag. This will write the intermediate datastructures
+Saving datastructures
+^^^^^^^^^^^^^^^^^^^^^
+
+Annotate a DBG as before, adding the ``--save`` flag. This will write the intermediate datastructures
 containing DBG coordinates of the predicted genes to a directory called ``ggc_data``.
 
 .. important::
@@ -182,6 +187,9 @@ containing DBG coordinates of the predicted genes to a directory called ``ggc_da
 For example, run with sensitive annotation and save intermediate files::
 
     ggcaller --refs input.txt --annotation sensitive --save
+
+Querying the DBG
+^^^^^^^^^^^^^^^^^^^^^
 
 Queries sequences can either be in multi-FASTA format, or in a single file with each sequence on its own line.
 
@@ -195,6 +203,9 @@ By default, mapped queries >=80% matching k-mers to a given colour will be retur
 To return queries with 100% match::
 
     ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data --query-id 1.0
+
+Interpreting results
+^^^^^^^^^^^^^^^^^^^^^
 
 Results will be output in ``matched_queries.fasta`` in the specified output directory. This is a multi-FASTA file describing
 all annotated genes that overlap with the query sequences.
