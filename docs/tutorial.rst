@@ -6,7 +6,7 @@ Here we'll walk through a typical run of ggCaller, including both :ref:`Gene-cal
 Installation and setup
 ----------------------
 
-Follow the guide in :doc:`<installation>` for downloading and installing ggCaller.
+Follow the guide in :doc:`installation` for downloading and installing ggCaller.
 
 Working Dataset
 ---------------
@@ -34,7 +34,7 @@ We recommend running the below command within the unzipped to generate this file
     ls -d -1 $PWD/*.fa > input.txt
     cd ..
 
-`input.txt` will now contain all `.fa` files in the directory `Bentley_et_al_2006_CPS_sequences`
+`input.txt` will now contain absolute paths to all `.fa` files in the directory `Bentley_et_al_2006_CPS_sequences`
 
 Now we will run ggCaller specifying the below settings:
 
@@ -48,4 +48,20 @@ To do this using 4 threads, run::
 
 You will find the following files in the output directory ``ggc_Bentley_et_al_CPS``:
 
--
+- ``cluster_size.png``: a frequency distribution of clusters by the number of genes found within them
+
+.. image:: images/cluster_size_example.png
+   :alt:  A frequency distribution of clusters by size
+   :align: center
+
+- ``gene_frequency.png``: a frequency distribution of clusters by proportion of dataset
+
+.. image:: images/gene_frequency_example.png
+   :alt:  A frequency distribution of clusters by proportion of dataset
+   :align: center
+
+- ``rarefaction_curve.png``: rarefaction curve, describes the number of new genes discovered with random addition of a single genome. Also includes power-law fit for determination of pangenome openness, based on `Tettelin et al. (2005) <https://www.pnas.org/doi/10.1073/pnas.0506758102>`_.
+
+.. image:: images/rarefaction_curve_example.png
+   :alt:  A gene rarefaction curve
+   :align: center
