@@ -166,6 +166,51 @@ For example, to run ggCaller in strict mode::
 
 More information can be found `here <https://gtonkinhill.github.io/panaroo/#/gettingstarted/params>`_.
 
+Querying
+--------
+
+ggCaller supports querying of sequences within an annotated DBG.
+
+To do this, annotate a DBG as before, adding the ``--save`` flag. This will write the intermediate datastructures
+containing DBG coordinates of the predicted genes to a directory called ``ggc_data``.
+
+.. important::
+    We suggest using an annotation database, either the default
+    ones provided or a custom one, as this will enable better
+    functional analysis of your queries.
+
+For example, run with sensitive annotation and save intermediate files::
+
+    ggcaller --refs input.txt --annotation sensitive --save
+
+Queries sequences can either be in multi-FASTA format, or in a single file with each sequence on its own line.
+
+Provide paths to the DBG ``.gfa`` and ``.bfg_colors`` files, the ``ggc_data`` directory and query file::
+
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data
+
+By default, mapped queries >=80% matching k-mers to a given colour will be returned. This can be changed using
+``--query-id`` flag.
+
+To return queries with 100% match::
+
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data --query-id 1.0
+
+Results will be output in ``matched_queries.fasta`` in the specified output directory. This is a multi-FASTA file describing
+all annotated genes that overlap with the query sequences.
+
+An example format is below::
+
+    >Isolate10_9298 ggcID=10_9298 QUERY=TACTGCTAAACAAAGTCGCAAAGAAATCGAA;GAGTCTAGCTAGCTAATCGATAGCTACTAGA annotation=FUNCTION A;FUNCTION B;
+    ATGTTAAATAAAGTCAAAACTAAAGCCTTAATTAGTGTCGGAGCAGTGGCTGCAACTAGCTAG
+
+The header contains:
+
+- Sample name and gene number (``Isolate10_9298``)
+- ggCaller identifier (``ggcID`` field)
+- Mapped query sequence(s) (``QUERY`` field) separated by semi-colons
+- Annotation(s) (``annotation`` field) separated by semi-colons
+
 Parallelisation
 ^^^^^^^^^^^^^^^
 
