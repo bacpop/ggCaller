@@ -1,4 +1,4 @@
-ggCaller documentation
+Home
 ==================================
 ggCaller is a novel bacterial gene annotation and pangenome analysis tool, designed to enable fast, accurate analysis of large single-species genome datasets.
 
@@ -17,6 +17,7 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
    self
    installation.rst
    usage.rst
+   advanced.rst
 
 Why ggCaller?
 -------------
