@@ -9,7 +9,7 @@ Input/output
 - ``--kmer``: value of k used to build Bifrost DBG (Default and max value = 31).
 - ``--all-seq-in-graph``: Output gene graph GML file with all DNA and amino acid sequences. Off by default due to large file size.
 
-ggCaller traversal and gene-calling cut-off settings
+Traversal and gene-calling cut-off settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - ``--max-path-length``: Maximum path length traversed during ORF finding (bp) (Default = 20000)
@@ -20,7 +20,7 @@ ggCaller traversal and gene-calling cut-off settings
 - ``--min-orf-score``: Minimum individual Balrog score for an ORF to be returned (Default = 100)
 - ``--max-orf-orf-distance``: Maximum distance between two ORFs to be connected (bp) (Default = 10000)
 
-Settings to avoid/include algorithms
+Avoid/include algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - ``--no-filter``: Do not filter ORF calls using Balrog, will return all ORF calls (Default = False)
