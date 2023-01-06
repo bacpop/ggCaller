@@ -21,7 +21,7 @@ separate directories.
 .. important::
     Ensure you have write access to the directories where
     the FASTA/FASTQ files are saved, as ggCaller saves
-    intermediate files in the same locations.
+    intermediate FMINDEX files in the same locations.
 
 To generate the input file for ggCaller, navigate inside the directory containing the genomes, and run::
 
@@ -70,6 +70,11 @@ By default, ggCaller will generate:
 - Roary-style gene frequency statistics
 - A pangenome reference FASTA, containing all cluster centroids
 - A gene presence/absence neighbour joining tree in NWK format
+
+Additionally, ggCaller generates some intermediate files:
+
+- Two Bifrost files, a GFA file and BFG_COLORS file, with the same file path as ``input.txt``
+- FMINDEX files for each of the sample FASTAs with the same file path the input files.
 
 Annotating genes
 ^^^^^^^^^^^^^^^^
@@ -204,6 +209,8 @@ To return queries with 100% match::
 
     ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data --query-id 1.0
 
+.. _Interpreting results:
+
 Interpreting results
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -212,14 +219,14 @@ all annotated genes that overlap with the query sequences.
 
 An example format is below::
 
-    >Isolate10_9298 ggcID=10_9298 QUERY=TACTGCTAAACAAAGTCGCAAAGAAATCGAA;GAGTCTAGCTAGCTAATCGATAGCTACTAGA annotation=FUNCTION A;FUNCTION B;
+    >Isolate10_9298 ggcID=10_9298 QUERY=Query_A;Query_B annotation=FUNCTION A;FUNCTION B;
     ATGTTAAATAAAGTCAAAACTAAAGCCTTAATTAGTGTCGGAGCAGTGGCTGCAACTAGCTAG
 
 The header contains:
 
 - Sample name and gene number (``Isolate10_9298``)
 - ggCaller identifier (``ggcID`` field)
-- Mapped query sequence(s) (``QUERY`` field) separated by semi-colons
+- Mapped query sequences or IDs (``QUERY`` field) separated by semi-colons. These will be fasta IDs if ``queries`` file is a FASTA, otherwise DNA sequence.
 - Annotation(s) (``annotation`` field) separated by semi-colons
 
 Parallelisation
