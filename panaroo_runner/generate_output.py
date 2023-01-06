@@ -450,7 +450,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         if len(sequence_ids) == centroid_no and centroid_no == 1:
             # If only one sequence, output it to aligned directory and break
             # if no other sequences, then just output with no alignment
-            ref_outname = outdir + "/alignments/" + node["name"].split("~")[0] + ".aln.fas"
+            ref_outname = outdir + "/alignments/" + "centroid_" + node["centroid"][0] + ".aln.fas"
             if len(ref_outname) >= 248:
                 ref_outname = ref_outname[:248] + ".fasta"
             SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
@@ -458,9 +458,9 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         else:
             # if centroid is on it's own, give name aln for aligned, otherwise ref
             if centroid_no > 1:
-                ref_outname = temp_directory + node["name"].split("~")[0] + "_ref.fasta"
+                ref_outname = temp_directory + "centroid_" + node["centroid"][0] + "_ref.fasta"
             else:
-                ref_outname = temp_directory + node["name"].split("~")[0] + "_ref.aln.fas"
+                ref_outname = temp_directory + "centroid_" + node["centroid"][0] + "_ref.aln.fas"
         if len(ref_outname) >= 248:
             ref_outname = ref_outname[:248] + ".fasta"
         SeqIO.write(ref_output_sequences_gen, ref_outname, 'fasta')
@@ -487,12 +487,12 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
     output_sequences = (x for x in output_sequences)
     # set filename to gene name, if more than one sequence to be aligned
     if (not ref_aln and seq_no > 1) or (ref_aln and seq_no > 0):
-        outname = temp_directory + node["name"].split("~")[0] + ".fasta"
+        outname = temp_directory + "centroid_" + node["centroid"][0] + ".fasta"
     else:
         # if number sequences is 0, do not output
         if seq_no > 0:
             # If only one sequence, output it to aligned directory and break
-            outname = outdir + "/alignments/" + node["name"].split("~")[0] + ".aln.fas"
+            outname = outdir + "/alignments/" + "centroid_" + node["centroid"][0] + ".aln.fas"
             if len(outname) >= 248:
                 outname = outname[:248] + ".fasta"
             SeqIO.write(output_sequences, outname, 'fasta')
@@ -617,7 +617,7 @@ def generate_nwk_tree(matrix_in, threads, isolate_names, output_dir, alignment):
             phylip_name = output_dir + 'core_gene_alignment.phylip'
             tree_filename = output_dir + 'core_tree_NJ.nwk'
         except ValueError:
-            print("Unable to generate tree from core-genome alignment. Check core_gene_alignment.aln.")
+            print("Unable to generate tree from core-genome alignment. Check core_genome_alignment.aln.")
             return
 
     else:
@@ -1079,7 +1079,7 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
         generate_nwk_tree([str(record.seq) for record in isolate_aln], threads, isolate_names, output_dir, True)
 
     # Write out the two output files
-    SeqIO.write(isolate_aln, output_dir + 'core_gene_alignment.aln', 'fasta')
+    SeqIO.write(isolate_aln, output_dir + 'core_genome_alignment.aln', 'fasta')
 
     write_alignment_header(gene_alignments, output_dir)
     return core_filenames
@@ -1100,7 +1100,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
 
     # Get core nodes
     core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold)
-    core_gene_names = [G.nodes[x[0]]["name"].split("~")[0] for x in core_genes]
+    core_gene_names = ["centroid_" + G.nodes[x[0]]["centroid"][0] for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
