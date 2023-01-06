@@ -21,7 +21,6 @@ def find_missing(G,
                  pairwise_id_thresh,
                  n_cpu,
                  pool,
-                 remove_by_consensus=False,
                  verbose=True):
     # load shared memory items
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)

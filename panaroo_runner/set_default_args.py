@@ -14,8 +14,6 @@ def set_default_args(args, n_samples):
             args.trailing_recursive = 99999999
         if args.min_edge_support_sv is None:
             args.min_edge_support_sv = max(2, math.ceil(0.01 * n_samples))
-        if args.remove_by_consensus is None:
-            args.remove_by_consensus = True
         if args.edge_support_threshold is None:
             args.edge_support_threshold = max(2, math.ceil(0.01 * n_samples))
 
@@ -28,8 +26,6 @@ def set_default_args(args, n_samples):
             args.trailing_recursive = 99999999
         if args.min_edge_support_sv is None:
             args.min_edge_support_sv = max(2, math.ceil(0.01 * n_samples))
-        if args.remove_by_consensus is None:
-            args.remove_by_consensus = False
         if args.edge_support_threshold is None:
             args.edge_support_threshold = max(2, math.ceil(0.01 * n_samples))
 
@@ -42,8 +38,6 @@ def set_default_args(args, n_samples):
             args.trailing_recursive = 0
         if args.min_edge_support_sv is None:
             args.min_edge_support_sv = 2
-        if args.remove_by_consensus is None:
-            args.remove_by_consensus = False
         if args.edge_support_threshold is None:
             args.edge_support_threshold = 0.0
 

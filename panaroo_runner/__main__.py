@@ -31,7 +31,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, ref_list, write_idx, kmer, repeat,
-                remove_by_consensus, search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
+                search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
                 call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
 
     # load shared memory items
@@ -150,7 +150,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                             repeat=repeat,
                                             overlap=overlap,
                                             isolate_names=input_colours,
-                                            remove_by_consensus=remove_by_consensus,
                                             search_radius=search_radius,
                                             prop_match=refind_prop_match,
                                             pairwise_id_thresh=identity_cutoff,
