@@ -25,9 +25,9 @@ author = 'Sam Horsfield'
 # built documents.
 #
 # The short X.Y version.
-version = 'v1.3'
+version = '1.3'
 # The full version, including alpha/beta/rc tags.
-release = '1.3.1'
+release = '1.3.0'
 
 # -- General configuration ---------------------------------------------------
 
