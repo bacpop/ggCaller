@@ -15,6 +15,7 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
    :caption: Contents:
 
    self
+   quickstart.rst
    installation.rst
    usage.rst
    tutorial.rst
@@ -30,9 +31,17 @@ ggCaller uses population-frequency information at several stages of gene annotat
 - One-line command from fasta -> gene annotations, gene frequency matrices, clusters of orthologous genes (COGs), core genome/pangenome alignments, phylogenetic trees, small/structural variants and more!
 - Annotated DBG-querying for functional PanGenome-Wide Association Studies (PGWAS), compatible with results from `Pyseer <https://github.com/mgalardini/pyseer>`_.
 
+For the impatient
+-----------------
+
+See :doc:`quickstart` to get ggCaller up and running quickly.
+
+Everyone else
+-----------------
+
+We recommend starting with :doc:`installation` to ensure things are installed correctly, followed by :doc:`usage`
+to get an overview of the commands, and finally :doc:`tutorial` for a step-by-step walkthrough.
+
 Contents
 ---------
-
-* :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

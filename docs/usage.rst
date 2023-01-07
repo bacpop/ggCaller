@@ -58,7 +58,7 @@ If all sequences are reads, specify ``--not-ref``::
     ggcaller --graph input.gfa --colours colours.bfg_colors --not-ref
 
 Results from all commands above will be saved to a directory called ``ggCaller_output`` by default.
-To change this, specify ``--out``. Note that ggCaller will overwrite results if an already existing directory is specified.
+To change this, specify ``--out <path>``. Note that ggCaller will overwrite results if an already existing directory is specified.
 
 By default, ggCaller will generate:
 
