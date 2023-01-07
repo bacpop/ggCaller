@@ -1,5 +1,6 @@
 import os, sys
 import _pickle as cPickle
+from Bio import SeqIO
 
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, query_id, num_threads):
     # check if objects_dir present, if not exit
@@ -10,11 +11,25 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     objects_dir = os.path.join(objects_dir, "")
 
     # read in and parse sequences in queryfile
+    id_vec = []
     query_vec = []
+    fasta_file = False
+
     with open(queryfile, "r") as f:
-        for line in f:
-            if line[0] != ">":
-                query_vec.append(line.strip())
+        first_line = f.readline()
+        if ">" in first_line:
+            fasta_file = True
+
+    if fasta_file:
+        fasta_sequences = SeqIO.parse(open(queryfile), 'fasta')
+        for entry in fasta_sequences:
+            query_vec.append(str(entry.seq))
+            id_vec.append(str(entry.id))
+    else:
+        with open(queryfile, "r") as f:
+            for line in f:
+                if line[0] != ">":
+                    query_vec.append(line.strip())
 
     # read in graph object and high_scoring ORFs and node_index
     graph.data_in(objects_dir + "ggc_graph.dat", graphfile, coloursfile, num_threads)
@@ -53,7 +68,11 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
             fasta_ID = isolate_names[colour] + "_" + str(ORF_ID)
             ORF_info = high_scoring_ORFs[colour][ORF_ID]
             seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
-            queries = ";".join([query_vec[i] for i in aligned])
+            if fasta_file:
+                id_set = set([id_vec[i] for i in aligned])
+                queries = ";".join([i for i in id_set])
+            else:
+                queries = ";".join([query_vec[i] for i in aligned])
 
             # add annotation
             f.write(
