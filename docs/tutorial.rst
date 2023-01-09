@@ -20,14 +20,14 @@ Working Dataset
 ---------------
 
 We'll use a dataset from `Bentley et al. (2006) <https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.0020031>`_.
-This dataset contains 91 sequences pneumococcal capsular polysaccharide synthetic (CPS) loci. These sequences are stucturally diverse,
-but are only ~20,000 bp in length, so can be analysed quickly on a standard laptop or desktop.
+This dataset contains 91 sequences pneumococcal capsular polysaccharide synthetic (CPS) loci. These sequences are structurally diverse,
+but are only ~20,000 bp in length, so can be analysed quickly (~5-10 minutes) on a standard laptop or desktop.
 
 Download the files from `here <https://figshare.com/articles/dataset/Bentley_et_al_2006_CPS_sequences/21829038>`_ and unzip::
 
     tar xvf Bentley_et_al_2006_CPS_sequences.tar.bz2
 
-We will also provide out own custom annotation database for DIAMOND. These will be the manually curated protein sequences
+We will also provide our own custom annotation database for DIAMOND. These will be the manually curated protein sequences
 from Bentley et al. Download from `here <https://figshare.com/articles/dataset/Bentley_et_al_2006_CPS_protein_sequences/21829071>`_ and unzip::
 
     tar xvf Bentley_et_al_2006_CPS_protein_sequences.tar.bz2
@@ -42,7 +42,7 @@ We recommend running the below command within the unzipped to generate this file
     ls -d -1 $PWD/*.fa > input.txt
     cd ..
 
-`input.txt` will now contain absolute paths to all `.fa` files in the directory `Bentley_et_al_2006_CPS_sequences`
+``input.txt`` will now contain absolute paths to all ``.fa`` files in the directory ``Bentley_et_al_2006_CPS_sequences``.
 
 Now we will run ggCaller specifying the below settings:
 
@@ -52,7 +52,7 @@ Now we will run ggCaller specifying the below settings:
 
 To do this using 4 threads, run::
 
-    ggcaller --refs fastas/Bentley_et_al_2006_CPS_sequences/input.txt --annotation ultrasensitive --diamonddb Bentley_et_al_2006_CPS_protein_sequences.faa --aligner def --alignment pan --save --out ggc_Bentley_et_al_CPS --threads 4
+    ggcaller --refs Bentley_et_al_2006_CPS_sequences/input.txt --annotation ultrasensitive --diamonddb Bentley_et_al_2006_CPS_protein_sequences.faa --aligner def --alignment pan --save --out ggc_Bentley_et_al_CPS --threads 4
 
 You will find the following files in the output directory ``ggc_Bentley_et_al_CPS``:
 
