@@ -45,10 +45,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifros
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
 SET( bifrost_INCLUDE_DIRS ${bifrost_INCLUDE_DIR} )
-# hack to avoid local MKL being linked
-SET( MKL_LIBRARIES ${bifrost_LIBRARY} )
-# avoid local MKL
-SET(MKL_FOUND TRUE)
+SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 
 # find TBB if not found already
 FIND_PATH(tbb_INCLUDE_DIR concurrent_unordered_map.h HINTS ${CONDA_DIR}/include/tbb NO_DEFAULT_PATH)
@@ -57,19 +54,29 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
 SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
 SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
+# find MKL
+FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
+FIND_LIBRARY(MKL_LIBRARIES NAMES mkl libmkl_intel_ilp64.so libmkl_core.so libmkl_intel_ilp64.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MK_INCLUDE_DIR MKL_LIBRARY)
+#SET( mkl_INCLUDE_DIRS ${mkl_INCLUDE_DIR} )
+#SET( mkl_LIBRARIES ${mkl_LIBRARY} )
+list(APPEND CMAKE_PREFIX_PATH ${MKL_ROOT})
+list(APPEND CMAKE_INCLUDE_PATH ${MKL_INCLUDE_DIR})
+list(APPEND CMAKE_LIBRARY_PATH ${MKL_LIBRARIES})
+# avoid local MKL when looking for pytorch
+SET(MKL_FOUND TRUE)
 
 # add torch libraries
 FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
 #MESSAGE(${PYTHON_SITE_PACKAGES})
 list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${MKL_ROOT})
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
-target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR})
+target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR} ${MKL_INCLUDE_DIR} ${bifrost_INCLUDE_DIRS})
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES})
+target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} ${bifrost_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
 
 #find OpenMP library
 find_package(OpenMP)
