@@ -14,7 +14,8 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - pytorch
+  - pytorch-cpu
+  - mkl-include
   - snp-sites
   - zlib
   - pthread-stubs
