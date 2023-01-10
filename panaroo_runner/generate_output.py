@@ -207,10 +207,13 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
             protein = str(record.seq)
             mem = int(record_ID.split("_")[0])
             ORF_ID = int(record_ID.split("_")[-1])
+            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
 
             # parse DNA sequence
-            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
-            dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            if ORF_ID > 0:
+                dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            else:
+                dna = ORFNodeVector[5]
 
             # back translate sequence
             aligned_dna = ""
@@ -223,6 +226,12 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
                     # remove any Ns present in DNA sequence
                     if "N" in to_add:
                         to_add.replace("N", "-")
+                    # if aligning pseudogene, may need to add on extra gaps
+                    if ORF_ID < 0:
+                        modulo = len(to_add) % 3
+                        if modulo > 0:
+                            for _ in range(0, modulo):
+                                to_add += "-"
                     aligned_dna += to_add
                     dna_idx += 3
 

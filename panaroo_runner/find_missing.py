@@ -102,7 +102,7 @@ def find_missing(G,
             nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
             high_scoring_ORFs[member][n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein)
+                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna)
 
     if verbose:
         print("Number of refound genes: ", n_found)
