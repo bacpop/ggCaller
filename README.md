@@ -29,10 +29,19 @@ conda config --add channels conda-forge
 ### Installation from source
 Required packages and versions can be found in ```environment.yml```. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.
 
+
+For example, using conda (creates ```ggc_env``` environment)
+
+```
+conda env create -f environment.yml
+conda activate ggc_env
+```
+
 Once all required packages are installed, install ggCaller using:
 
 ```
-git clone --recursive https://github.com/samhorsfield96/ggCaller 
+git clone --recursive https://github.com/samhorsfield96/ggCaller
+cd ggCaller
 python setup.py install
 ```
 

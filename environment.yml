@@ -1,9 +1,13 @@
 name: ggc_env
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
+  - pytorch-cpu
+  - mkl-devel
+  - tbb-devel
+  - boost-cpp
   - pip
   - numpy
   - scipy
@@ -14,8 +18,6 @@ dependencies:
   - diamond
   - hmmer
   - mafft
-  - pytorch-cpu
-  - mkl-include
   - snp-sites
   - zlib
   - pthread-stubs
@@ -34,8 +36,7 @@ dependencies:
   - pybind11
   - uncertainties
   - eigen=3.3
-  - openblas
-  - cmake>=3.10
+  - cmake
   - libgomp
   - llvm-openmp
   - tqdm
@@ -43,8 +44,6 @@ dependencies:
   - make
   - seaborn
   - rapidnj
-  - boost-cpp
-  - tbb-devel
   - python-edlib
   - joblib
   - gffutils

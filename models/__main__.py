@@ -13,6 +13,7 @@ def download_db():
         print("Downloading databases...")
         url = "https://ggcallerdb.blob.core.windows.net/dbs/ggCallerdb.tar.bz2"
         filename = wget.download(url, out=module_dir)
+        print("")
     if not os.path.exists(db_dir):
         tar = tarfile.open(db_dir + ".tar.bz2", mode="r:bz2")
         tar.extractall(module_dir)
