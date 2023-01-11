@@ -28,22 +28,18 @@ FIND_LIBRARY(Protobuf_LIBRARY NAMES protobuf HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_LIBRARY(Protobuf_PROTOC_LIBRARY NAMES protoc HINTS ${CONDA_DIR}/lib REQUIRED)
 FIND_PATH(Protobuf_INCLUDE_DIR zlib.h HINTS ${CONDA_DIR}/include)
 
-#Find include dirs
-FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
-FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
-
-# Find libraries
 include(FindPackageHandleStandardArgs)
+#Find zlib
+FIND_PATH(z_INCLUDE_DIR NAMES zlib.h HINTS ${CONDA_DIR}/include)
 FIND_LIBRARY(z_LIBRARY NAMES z HINTS ${CONDA_DIR}/lib REQUIRED)
-FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
-
-# Set package found as true
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(z DEFAULT_MSG z_INCLUDE_DIR z_LIBRARY)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifrost_LIBRARY)
-
-# Set dirs if multiple include/libraries found
 SET( z_INCLUDE_DIRS ${z_INCLUDE_DIR} )
 SET( z_LIBRARIES ${z_LIBRARY} )
+
+#Find bifrost
+FIND_PATH(bifrost_INCLUDE_DIR bifrost/CompactedDBG.hpp HINTS ${CONDA_DIR}/include)
+FIND_LIBRARY(bifrost_LIBRARY NAMES bifrost HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(bifrost DEFAULT_MSG bifrost_INCLUDE_DIR bifrost_LIBRARY)
 SET( bifrost_INCLUDE_DIRS ${bifrost_INCLUDE_DIR} )
 SET( bifrost_LIBRARIES ${bifrost_LIBRARY} )
 
@@ -56,13 +52,11 @@ SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
 # find MKL
 FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
-FIND_LIBRARY(MKL_LIBRARIES NAMES mkl libmkl_intel_ilp64.so libmkl_core.so libmkl_intel_ilp64.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MK_INCLUDE_DIR MKL_LIBRARY)
-#SET( mkl_INCLUDE_DIRS ${mkl_INCLUDE_DIR} )
-#SET( mkl_LIBRARIES ${mkl_LIBRARY} )
-list(APPEND CMAKE_PREFIX_PATH ${MKL_ROOT})
-list(APPEND CMAKE_INCLUDE_PATH ${MKL_INCLUDE_DIR})
-list(APPEND CMAKE_LIBRARY_PATH ${MKL_LIBRARIES})
+FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
+SET(MKL_LIBRARIES)
+list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
+#MESSAGE(${MKL_LIBRARIES})
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
 # avoid local MKL when looking for pytorch
 SET(MKL_FOUND TRUE)
 
@@ -73,10 +67,10 @@ list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
-target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR} ${MKL_INCLUDE_DIR} ${bifrost_INCLUDE_DIRS})
+target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR} ${MKL_INCLUDE_DIR})
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} ${bifrost_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
 
 #find OpenMP library
 find_package(OpenMP)
