@@ -3,7 +3,7 @@ project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # find packages with cmake methods
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -21,6 +21,11 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
   SET(Protobuf_PROTOC_EXECUTABLE ${CONDA_DIR}/bin/protoc)
+  # find torch cmake files
+  SET(Torch_SUFF "site-packages/torch/share/cmake/Torch")
+  FIND_PATH(Torch_DIR NAMES TorchConfig.cmake HINTS ${CONDA_DIR}/lib/python3.8/${Torch_SUFF} ${CONDA_DIR}/lib/python3.9/${Torch_SUFF} ${CONDA_DIR}/lib/python3.10/${Torch_SUFF} ${CONDA_DIR}/lib/python3.11/${Torch_SUFF} ${CONDA_DIR}/lib/python3.12/${Torch_SUFF} ${CONDA_DIR}/lib/python3.13/${Torch_SUFF} ${CONDA_DIR}/lib/python3.14/${Torch_SUFF} ${CONDA_DIR}/lib/python3.15/${Torch_SUFF} NO_DEFAULT_PATH)
+  #MESSAGE(${Torch_DIR})
+  #MESSAGE(${CONDA_DIR})
 ENDIF()
 
 # find correct protobuf library
@@ -56,14 +61,12 @@ FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so HINTS ${MKL_ROOT}/lib/intel64 ${CO
 SET(MKL_LIBRARIES)
 list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
 #MESSAGE(${MKL_LIBRARIES})
+#MESSAGE(${MKL_INCLUDE_DIR})
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
 # avoid local MKL when looking for pytorch
 SET(MKL_FOUND TRUE)
 
 # add torch libraries
-FIND_PATH(PYTHON_SITE_PACKAGES LICENSE.txt HINTS ${CONDA_DIR}/lib NO_DEFAULT_PATH)
-#MESSAGE(${PYTHON_SITE_PACKAGES})
-list(APPEND CMAKE_PREFIX_PATH ${PYTHON_SITE_PACKAGES}/torch/share/cmake)
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
