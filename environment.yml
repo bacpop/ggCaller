@@ -37,6 +37,7 @@ dependencies:
   - uncertainties
   - eigen=3.3
   - cmake
+  - libgcc
   - libgomp
   - llvm-openmp
   - tqdm
