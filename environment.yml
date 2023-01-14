@@ -36,8 +36,7 @@ dependencies:
   - pybind11
   - uncertainties
   - eigen=3.3
-  - cmake
-  - libgcc
+  - cmake>=3.10
   - libgomp
   - llvm-openmp
   - tqdm

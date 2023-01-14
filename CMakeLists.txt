@@ -75,9 +75,12 @@ target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/incl
 # link libraries
 target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
 
-#find OpenMP library
-find_package(OpenMP)
-
-if(OpenMP_CXX_FOUND)
-  target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
+# find openmp
+if(DEFINED ENV{CONDA_PREFIX} AND (NOT APPLE OR CMAKE_COMPILER_IS_GNUCC))
+    target_link_libraries(ggCaller_cpp PRIVATE gomp)
+else()
+    find_package(OpenMP)
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
+    endif()
 endif()
