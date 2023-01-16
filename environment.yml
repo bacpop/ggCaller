@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - pytorch-cpu>=1.10
-  - mkl-devel
+  - mkl-devel>=2023
   - tbb-devel
   - boost-cpp
   - pip
