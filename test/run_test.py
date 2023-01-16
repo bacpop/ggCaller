@@ -29,7 +29,7 @@ subprocess.run(
 ### reference read workflow ###
 sys.stderr.write("Running reference read workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --high-var-flag 4 --core-threshold 0.96",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --core-threshold 0.96",
     shell=True,
     check=True)
 
@@ -43,7 +43,7 @@ subprocess.run(
 ### reads + refs build workflow ###
 sys.stderr.write("Running reads + reference build workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --reads pneumo_CL_group2.txt --out test_dir --repeat --family-threshold 0.75 --merge-paralogs --refind-prop-match 0.15 --edge-support-threshold 2 --remove-by-consensus True",
+    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --reads pneumo_CL_group2.txt --out test_dir --repeat --family-threshold 0.75 --merge-paralogs --refind-prop-match 0.15 --edge-support-threshold 2",
     shell=True,
     check=True)
 
