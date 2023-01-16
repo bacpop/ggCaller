@@ -15,7 +15,7 @@ dependencies:
   - bifrost
   - biopython
   - bcbio-gff
-  - diamond
+  - diamond>=2.0
   - hmmer
   - mafft
   - snp-sites

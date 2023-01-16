@@ -95,11 +95,8 @@ def run_diamond_search(G, shd_arr_tup, overlap, annotation_temp_dir, annotate, a
                    annotation_temp_dir + "dna_d.fasta", "-o", annotation_temp_dir + "dna_d.tsv"]
 
     #result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    result = subprocess.run(command, capture_output=True, text=True)
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
-        print(command)
-        print(result.stdout)
-        print(result.stderr)
         raise Exception("Diamond search failed!")
         sys.exit(1)
 
