@@ -38,6 +38,7 @@ dependencies:
   - eigen=3.3
   - cmake>=3.10
   - libgomp
+  - protobuf
   - llvm-openmp
   - tqdm
   - setuptools
