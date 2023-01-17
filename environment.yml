@@ -31,6 +31,7 @@ dependencies:
   - xorg-libxpm
   - xorg-libxaw
   - xorg-libxfixes
+  - openblas
   - intbitset
   - networkx
   - pybind11
