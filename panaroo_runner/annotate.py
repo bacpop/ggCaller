@@ -105,7 +105,7 @@ def run_diamond_search(G, shd_arr_tup, overlap, annotation_temp_dir, annotate, a
         df = pd.read_csv(annotation_temp_dir + "dna_d.tsv", sep='\t', header=None)
     except pd.errors.EmptyDataError:
         return G
-    df.set_axis(['query_id', 'id', 'bitscore', 'description'], axis=1, inplace=True)
+    df = df.set_axis(['query_id', 'id', 'bitscore', 'description'], axis=1, copy=False)
 
     # split node in which query is found
     df['node'] = df['query_id'].str.split(';').str[0]

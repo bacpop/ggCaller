@@ -145,6 +145,7 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     seq_to_cluster[ORF_id] = cluster_to_add
                 G.add_node(
                     cluster_to_add,
+                    CID=cluster_to_add,
                     size=1,
                     centroid=[cluster_centroids[current_cluster]],
                     maxLenId=0,

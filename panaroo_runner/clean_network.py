@@ -185,6 +185,7 @@ def merge_node_cluster(G,
 
     G.add_node(
         newNode,
+        CID=newNode,
         size=len(members),
         centroid=centroid,
         maxLenId=maxLenId,
