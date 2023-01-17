@@ -22,7 +22,7 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
   SET(Protobuf_PROTOC_EXECUTABLE ${CONDA_DIR}/bin/protoc)
   # find torch cmake files
-  SET(Torch_SUFF "site-packages/torch/share/cmake/Torch")
+  SET(Torch_SUFF "/torch/share/cmake/Torch")
   FIND_PATH(Torch_DIR NAMES TorchConfig.cmake HINTS ${PYTHON_SITE_PACKAGES}/${Torch_SUFF} NO_DEFAULT_PATH)
   #MESSAGE(${Torch_DIR})
   #MESSAGE(${CONDA_DIR})
