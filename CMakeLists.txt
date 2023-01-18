@@ -55,28 +55,27 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
 SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
 SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
-# find MKL if on linux
-if(NOT APPLE)
-  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
-  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
-  SET(MKL_LIBRARIES)
-  list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
-  #MESSAGE(${MKL_LIBRARIES})
-  #MESSAGE(${MKL_INCLUDE_DIR})
-  FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
-  # avoid local MKL when looking for pytorch
-  SET(MKL_FOUND TRUE)
-  target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
-endif()
+# find MKL if on linux or Macosx
+FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
+FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
+SET(MKL_LIBRARIES)
+list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
+#MESSAGE(${MKL_LIBRARIES})
+#MESSAGE(${MKL_INCLUDE_DIR})
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
+# avoid local MKL when looking for pytorch
+SET(MKL_FOUND TRUE)
+target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
+target_include_directories(ggCaller_cpp PRIVATE ${MKL_INCLUDE_DIR})
 
 # add torch libraries
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
-target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR} ${MKL_INCLUDE_DIR})
+target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR})
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${MKL_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
+target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
 
 # find openmp
 if(DEFINED ENV{CONDA_PREFIX} AND (NOT APPLE OR CMAKE_COMPILER_IS_GNUCC))
