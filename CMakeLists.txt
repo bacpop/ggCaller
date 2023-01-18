@@ -55,16 +55,19 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(tbb DEFAULT_MSG tbb_INCLUDE_DIR tbb_LIBRARY)
 SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
 SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
-# find MKL
-FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
-FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
-SET(MKL_LIBRARIES)
-list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
-MESSAGE(${MKL_LIBRARIES})
-MESSAGE(${MKL_INCLUDE_DIR})
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
-# avoid local MKL when looking for pytorch
-SET(MKL_FOUND TRUE)
+# find MKL if on linux
+if(NOT APPLE)
+  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
+  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
+  SET(MKL_LIBRARIES)
+  list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
+  #MESSAGE(${MKL_LIBRARIES})
+  #MESSAGE(${MKL_INCLUDE_DIR})
+  FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
+  # avoid local MKL when looking for pytorch
+  SET(MKL_FOUND TRUE)
+  target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
+endif()
 
 # add torch libraries
 find_package(Torch REQUIRED)
@@ -82,5 +85,6 @@ else()
     find_package(OpenMP)
     if(OpenMP_CXX_FOUND)
         target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
+        MESSAGE("Found openmp")
     endif()
 endif()
