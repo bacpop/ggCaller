@@ -68,6 +68,11 @@ SET(MKL_FOUND TRUE)
 target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
 target_include_directories(ggCaller_cpp PRIVATE ${MKL_INCLUDE_DIR})
 
+# ignore USE_NNPACK on macos
+if ( APPLE )
+  set(ENV{USE_NNPACK} 0)
+endif()
+
 # add torch libraries
 find_package(Torch REQUIRED)
 
