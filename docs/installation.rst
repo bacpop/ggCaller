@@ -1,7 +1,9 @@
 Installation
 ============
 
-ggCaller is available on Linux and MacOS. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux (`WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_).
+ggCaller is available on Linux. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux (`WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_).
+
+We plan to get a MacOS version up and running in the future.
 
 The easiest way to install is through conda, which will also install the
 dependencies::
