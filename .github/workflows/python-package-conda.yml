@@ -34,6 +34,7 @@ jobs:
       uses: mamba-org/provision-with-micromamba@main
       with:
         cache-env: true
+        environment-file: environment_linux.yml
     - name: Install and run_test.py
       shell: bash -l {0}
       run: |
@@ -68,6 +69,7 @@ jobs:
       uses: mamba-org/provision-with-micromamba@main
       with:
         cache-env: true
+        environment-file: environment_macOS.yml
     - name: Install and run_test.py
       shell: bash -l {0}
       run: |
