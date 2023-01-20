@@ -26,6 +26,11 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   FIND_PATH(Torch_DIR NAMES TorchConfig.cmake HINTS ${PYTHON_SITE_PACKAGES}/${Torch_SUFF} NO_DEFAULT_PATH)
   #MESSAGE(${Torch_DIR})
   #MESSAGE(${CONDA_DIR})
+  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${CONDA_DIR}/include NO_DEFAULT_PATH)
+  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${CONDA_DIR}/lib REQUIRED NO_DEFAULT_PATH)
+else()
+  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include)
+  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${MKL_ROOT}/lib/intel64 REQUIRED)
 ENDIF()
 
 # find correct protobuf library
@@ -56,8 +61,6 @@ SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
 SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
 # find MKL if on linux or Macosx
-FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include ${CONDA_DIR}/include)
-FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${MKL_ROOT}/lib/intel64 ${CONDA_DIR}/lib REQUIRED)
 SET(MKL_LIBRARIES)
 list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
 #MESSAGE(${MKL_LIBRARIES})
