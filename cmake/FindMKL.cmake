@@ -60,10 +60,10 @@ else()
   set(INTEL_ROOT_DEFAULT "/opt/intel")
 endif()
 set(INTEL_ROOT ${INTEL_ROOT_DEFAULT} CACHE PATH "Folder contains intel libs")
-find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKLROOT} ${INTEL_ROOT}/mkl
+find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKLROOT} ${INTEL_ROOT}/mkl $ENV{CONDA_PREFIX}
                                    DOC "Folder contains MKL")
 
-find_path(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include /usr/include/mkl)
+find_path(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include /usr/include/mkl $ENV{CONDA_PREFIX}/include)
 
 
 find_library(MKL_INTERFACE_LIBRARY

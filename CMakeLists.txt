@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+if (POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW) # CMake 3.12
+endif ()
+
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
