@@ -34,24 +34,10 @@ if (MKL_INCLUDE_DIRS AND MKL_LIBRARIES AND MKL_INTERFACE_LIBRARY AND
   set (MKL_FIND_QUIETLY TRUE)
 endif()
 
-if(NOT BUILD_SHARED_LIBS)
-  if (WIN32)
-    set(INT_LIB "mkl_intel_ilp64.lib")
-    set(SEQ_LIB "mkl_sequential.lib")
-    set(THR_LIB "mkl_intel_thread.lib")
-    set(COR_LIB "mkl_core.lib")
-  else()
-    set(INT_LIB "libmkl_intel_ilp64.a")
-    set(SEQ_LIB "libmkl_sequential.a")
-    set(THR_LIB "libmkl_intel_thread.a")
-    set(COR_LIB "libmkl_core.a")
-  endif()
-else()
-  set(INT_LIB "mkl_intel_ilp64")
-  set(SEQ_LIB "mkl_sequential")
-  set(THR_LIB "mkl_intel_thread")
-  set(COR_LIB "mkl_core")
-endif()
+set(INT_LIB "mkl_intel_ilp64")
+set(SEQ_LIB "mkl_sequential")
+set(THR_LIB "mkl_intel_thread")
+set(COR_LIB "mkl_core")
 
 if(MSVC)
   set(ProgramFilesx86 "ProgramFiles(x86)")
@@ -66,7 +52,6 @@ find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKLROOT} ${INTEL_ROOT}/mkl $ENV{COND
 MESSAGE(${MKL_ROOT})
 
 find_path(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include /usr/include/mkl $ENV{CONDA_PREFIX}/include)
-
 
 find_library(MKL_INTERFACE_LIBRARY
              NAMES ${INT_LIB}
