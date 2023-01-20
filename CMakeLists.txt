@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(ggCaller_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # find packages with cmake methods
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -26,11 +27,6 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   FIND_PATH(Torch_DIR NAMES TorchConfig.cmake HINTS ${PYTHON_SITE_PACKAGES}/${Torch_SUFF} NO_DEFAULT_PATH)
   #MESSAGE(${Torch_DIR})
   #MESSAGE(${CONDA_DIR})
-  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${CONDA_DIR}/include NO_DEFAULT_PATH)
-  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${CONDA_DIR}/lib REQUIRED NO_DEFAULT_PATH)
-else()
-  FIND_PATH(MKL_INCLUDE_DIR NAMES mkl.h HINTS ${MKL_ROOT}/include)
-  FIND_LIBRARY(MKL_LIBRARY NAMES libmkl_core.so libmkl_core.dylib HINTS ${MKL_ROOT}/lib/intel64 REQUIRED)
 ENDIF()
 
 # find correct protobuf library
@@ -61,13 +57,14 @@ SET( tbb_INCLUDE_DIRS ${tbb_INCLUDE_DIR} )
 SET( tbb_LIBRARIES ${tbb_LIBRARY} )
 
 # find MKL if on linux or Macosx
-SET(MKL_LIBRARIES)
-list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
-#MESSAGE(${MKL_LIBRARIES})
-#MESSAGE(${MKL_INCLUDE_DIR})
+find_package(MKL)
+#SET(MKL_LIBRARIES)
+#list(APPEND MKL_LIBRARIES ${MKL_LIBRARY})
+MESSAGE(${MKL_LIBRARIES})
+MESSAGE(${MKL_INCLUDE_DIR})
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
 # avoid local MKL when looking for pytorch
-SET(MKL_FOUND TRUE)
+#SET(MKL_FOUND TRUE)
 target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
 target_include_directories(ggCaller_cpp PRIVATE ${MKL_INCLUDE_DIR})
 
