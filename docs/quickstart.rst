@@ -1,6 +1,10 @@
 Quickstart
 ==================================
 
+.. important::
+    We are aware of issues installing from conda version at the moment.
+    We recommend installing from source at this time.
+
 Installation
 ------------
 

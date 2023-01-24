@@ -14,7 +14,27 @@ ggCaller is available on Linux. If you are running Windows 10/11, Linux can be i
 
 We plan to get a MacOS version up and running in the future.
 
-### Installation via conda (recommended)
+NOTE: We are aware of issues installing from conda at the moment. We recommend installing from source at this time.
+
+### Installation from source (recommended)
+Required packages and versions can be found in ```environment_linux.yml``` and ```environment_macOS.yml``` depending on your operating system. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.
+
+For example, using conda (creates ```ggc_env``` environment)
+
+```
+conda env create -f environment_linux.yml
+conda activate ggc_env
+```
+
+Once all required packages are installed, install ggCaller using:
+
+```
+git clone --recursive https://github.com/samhorsfield96/ggCaller
+cd ggCaller
+python setup.py install
+```
+
+### Installation via conda
 
 Install through [bioconda](http://bioconda.github.io/):
 
@@ -26,25 +46,6 @@ If conda is not installed, first install [miniconda](https://docs.conda.io/en/la
 conda config --add channels defaults
 conda config --add channels bioconda
 conda config --add channels conda-forge
-```
-
-### Installation from source
-Required packages and versions can be found in ```environment.yml```. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.
-
-
-For example, using conda (creates ```ggc_env``` environment)
-
-```
-conda env create -f environment.yml
-conda activate ggc_env
-```
-
-Once all required packages are installed, install ggCaller using:
-
-```
-git clone --recursive https://github.com/samhorsfield96/ggCaller
-cd ggCaller
-python setup.py install
 ```
 
 ## Citation
