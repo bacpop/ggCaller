@@ -20,6 +20,7 @@ and `Panaroo <https://github.com/gtonkinhill/panaroo>`_ for pangenome analysis a
    usage.rst
    tutorial.rst
    advanced.rst
+   citations.rst
 
 Why ggCaller?
 -------------
