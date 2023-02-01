@@ -50,7 +50,11 @@ conda config --add channels conda-forge
 
 ## Citation
 
-If you use this code, please cite:
+Please cite the ggCaller pre-print:
+
+Horsfield, S.T., Croucher, N.J., Lees, J.A. "Accurate and fast graph-based pangenome annotation and clustering with ggCaller" bioRxiv 2023.01.24.524926 (2023). doi: https://doi.org/10.1101/2023.01.24.524926
+
+If you use this code, please also cite the dependencies:
 
 #### DBG building and querying
 - **Bifrost:** Holley, G., Melsted, P. "Bifrost: highly parallel construction and indexing of colored and compacted de Bruijn graphs." Genome Biol 21(249) (2020). https://doi.org/10.1186/s13059-020-02135-8
