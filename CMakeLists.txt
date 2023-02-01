@@ -8,7 +8,7 @@ endif ()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # find packages with cmake methods
 set(THREADS_PREFER_PTHREAD_FLAG ON)
