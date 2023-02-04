@@ -36,4 +36,9 @@ To run ggCaller with just reads::
 
     ggcaller --reads input.txt
 
+.. important::
+    We haven't extensively tested calling genes within
+    read datasets yet. Exercise caution when interpreting
+    results.
+
 Results will be saved to the directory ``ggCaller_output`` by default. To change this, specify ``--out <path>``.

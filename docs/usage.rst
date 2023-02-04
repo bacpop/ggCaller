@@ -44,6 +44,11 @@ To run ggCaller with reads and assemblies::
 
     ggcaller --refs input1.txt --reads input2.txt
 
+.. important::
+    We haven't extensively tested calling genes within
+    read datasets yet. Exercise caution when interpreting
+    results.
+
 ggCaller can also be run on a pre-built Bifrost DBG and its associated colours file::
 
     ggcaller --graph input.gfa --colours colours.bfg_colors
