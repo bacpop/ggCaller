@@ -13,7 +13,7 @@ dependencies:
   - scipy
   - pandas
   - bifrost
-  - biopython
+  - biopython=1.80
   - bcbio-gff
   - diamond>=2.0
   - hmmer
