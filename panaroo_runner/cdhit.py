@@ -406,7 +406,7 @@ def iterative_cdhit(
             run_cdhit_est(input_file=temp_input_file.name,
                           output_file=temp_output_file.name,
                           id=cid,
-                          s=s,
+                          s=cid,
                           aL=aL,
                           AL=AL,
                           aS=AS,
