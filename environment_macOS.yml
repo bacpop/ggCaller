@@ -4,6 +4,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  - python>=3.9
   - pytorch-cpu=1.10
   - mkl-devel
   - tbb-devel
