@@ -8,8 +8,8 @@ Example results can be found `here <https://figshare.com/articles/dataset/ggCall
 .. important::
     Results will be consistent, but may not exactly match between your run
     and the example. This is due to the greedy clustering
-    algorithm used by ggCaller, which can cause differences
-    in rare genes counts.
+    algorithm used by ggCaller, which can cause small differences
+    in genes counts.
 
 Installation and setup
 ----------------------
