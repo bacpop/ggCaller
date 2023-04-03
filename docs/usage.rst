@@ -51,16 +51,16 @@ To run ggCaller with reads and assemblies::
 
 ggCaller can also be run on a pre-built Bifrost DBG and its associated colours file::
 
-    ggcaller --graph input.gfa --colours colours.bfg_colors
+    ggcaller --graph input.gfa --colours colours.color.bfg
 
 This assumes all sequences used to build the graph are assemblies.
 If only some sequences are assemblies and the rest are reads, specify which files are references using ``--refs``::
 
-    ggcaller --graph input.gfa --colours colours.bfg_colors --refs input1.txt
+    ggcaller --graph input.gfa --colours colours.color.bfg --refs input1.txt
 
 If all sequences are reads, specify ``--not-ref``::
 
-    ggcaller --graph input.gfa --colours colours.bfg_colors --not-ref
+    ggcaller --graph input.gfa --colours colours.color.bfg --not-ref
 
 Results from all commands above will be saved to a directory called ``ggCaller_output`` by default.
 To change this, specify ``--out <path>``. Note that ggCaller will overwrite results if an already existing directory is specified.
@@ -205,16 +205,16 @@ Querying the DBG
 
 Queries sequences can either be in multi-FASTA format, or in a single file with each sequence on its own line.
 
-Provide paths to the DBG ``.gfa`` and ``.bfg_colors`` files, the ``ggc_data`` directory and query file::
+Provide paths to the DBG ``.gfa`` and ``.color.bfg`` files, the ``ggc_data`` directory and query file::
 
-    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --data ggCaller_output/ggc_data
 
 By default, mapped queries >=80% matching k-mers to a given colour will be returned. This can be changed using
 ``--query-id`` flag.
 
 To return queries with 100% match::
 
-    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.bfg_colors --data ggCaller_output/ggc_data --query-id 1.0
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --data ggCaller_output/ggc_data --query-id 1.0
 
 .. _Interpreting results:
 

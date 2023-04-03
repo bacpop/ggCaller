@@ -22,14 +22,14 @@ subprocess.run(
 
 sys.stderr.write("Running unitig query workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --data test_dir/ggc_data --query pneumo_CL_group2_queries.fasta --query-id 0.5 --out test_dir",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.color.bfg --data test_dir/ggc_data --query pneumo_CL_group2_queries.fasta --query-id 0.5 --out test_dir",
     shell=True,
     check=True)
 
 ### reference read workflow ###
 sys.stderr.write("Running reference read workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --core-threshold 0.96",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.color.bfg --out test_dir --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --evalue 0.01 --core-threshold 0.96",
     shell=True,
     check=True)
 
@@ -50,7 +50,7 @@ subprocess.run(
 ### reads read workflow ###
 sys.stderr.write("Running reads read workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --not-ref --out test_dir --repeat --clean-mode sensitive --min-trailing-support 1 --trailing-recursive 1",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.color.bfg --not-ref --out test_dir --repeat --clean-mode sensitive --min-trailing-support 1 --trailing-recursive 1",
     shell=True,
     check=True)
 
@@ -63,7 +63,7 @@ subprocess.run(
 ### reference read workflow ###
 sys.stderr.write("Running reference read workflow without models\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.bfg_colors --out test_dir --no-filter --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --truncation-threshold 0.7 --ignore-pseduogenes --no-variants",
+    python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.color.bfg --out test_dir --no-filter --len-diff-cutoff 0.99 --alignment pan --aligner def --annotation sensitive --truncation-threshold 0.7 --ignore-pseduogenes --no-variants",
     shell=True,
     check=True)
 

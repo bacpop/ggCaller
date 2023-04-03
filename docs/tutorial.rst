@@ -104,7 +104,7 @@ Querying the graph
 
 We can now query the graph. To do so, run::
 
-    ggcaller --query CPS_queries.fasta --graph Bentley_et_al_2006_CPS_sequences/input.gfa --colours Bentley_et_al_2006_CPS_sequences/input.bfg_colors --data ggc_Bentley_et_al_CPS/ggc_data --out ggc_Bentley_et_al_CPS --threads 4
+    ggcaller --query CPS_queries.fasta --graph Bentley_et_al_2006_CPS_sequences/input.gfa --colours Bentley_et_al_2006_CPS_sequences/input.color.bfg --data ggc_Bentley_et_al_CPS/ggc_data --out ggc_Bentley_et_al_CPS --threads 4
 
 Results will be saved in ``ggc_Bentley_et_al_CPS/matched_queries.fasta``.
 
