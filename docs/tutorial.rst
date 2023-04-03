@@ -6,10 +6,10 @@ Here we'll walk through a typical run of ggCaller, including both :ref:`Gene-cal
 Example results can be found `here <https://figshare.com/articles/dataset/ggCaller_example_results/21831204>`_.
 
 .. important::
-    Results may not exactly match between your run
-    and the example. This is due to multiple valid paths
-    present through the DBG which can sometimes result
-    in rare genes being missed.
+    Results will be consistent, but may not exactly match between your run
+    and the example. This is due to the greedy clustering
+    algorithm used by ggCaller, which can cause differences
+    in rare genes counts.
 
 Installation and setup
 ----------------------
