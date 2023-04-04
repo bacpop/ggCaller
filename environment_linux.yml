@@ -1,10 +1,11 @@
-name: ggc_env
+name: base
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   - python>=3.9
+  - cxx-compiler
   - pytorch-cpu=1.10
   - mkl-devel
   - tbb-devel
