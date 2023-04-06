@@ -23,11 +23,21 @@ separate directories.
     the FASTA/FASTQ files are saved, as ggCaller saves
     intermediate FMINDEX files in the same locations.
 
-To generate the input file for ggCaller, navigate inside the directory containing the genomes, and run::
+If not using Docker, generate the input file for ggCaller, navigate inside the directory containing the genomes, and run::
 
     ls -d -1 $PWD/*.fasta > input.txt
 
+If using Docker, you must navigate to the directory containing the fasta files and run::
+
+    ls -d -1 *.fasta > input.txt
+
 This will generate a list of all the ``.fasta`` files in the directory. Change this extension as required.
+
+.. important::
+    All of the below commands can be run with docker installations, however they
+    must be run as: ``docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller <commands>``.
+    This command must be run within the same directory as the `.fasta` files and `input.txt`.
+    All paths provided must be relative, as absolute paths will not work within the docker container.
 
 DBG building with reads or assemblies is different, with k-mers that appear only once being removed from the graph.
 Therefore it is important to specify whether ``input.txt`` contains reads or assemblies.
