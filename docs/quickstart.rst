@@ -14,7 +14,7 @@ dependencies::
     conda install ggcaller
 
 .. important::
-    ggCaller requires python3.8 to run
+    ggCaller requires python3.9 to run
     (which on many default Linux installations is
     run using ``python3`` rather than ``python``).
 
