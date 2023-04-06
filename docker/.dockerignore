@@ -1,7 +1,12 @@
-../test/*
-test/*
+../test*
+test*
+../.git*
 .git*
 ../docs
+docs
 ../data
+data
 ../dist
+dist
 ../build
+build
