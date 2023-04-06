@@ -1,13 +1,6 @@
 FROM mambaorg/micromamba:latest
 
-ARG USER_ID
-ARG GROUP_ID
-
 USER root
-
-RUN addgroup --gid $GROUP_ID user
-RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
-USER user
 
 # create a project directory inside user home
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
