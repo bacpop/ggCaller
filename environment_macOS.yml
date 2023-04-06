@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.9
+  - cxx-compiler
   - pytorch-cpu=1.10
   - mkl-devel
   - tbb-devel
@@ -23,15 +24,6 @@ dependencies:
   - zlib
   - pthread-stubs
   - matplotlib
-  - xorg-libxi
-  - xorg-libxcursor
-  - xorg-libxdamage
-  - xorg-libxcomposite
-  - xorg-libxrandr
-  - xorg-libxinerama
-  - xorg-libxpm
-  - xorg-libxaw
-  - xorg-libxfixes
   - openblas
   - intbitset
   - networkx

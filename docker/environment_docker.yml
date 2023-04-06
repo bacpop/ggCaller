@@ -1,4 +1,4 @@
-name: ggc_env
+name: base
 channels:
   - conda-forge
   - bioconda

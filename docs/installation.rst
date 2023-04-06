@@ -1,21 +1,39 @@
 Installation
 ============
 
-ggCaller is available on Linux. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux (`WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_).
+ggCaller is available on Linux. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux (`WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_). If running via Docker, ensure you install WSL2.
 
 We plan to get a MacOS version up and running in the future.
 
 .. important::
-    ggCaller requires python3.8 to run
+    ggCaller requires python3.9 to run
     (which on many default Linux installations is
     run using ``python3`` rather than ``python``).
+
+Installing with Docker (recommended)
+-----------------------------------
+
+First, install (`Docker <https://docs.docker.com/get-docker/>`_) for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
+
+Then, download and switch to the ggCaller repository::
+
+    git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
+
+Finally, build with Docker. This should take between 5-10 minutes to fully install.::
+
+	docker build -t ggc_env:latest -f docker/Dockerfile .
+
+To run ggCaller, run::
+
+	cd test && docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs pneumo_CL_group2.txt
+
 
 Installing with conda
 -----------------------------------
 
 .. important::
     We are aware of issues installing from conda at the moment.
-    We recommend installing from source at this time.
+    We recommend installing from docker or source at this time.
 
 Installing with conda is the easiest way to get ggCaller up and running, and will install all dependencies.
 
@@ -40,10 +58,12 @@ You will need to install the dependencies yourself (you can still use
 conda or pip for this purpose). See ``environment_linux.yml`` or ``environment_macOS.yml``.
 In addition, a C++17 compiler (e.g. gcc >=7.3) is required.
 
-For example, using conda (creates ```ggc_env``` environment)::
+We highly recommend using mamba over conda due to the large number of dependencies, making mamba significantly faster.
 
-    conda env create -f environment_linux.yml
-    conda activate ggc_env
+To install dependencies (creates ```ggc_env``` environment)::
+
+    mamba env create -f environment_linux.yml
+    mamba activate ggc_env
 
 Then clone the code and install::
 
