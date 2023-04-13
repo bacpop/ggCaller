@@ -8,7 +8,7 @@ Quickstart
 Installation
 ------------
 
-The easiest way to get up and running is using . First, download and switch to the ggCaller repository::
+The easiest way to get up and running is using Docker. First, download and switch to the ggCaller repository::
 
     git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
 
