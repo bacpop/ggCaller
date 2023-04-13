@@ -199,10 +199,10 @@ def get_options():
     Panaroo_annotation = parser.add_argument_group('Panaroo gene cluster annotation options')
     Panaroo_annotation.add_argument("--annotation",
                                     dest="annotate",
-                                    help="Annotate genes using diamond default (fast), diamond sensitive (sensitive) or diamond and HMMscan (ultrasensitive)."
-                                         "If not specified, no annotation done",
-                                    choices=["fast", "sensitive", "ultrasensitive"],
-                                    default=None)
+                                    help="Annotate genes using diamond default (fast), diamond sensitive (sensitive) or diamond and HMMscan (ultrasensitive). Specify 'none' if annotation not required."
+                                         "Default = 'fast'",
+                                    choices=["none", "fast", "sensitive", "ultrasensitive"],
+                                    default="fast")
     Panaroo_annotation.add_argument("--diamonddb",
                                     dest="annotation_db",
                                     help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
@@ -440,7 +440,7 @@ def main():
     annotation_db = options.annotation_db
     hmm_db = options.hmm_db
 
-    if options.annotate is not None:
+    if options.annotate != "none":
         # check diamond and HMMER are installed correctly
         check_diamond_install()
         check_HMMER_install()
