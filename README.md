@@ -22,7 +22,7 @@ First, install [Docker](https://docs.docker.com/get-docker/) for your OS. If run
 
 Then pull the latest image::
 
-    docker pull samhorsfield96/ggcaller:v1.3.4
+    docker pull samhorsfield96/ggcaller:latest
 
 To run ggCaller, run::
 
