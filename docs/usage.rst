@@ -35,7 +35,7 @@ This will generate a list of all the ``.fasta`` files in the directory. Change t
 
 .. important::
     All of the below commands can be run with docker installations, however they
-    must be run as: ``docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller <commands>``.
+    must be run as: ``docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller <commands>``.
     This command must be run within the same directory as the `.fasta` files and `input.txt`.
     All paths provided must be relative, as absolute paths will not work within the docker container.
 

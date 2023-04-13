@@ -8,14 +8,9 @@ Quickstart
 Installation
 ------------
 
-The easiest way to get up and running is using Docker. First, download and switch to the ggCaller repository::
+The easiest way to get up and running is using Docker. To get up and running, pull the latest image::
 
-    git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
-
-Then, build with Docker. This should take between 5-10 minutes to fully install::
-
-	docker build -t ggc_env:latest -f docker/Dockerfile .
-
+    docker pull samhorsfield96/ggcaller:latest
 
 Preparing the data
 ------------------
@@ -41,7 +36,7 @@ To run ggCaller with just reads::
 
 If using Docker, run with the below command. You must ensure all paths are relative, including in ``input.txt``::
 
-	docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs input.txt --out output_path
+	docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs input.txt --out output_path
 
 .. important::
     We haven't extensively tested calling genes within

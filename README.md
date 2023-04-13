@@ -20,17 +20,13 @@ NOTE: We are aware of issues installing from conda at the moment. We recommend i
 
 First, install [Docker](https://docs.docker.com/get-docker/) for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
 
-Then, download and switch to the ggCaller repository::
+Then pull the latest image::
 
-    git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
-
-Finally, build with Docker. This should take between 5-10 minutes to fully install.::
-
-	docker build -t ggc_env:latest -f docker/Dockerfile .
+    docker pull samhorsfield96/ggcaller:v1.3.4
 
 To run ggCaller, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs pneumo_CL_group2.txt
+	cd test && docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs pneumo_CL_group2.txt
 
 ### Installation from source
 Required packages and versions can be found in ```environment_linux.yml``` and ```environment_macOS.yml``` depending on your operating system. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.

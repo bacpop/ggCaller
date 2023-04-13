@@ -15,7 +15,15 @@ Installing with Docker (recommended)
 
 First, install (`Docker <https://docs.docker.com/get-docker/>`_) for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
 
-Then, download and switch to the ggCaller repository::
+To use the latest image, run::
+
+    docker pull samhorsfield96/ggcaller:latest
+
+To run ggCaller from the Docker Hub image, run::
+
+	cd test && docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs pneumo_CL_group2.txt
+
+You can also build the image yourself. First download and switch to the ggCaller repository::
 
     git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
 
@@ -23,10 +31,9 @@ Finally, build with Docker. This should take between 5-10 minutes to fully insta
 
 	docker build -t ggc_env:latest -f docker/Dockerfile .
 
-To run ggCaller, run::
+To run ggCaller from a local Docker build, run::
 
 	cd test && docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs pneumo_CL_group2.txt
-
 
 Installing with conda
 -----------------------------------
