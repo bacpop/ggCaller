@@ -12,7 +12,7 @@ The easiest way to get up and running is using Docker. First, download and switc
 
     git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
 
-Then, build with Docker. This should take between 5-10 minutes to fully install.::
+Then, build with Docker. This should take between 5-10 minutes to fully install::
 
 	docker build -t ggc_env:latest -f docker/Dockerfile .
 
@@ -24,7 +24,7 @@ Place all of you samples to analyse in the same directory. Then navigate inside 
 
     ls -d -1 $PWD/*.fasta > input.txt
 
-If using Docker, instead navigate to the directory containing the fasta files and run the below command, to ensure paths files are relative. The docker version will not work with absolute paths.::
+If using Docker, instead navigate to the directory containing the fasta files and run the below command, to ensure file paths are relative (the docker version will not work with absolute paths)::
 
     ls -d -1 *.fasta > input.txt
 
