@@ -3,7 +3,7 @@ Quickstart
 
 .. important::
     We are aware of issues installing from conda version at the moment.
-    We recommend installing from source at this time.
+    We recommend installing via Docker at this time.
 
 Installation
 ------------
