@@ -99,7 +99,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                           n_cpu=n_cpu,
                           quiet=(not verbose))[0]
 
-    if annotate is not None:
+    if annotate != "none":
         if verbose:
             print("annotating gene families...")
 
@@ -215,7 +215,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 ids_len_stop[sid] = (ORF_len / 3, ORF_info[3])
             else:
                 ids_len_stop[sid] = (ORF_len / 3, False)
-            if annotate is not None and ref_list[mem]:
+            if annotate != "none" and ref_list[mem]:
                 # annotate genes
                 source = "annotation"
                 if node_bitscore == 0:
@@ -235,7 +235,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 contig_annotation[mem].append((ORF_ID, annotation))
 
     # write output GFF
-    if annotate is not None and any(ref_list):
+    if annotate != "none" and any(ref_list):
         if verbose:
             print("writing GFF files...")
         generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
