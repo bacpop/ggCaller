@@ -13,7 +13,7 @@ We plan to get a MacOS version up and running in the future.
 Installing with Docker (recommended)
 -----------------------------------
 
-First, install (`Docker <https://docs.docker.com/get-docker/>`_) for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
+First, install `Docker <https://docs.docker.com/get-docker/>`_ for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
 
 To use the latest image, run::
 
@@ -34,6 +34,20 @@ Finally, build with Docker. This should take between 5-10 minutes to fully insta
 To run ggCaller from a local Docker build, run::
 
 	cd test && docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs pneumo_CL_group2.txt
+
+Installing with singularity
+-----------------------------------
+
+If you encounter permissions issues using Docker, you can download the singularity image from `Zenodo <https://zenodo.org/record/7870950>`_
+
+Once downloaded, set up the singularity container using::
+
+    singularity shell --writable <singulatiry image>.sif
+
+Once loaded, add the conda bin directory to your path variable and run ggCaller as normal::
+
+    PATH=$PATH:/opt/conda/bin
+    ggcaller --refs input.txt --out output_path
 
 Installing with conda
 -----------------------------------
