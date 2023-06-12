@@ -42,6 +42,11 @@ This will generate a list of all the ``.fasta`` files in the directory. Change t
 DBG building with reads or assemblies is different, with k-mers that appear only once being removed from the graph.
 Therefore it is important to specify whether ``input.txt`` contains reads or assemblies.
 
+.. important::
+    Assemblies with many Ns generate disjointed DBGs leading
+    to underclustering. To ensure optimal performance, avoid
+    using assemblies containing Ns.
+
 To run ggCaller with just assemblies::
 
     ggcaller --refs input.txt

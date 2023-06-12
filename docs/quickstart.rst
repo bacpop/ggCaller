@@ -26,6 +26,11 @@ If using Docker, instead navigate to the directory containing the fasta files an
 Running ggCaller
 ------------------
 
+.. important::
+    Assemblies with many Ns generate disjointed DBGs leading
+    to underclustering. To ensure optimal performance, avoid
+    using assemblies containing Ns.
+
 To run ggCaller with just assemblies::
 
     ggcaller --refs input.txt --out output_path
