@@ -11,7 +11,7 @@ balrog_model_dir = os.path.join(db_dir, "balrog_models")
 def download_db():
     if not os.path.exists(zipped_db_dir):
         print("Downloading databases...")
-        url = "https://ggcallerdb.blob.core.windows.net/dbs/ggCallerdb.tar.bz2"
+        url = "https://ftp.ebi.ac.uk/pub/databases/pp_dbs/ggCallerdb.tar.bz2"
         filename = wget.download(url, out=module_dir)
         print("")
     if not os.path.exists(db_dir):
