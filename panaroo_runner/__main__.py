@@ -276,7 +276,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                                       ignore_pseduogenes, truncation_threshold, pool)
         core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, high_scoring_ORFs,
                                          truncation_threshold)
-        core_gene_names = ["centroid_" + G.nodes[x[0]]["centroid"][0] for x in core_genes]
+        core_gene_names = ["CID_" + str(G.nodes[x[0]]["CID"]) for x in core_genes]
         concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpu)
     elif aln == "core":
         if verbose: print("generating core genome MSAs...")
