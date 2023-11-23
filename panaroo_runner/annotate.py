@@ -18,7 +18,7 @@ def check_diamond_install():
 
     present = False
 
-    find_ver = re.search(r'diamond v\d+\.\d+\.\d+', p)
+    find_ver = re.search(r'diamond v\d+\.\d+', p)
     if find_ver != None:
         present = True
 
@@ -39,7 +39,7 @@ def check_HMMER_install():
 
     present = False
 
-    find_ver = re.search(r'HMMER \d+\.\d+\.\d+', p)
+    find_ver = re.search(r'HMMER \d+\.\d+', p)
     if find_ver != None:
         present = True
 
