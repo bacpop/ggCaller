@@ -41,6 +41,15 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
         kseq_destroy(seq);
         gzclose(fp);
 
+        // convert string to uppercase
+        std::transform(reference_seq.begin(), reference_seq.end(), reference_seq.begin(), ::tolower);
+
+        cout << reference_seq << endl;
+
+        std::transform(reference_seq.begin(), reference_seq.end(), reference_seq.begin(), ::toupper);
+
+        cout << reference_seq << endl;
+
         sdsl::construct_im(ref_index, reference_seq, 1); // generate index
         if (write_idx)
         {
