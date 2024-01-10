@@ -5,6 +5,10 @@
 #include "kseq.h"
 
 // match_strings
+// code from
+// https://stackoverflow.com/questions/735204/convert-a-string-in-c-to-upper-case
+char ascii_toupper_char(char c);
+
 std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
                                                           const bool write_idx);
 

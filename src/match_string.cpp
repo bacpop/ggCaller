@@ -1,6 +1,14 @@
 // ggCaller header
 #include "match_string.h"
 
+// code from
+// https://stackoverflow.com/questions/735204/convert-a-string-in-c-to-upper-case
+char ascii_toupper_char(char c) {
+  return ('a' <= c && c <= 'z')
+             ? c ^ 0x20
+             : c; // ^ autovectorizes to PXOR: runs on more ports than paddb
+}
+
 // index fasta files
 std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
                                                           const bool write_idx)
@@ -40,6 +48,9 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
         // destroy seq and fp objects
         kseq_destroy(seq);
         gzclose(fp);
+
+        // convert string to uppercase to avoid indexing issues
+        std::transform(reference_seq.begin(), reference_seq.end(), reference_seq.begin(), ::ascii_toupper_char);
 
         sdsl::construct_im(ref_index, reference_seq, 1); // generate index
         if (write_idx)
