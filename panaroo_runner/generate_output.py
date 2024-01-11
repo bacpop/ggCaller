@@ -603,7 +603,6 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
             plt.fill_between(xnew, bound_lower, bound_upper, color='red', alpha=0.15)
         except ValueError:
             print("Fitting of rarefaction curve failed. Power-law fit may look strange.")
-            pass
 
         plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='red')
 
