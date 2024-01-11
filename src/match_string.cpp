@@ -109,7 +109,7 @@ std::pair<ContigLoc, bool> get_ORF_coords(const std::string& query,
     const bool strand = std::get<1>(query_pair);
 
     //if sequence present then determine contig coordinates
-    if (query_loc > 0)
+    if (query_loc >= 0)
     {
         // go through contig_locs to determine in which contig sequence sits
         for (int i = 0; i < contig_locs.size(); i++)

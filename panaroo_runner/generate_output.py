@@ -586,33 +586,36 @@ def generate_summary_graphs(output_dir, gene_frequencies, cluster_sizes, genes_p
         pangenome_openess = "non-significant"
     text_res = r'$\gamma$' + " = {}\nPangenome: {}".format(b, pangenome_openess)
 
-    # generate power-law spline
     genome_list = np.sort(np.unique(genome_list))
-    spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
     xnew = np.linspace(1, genome_list.max(), 100)
-    power_smooth = spl(xnew)
 
-    # fit may produce inf values in covariance matrix. If occurs don't plot confidence interval splines.
+    # generate power-law spline
     try:
-        upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
-        lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
-        bound_upper = upper_spl(xnew)
-        bound_lower = lower_spl(xnew)
-        plt.fill_between(xnew, bound_lower, bound_upper, color='red', alpha=0.15)
+        spl = make_interp_spline(genome_list, power_law(genome_list, *pars), k=3)
+        power_smooth = spl(xnew)
+        
+        # fit may produce inf values in covariance matrix. If occurs don't plot confidence interval splines.
+        try:
+            upper_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars + sigma_ab)), k=3)
+            lower_spl = make_interp_spline(genome_list, power_law(genome_list, *(pars - sigma_ab)), k=3)
+            bound_upper = upper_spl(xnew)
+            bound_lower = lower_spl(xnew)
+            plt.fill_between(xnew, bound_lower, bound_upper, color='red', alpha=0.15)
+        except ValueError:
+            print("Fitting of rarefaction curve failed. Power-law fit may look strange.")
+
+        plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='red')
+
+        # set axis variables
+        plt.ylim(ymin=0)
+        plt.xlim(xmin=0)
+        plt.xlabel('Number of genomes sampled')
+        plt.ylabel('Cumulative number of genes discovered')
+        plt.text(0.7, 0.2, text_res, horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+        plt.savefig(output_dir + "rarefaction_curve.png", format="png")
+        plt.clf()
     except ValueError:
-        print("Fitting of rarefaction curve failed. Power-law fit may look strange.")
-        pass
-
-    plt.plot(xnew, power_smooth, linestyle='--', linewidth=2, color='red')
-
-    # set axis variables
-    plt.ylim(ymin=0)
-    plt.xlim(xmin=0)
-    plt.xlabel('Number of genomes sampled')
-    plt.ylabel('Cumulative number of genes discovered')
-    plt.text(0.7, 0.2, text_res, horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-    plt.savefig(output_dir + "rarefaction_curve.png", format="png")
-    plt.clf()
+        print("Fitting of rarefaction curve failed.")
 
     return
 
