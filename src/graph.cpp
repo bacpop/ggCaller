@@ -399,7 +399,15 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
                 // get centroid info
                 auto& centroid_ID_pair = ORF_entries.at(0);
-                auto& centroid_info = colour_ORF_vec_map.at(centroid_ID_pair.first).at(centroid_ID_pair.second);
+
+                // ensure centroid present in colour_ORF_vec_map
+                auto centroid_entry = colour_ORF_vec_map[centroid_ID_pair.first].find(centroid_ID_pair.second);
+                if (centroid_entry == colour_ORF_vec_map[centroid_ID_pair.first].end())
+                {
+                    continue;
+                }
+
+                auto& centroid_info = centroid_entry->second;
 
                 // get centroid sequence
                 const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
@@ -416,7 +424,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 // if centroid score is below the min-orf score remove from cluster map
                 if (std::get<4>(centroid_info) < minimum_ORF_score)
                 {
-                    colour_ORF_vec_map[centroid_ID_pair.first].erase(centroid_ID_pair.second);
                     to_remove_within_cluster.insert(centroid_ID_pair);
                     centroid_low = true;
                 }
@@ -430,7 +437,14 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 {
                     auto& ORF_ID_pair = ORF_entries.at(j);
 
-                    auto& ORF_info = colour_ORF_vec_map.at(ORF_ID_pair.first).at(ORF_ID_pair.second);
+                    // ensure ORF present in colour_ORF_vec_map
+                    auto ORF_entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
+                    if (ORF_entry == colour_ORF_vec_map[ORF_ID_pair.first].end())
+                    {
+                        continue;
+                    }
+
+                    auto& ORF_info = ORF_entry->second;
 
                     // get centroid sequence
                     const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
@@ -441,7 +455,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     // remove from orf map if score too low
                     if (std::get<4>(ORF_info) < minimum_ORF_score)
                     {
-                        colour_ORF_vec_map[ORF_ID_pair.first].erase(ORF_ID_pair.second);
                         to_remove_within_cluster.insert(ORF_ID_pair);
                     } else if (centroid_low)
                     {
@@ -489,16 +502,19 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 if (!to_remove_within_cluster.empty())
                 {
                     std::vector<std::pair<size_t, size_t>> new_entries;
-                    // check that centroid not within to remove
-                    if (to_remove_within_cluster.find(centroid_ID_pair) == to_remove_within_cluster.end())
-                    {
-                        new_entries.push_back(centroid_ID_pair);
-                    }
                     for (const auto& ORF_ID_pair : ORF_entries)
                     {
-                        if (ORF_ID_pair != centroid_ID_pair && to_remove_within_cluster.find(ORF_ID_pair) == to_remove_within_cluster.end())
+                        if (to_remove_within_cluster.find(ORF_ID_pair) == to_remove_within_cluster.end())
                         {
                             new_entries.push_back(ORF_ID_pair);
+                        } else
+                        {
+                            // remove from map
+                            const auto entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
+                            if (entry != colour_ORF_vec_map[ORF_ID_pair.first].end())
+                            {
+                                colour_ORF_vec_map[ORF_ID_pair.first].erase(entry->first);
+                            }
                         }
                     }
 
