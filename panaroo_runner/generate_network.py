@@ -200,7 +200,11 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
             for neighbour in edge_set:
                 pan_neigbour_id = str(genome_id) + "_0_" + str(neighbour)
 
-                neighbour_cluster = seq_to_cluster[pan_neigbour_id]
+                # ensure neighbour is high scoring ORF, otherwise ignore
+                if pan_neigbour_id in seq_to_cluster:
+                    neighbour_cluster = seq_to_cluster[pan_neigbour_id]
+                else:
+                    continue
 
                 # add edge between current ORF and neighbour
                 if G.has_edge(node, neighbour_cluster):
