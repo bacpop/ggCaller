@@ -39,9 +39,9 @@ To run ggCaller with just reads::
 
     ggcaller --reads input.txt --out output_path
 
-If using Docker, run with the below command. You must ensure all paths are relative, including in ``input.txt``::
+If using Docker, run with the below command, ensuring you keep ``--bakta_db ggc_db`` as specified below. You must ensure all paths are relative, including in ``input.txt``::
 
-	docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs input.txt --out output_path
+	docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --bakta_db ggc_db --refs input.txt --out output_path 
 
 .. important::
     We haven't extensively tested calling genes within
