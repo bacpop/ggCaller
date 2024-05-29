@@ -42,6 +42,4 @@ def load_balrog_models(db_path):
     geneTCN = os.path.join(balrog_model_dir, "geneTCN_jit.pt")
     tisTCN = os.path.join(balrog_model_dir, "tisTCN_jit.pt")
 
-    print(geneTCN)
-
     return (geneTCN, tisTCN)
