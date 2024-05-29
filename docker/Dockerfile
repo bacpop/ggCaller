@@ -17,9 +17,8 @@ WORKDIR $PROJECT_DIR
 ENV ENV_PREFIX $PROJECT_DIR/env
 COPY --chown=$user:$user docker/environment_docker.yml /tmp/environment_docker.yml
 
-COPY docker/entrypoint.sh /usr/local/bin/
-RUN --chown=$user:$user /usr/local/bin/entrypoint.sh && \
-    chmod u+x /usr/local/bin/entrypoint.sh
+COPY --chown=$user:$user docker/entrypoint.sh /usr/local/bin/
+RUN chmod u+x /usr/local/bin/entrypoint.sh
 
 RUN micromamba install -y --prefix $ENV_PREFIX -f /tmp/environment_docker.yml && \
     micromamba clean --all --yes && \
