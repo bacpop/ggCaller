@@ -15,7 +15,7 @@ The easiest way to get up and running is using Docker. To get up and running, pu
 Preparing the data
 ------------------
 
-Place all of you samples to analyse in the same directory. Then navigate inside and run::
+Place all of your samples to be analysed in the same directory. Then navigate inside and run::
 
     ls -d -1 $PWD/*.fasta > input.txt
 

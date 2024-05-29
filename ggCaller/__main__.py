@@ -326,6 +326,12 @@ def get_options():
 
     # Other options
     Misc = parser.add_argument_group('Misc. options')
+    Misc.add_argument("--balrog-db",
+                      default=None,
+                      dest="balrog_db",
+                      help="Path to save BALROG and default annotation databases. If not specified will download"
+                            "automatically on first run."
+                            "[Default = None]")
     Misc.add_argument("--quiet",
                       dest="verbose",
                       help="suppress additional output"
@@ -420,20 +426,24 @@ def main():
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
                                   start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set)
+    elif options.balrog_db is not None:
+        db_dir = download_db(options.balrog_db)
+        sys.exit(0)
     else:
         print("Error: incorrect number of input files specified. Please only specify the below combinations:\n"
               "- Bifrost GFA and Bifrost colours file (with/without list of reference files)\n"
               "- Bifrost GFA, Bifrost colours file and list of query sequences\n"
               "- List of reference files\n"
               "- List of read files\n"
-              "- A list of reference files and a list of read files.")
+              "- A list of reference files and a list of read files.\n"
+              "- A path to download the balrog gene model files.")
         sys.exit(1)
 
     # unpack ORF pair into overlap dictionary and list for gene scoring
     input_colours, nb_colours, overlap, ref_list = graph_tuple
 
     # download balrog and annotation files
-    db_dir = download_db()
+    db_dir = download_db(options.balrog_db)
 
     # set rest of panaroo arguments
     options = set_default_args(options, nb_colours)
@@ -486,7 +496,7 @@ def main():
     # load models models if required
     if not options.no_filter:
         print("Loading gene models...")
-        ORF_model_file, TIS_model_file = load_balrog_models()
+        ORF_model_file, TIS_model_file = load_balrog_models(db_dir)
 
     else:
         ORF_model_file, TIS_model_file = "NA", "NA"
