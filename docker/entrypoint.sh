@@ -1,5 +1,5 @@
 #!/bin/bash --login
 set -e
 
-micromamba activate $HOME/app/env
+micromamba activate base
 exec "$@"

@@ -20,9 +20,9 @@ COPY --chown=$user:$user docker/environment_docker.yml /tmp/environment_docker.y
 COPY --chown=$user:$user docker/entrypoint.sh /usr/local/bin/
 RUN chmod u+x /usr/local/bin/entrypoint.sh
 
-RUN micromamba install -y --prefix $ENV_PREFIX -f /tmp/environment_docker.yml && \
+RUN micromamba install -y -n base -f /tmp/environment_docker.yml && \
     micromamba clean --all --yes && \
-    micromamba activate $ENV_PREFIX && \
+    micromamba activate base && \
     python -m pip install --no-deps --ignore-installed . && \
     mkdir ggc_db && \
     ggcaller --balrog-db ggc_db && \
