@@ -17,11 +17,11 @@ First, install `Docker <https://docs.docker.com/get-docker/>`_ for your OS. If r
 
 To use the latest image, run::
 
-    docker pull samhorsfield96/ggcaller:latest
+    docker pull samhorsfield96/ggcaller:master
 
 To run ggCaller from the Docker Hub image, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs pneumo_CL_group2.txt --balrog-db ggc_db
+	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:master ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
 
 You can also build the image yourself. First download and switch to the ggCaller repository::
 
@@ -33,9 +33,9 @@ Finally, build with Docker. This should take between 5-10 minutes to fully insta
 
 To run ggCaller from a local Docker build, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir ggc_env:latest ggcaller --refs pneumo_CL_group2.txt --balrog-db ggc_db
+	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data ggc_env:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
 
-Please ensure you keep ``--balrog-db ggc_db`` as specified above in all cases.
+Please ensure you keep ``--balrog-db /app/ggc_db`` and ``/workdir`` paths as specified above.
 
 Installing with singularity
 -----------------------------------
