@@ -28,4 +28,3 @@ RUN micromamba install -y -n base -f /tmp/environment_docker.yml && \
     PATH=$PATH:/opt/conda/bin
 
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
-WORKDIR /workdir
