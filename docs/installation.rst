@@ -37,19 +37,20 @@ To run ggCaller from a local Docker build, run::
 
 Please ensure you keep ``--balrog-db /app/ggc_db`` and ``/workdir`` paths as specified above.
 
-Installing with singularity
+Installing with apptainer (singularity)
 -----------------------------------
 
-If you encounter permissions issues using Docker, you can download the singularity image from `Zenodo <https://zenodo.org/record/7870950>`_
+If you encounter permissions issues using Docker, you can download the apptainer image from `Zenodo <https://zenodo.org/record/7870950>`_
 
-Once downloaded, set up the singularity container using::
+Once downloaded, set up the apptainer container using::
 
-    singularity shell --writable <singulatiry image>.sif
+    apptainer shell ggcaller.sif
 
-Once loaded, add the conda bin directory to your path variable and run ggCaller as normal::
+Once loaded, add the conda bin directory to your path variable and run ggCaller as normal, ensuring to copy the database directory to an appropriate path designated by ``<path/to/ggc_db>``::
 
     PATH=$PATH:/opt/conda/bin
-    ggcaller --refs input.txt --out output_path
+    cp -r /app/ggc_db <path/to/ggc_db>
+    ggcaller --refs input.txt --out output_path --balrog-db <path/to/ggc_db>
 
 Installing with conda
 -----------------------------------
