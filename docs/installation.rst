@@ -10,18 +10,18 @@ We plan to get a MacOS version up and running in the future.
     (which on many default Linux installations is
     run using ``python3`` rather than ``python``).
 
-Installing with Docker (recommended)
+Installing with Docker
 -----------------------------------
 
 First, install `Docker <https://docs.docker.com/get-docker/>`_ for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
 
 To use the latest image, run::
 
-    docker pull samhorsfield96/ggcaller:master
+    docker pull samhorsfield96/ggcaller:latest
 
 To run ggCaller from the Docker Hub image, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:master ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
+	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
 
 You can also build the image yourself. First download and switch to the ggCaller repository::
 
@@ -53,10 +53,6 @@ Once loaded, add the conda bin directory to your path variable and run ggCaller 
 
 Installing with conda
 -----------------------------------
-
-.. important::
-    We are aware of issues installing from conda at the moment.
-    We recommend installing from docker or source at this time.
 
 Installing with conda is the easiest way to get ggCaller up and running, and will install all dependencies.
 

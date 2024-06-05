@@ -14,9 +14,21 @@ ggCaller is available on Linux. If you are running Windows 10/11, Linux can be i
 
 We plan to get a MacOS version up and running in the future.
 
-NOTE: We are aware of issues installing from conda at the moment. We recommend installing via docker at this time.
+### Installation via conda/mamba
 
-### Installing with Docker (recommended)
+Install through [bioconda](http://bioconda.github.io/):
+
+```conda install ggcaller```
+
+If conda is not installed, first install [miniconda](https://docs.conda.io/en/latest/miniconda.html), then add the correct channels:
+
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+
+### Installing with Docker
 
 First, install [Docker](https://docs.docker.com/get-docker/) for your OS. If running with WSL2, you should still download Docker Desktop for Windows.
 
@@ -26,7 +38,7 @@ Then pull the latest image::
 
 To run ggCaller, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir samhorsfield96/ggcaller:latest ggcaller --refs pneumo_CL_group2.txt
+	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
 
 ### Installation from source
 Required packages and versions can be found in ```environment_linux.yml``` and ```environment_macOS.yml``` depending on your operating system. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.
@@ -44,20 +56,6 @@ Once all required packages are installed, install ggCaller using:
 git clone --recursive https://github.com/samhorsfield96/ggCaller
 cd ggCaller
 python setup.py install
-```
-
-### Installation via conda
-
-Install through [bioconda](http://bioconda.github.io/):
-
-```conda install ggcaller```
-
-If conda is not installed, first install [miniconda](https://docs.conda.io/en/latest/miniconda.html), then add the correct channels:
-
-```
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
 ```
 
 ## Citation
