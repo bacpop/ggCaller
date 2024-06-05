@@ -1,10 +1,6 @@
 Quickstart
 ==================================
 
-.. important::
-    We are aware of issues installing from conda version at the moment.
-    We recommend installing via Docker at this time.
-
 Installation
 ------------
 
@@ -45,7 +41,7 @@ To run ggCaller with just reads::
 
 If using Docker, run with the below command, ensuring you keep ``--balrog-db /app/ggc_db`` and ``/workdir`` paths as specified below. Replace ``path to files`` with the absolute path to the directory of files in ``input_docker.txt``::
 
-	docker run --rm -it -v $(pwd):/workdir -v <path to files>:/data samhorsfield96/ggcaller:master ggcaller --balrog-db /app/ggc_db --refs /workdir/input_docker.txt --out /workdir/output_path 
+	docker run --rm -it -v $(pwd):/workdir -v <path to files>:/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/input_docker.txt --out /workdir/output_path 
 
 .. important::
     We haven't extensively tested calling genes within

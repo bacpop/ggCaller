@@ -340,8 +340,8 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                                            .replace(";", " ")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][0], entry[1][0][1]),
-                        type="CDS", strand=strand, qualifiers=qualifiers
+                        FeatureLocation(entry[1][0][0], entry[1][0][1], strand=strand),
+                        type="CDS", qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
                     entry_ID += 1
