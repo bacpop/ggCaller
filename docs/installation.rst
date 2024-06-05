@@ -40,7 +40,7 @@ Please ensure you keep ``--balrog-db /app/ggc_db`` and ``/workdir`` paths as spe
 Installing with apptainer (singularity)
 -----------------------------------
 
-If you encounter permissions issues using Docker, you can download the apptainer image from `Zenodo <https://zenodo.org/record/7870950>`_
+If you encounter permissions issues using Docker, you can download the `apptainer <https://apptainer.org/docs/user/main/index.html>`_ image from `Zenodo <https://zenodo.org/records/11485077>`_
 
 Once downloaded, set up the apptainer container using::
 
