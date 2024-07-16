@@ -458,16 +458,18 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     }
                 }
 
-                // map to last entry and assign end-contig
-                auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
-                auto& um_data = um_pair.second;
-
-                um_data->set_end_contig(colour_ID, nb_colours);
-
-                // add delimiter between contigs
-                genome_path += contig_path;
-                genome_path += ";";
-                contig_ID++;
+                if (prev_head != 0) {
+                    // map to last entry and assign end-contig
+                    auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
+                    auto& um_data = um_pair.second;
+    
+                    um_data->set_end_contig(colour_ID, nb_colours);
+    
+                    // add delimiter between contigs
+                    genome_path += contig_path;
+                    genome_path += ";";
+                    contig_ID++;
+                }
             }
         }
     }
