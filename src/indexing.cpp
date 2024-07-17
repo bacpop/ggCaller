@@ -458,6 +458,8 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                     }
                 }
 
+                // in case where whole contig removed, do not add to FM index
+                // otherwise causes out of range error with head_kmer_arr as k-mer not present
                 if (prev_head != 0) {
                     // map to last entry and assign end-contig
                     auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
