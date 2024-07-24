@@ -21,6 +21,8 @@ from scipy.interpolate import make_interp_spline
 from random import shuffle
 from uncertainties import ufloat
 from .generate_alignments import *
+import gzip
+from functools import partial
 
 # stringizer imports
 import os, sys
@@ -316,8 +318,15 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                                                      (ORF_coords[i][0][1], ORF_coords[i][1]),
                                                      contig_annotation[colour][i][1]))
 
+        # check if FASTA is gzipped
+        gzipped = False
+        with open(input_colours[colour], 'rb') as test_f:
+            gzipped = True if test_f.read(2) == b'\x1f\x8b' else False
+
+        _open = partial(gzip.open, mode='rt') if gzipped == True else open
+
         # iterate over the entries in input_colors
-        with open(input_colours[colour]) as handle:
+        with _open(input_colours[colour]) as handle:
             gff_record_list = []
             record_id = 1
             for record in SeqIO.parse(handle, "fasta"):
