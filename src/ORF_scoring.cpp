@@ -81,12 +81,15 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
                 {
                     encoded.push_back(nuc_encode(c).out());
                 }
-                torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
 
-                if (!tensor_size)
+                // ensure sequence is padded if too short
+                const size_t len_diff = 32 - encoded.size();
+                for (int pad = 0; pad < len_diff; pad++)
                 {
-                    tensor_size = t.size(0);
+                    encoded.push_back(0);
                 }
+                
+                torch::Tensor t = torch::tensor(encoded, {torch::kInt64});
 
                 padded_stack.push_back(std::move(t));
                 pos_idx.push_back(pos);
@@ -101,10 +104,10 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
 
     if (!pos_idx.empty())
     {
-        // pad tensor if only single sequence
+        // pad tensor to 32 bp if only single sequence
         if (pos_idx.size() == 1)
         {
-            torch::Tensor zeroes = torch::zeros({tensor_size}, torch::kInt64);
+            torch::Tensor zeroes = torch::zeros({32}, torch::kInt64);
             padded_stack.push_back(std::move(zeroes));
         }
         torch::Tensor pred = predict(TIS_model, torch::stack(padded_stack), false);
