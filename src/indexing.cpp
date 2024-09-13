@@ -290,17 +290,23 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            if (unitig.size() - pos >= kmer)
+            //if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = unitig.substr(pos, kmer);
                 std::string start_site_AA = (translate(start_site_DNA)).aa();
 
-                if (start_site_AA.find('*') != std::string::npos)
-                {
-                    continue;
-                }
+                // remove any starts with stop codon
+                // if (start_site_AA.find('*') != std::string::npos)
+                // {
+                //     continue;
+                // }
 
-                const int num_kmers = start_site_AA.size() - aa_kmer;
+                int num_kmers = start_site_AA.size() - aa_kmer;
+                // ensure if small start found, can still generate sequence
+                if (num_kmers <= 0)
+                {
+                    num_kmers = 1;
+                }
 
                 std::vector<std::string> AA_kmers(num_kmers);
 
@@ -341,17 +347,23 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            if (unitig.size() - pos >= kmer)
+            //if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = rev_unitig.substr(pos, kmer);
                 std::string start_site_AA = (translate(start_site_DNA)).aa();
 
-                if (start_site_AA.find('*') != std::string::npos)
-                {
-                    continue;
-                }
+                // remove any starts with stop codon
+                // if (start_site_AA.find('*') != std::string::npos)
+                // {
+                //     continue;
+                // }
 
-                const int num_kmers = start_site_AA.size() - aa_kmer;
+                int num_kmers = start_site_AA.size() - aa_kmer;
+                // ensure if small start found, can still generate sequence
+                if (num_kmers <= 0)
+                {
+                    num_kmers = 1;
+                }
 
                 std::vector<std::string> AA_kmers(num_kmers);
 
