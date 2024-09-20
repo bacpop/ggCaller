@@ -1,14 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
-project(ggCaller_cpp)
+project(ggCaller_exe)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW) # CMake 3.12
 endif ()
 
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
+
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # find packages with cmake methods
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -18,10 +22,14 @@ find_package(Boost REQUIRED system serialization graph)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # find pybind and create python module
-find_package(pybind11 REQUIRED)
-pybind11_add_module(ggCaller_cpp src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp src/ORF_scoring.cpp src/gene_graph.cpp)
+#find_package(pybind11 REQUIRED)
+#pybind11_add_module(ggCaller_exe src/bindings.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp src/ORF_scoring.cpp src/gene_graph.cpp)
+
+add_executable(ggCaller_exe src/main.cpp src/call_ORFs.cpp src/graph.cpp src/indexing.cpp src/match_string.cpp src/traversal.cpp src/unitigDict.cpp src/gene_overlap.cpp src/ORF_connection.cpp src/ORF_clustering.cpp src/gene_refinding.cpp src/distances.cpp src/search_DBG.cpp src/edlib/edlib.cpp src/ORF_scoring.cpp src/gene_graph.cpp)
 
 # check for conda environment
+SET(ENV{CONDA_PREFIX} "/Users/shorsfield/miniforge3/envs/ggc_env")
+MESSAGE($ENV{CONDA_PREFIX})
 IF( DEFINED ENV{CONDA_PREFIX} )
   # set conda directory
   SET(CONDA_DIR "$ENV{CONDA_PREFIX}")
@@ -29,14 +37,19 @@ IF( DEFINED ENV{CONDA_PREFIX} )
   # find torch cmake files
   SET(Torch_SUFF "/torch/share/cmake/Torch")
   FIND_PATH(Torch_DIR NAMES TorchConfig.cmake HINTS ${PYTHON_SITE_PACKAGES}/${Torch_SUFF} NO_DEFAULT_PATH)
-  #MESSAGE(${Torch_DIR})
-  #MESSAGE(${CONDA_DIR})
+  MESSAGE(${Torch_DIR})
+  MESSAGE(${CONDA_DIR})
 ENDIF()
 
 # find correct protobuf library
-FIND_LIBRARY(Protobuf_LIBRARY NAMES protobuf HINTS ${CONDA_DIR}/lib REQUIRED)
+FIND_LIBRARY(Protobuf_LIBRARY NAMES protobuf HINTS ${CONDA_DIR}/lib REQUIRED )
 FIND_LIBRARY(Protobuf_PROTOC_LIBRARY NAMES protoc HINTS ${CONDA_DIR}/lib REQUIRED)
-FIND_PATH(Protobuf_INCLUDE_DIR zlib.h HINTS ${CONDA_DIR}/include)
+unset(Protobuf_INCLUDE_DIR CACHE)
+FIND_PATH(Protobuf_INCLUDE_DIR NAMES zlib.h PATHS ${CONDA_DIR}/include NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+#MESSAGE($Protobuf_LIBRARY})
+#ßMESSAGE(${Protobuf_PROTOC_LIBRARY})
+MESSAGE(${Protobuf_INCLUDE_DIR})
+
 
 include(FindPackageHandleStandardArgs)
 #Find zlib
@@ -67,8 +80,8 @@ find_package(MKL)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_INCLUDE_DIR MKL_LIBRARIES)
 # avoid local MKL when looking for pytorch
 #SET(MKL_FOUND TRUE)
-target_link_libraries(ggCaller_cpp PRIVATE ${MKL_LIBRARIES} )
-target_include_directories(ggCaller_cpp PRIVATE ${MKL_INCLUDE_DIR})
+target_link_libraries(ggCaller_exe PRIVATE ${MKL_LIBRARIES} )
+target_include_directories(ggCaller_exe PRIVATE ${MKL_INCLUDE_DIR})
 
 # ignore USE_NNPACK on macos
 if ( APPLE )
@@ -76,16 +89,17 @@ if ( APPLE )
 endif()
 
 # add torch libraries
+list(APPEND CMAKE_PREFIX_PATH "/Users/shorsfield/miniforge3/envs/ggc_env/lib/python3.9/site-packages/torch/share/cmake")
 find_package(Torch REQUIRED)
 
 # add sdsl include directory
-target_include_directories(ggCaller_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR})
+target_include_directories(ggCaller_exe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${tbb_INCLUDE_DIR})
 
 # link libraries
-target_link_libraries(ggCaller_cpp PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
+target_link_libraries(ggCaller_exe PRIVATE ${bifrost_LIBRARIES} ${z_LIBRARIES} ${tbb_LIBRARIES} Threads::Threads Eigen3::Eigen ${Boost_LIBRARIES} ${TORCH_LIBRARIES} )
 
 # find openmp
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-  target_link_libraries(ggCaller_cpp PRIVATE OpenMP::OpenMP_CXX)
+  target_link_libraries(ggCaller_exe PRIVATE OpenMP::OpenMP_CXX)
 endif()
