@@ -28,6 +28,12 @@ boost::dynamic_bitset<> generate_colours(const UnitigMap<DataAccessor<T>, DataSt
                                          const size_t nb_colours,
                                          const size_t position);
 
+void calc_start_freq (const std::string& start_site_AA, 
+                      const boost::dynamic_bitset<>& full_unitig_colour,
+                      tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_set<int>>& start_freq_set,
+                      const int& aa_kmer,
+                      const size_t& nb_colours);
+
 template <class T, class U, bool is_const>
 void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                              UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,

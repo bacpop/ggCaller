@@ -323,7 +323,8 @@ void generate_ORFs(const int& colour_ID,
                             std::string start_site_AA = (translate(start_site_DNA)).aa();
                             site_hash = hasher{}(start_site_AA);
 
-                            const int num_kmers = start_site_AA.size() - aa_kmer;
+                            // ensure if small start found, can still generate sequence
+                            int num_kmers = start_site_AA.size() > aa_kmer ? start_site_AA.size() - aa_kmer : 1;
 
                             site_coverage.resize(num_kmers);
 

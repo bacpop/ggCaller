@@ -22,7 +22,7 @@ subprocess.run(
 
 sys.stderr.write("Running reference build workflow with annotation\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --clean-mode strict --min-orf-length 100 --max-ORF-overlap 55 --alignment core --aligner def --annotation fast --evalue 0.0001 --search-radius 3000 --save",
+    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 13 --out test_dir --max-path-length 5000 --clean-mode strict --min-orf-length 0 --max-ORF-overlap 55 --alignment core --aligner def --annotation fast --evalue 0.0001 --search-radius 3000 --save",
     shell=True,
     check=True)
 
