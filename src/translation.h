@@ -13,6 +13,7 @@ class translate
         {
             const std::string codon = dna_seq.substr(i, 3);
             aa_seq_ += tMap_[codon];
+            // break if stop codon present
             if (tMap_[codon] == '*') {
                 break;
             }

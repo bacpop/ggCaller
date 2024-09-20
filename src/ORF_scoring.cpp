@@ -83,7 +83,7 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
                 }
 
                 // ensure sequence is padded if too short
-                const size_t len_diff = 32 - encoded.size();
+                const int len_diff = 32 - encoded.size();
                 for (int pad = 0; pad < len_diff; pad++)
                 {
                     encoded.push_back(0);
@@ -104,7 +104,7 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
 
     if (!pos_idx.empty())
     {
-        // pad tensor to 32 bp if only single sequence
+        // pad tensor to 32 bp if only single sequence, scoring guaranteed to be on 32 length vector
         if (pos_idx.size() == 1)
         {
             torch::Tensor zeroes = torch::zeros({32}, torch::kInt64);
