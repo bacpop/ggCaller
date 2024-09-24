@@ -293,7 +293,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
             //if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = unitig.substr(pos, kmer);
-                std::string start_site_AA = (translate(start_site_DNA)).aa();
+                std::string start_site_AA = translate(start_site_DNA);
 
                 // remove any starts with stop codon
                 // if (start_site_AA.find('*') != std::string::npos)
@@ -350,7 +350,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
             //if (unitig.size() - pos >= kmer)
             {
                 std::string start_site_DNA = rev_unitig.substr(pos, kmer);
-                std::string start_site_AA = (translate(start_site_DNA)).aa();
+                std::string start_site_AA = translate(start_site_DNA);
 
                 // remove any starts with stop codon
                 // if (start_site_AA.find('*') != std::string::npos)

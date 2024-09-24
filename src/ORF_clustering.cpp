@@ -425,8 +425,8 @@ double align_seqs(const ORFNodeVector& ORF1_info,
         const auto ORF2_sequence = generate_sequence_nm(std::get<0>(ORF2_info), std::get<1>(ORF2_info), DBG_overlap, ccdbg, head_kmer_arr);
 
         // translate DNA sequence
-        ORF1_aa = (translate(ORF1_sequence)).aa();
-        ORF2_aa = (translate(ORF2_sequence)).aa();
+        ORF1_aa = translate(ORF1_sequence);
+        ORF2_aa = translate(ORF2_sequence);
     }
 
     // convert sequence to const char * and calculate edit distance

@@ -320,7 +320,7 @@ void generate_ORFs(const int& colour_ID,
                         size_t site_hash;
                         {
                             std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-                            std::string start_site_AA = (translate(start_site_DNA)).aa();
+                            std::string start_site_AA = translate(start_site_DNA);
                             site_hash = hasher{}(start_site_AA);
 
                             int num_kmers = start_site_AA.size() - aa_kmer;

@@ -11,6 +11,7 @@
 #include "ORF_clustering.h"
 #include "distances.h"
 #include "gene_graph.h"
+#include "gene_refinding.h"
 
 // parse a fasta and return sequences
 std::pair<std::vector<std::pair<int, int>>, std::vector<std::string>> parse_fasta (const std::string& fasta)
@@ -91,15 +92,16 @@ int main(int argc, char *argv[]) {
     const bool write_idx = true;
     const bool repeat = false;
     const size_t max_path_length = 10000;
-    const size_t min_ORF_length = 0;
+    const size_t min_ORF_length = 90;
     const size_t max_overlap = 60;
     const bool no_filter = false;
 
-    const std::string graphfile = "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.gfa";
-    const std::string coloursfile ="/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_capsular_fa_list.bfg_colors";
-    const std::string listfile ="/Users/shorsfield/Documents/Software/ggCaller/test/pneumo_group2_abs_paths.txt";
-    const std::string ORF_model_file = "/Users/shorsfield/miniforge3/envs/ggc_env/lib/python3.9/site-packages/ggCaller-1.3.6-py3.9-macosx-10.9-x86_64.egg/models/ggCallerdb/balrog_models/geneTCN_jit.pt";
-    const std::string TIS_model_file = "/Users/shorsfield/miniforge3/envs/ggc_env/lib/python3.9/site-packages/ggCaller-1.3.6-py3.9-macosx-10.9-x86_64.egg/models/ggCallerdb/balrog_models/tisTCN_jit.pt";
+    std::string workdir = "/home/shorsfield/software/ggCaller";
+    std::string graphfile = workdir + "/test/input.gfa";
+    std::string coloursfile = workdir + "/test/input.color.bfg";
+    std::string listfile = workdir + "/test/input.txt";
+    std::string ORF_model_file = workdir + "/models/ggCallerdb/balrog_models/geneTCN_jit.pt";
+    std::string TIS_model_file = workdir + "/models/ggCallerdb/balrog_models/tisTCN_jit.pt";
     const double minimum_ORF_score = 100;
     const double minimum_path_score = 100;
     const size_t max_ORF_ORF_distance = 10000;
@@ -107,7 +109,6 @@ int main(int argc, char *argv[]) {
     const double id_cutoff = 0.98;
     const double len_diff_cutoff = 0.98;
     const float score_tolerance = 0.95;
-
 
     const std::vector<std::string> stop_codons_for = {"TAA", "TGA", "TAG"};
     const std::vector<std::string> stop_codons_rev = {"TTA", "TCA", "CTA"};
@@ -141,23 +142,26 @@ int main(int argc, char *argv[]) {
 
 
     // parse ORFs known to be genes
-    const auto known_genes_pair = parse_fasta("/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_test_ORFs_for_panaroo.fasta");
-    const auto& known_genes_entries = known_genes_pair.first;
-    const auto& known_genes = known_genes_pair.second;
+    //const auto known_genes_pair = parse_fasta("/mnt/c/Users/sth19/CLionProjects/ggCaller/data/group3_test_ORFs_for_panaroo.fasta");
+    //const auto& known_genes_entries = known_genes_pair.first;
+    //const auto& known_genes = known_genes_pair.second;
 
     const auto gene_tuple = unitig_graph.findGenes (repeat, overlap, max_path_length,
             no_filter, stop_codons_for, start_codons_for, min_ORF_length, max_overlap, input_colours,
             ORF_model_file, TIS_model_file, minimum_ORF_score, minimum_path_score, max_ORF_ORF_distance,
-            clustering, id_cutoff, len_diff_cutoff, num_threads, "/mnt/c/Users/sth19/CLionProjects/ggCaller/data/cluster_file.dat",
+            clustering, id_cutoff, len_diff_cutoff, num_threads, workdir + "/test/test_cluster_file.dat",
             score_tolerance);
+
+    cout << "Finished findGenes..." << endl;
 
     const auto& colour_ORF_map = std::get<0>(gene_tuple);
 
 //    #pragma omp parallel for
-    for (int i = 0; i < colour_ORF_map.size(); i++)
+    //for (int i = 0; i < colour_ORF_map.size(); i++)
     {
         NodeSearchDict node_search_dict;
         int node_ID = 0;
+	const size_t i = 0;
         for (const auto& ORF_entry : colour_ORF_map.at(i))
         {
             const auto& ORF_ID = ORF_entry.first;
@@ -166,12 +170,13 @@ int main(int argc, char *argv[]) {
             node_search_dict[node_ID] = {{std::get<0>(ORF_info), std::get<1>(ORF_info)}, {{std::get<0>(ORF_info), std::get<1>(ORF_info)}}};
             node_ID++;
         }
-        //const auto refound = unitig_graph.refind_gene(i, node_search_dict, 5000, 31, input_colours[i], repeat);
+        std::unordered_set<int> to_avoid;
+        const auto refound = unitig_graph.refind_gene(i, node_search_dict, 5000, 31, input_colours[i], repeat, to_avoid);
     }
 
-    unitig_graph.out("/mnt/c/Users/sth19/CLionProjects/ggCaller/test_graph.o");
+    unitig_graph.out(workdir + "/test/test_graph.o");
     unitig_graph.clear();
-    unitig_graph.in("/mnt/c/Users/sth19/CLionProjects/ggCaller/test_graph.o", graphfile, coloursfile, num_threads);
+    unitig_graph.in(workdir + "/test/test_graph.o", graphfile, coloursfile, num_threads);
 
 
     // query vec from group 3, first is full node 1 (F), then full node 2 (R), part node 3 (F), part node 6 (R)
