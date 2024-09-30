@@ -82,9 +82,10 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // check against fm-idx every other node, pass if not present
             if (is_ref && node_vector.size() % 2 == 1)
             {
-                std::vector<int> check_vector = node_vector;
-                check_vector.push_back(neighbour_id);
-                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
+                //std::vector<int> check_vector = node_vector;
+                node_vector.push_back(neighbour_id);
+                std::pair<bool, bool> present = path_search(node_vector, fm_idx);
+                node_vector.pop_back();
                 if (!present.first)
                 {
                     continue;
@@ -98,16 +99,6 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                     continue;
                 }
             }
-
-
-            // if not is_ref, check that unitig is shared in at least one other colour
-//            if (!is_ref)
-//            {
-//                if (neighbour_colour.count() < 2)
-//                {
-//                    continue;
-//                }
-//            }
 
             // check path length, if too long continue
             const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
