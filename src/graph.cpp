@@ -224,10 +224,14 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                                          const double& len_diff_cutoff,
                                                          size_t num_threads,
                                                          const std::string& cluster_file,
-                                                         const float& score_tolerance)
+                                                         const float& score_tolerance,
+                                                         const std::string& tmp_dir)
 {
     // initilise intermediate colour ORF vector
-    ColourORFVectorMap colour_ORF_vec_map;
+    //ColourORFVectorMap colour_ORF_vec_map;
+    
+    // initilise map to hold file paths
+    std::map<size_t, std::string> ORF_file_paths;
 
     // Set number of threads
     if (num_threads < 1)
@@ -289,7 +293,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             }
 
             // initialise ORF_vector
-            ORFNodeRobMap ORF_map;
+            ORFNodeMap ORF_map;
 
             // traverse graph, set scope for all_paths and fm_idx
             {
@@ -323,7 +327,19 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             }
 
             // update colour_orf_vec_map
-            colour_ORF_vec_map[colour_ID] = std::move(ORF_map);
+            //colour_ORF_vec_map[colour_ID] = std::move(ORF_map);
+
+            // write ORF_map cluster file
+            {
+                std::string ORF_file_path = tmp_dir + "/colour_" + colour_ID + "_ORFs.tmp";
+                std::ofstream ofs(ORF_file_path);
+                boost::archive::text_oarchive oa(ofs);
+                // write class instance to archive
+                oa << ORF_map;
+
+                ORF_file_paths[colour_ID] = ORF_file_path;
+
+            }
 
             // update progress bar
             #pragma omp critical
@@ -367,10 +383,10 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         // scope for clustering variables
         {
             // group ORFs together based on single shared k-mer
-            auto ORF_group_pair = group_ORFs(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap);
+            auto ORF_group_pair = group_ORFs(ORF_file_paths, _ccdbg, _KmerArray, overlap);
 
             // generate clusters for ORFs based on identity
-            cluster_map = produce_clusters(colour_ORF_vec_map, _ccdbg, _KmerArray, overlap,
+            cluster_map = produce_clusters(ORF_file_paths, _ccdbg, _KmerArray, overlap,
                                            ORF_group_pair, id_cutoff, len_diff_cutoff);
         }
 

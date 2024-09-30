@@ -9,7 +9,7 @@
 #include "gene_overlap.h"
 #include "translation.h"
 
-ORFGroupPair group_ORFs(const ColourORFVectorMap& colour_ORF_map,
+ORFGroupPair group_ORFs(const std::map<size_t, std::string>& ORF_file_paths,
                         const ColoredCDBG<MyUnitigMap>& ccdbg,
                         const std::vector<Kmer>& head_kmer_arr,
                         const size_t& overlap);

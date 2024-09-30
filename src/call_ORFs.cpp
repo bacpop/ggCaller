@@ -605,13 +605,13 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 }
 
 // converts ORF entries into a vector and assigns relative strand
-ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+ORFNodeMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
                            const std::vector<Kmer>& head_kmer_arr,
                            const bool is_ref)
 {
-    ORFNodeRobMap ORF_map;
+    ORFNodeMap ORF_map_new;
 
     // generate ID for each ORF and assign strand
     size_t ORF_ID = 0;
@@ -650,7 +650,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         }
 
         // move entry from map to vector
-        ORF_map[ORF_ID] = std::move(ORF.second);
+        ORF_map_new[ORF_ID] = std::move(ORF.second);
 
         // iterate ORF_ID
         ORF_ID++;
@@ -659,7 +659,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     // clear ORF_node_map
     ORF_node_map.clear();
 
-    return ORF_map;
+    return ORF_map_new;
 }
 
 // calculate the relative strand of each node traversed in an ORF
