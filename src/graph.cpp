@@ -228,7 +228,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                                                          const std::string& tmp_dir)
 {
     // initilise intermediate colour ORF vector
-    //ColourORFVectorMap colour_ORF_vec_map;
+    ColourORFVectorMap colour_ORF_vec_map;
     
     // initilise map to hold file paths
     std::map<size_t, std::string> ORF_file_paths;
@@ -329,16 +329,15 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             // update colour_orf_vec_map
             //colour_ORF_vec_map[colour_ID] = std::move(ORF_map);
 
-            // write ORF_map cluster file
+            // write ORF_map file
             {
-                std::string ORF_file_path = tmp_dir + "/colour_" + colour_ID + "_ORFs.tmp";
+                std::string ORF_file_path = tmp_dir + "/colour_" + std::to_string(colour_ID) + "_ORFs.tmp";
                 std::ofstream ofs(ORF_file_path);
                 boost::archive::text_oarchive oa(ofs);
                 // write class instance to archive
                 oa << ORF_map;
 
                 ORF_file_paths[colour_ID] = ORF_file_path;
-
             }
 
             // update progress bar

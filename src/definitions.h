@@ -41,6 +41,7 @@
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/unordered_set.hpp>
+#include <boost/serialization/map.hpp>
 #include <serialize_tuple.h>
 
 // pybind11 headers

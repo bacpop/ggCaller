@@ -84,7 +84,7 @@ void write_to_file (const robin_hood::unordered_map<std::string, std::vector<boo
 
 int main(int argc, char *argv[]) {
 
-    int num_threads = 1;
+    int num_threads = 8;
     bool is_ref = true;
     //const std::string outfile = "/home/shorsfield/software/ggCaller/all_test_capsular_loci_list_v1.2.4.fasta";
     omp_set_num_threads(num_threads);
@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
     std::string listfile = workdir + "/test/input.txt";
     std::string ORF_model_file = workdir + "/models/ggCallerdb/balrog_models/geneTCN_jit.pt";
     std::string TIS_model_file = workdir + "/models/ggCallerdb/balrog_models/tisTCN_jit.pt";
+    std::string tmp_dir = workdir + "/tmp";
     const double minimum_ORF_score = 100;
     const double minimum_path_score = 100;
     const size_t max_ORF_ORF_distance = 10000;
@@ -150,7 +151,7 @@ int main(int argc, char *argv[]) {
             no_filter, stop_codons_for, start_codons_for, min_ORF_length, max_overlap, input_colours,
             ORF_model_file, TIS_model_file, minimum_ORF_score, minimum_path_score, max_ORF_ORF_distance,
             clustering, id_cutoff, len_diff_cutoff, num_threads, workdir + "/test/test_cluster_file.dat",
-            score_tolerance);
+            score_tolerance, tmp_dir);
 
     cout << "Finished findGenes..." << endl;
 
