@@ -113,7 +113,7 @@ typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, si
 // tuple containing grouping information for ORFs filtered by Balrog
 typedef std::pair<std::vector<std::tuple<int, int, size_t, size_t, std::shared_ptr<std::string>>>, std::vector<std::pair<size_t, std::pair<size_t, size_t>>>> ORFGroupPair;
 // map of ORFs to clusters, with centroid as first entry
-typedef std::unordered_map<size_t, std::vector<std::pair<size_t, size_t>>> ORFClusterMap;
+typedef std::unordered_map<std::string, std::vector<std::pair<size_t, size_t>>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
 typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, bool> RefindTuple;
 // map containing nodeID, search sequence and refind tuple

@@ -326,9 +326,6 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
             }
 
-            // update colour_orf_vec_map
-            //colour_ORF_vec_map[colour_ID] = std::move(ORF_map);
-
             // write ORF_map file
             {
                 std::string ORF_file_path = tmp_dir + "/colour_" + std::to_string(colour_ID) + "_ORFs.tmp";
@@ -404,13 +401,51 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
             bar.set_closing_bracket_char("|");
 
             // score centroid and apply score to all ORFs in group
-            #pragma omp parallel for
-            for (int i = 0; i < cluster_map.size(); i++)
+            std::set<std::pair<size_t, size_t>> to_remove;
+            
+            //#pragma omp parallel for
+            for (const auto& colour : ORF_file_paths)
             {
-                // get index in map
-                auto datIt = cluster_map.begin();
-                std::advance(datIt, i);
-                auto& ORF_entries = datIt->second;
+                ORFNodeMap ORF_map;
+                // read in ORF_map file
+                {
+                    std::ifstream ifs(colour.second);
+                    boost::archive::text_iarchive ia(ifs);
+                    ia >> ORF_map;
+                }
+                
+                for (const auto& ORF_entry : ORF_map)
+                {
+                    // check if centroid, if so then score otherwise ignore
+                    std::string ORF_ID_str = std::to_string(colour.first) + "_" + std::to_string(ORF_entry.first);
+
+                    auto centroid_found = cluster_map.find(ORF_ID_str);
+                    
+                    if (centroid_found != cluster_map.end())
+                    {
+                        const auto& centroid_info = ORF_entry.second;
+                        std::string centroid_seq = translate(generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray));
+                        
+                        const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
+                        // if centroid score is below the min-orf score remove from cluster map
+                        if (std::get<4>(centroid_info) < minimum_ORF_score)
+                        {
+                            to_remove.insert({colour.first, ORF_entry.first});
+
+                            // remove all remaining ORFs
+                            for (const auto& homolog_ID : centroid_found.second) 
+                            {
+                                to_remove.insert(homolog_ID);
+                            }
+                        }
+                    }
+                }
+
+                // now need to iterate over genes again, identify the centroid and then assign the score
+                // need to hold scores for each ORF so that it can be assigned to the new ORFs from gene_prob
+
+
+                // -------------- recoding below --------------
 
                 // get centroid info
                 auto& centroid_ID_pair = ORF_entries.at(0);
