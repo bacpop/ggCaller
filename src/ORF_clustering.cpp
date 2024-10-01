@@ -214,7 +214,6 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
     ORFClusterMap final_clusters;
 
     // iterate over ORF_length_list, pulling out centroids and their assigned clustered ORFs
-    size_t cluster_id = 0;
     for (size_t i = 0; i < ORF_length_list.size(); i++)
     {
         const auto& ORF_ID = ORF_length_list.at(i).second;
@@ -230,7 +229,7 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
         if (CentroidToORFMap.find(ORF_ID_str) != CentroidToORFMap.end())
         {
             // add current ORF to centroid entry
-            final_clusters[cluster_id].push_back(ORF_ID);
+            final_clusters[ORF_ID_str].push_back(ORF_ID);
 
             // add the centroid to the cluster_assigned set
             cluster_assigned.insert(ORF_ID_str);
@@ -243,7 +242,7 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
                 // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
                 if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
                 {
-                    final_clusters[cluster_id].push_back(homolog_ID);
+                    final_clusters[ORF_ID_str].push_back(homolog_ID);
                     cluster_assigned.insert(homolog_ID_str);
                 }
                 // if homolog already assigned to a cluster, skip
@@ -257,11 +256,10 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
         } else
         {
             // if not assigned and not a centroid, then add to it's own cluster as singleton
-            final_clusters[cluster_id].push_back(ORF_ID);
+            final_clusters[ORF_ID_str].push_back(ORF_ID);
 
             cluster_assigned.insert(ORF_ID_str);
         }
-        cluster_id++;
     }
 
     return final_clusters;

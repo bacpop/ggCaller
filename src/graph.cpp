@@ -402,6 +402,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
             // score centroid and apply score to all ORFs in group
             std::set<std::pair<size_t, size_t>> to_remove;
+            robin_hood::unordered_map<size_t, robin_hood::unordered_map<size_t, float>> ORFToScoreMap;
             
             //#pragma omp parallel for
             for (const auto& colour : ORF_file_paths)
@@ -423,173 +424,223 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                     
                     if (centroid_found != cluster_map.end())
                     {
-                        const auto& centroid_info = ORF_entry.second;
+                        auto& centroid_info = ORF_entry.second;
                         std::string centroid_seq = translate(generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray));
                         
                         const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
+                        
                         // if centroid score is below the min-orf score remove from cluster map
                         if (std::get<4>(centroid_info) < minimum_ORF_score)
                         {
-                            to_remove.insert({colour.first, ORF_entry.first});
-
-                            // remove all remaining ORFs
+                            // remove all ORFs (first is centroid)
                             for (const auto& homolog_ID : centroid_found.second) 
                             {
                                 to_remove.insert(homolog_ID);
                             }
+                        } else {
+                            // add score for calculation
+                            for (const auto& homolog_ID : centroid_found.second) 
+                            {
+                                ORFToScoreMap[homolog_ID.first][homolog_ID.second] = gene_prob;
+                            }
                         }
                     }
                 }
+            }
 
-                // now need to iterate over genes again, identify the centroid and then assign the score
-                // need to hold scores for each ORF so that it can be assigned to the new ORFs from gene_prob
-
-
-                // -------------- recoding below --------------
-
-                // get centroid info
-                auto& centroid_ID_pair = ORF_entries.at(0);
-
-                // ensure centroid present in colour_ORF_vec_map
-                auto centroid_entry = colour_ORF_vec_map[centroid_ID_pair.first].find(centroid_ID_pair.second);
-                if (centroid_entry == colour_ORF_vec_map[centroid_ID_pair.first].end())
+            // now need to iterate over genes again, identify the centroid and then assign the score
+            // need to hold scores for each ORF so that it can be assigned to the new ORFs from gene_prob
+            for (const auto& colour : ORF_file_paths)
+            {
+                ORFNodeMap ORF_map;
+                // read in ORF_map file
                 {
-                    continue;
+                    std::ifstream ifs(colour.second);
+                    boost::archive::text_iarchive ia(ifs);
+                    ia >> ORF_map;
                 }
 
-                auto& centroid_info = centroid_entry->second;
-
-                // get centroid sequence
-                const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
-
-                // score centroid
-                const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
-
-                // determine if centroid is low scorer
-                bool centroid_low = false;
-
-                // determine if there are any elements to remove from current cluster
-                std::set<std::pair<size_t, size_t>> to_remove_within_cluster;
-
-                // if centroid score is below the min-orf score remove from cluster map
-                if (std::get<4>(centroid_info) < minimum_ORF_score)
+                // iterate over ORFToScoreMap for the given colour
+                for (const auto& ORF_ID : ORFToScoreMap[colour.first])
                 {
-                    to_remove_within_cluster.insert(centroid_ID_pair);
-                    centroid_low = true;
-                }
-
-                // set centroid length to reassign centroid if required
-                size_t centroid_length = 0;
-                size_t centroid_hash = 0;
-
-                // iterate over remaining elements in cluster, calculating scores
-                for (int j = 1; j < ORF_entries.size(); j++)
-                {
-                    auto& ORF_ID_pair = ORF_entries.at(j);
-
-                    // ensure ORF present in colour_ORF_vec_map
-                    auto ORF_entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
-                    if (ORF_entry == colour_ORF_vec_map[ORF_ID_pair.first].end())
+                    // remove if score too low and move onto next gene
+                    if (to_remove.find({colour.first, ORF_ID.first}) != to_remove.end())
                     {
+                        ORF_map.erase(ORF_ID.first);
                         continue;
                     }
 
-                    auto& ORF_info = ORF_entry->second;
-
-                    // get centroid sequence
-                    const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
-
-                    // score ORF in place
-                    score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
-
-                    // remove from orf map if score too low
-                    if (std::get<4>(ORF_info) < minimum_ORF_score)
+                    std::string ORF_ID_str = std::to_string(colour.first) + "_" + std::to_string(ORF_ID.first);
+                    
+                    auto centroid_found = cluster_map.find(ORF_ID_str);
+                    
+                    // this time ignore centroids as already scored
+                    if (centroid_found == cluster_map.end())
                     {
-                        to_remove_within_cluster.insert(ORF_ID_pair);
-                    } else if (centroid_low)
-                    {
-                        // get ORF length
-                        const auto& ORF_length = std::get<2>(ORF_info);
-                        // generate a hash based on kmer string
-                        std::string ORF_kmer;
+                        const auto& gene_prob = ORF_ID.second;
 
-                        for (const auto& node_traversed : std::get<0>(ORF_info))
-                        {
-                            const size_t node_ID = abs(node_traversed) - 1;
-                            ORF_kmer += _KmerArray.at(node_ID).toString();
-                        }
+                        auto& ORF_info = ORF_map[ORF_ID.first];
+                        
+                        // get ORF sequence
+                        const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
 
-                        // calculate hash, determine highest hash if lengths equal
-                        size_t ORF_hash = hasher{}(ORF_kmer);
+                        // score ORF in place
+                        score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
 
-                        if (ORF_length > centroid_length)
+                        // remove from orf map if score too low
+                        if (std::get<4>(ORF_info) < minimum_ORF_score)
                         {
-                            centroid_ID_pair = ORF_ID_pair;
-                            centroid_length = ORF_length;
-                            centroid_hash = ORF_hash;
-                        } else if (ORF_length == centroid_length)
-                        {
-                            if (ORF_hash < centroid_hash)
-                            {
-                                centroid_ID_pair = ORF_ID_pair;
-                                centroid_length = ORF_length;
-                                centroid_hash = ORF_hash;
-                            } else if (ORF_hash == centroid_hash)
-                            {
-                                // assign to lowest colour if hash and lengths equal
-                                if (ORF_ID_pair.first < centroid_ID_pair.first)
-                                {
-                                    centroid_ID_pair = ORF_ID_pair;
-                                    centroid_length = ORF_length;
-                                    centroid_hash = ORF_hash;
-                                }
-                            }
+                            ORF_map.erase(ORF_ID.first);
                         }
                     }
-                }
-
-                // if some ORFs need removing, go over the list, adding centroid first
-                if (!to_remove_within_cluster.empty())
-                {
-                    std::vector<std::pair<size_t, size_t>> new_entries;
-                    for (const auto& ORF_ID_pair : ORF_entries)
-                    {
-                        if (to_remove_within_cluster.find(ORF_ID_pair) == to_remove_within_cluster.end())
-                        {
-                            new_entries.push_back(ORF_ID_pair);
-                        } else
-                        {
-                            // remove from map
-                            const auto entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
-                            if (entry != colour_ORF_vec_map[ORF_ID_pair.first].end())
-                            {
-                                colour_ORF_vec_map[ORF_ID_pair.first].erase(entry->first);
-                            }
-                        }
-                    }
-
-                    // reassign entries
-                    ORF_entries = std::move(new_entries);
-                }
-
-                // determine whether to remove cluster
-                if (ORF_entries.empty())
-                {
-                    to_remove_cluster.insert(datIt->first);
-                }
-
-                // update progress bar
-                #pragma omp critical
-                {
-                    bar.update();
                 }
             }
 
-            // remove any low scoring clusters from cluster map
-            for (const auto& low_scorer : to_remove_cluster)
+
+                // // -------------- recoding below --------------
+
+                // // get centroid info
+                // auto& centroid_ID_pair = ORF_entries.at(0);
+
+                // // ensure centroid present in colour_ORF_vec_map
+                // auto centroid_entry = colour_ORF_vec_map[centroid_ID_pair.first].find(centroid_ID_pair.second);
+                // if (centroid_entry == colour_ORF_vec_map[centroid_ID_pair.first].end())
+                // {
+                //     continue;
+                // }
+
+                // auto& centroid_info = centroid_entry->second;
+
+                // // get centroid sequence
+                // const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
+
+                // // score centroid
+                // const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
+
+                // // determine if centroid is low scorer
+                // bool centroid_low = false;
+
+                // // determine if there are any elements to remove from current cluster
+                // std::set<std::pair<size_t, size_t>> to_remove_within_cluster;
+
+                // // if centroid score is below the min-orf score remove from cluster map
+                // if (std::get<4>(centroid_info) < minimum_ORF_score)
+                // {
+                //     to_remove_within_cluster.insert(centroid_ID_pair);
+                //     centroid_low = true;
+                // }
+
+                // // set centroid length to reassign centroid if required
+                // size_t centroid_length = 0;
+                // size_t centroid_hash = 0;
+
+                // // iterate over remaining elements in cluster, calculating scores
+                // for (int j = 1; j < ORF_entries.size(); j++)
+                // {
+                //     auto& ORF_ID_pair = ORF_entries.at(j);
+
+                //     // ensure ORF present in colour_ORF_vec_map
+                //     auto ORF_entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
+                //     if (ORF_entry == colour_ORF_vec_map[ORF_ID_pair.first].end())
+                //     {
+                //         continue;
+                //     }
+
+                //     auto& ORF_info = ORF_entry->second;
+
+                //     // get centroid sequence
+                //     const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
+
+                //     // score ORF in place
+                //     score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
+
+                //     // remove from orf map if score too low
+                //     if (std::get<4>(ORF_info) < minimum_ORF_score)
+                //     {
+                //         to_remove_within_cluster.insert(ORF_ID_pair);
+                //     } else if (centroid_low)
+                //     {
+                //         // get ORF length
+                //         const auto& ORF_length = std::get<2>(ORF_info);
+                //         // generate a hash based on kmer string
+                //         std::string ORF_kmer;
+
+                //         for (const auto& node_traversed : std::get<0>(ORF_info))
+                //         {
+                //             const size_t node_ID = abs(node_traversed) - 1;
+                //             ORF_kmer += _KmerArray.at(node_ID).toString();
+                //         }
+
+                //         // calculate hash, determine highest hash if lengths equal
+                //         size_t ORF_hash = hasher{}(ORF_kmer);
+
+                //         if (ORF_length > centroid_length)
+                //         {
+                //             centroid_ID_pair = ORF_ID_pair;
+                //             centroid_length = ORF_length;
+                //             centroid_hash = ORF_hash;
+                //         } else if (ORF_length == centroid_length)
+                //         {
+                //             if (ORF_hash < centroid_hash)
+                //             {
+                //                 centroid_ID_pair = ORF_ID_pair;
+                //                 centroid_length = ORF_length;
+                //                 centroid_hash = ORF_hash;
+                //             } else if (ORF_hash == centroid_hash)
+                //             {
+                //                 // assign to lowest colour if hash and lengths equal
+                //                 if (ORF_ID_pair.first < centroid_ID_pair.first)
+                //                 {
+                //                     centroid_ID_pair = ORF_ID_pair;
+                //                     centroid_length = ORF_length;
+                //                     centroid_hash = ORF_hash;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+
+                // // if some ORFs need removing, go over the list, adding centroid first
+                // if (!to_remove_within_cluster.empty())
+                // {
+                //     std::vector<std::pair<size_t, size_t>> new_entries;
+                //     for (const auto& ORF_ID_pair : ORF_entries)
+                //     {
+                //         if (to_remove_within_cluster.find(ORF_ID_pair) == to_remove_within_cluster.end())
+                //         {
+                //             new_entries.push_back(ORF_ID_pair);
+                //         } else
+                //         {
+                //             // remove from map
+                //             const auto entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
+                //             if (entry != colour_ORF_vec_map[ORF_ID_pair.first].end())
+                //             {
+                //                 colour_ORF_vec_map[ORF_ID_pair.first].erase(entry->first);
+                //             }
+                //         }
+                //     }
+
+                //     // reassign entries
+                //     ORF_entries = std::move(new_entries);
+                // }
+
+                // // determine whether to remove cluster
+                // if (ORF_entries.empty())
+                // {
+                //     to_remove_cluster.insert(datIt->first);
+                // }
+
+            // update progress bar
+            #pragma omp critical
             {
-                cluster_map.erase(low_scorer);
+                bar.update();
             }
+
+            // // remove any low scoring clusters from cluster map
+            // for (const auto& low_scorer : to_remove_cluster)
+            // {
+            //     cluster_map.erase(low_scorer);
+            // }
 
             // new line for progress bar
             cout << endl;
