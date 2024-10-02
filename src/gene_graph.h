@@ -57,7 +57,7 @@ std::vector<size_t> getPath(
         const std::vector<size_t>& vertex_mapping);
 
 template <class T>
-std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
+std::vector<size_t> traverse_components(const ORFNodeMap& ORF_map,
                                         const std::vector<size_t>& vertex_mapping,
                                         const std::unordered_set<size_t>& vertex_list,
                                         const GeneGraph& g,
@@ -66,7 +66,7 @@ std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
                                         T weight_pmap,
                                         const std::vector<Kmer>& head_kmer_arr);
 
-std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
+std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
                                                   const ORFOverlapMap& overlap_map,
                                                   const float& minimum_path_score,
                                                   const std::vector<Kmer>& head_kmer_arr);

@@ -155,15 +155,22 @@ int main(int argc, char *argv[]) {
 
     cout << "Finished findGenes..." << endl;
 
-    const auto& colour_ORF_map = std::get<0>(gene_tuple);
+    const auto& ORF_file_paths = std::get<0>(gene_tuple);
 
 //    #pragma omp parallel for
     //for (int i = 0; i < colour_ORF_map.size(); i++)
     {
         NodeSearchDict node_search_dict;
         int node_ID = 0;
-	const size_t i = 0;
-        for (const auto& ORF_entry : colour_ORF_map.at(i))
+	    const size_t i = 0;
+        ORFNodeMap ORF_map;
+        // read in ORF_map file
+        {
+            std::ifstream ifs(ORF_file_paths.at(i));
+            boost::archive::text_iarchive ia(ifs);
+            ia >> ORF_map;
+        }
+        for (const auto& ORF_entry : ORF_map)
         {
             const auto& ORF_ID = ORF_entry.first;
             const auto& ORF_info = ORF_entry.second;
