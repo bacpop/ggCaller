@@ -205,33 +205,31 @@ void Graph::out(const std::string& outfile)
 }
 
 
-std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
-                                                         const size_t overlap,
-                                                         const size_t max_path_length,
-                                                         bool no_filter,
-                                                         const std::vector<std::string>& stop_codons_for,
-                                                         const std::vector<std::string>& start_codons_for,
-                                                         const size_t min_ORF_length,
-                                                         const size_t max_overlap,
-                                                         const std::vector<std::string>& input_colours,
-                                                         const std::string& ORF_model_file,
-                                                         const std::string& TIS_model_file,
-                                                         const float& minimum_ORF_score,
-                                                         const float& minimum_path_score,
-                                                         const size_t max_ORF_path_length,
-                                                         const bool clustering,
-                                                         const double& id_cutoff,
-                                                         const double& len_diff_cutoff,
-                                                         size_t num_threads,
-                                                         const std::string& cluster_file,
-                                                         const float& score_tolerance,
-                                                         const std::string& tmp_dir)
-{
-    // initilise intermediate colour ORF vector
-    ColourORFVectorMap colour_ORF_vec_map;
-    
+std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::findGenes (const bool repeat,
+                                                                                            const size_t overlap,
+                                                                                            const size_t max_path_length,
+                                                                                            bool no_filter,
+                                                                                            const std::vector<std::string>& stop_codons_for,
+                                                                                            const std::vector<std::string>& start_codons_for,
+                                                                                            const size_t min_ORF_length,
+                                                                                            const size_t max_overlap,
+                                                                                            const std::vector<std::string>& input_colours,
+                                                                                            const std::string& ORF_model_file,
+                                                                                            const std::string& TIS_model_file,
+                                                                                            const float& minimum_ORF_score,
+                                                                                            const float& minimum_path_score,
+                                                                                            const size_t max_ORF_path_length,
+                                                                                            const bool clustering,
+                                                                                            const double& id_cutoff,
+                                                                                            const double& len_diff_cutoff,
+                                                                                            size_t num_threads,
+                                                                                            const std::string& cluster_file,
+                                                                                            const float& score_tolerance,
+                                                                                            const std::string& tmp_dir)
+{    
     // initilise map to hold file paths
     std::map<size_t, std::string> ORF_file_paths;
+    std::map<size_t, std::string> Edge_file_paths;
 
     // Set number of threads
     if (num_threads < 1)
@@ -388,13 +386,13 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
 
         if (!no_filter)
         {
-            cout << "Scoring ORF clusters..." << endl;
+            cout << "Scoring Centroids..." << endl;
 
             // keep track of clusters with low scoring centroids
-            tbb::concurrent_unordered_set<size_t> to_remove_cluster;
+            //tbb::concurrent_unordered_set<size_t> to_remove_cluster;
 
             // set up progress bar
-            progressbar bar(cluster_map.size());
+            progressbar bar(ORF_file_paths.size());
             bar.set_todo_char(" ");
             bar.set_done_char("█");
             bar.set_opening_bracket_char("|");
@@ -437,6 +435,10 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                             {
                                 to_remove.insert(homolog_ID);
                             }
+
+                            // remove from cluster map
+                            cluster_map.erase(ORF_ID_str);
+
                         } else {
                             // add score for calculation
                             for (const auto& homolog_ID : centroid_found.second) 
@@ -446,12 +448,29 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                         }
                     }
                 }
+                // update progress bar
+                #pragma omp critical
+                {
+                    bar.update();
+                }
             }
+            // new line for progress bar
+            cout << endl;
 
             // now need to iterate over genes again, identify the centroid and then assign the score
             // need to hold scores for each ORF so that it can be assigned to the new ORFs from gene_prob
+            
+            cout << "Scoring remaining ORFs..." << endl;
+            bar(ORF_file_paths.size());
+            bar.set_todo_char(" ");
+            bar.set_done_char("█");
+            bar.set_opening_bracket_char("|");
+            bar.set_closing_bracket_char("|");
+            
             for (const auto& colour : ORF_file_paths)
             {
+                // set up progress bar
+
                 ORFNodeMap ORF_map;
                 // read in ORF_map file
                 {
@@ -494,156 +513,21 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                         }
                     }
                 }
+
+                // overwrite ORF_map file
+                {
+                    std::ofstream ofs(colour.second);
+                    boost::archive::text_oarchive oa(ofs);
+                    // write class instance to archive
+                    oa << ORF_map;
+                }
+
+                // update progress bar
+                #pragma omp critical
+                {
+                    bar.update();
+                }
             }
-
-
-                // // -------------- recoding below --------------
-
-                // // get centroid info
-                // auto& centroid_ID_pair = ORF_entries.at(0);
-
-                // // ensure centroid present in colour_ORF_vec_map
-                // auto centroid_entry = colour_ORF_vec_map[centroid_ID_pair.first].find(centroid_ID_pair.second);
-                // if (centroid_entry == colour_ORF_vec_map[centroid_ID_pair.first].end())
-                // {
-                //     continue;
-                // }
-
-                // auto& centroid_info = centroid_entry->second;
-
-                // // get centroid sequence
-                // const auto centroid_seq = generate_sequence_nm(std::get<0>(centroid_info), std::get<1>(centroid_info), overlap, _ccdbg, _KmerArray);
-
-                // // score centroid
-                // const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
-
-                // // determine if centroid is low scorer
-                // bool centroid_low = false;
-
-                // // determine if there are any elements to remove from current cluster
-                // std::set<std::pair<size_t, size_t>> to_remove_within_cluster;
-
-                // // if centroid score is below the min-orf score remove from cluster map
-                // if (std::get<4>(centroid_info) < minimum_ORF_score)
-                // {
-                //     to_remove_within_cluster.insert(centroid_ID_pair);
-                //     centroid_low = true;
-                // }
-
-                // // set centroid length to reassign centroid if required
-                // size_t centroid_length = 0;
-                // size_t centroid_hash = 0;
-
-                // // iterate over remaining elements in cluster, calculating scores
-                // for (int j = 1; j < ORF_entries.size(); j++)
-                // {
-                //     auto& ORF_ID_pair = ORF_entries.at(j);
-
-                //     // ensure ORF present in colour_ORF_vec_map
-                //     auto ORF_entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
-                //     if (ORF_entry == colour_ORF_vec_map[ORF_ID_pair.first].end())
-                //     {
-                //         continue;
-                //     }
-
-                //     auto& ORF_info = ORF_entry->second;
-
-                //     // get centroid sequence
-                //     const auto ORF_seq = generate_sequence_nm(std::get<0>(ORF_info), std::get<1>(ORF_info), overlap, _ccdbg, _KmerArray);
-
-                //     // score ORF in place
-                //     score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
-
-                //     // remove from orf map if score too low
-                //     if (std::get<4>(ORF_info) < minimum_ORF_score)
-                //     {
-                //         to_remove_within_cluster.insert(ORF_ID_pair);
-                //     } else if (centroid_low)
-                //     {
-                //         // get ORF length
-                //         const auto& ORF_length = std::get<2>(ORF_info);
-                //         // generate a hash based on kmer string
-                //         std::string ORF_kmer;
-
-                //         for (const auto& node_traversed : std::get<0>(ORF_info))
-                //         {
-                //             const size_t node_ID = abs(node_traversed) - 1;
-                //             ORF_kmer += _KmerArray.at(node_ID).toString();
-                //         }
-
-                //         // calculate hash, determine highest hash if lengths equal
-                //         size_t ORF_hash = hasher{}(ORF_kmer);
-
-                //         if (ORF_length > centroid_length)
-                //         {
-                //             centroid_ID_pair = ORF_ID_pair;
-                //             centroid_length = ORF_length;
-                //             centroid_hash = ORF_hash;
-                //         } else if (ORF_length == centroid_length)
-                //         {
-                //             if (ORF_hash < centroid_hash)
-                //             {
-                //                 centroid_ID_pair = ORF_ID_pair;
-                //                 centroid_length = ORF_length;
-                //                 centroid_hash = ORF_hash;
-                //             } else if (ORF_hash == centroid_hash)
-                //             {
-                //                 // assign to lowest colour if hash and lengths equal
-                //                 if (ORF_ID_pair.first < centroid_ID_pair.first)
-                //                 {
-                //                     centroid_ID_pair = ORF_ID_pair;
-                //                     centroid_length = ORF_length;
-                //                     centroid_hash = ORF_hash;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-
-                // // if some ORFs need removing, go over the list, adding centroid first
-                // if (!to_remove_within_cluster.empty())
-                // {
-                //     std::vector<std::pair<size_t, size_t>> new_entries;
-                //     for (const auto& ORF_ID_pair : ORF_entries)
-                //     {
-                //         if (to_remove_within_cluster.find(ORF_ID_pair) == to_remove_within_cluster.end())
-                //         {
-                //             new_entries.push_back(ORF_ID_pair);
-                //         } else
-                //         {
-                //             // remove from map
-                //             const auto entry = colour_ORF_vec_map[ORF_ID_pair.first].find(ORF_ID_pair.second);
-                //             if (entry != colour_ORF_vec_map[ORF_ID_pair.first].end())
-                //             {
-                //                 colour_ORF_vec_map[ORF_ID_pair.first].erase(entry->first);
-                //             }
-                //         }
-                //     }
-
-                //     // reassign entries
-                //     ORF_entries = std::move(new_entries);
-                // }
-
-                // // determine whether to remove cluster
-                // if (ORF_entries.empty())
-                // {
-                //     to_remove_cluster.insert(datIt->first);
-                // }
-
-            // update progress bar
-            #pragma omp critical
-            {
-                bar.update();
-            }
-
-            // // remove any low scoring clusters from cluster map
-            // for (const auto& low_scorer : to_remove_cluster)
-            // {
-            //     cluster_map.erase(low_scorer);
-            // }
-
-            // new line for progress bar
-            cout << endl;
         }
         // write cluster file
         {
@@ -670,10 +554,17 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
         cout << "Identifying high-scoring ORFs..." << endl;
         // after clustering, determing highest scoring gene set
         #pragma omp parallel for
-        for (int colour_ID = 0; colour_ID < input_colours.size(); colour_ID++)
+        for (const auto& colour : ORF_file_paths)
         {
-            // pull ORF_map for colour
-            auto& ORF_map = colour_ORF_vec_map[colour_ID];
+            ORFNodeMap ORF_map;
+            // read in ORF_map file
+            {
+                std::ifstream ifs(colour.second);
+                boost::archive::text_iarchive ia(ifs);
+                ia >> ORF_map;
+            }
+
+            const auto colour_ID = colour.first;
 
             // get whether colour is reference or not
             bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
@@ -821,9 +712,35 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
                 }
             }
 
+            // overwrite ORF_map file with gene_map
+            {
+                std::ofstream ofs(colour.second);
+                boost::archive::text_oarchive oa(ofs);
+                // write class instance to archive
+                oa << gene_map;
+            }
+
+            // overwrite ORF_map file with gene_map
+            {
+                std::ofstream ofs(colour.second);
+                boost::archive::text_oarchive oa(ofs);
+                // write class instance to archive
+                oa << gene_map;
+            }
+
+            {
+                std::string file_path = tmp_dir + "/colour_" + std::to_string(colour_ID) + "_edges.tmp";
+                std::ofstream ofs(file_path);
+                boost::archive::text_oarchive oa(ofs);
+                // write class instance to archive
+                oa << gene_edges;
+
+                Edge_file_paths[colour_ID] = file_path;
+            }
+
             // update colour_ORF_map and colour_edge_map
-            colour_ORF_map[colour_ID] = std::move(gene_map);
-            colour_edge_map[colour_ID] = std::move(gene_edges);
+            //colour_ORF_map[colour_ID] = std::move(gene_map);
+            //colour_edge_map[colour_ID] = std::move(gene_edges);
 
             // update progress bar
             #pragma omp critical
@@ -836,7 +753,7 @@ std::pair<ColourORFMap, ColourEdgeMap> Graph::findGenes (const bool repeat,
     // add line for progress bar
     cout << endl;
 
-    return {colour_ORF_map, colour_edge_map};
+    return {ORF_file_paths, Edge_file_paths};
 }
 
 
