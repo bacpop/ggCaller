@@ -118,42 +118,42 @@ template <class T>
 std::vector<size_t> traverse_components(const ORFNodeMap& ORF_map,
                                        const std::vector<size_t>& vertex_mapping,
                                        const std::vector<size_t>& component_vertex_mapping,
-                                       const std::unordered_set<size_t>& vertex_list,
                                        const GeneGraph& g,
                                        const float& minimum_path_score,
                                        const size_t numVertices,
                                        T weight_pmap,
                                        const std::vector<Kmer>& head_kmer_arr)
 {
-    // set all vertices as source and sink
-    std::vector<VertexDescriptor> start_vertices;
-    std::vector<VertexDescriptor> end_vertices;
+    // // set all vertices as source and sink
+    // std::vector<VertexDescriptor> start_vertices;
+    // std::vector<VertexDescriptor> end_vertices;
 
-    // push all vertices onto vertex list to test all possible paths
-    for (const auto& v : vertex_list)
-    {
-        start_vertices.push_back(v);
-        end_vertices.push_back(v);
-    }
+    // // push all vertices onto vertex list to test all possible paths
+    // // for (const auto& v : vertex_list)
+    // // {
+    // //     start_vertices.push_back(v);
+    // //     end_vertices.push_back(v);
+    // // }
 
-    // catch issue if no vertices in start or end
-    if (start_vertices.empty())
-    {
-        std::copy(vertex_list.begin(), vertex_list.end(), start_vertices.begin());
-    }
-    if (end_vertices.empty())
-    {
-        std::copy(vertex_list.begin(), vertex_list.end(), end_vertices.begin());
-    }
+    // // // catch issue if no vertices in start or end
+    // // if (start_vertices.empty())
+    // // {
+    // //     std::copy(vertex_list.begin(), vertex_list.end(), start_vertices.begin());
+    // // }
+    // // if (end_vertices.empty())
+    // // {
+    // //     std::copy(vertex_list.begin(), vertex_list.end(), end_vertices.begin());
+    // // }
 
     // set values of paths and scores
     std::vector<size_t> gene_path;
     float high_score = 0;
 
-    for (const auto& start : start_vertices)
+    for (int start = 0; start < component_vertex_mapping.size(); start++)
     {
         // get start score
-        const float start_score = -std::get<4>(ORF_map.at(vertex_mapping.at(component_vertex_mapping.at(start))));
+        const auto& start_node = component_vertex_mapping.at(start);
+        const float start_score = -std::get<4>(ORF_map.at(vertex_mapping.at(start_node)));
 
         // if starting node is highest scorer, set as path
         if (start_score < high_score)
@@ -173,7 +173,7 @@ std::vector<size_t> traverse_components(const ORFNodeMap& ORF_map,
                                             distance_map(make_iterator_property_map(distances.begin(), get(vertex_index, g))));
 
         // determine shortest path to each end
-        for (const auto& end : end_vertices)
+        for (int end = 0; end < component_vertex_mapping.size(); end++)
         {
             // pass if start and end are the same
             if (start == end)
@@ -309,7 +309,6 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
         {
             // make transative closure graph
             GeneGraph tc;
-            // TODO this won't work with a component, need to generate a small graph as above most likely
 
             std::vector<size_t> component_vertex_mapping;
             std::unordered_map<size_t, size_t> component_ORF_ID_mapping;
@@ -397,7 +396,7 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
             // get weight map for graph
             const auto weight_pmap = get(boost::edge_weight_t(), tc);
             
-            auto path = traverse_components(ORF_map, vertex_mapping, component_vertex_mapping, component, tc, minimum_path_score, numVertices, weight_pmap, head_kmer_arr);
+            auto path = traverse_components(ORF_map, vertex_mapping, component_vertex_mapping, tc, minimum_path_score, numVertices, weight_pmap, head_kmer_arr);
             // ensure path is not empty
             if (!path.empty())
             {
