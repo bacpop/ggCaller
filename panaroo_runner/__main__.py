@@ -315,12 +315,13 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         if all_seq_in_graph:
             G.nodes[node]['dna'] = list()
             G.nodes[node]['protein'] = list()
+    
+    for colour_ID, file_path in ORF_file_paths.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
-        for seq_ID in G.nodes[node]['seqIDs']:
-            parsed_id = seq_ID.split("_")
-            genome_id = int(parsed_id[0])
-            local_id = int(parsed_id[-1])
-            ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+        for ORF_ID, ORFNodeVector in ORF_map.items():
+            pan_ORF_id = str(colour_ID) + "_0_" + str(ORF_ID)
+            node = ids_len_stop[pan_ORF_id][2]
 
             G.nodes[node]['lengths'].append(ORFNodeVector[2])
 
@@ -328,7 +329,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             if all_seq_in_graph:
                 seq = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 G.nodes[node]['dna'].append(seq)
-                if local_id < 0:
+                if ORF_ID < 0:
                     G.nodes[node]['protein'].append(ORFNodeVector[4])
                 else:
                     G.nodes[node]['protein'].append(str(Seq(seq).translate()))
@@ -338,10 +339,10 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
             G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
-        # add node annotation
-        if save_objects:
-            high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
-            high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
+        # # add node annotation
+        # if save_objects:
+        #     high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
+        #     high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
 
 
     for edge in G.edges():
