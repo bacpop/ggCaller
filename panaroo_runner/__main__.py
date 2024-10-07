@@ -286,7 +286,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
+                                      ORF_file_paths, overlap, ref_aln, call_variants, verbose,
                                       ignore_pseduogenes, truncation_threshold, pool)
         core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, high_scoring_ORFs,
                                          truncation_threshold)
