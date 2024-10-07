@@ -288,7 +288,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
                                       ORF_file_paths, overlap, ref_aln, call_variants, verbose,
                                       ignore_pseduogenes, truncation_threshold, pool)
-        core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, high_scoring_ORFs,
+        core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, ORF_file_paths,
                                          truncation_threshold)
         core_gene_names = ["CID_" + str(G.nodes[x[0]]["CID"]) for x in core_genes]
         concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpu)
@@ -296,7 +296,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
+                                       ORF_file_paths, overlap, ref_aln, call_variants, verbose,
                                        ignore_pseduogenes, truncation_threshold, pool)
 
 

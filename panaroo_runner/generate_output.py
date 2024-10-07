@@ -1037,22 +1037,37 @@ def get_unannotated_nodes(G):
     return unannotated_nodes
 
 
-def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold):
+def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, ORF_file_paths, truncation_threshold):
     # Get the core genes based on percent threshold
     core_nodes = []
     for node in G.nodes(data=True):
         node_data = node[1]
         if float(node_data["size"]) / float(num_isolates) >= threshold:
+            # iterate over entries and parse by colour
+            sequence_dict = defaultdict(list)
+            for pan_ORF_id in node_data["seqIDs"]:
+                mem = int(pan_ORF_id.split("_")[0])
+                ORF_ID = int(pan_ORF_id.split("_")[-1])
+                sequence_dict[mem].append(ORF_ID)
+            
+            # just get information for this cluster
+            ORF_info_dict = defaultdict(dict)
+            for colour, ORF_list in sequence_dict:
+                ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
+                for ORF_ID in ORF_list:
+                    ORF_info = ORF_map[ORF_ID]
+                    ORF_info_dict[colour][ORF_ID] = ORF_info
+            
             if ignore_pseudogenes:
                 length_centroid = node_data['lengths'][node_data['maxLenId']]
                 sequence_ids = [x for x in node_data["seqIDs"] if
-                            not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
+                            not ((ORF_info_dict[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                                   < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
-                                                                                (high_scoring_ORFs[
+                                                                                (ORF_info_dict[
                                                                                      int(x.split("_")[0])][
                                                                                      int(x.split("_")[-1])][
                                                                                      3] is True or
-                                                                                 high_scoring_ORFs[
+                                                                                 ORF_info_dict[
                                                                                      int(x.split("_")[0])][
                                                                                      int(x.split("_")[-1])][2] % 3 != 0
                                                                                  )))]
@@ -1137,7 +1152,7 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
-                                   isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
+                                   isolate_names, threshold, num_isolates, shd_arr_tup, ORF_file_paths,
                                    overlap, ref_aln, call_variants, verbose,
                                    ignore_pseudogenes, truncation_threshold, pool):
     unaligned_sequence_files = []
@@ -1150,13 +1165,13 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         os.mkdir(output_dir + "alignments")
 
     # Get core nodes
-    core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold)
+    core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, ORF_file_paths, truncation_threshold)
     core_gene_names = ["CID_" + str(G.nodes[x[0]]["CID"]) for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
+                                                 ORF_file_paths=ORF_file_paths, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseudogenes=ignore_pseudogenes,
                                                  truncation_threshold=truncation_threshold),
                                          core_genes):
