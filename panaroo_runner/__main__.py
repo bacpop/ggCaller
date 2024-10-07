@@ -249,7 +249,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
     if annotate != "none" and any(ref_list):
         if verbose:
             print("writing GFF files...")
-        generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
+        generate_GFF(shd_arr[0], ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
                      overlap, write_idx, ref_list, n_cpu)
 
     # write roary output and summary stats file

@@ -292,7 +292,7 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
     return
 
 
-def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir, overlap,
+def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir, overlap,
                  write_idx, ref_list, num_threads):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
@@ -302,12 +302,15 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
     GFF_dir = os.path.join(GFF_dir, "")
 
     # iterate over colours in contig_annotation, writing output file
-    for colour in range(len(input_colours)):
+    for colour, file_path in ORF_file_paths.items():
         # if colour is not reference, then cannot generate GFF
         if not ref_list[colour]:
             continue
+        
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
         # get coordinates for each ORF
-        ORF_IDs = [(high_scoring_ORFs[colour][i[0]][0], high_scoring_ORFs[colour][i[0]][1]) for i in
+        ORF_IDs = [(ORF_map[i[0]][0], ORF_map[i[0]][1]) for i in
                    contig_annotation[colour]]
         ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads)
 
