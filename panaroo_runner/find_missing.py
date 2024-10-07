@@ -4,14 +4,14 @@ from joblib import Parallel, delayed
 import edlib
 from .clean_network import delete_node, remove_member_from_node
 import re
-
+import ggCaller_cpp
 from ggCaller.shared_memory import *
 from functools import partial
 
 
 def find_missing(G,
+                 ORF_file_paths,
                  graph_shd_arr_tup,
-                 high_scoring_ORFs,
                  kmer,
                  repeat,
                  overlap,
@@ -36,8 +36,7 @@ def find_missing(G,
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
                 ORF_ID = int(sid.split("_")[-1])
-                ORF_info = (high_scoring_ORFs[member][ORF_ID][0], high_scoring_ORFs[member][ORF_ID][1])
-                search_dict[member]["conflicts"][neigh] = ORF_info
+                search_dict[member]["conflicts"][neigh] = (member, ORF_ID)
 
                 if member not in G.nodes[node]['members']:
                     if G.nodes[node]["lengths"][G.nodes[node]['maxLenId']] <= 0:
@@ -46,7 +45,7 @@ def find_missing(G,
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = ((curr_ORF_info[0], curr_ORF_info[1]), [])
-                    search_dict[member]["searches"][node][1].append(ORF_info)
+                    search_dict[member]["searches"][node][1].append((member, ORF_ID))
 
                     n_searches += 1
 
@@ -59,6 +58,7 @@ def find_missing(G,
     all_node_locs = [None] * len(isolate_names)
 
     for member, hits, node_locs in pool.map(partial(search_graph,
+                                                    ORF_file_paths=ORF_file_paths,
                                                     graph_shd_arr_tup=graph_shd_arr_tup,
                                                     isolate_names=isolate_names,
                                                     search_radius=search_radius,
@@ -89,6 +89,8 @@ def find_missing(G,
     # update the graph
     n_found = 0
     for member, hits in enumerate(all_hits):
+        # load ORF map
+        ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[member])
         i = -1
         for node, dna_hit in hits:
             i += 1
@@ -101,16 +103,19 @@ def find_missing(G,
             # add new refound gene to high_scoring_ORFs with negative ID to indicate refound
             nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
-            high_scoring_ORFs[member][n_found * -1] = (
+            ORF_map[n_found * -1] = (
                 nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna)
+        # save ORF_map
+        ggCaller_cpp.save_ORF_file(ORF_file_paths[member], ORF_map)
 
     if verbose:
         print("Number of refound genes: ", n_found)
 
-    return G, high_scoring_ORFs
+    return G
 
 
 def search_graph(search_pair,
+                 ORF_file_paths,
                  graph_shd_arr_tup,
                  isolate_names,
                  kmer,
@@ -122,6 +127,7 @@ def search_graph(search_pair,
     # unpack search_pair and assign fasta
     member, dicts = search_pair
     fasta = isolate_names[member]
+    ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[member])
 
     # load shared memory items
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
@@ -137,7 +143,11 @@ def search_graph(search_pair,
     to_avoid = set()
 
     # mask regions that already have genes
-    for node, ORF_info in conflicts.items():
+    for node, ORF_ID in conflicts.items():
+        
+        # read in ORF information
+        ORF_info = ORF_map[ORF_ID[1]]
+
         # determine sequence overlap of ORFs
         for i, node_coords in enumerate(ORF_info[1]):
             node_overlap = (node_coords[1] - node_coords[0]) + 1

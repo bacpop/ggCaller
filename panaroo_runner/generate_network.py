@@ -4,7 +4,7 @@ from intbitset import intbitset
 import ggCaller_cpp
 
 
-def generate_network(DBG, overlap,  ORF_file_paths, Edge_file_paths, cluster_file):
+def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file):
     # read in cluster_dict
     cluster_dict = ggCaller_cpp.read_cluster_file(cluster_file)
 
@@ -27,7 +27,7 @@ def generate_network(DBG, overlap,  ORF_file_paths, Edge_file_paths, cluster_fil
             if ORF_ID_str in cluster_dict:
                 # access ORF information for centroid from high_scoring_ORFs
                 pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
-                
+
                 seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 current_hash = DBG.rb_hash(seq)
 

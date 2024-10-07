@@ -33,6 +33,10 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     m.def("read_ORF_file", &read_ORF_file, "Read ORF file",
         py::arg("ORF_file"));
     
+    m.def("save_ORF_file", &save_ORF_file, "Save ORF file",
+        py::arg("ORF_file"),
+        py::arg("ORF_map"));
+    
     m.def("read_edge_file", &read_edge_file, "Read edge file",
         py::arg("edge_file"));
 

@@ -887,6 +887,15 @@ ORFNodeMap read_ORF_file(const std::string& ORF_file)
     return ORF_map;
 }
 
+void save_ORF_file(const std::string& ORF_file_path,
+                   const ORFNodeMap& ORF_map)
+{
+    std::ofstream ofs(ORF_file_path);
+    boost::archive::text_oarchive oa(ofs);
+    // write class instance to archive
+    oa << ORF_map;
+}
+
 std::unordered_map<size_t, std::unordered_set<size_t>> read_edge_file(const std::string& cluster_file)
 {
     std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;

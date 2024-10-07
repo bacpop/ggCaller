@@ -213,6 +213,13 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> findGene
 
 ORFClusterMap read_cluster_file(const std::string& cluster_file);
 
+ORFNodeMap read_ORF_file(const std::string& ORF_file);
+
+void save_ORF_file(const std::string& ORF_file_path,
+                   const ORFNodeMap& ORF_map);
+
+std::unordered_map<size_t, std::unordered_set<size_t>> read_edge_file(const std::string& cluster_file);
+
 void clear_graph(Graph& g);
 
 //void use_count(std::shared_ptr<Graph> sp);

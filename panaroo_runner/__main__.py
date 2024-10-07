@@ -143,19 +143,19 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             print("refinding genes...")
 
         # find genes that Prokka has missed
-        G, high_scoring_ORFs = find_missing(G,
-                                            shd_arr_tup,
-                                            high_scoring_ORFs,
-                                            kmer=kmer,
-                                            repeat=repeat,
-                                            overlap=overlap,
-                                            isolate_names=input_colours,
-                                            search_radius=search_radius,
-                                            prop_match=refind_prop_match,
-                                            pairwise_id_thresh=identity_cutoff,
-                                            pool=pool,
-                                            n_cpu=n_cpu,
-                                            verbose=verbose)
+        G = find_missing(G,
+                         ORF_file_paths,
+                         shd_arr_tup,
+                         kmer=kmer,
+                         repeat=repeat,
+                         overlap=overlap,
+                         isolate_names=input_colours,
+                         search_radius=search_radius,
+                         prop_match=refind_prop_match,
+                         pairwise_id_thresh=identity_cutoff,
+                         pool=pool,
+                         n_cpu=n_cpu,
+                         verbose=verbose)
 
         # remove edges that are likely due to misassemblies (by consensus)
 
