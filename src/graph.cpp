@@ -876,6 +876,28 @@ ORFClusterMap read_cluster_file(const std::string& cluster_file)
     return cluster_map;
 }
 
+ORFNodeMap read_ORF_file(const std::string& ORF_file)
+{
+    ORFNodeMap ORF_map;
+
+    std::ifstream ifs(ORF_file);
+    boost::archive::text_iarchive ia(ifs);
+    ia >> ORF_map;
+
+    return ORF_map;
+}
+
+std::unordered_map<size_t, std::unordered_set<size_t>> read_edge_file(const std::string& cluster_file)
+{
+    std::unordered_map<size_t, std::unordered_set<size_t>> gene_edges;
+
+    std::ifstream ifs(cluster_file);
+    boost::archive::text_iarchive ia(ifs);
+    ia >> gene_edges;
+
+    return gene_edges;
+}
+
 void clear_graph(Graph& g)
 {
     g.~Graph();

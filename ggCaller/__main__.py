@@ -501,7 +501,7 @@ def main():
     else:
         ORF_model_file, TIS_model_file = "NA", "NA"
 
-    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
+    file_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons_for, options.min_orf_length,
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
@@ -509,7 +509,7 @@ def main():
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
                                  options.score_tolerance)
 
-    high_scoring_ORFs, high_scoring_ORF_edges = gene_tuple
+    ORF_file_paths, Edge_file_paths = file_tuple
 
     # generate ORF clusters
     if not options.no_clustering:
@@ -518,7 +518,7 @@ def main():
             total_arr = np.array([graph])
             array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
             with Pool(processes=options.threads) as pool:
-                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
+                run_panaroo(pool, array_shd_tup, ORF_file_paths, Edge_file_paths,
                             cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
                             options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,

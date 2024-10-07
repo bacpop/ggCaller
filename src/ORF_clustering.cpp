@@ -12,7 +12,7 @@ ORFGroupPair group_ORFs(const std::map<size_t, std::string>& ORF_file_paths,
     std::vector<std::pair<size_t, std::pair<size_t, size_t>>> ORF_length_list;
 
     // initialise vector to hold all centroid IDs in, and dynamic bitset to determine which centroids have been assigned
-    std::shared_ptr<std::string> placeholder = std::make_shared<std::string>("NA");
+    std::shared_ptr<std::string> placeholder = std::make_shared<std::string>("");
     std::vector<std::tuple<int, int, size_t, size_t, std::shared_ptr<std::string>>> centroid_vector(head_kmer_arr.size(), {-1, -1, 0, 0, placeholder});
 
     // iterate over each ORF sequence with specific colours combination
