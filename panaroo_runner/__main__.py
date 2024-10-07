@@ -209,9 +209,9 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
 
             # determine if gene is refound. If it is, then determine if premature stop codon present
             if (ORF_ID < 0):
-                ids_len_stop[pan_ORF_id] = (ORF_len / 3, ORF_info[3])
+                ids_len_stop[pan_ORF_id] = [ORF_len / 3, ORF_info[3], -1]
             else:
-                ids_len_stop[pan_ORF_id] = (ORF_len / 3, False)
+                ids_len_stop[pan_ORF_id] = [ORF_len / 3, False, -1]
     
     # add annotation to genes
     contig_annotation = defaultdict(list)
@@ -225,6 +225,9 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             ORF_ID = int(pan_ORF_id.split("_")[-1])
             ORF_len = ids_len_stop[pan_ORF_id][0] * 3
             prem_stop = ids_len_stop[pan_ORF_id][1]
+
+            # update cluster_ID in ids_len_stop
+            ids_len_stop[pan_ORF_id][2] = node
 
             if annotate != "none" and ref_list[mem]:
                 # annotate genes
@@ -275,8 +278,8 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
 
     if verbose:
         print("writing gene fasta...")
-    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
-                    input_colours, overlap, shd_arr[0], truncation_threshold, G)
+    print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
+                    input_colours, overlap, shd_arr[0], truncation_threshold, G, ids_len_stop)
 
     # Write out core/pan-genome alignments
     # determine if reference-guided alignment being done
