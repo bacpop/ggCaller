@@ -156,6 +156,9 @@ def search_graph(search_pair,
             if node_overlap == graph_shd_arr[0].node_size(ORF_info[0][i]):
                 to_avoid.add(ORF_info[0][i])
 
+    # remove from memory
+    del ORF_map
+
     # get sequences to search
     refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
                                                       repeat, to_avoid)

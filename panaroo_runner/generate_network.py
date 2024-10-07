@@ -17,7 +17,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
     cluster_id = 0
 
     # iterate over all ORFs in ORF_file_paths to determine centroids and add clusters
-    for colour_ID, file_path in ORF_file_paths:
+    for colour_ID, file_path in ORF_file_paths.items():
         ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
         for ORF_ID, ORFNodeVector in ORF_map.items():

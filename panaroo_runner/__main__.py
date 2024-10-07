@@ -199,22 +199,33 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
     # get original annotation IDs, lengths and whether or
     # not an internal stop codon is present
     ids_len_stop = {}
+    for colour_ID, file_path in ORF_file_paths.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+        for ORF_ID, ORF_info in ORF_map.items():
+            ORF_len = ORF_info[2]
+
+            pan_ORF_id = str(colour_ID) + "_0_" + str(ORF_ID)
+
+            # determine if gene is refound. If it is, then determine if premature stop codon present
+            if (ORF_ID < 0):
+                ids_len_stop[pan_ORF_id] = (ORF_len / 3, ORF_info[3])
+            else:
+                ids_len_stop[pan_ORF_id] = (ORF_len / 3, False)
+    
+    # add annotation to genes
     contig_annotation = defaultdict(list)
     for node in G.nodes():
         length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
         node_annotation = G.nodes[node]['annotation']
         node_bitscore = G.nodes[node]['bitscore']
         node_description = G.nodes[node]['description']
-        for sid in G.nodes[node]['seqIDs']:
-            mem = int(sid.split("_")[0])
-            ORF_ID = int(sid.split("_")[-1])
-            ORF_info = high_scoring_ORFs[mem][ORF_ID]
-            ORF_len = ORF_info[2]
-            # determine if gene is refound. If it is, then determine if premature stop codon present
-            if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORF_len / 3, ORF_info[3])
-            else:
-                ids_len_stop[sid] = (ORF_len / 3, False)
+        for pan_ORF_id in G.nodes[node]['seqIDs']:
+            mem = int(pan_ORF_id.split("_")[0])
+            ORF_ID = int(pan_ORF_id.split("_")[-1])
+            ORF_len = ids_len_stop[pan_ORF_id][0] * 3
+            prem_stop = ids_len_stop[pan_ORF_id][1]
+
             if annotate != "none" and ref_list[mem]:
                 # annotate genes
                 source = "annotation"
@@ -228,7 +239,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
                 annotation = (source, node_annotation, node_bitscore, node_description)
 
                 # annotate potential pseudogene if fits criteria of length, premature stop codon or length not multiple of 3
-                if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
+                if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (prem_stop is True
                                                                                           or ORF_len % 3 != 0)):
                     description = annotation[-1] + " potential psuedogene"
                     annotation = annotation[0:3] + (description,)
