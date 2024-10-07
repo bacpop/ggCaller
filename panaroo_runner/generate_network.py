@@ -27,12 +27,7 @@ def generate_network(DBG, overlap,  ORF_file_paths, Edge_file_paths, cluster_fil
             if ORF_ID_str in cluster_dict:
                 # access ORF information for centroid from high_scoring_ORFs
                 pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
-
-        # generate hash for later comparisons if not already generated
-        # generate hash for later comparisons if not already generated
-        if current_hash is None:
-                # generate hash for later comparisons if not already generated
-        if current_hash is None:
+                
                 seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 current_hash = DBG.rb_hash(seq)
 
