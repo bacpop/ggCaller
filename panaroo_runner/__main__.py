@@ -146,7 +146,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         G = find_missing(G,
                          ORF_file_paths,
                          shd_arr_tup,
-                         kmer=kmer,
+                         kmer=kmer,ƒ
                          repeat=repeat,
                          overlap=overlap,
                          isolate_names=input_colours,
@@ -339,6 +339,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
             G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
 
+        # TODO sort out saving object, don't necessarily need to anymore as they are saved by default
         # # add node annotation
         # if save_objects:
         #     high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
@@ -365,28 +366,30 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         # make sure trailing forward slash is present
         objects_dir = os.path.join(objects_dir, "")
 
-        to_remove = set()
+        to_remove = defaultdict(set)
 
         # create index of all high_scoring_ORFs node_IDs, remove if not in panaroo graph
         node_index = defaultdict(list)
-        for colour, gene_dict in high_scoring_ORFs.items():
-            for ORF_ID, ORF_info in gene_dict.items():
+        for colour_ID, file_path in ORF_file_paths.items():
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+            for ORF_ID, ORF_info in ORF_map.items():
                 if not isinstance(ORF_info, list):
-                    to_remove.add((colour, ORF_ID))
+                    to_remove[colour_ID].add(ORF_ID)
                     continue
                 delim = "_0_" if ORF_ID > 0 else "_refound_"
-                entry_ID = str(colour) + delim + str(ORF_ID)
+                entry_ID = str(colour_ID) + delim + str(ORF_ID)
                 for node in ORF_info[0]:
                     node_index[abs(node)].append(entry_ID)
 
         # remove genes not in panaroo graph
-        for entry in to_remove:
-            del high_scoring_ORFs[entry[0]][entry[1]]
+        for colour_ID, file_path in ORF_file_paths.items():
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
-        # serialise graph object and high scoring ORFs to future reading
-        shd_arr[0].data_out(objects_dir + "ggc_graph.dat")
-        with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
-            cPickle.dump(high_scoring_ORFs, o)
+            for ORF_ID in to_remove[colour_ID]:
+                del ORF_map[ORF_ID]
+            
+            ggCaller_cpp.save_ORF_file(file_path, ORF_map)
 
         with open(objects_dir + "node_index.dat", "wb") as o:
             cPickle.dump(node_index, o)
