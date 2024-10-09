@@ -142,7 +142,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
             colour_to_nodes[genome_id].add(current_cluster)
 
     # iterative over each colour, adding edges between nodes with genes of that colour
-    for genome_id, node_set in colour_to_nodes:
+    for genome_id, node_set in colour_to_nodes.items():
         ORF_edges = ggCaller_cpp.read_edge_file(Edge_file_paths[genome_id])
         for node in node_set:                        
             for index, ORF_id in enumerate(G.nodes[node]['seqIDs']):

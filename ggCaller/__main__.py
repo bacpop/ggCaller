@@ -493,6 +493,11 @@ def main():
     # Create temp_file for cluster_map
     cluster_file = os.path.join(temp_dir, "cluster_map.dat")
 
+    # create directory for ORF map
+    ORFMap_dir = os.path.join(output_dir, "ORF_dir")
+    if not os.path.exists(ORFMap_dir):
+        os.mkdir(ORFMap_dir)    
+
     # load models models if required
     if not options.no_filter:
         print("Loading gene models...")
@@ -507,7 +512,7 @@ def main():
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
-                                 options.score_tolerance)
+                                 options.score_tolerance, ORFMap_dir)
 
     ORF_file_paths, Edge_file_paths = file_tuple
 

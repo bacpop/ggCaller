@@ -279,10 +279,11 @@ def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, trunca
             for ORF_ID, ORF_info in ORF_map.items():
                 pan_ORF_id = str(colour) + "_0_" + str(ORF_ID)
                 # if pan_ORF_id not in ORF_map means has been removed so remove it from ORF_map
-                if pan_ORF_id not in ids_len_stop:
-                    to_remove.add(ORF_ID)
-                    continue
                 node = ids_len_stop[pan_ORF_id][2]
+                if node == -1:
+                    to_remove.add(ORF_ID)
+                    del ids_len_stop[pan_ORF_id]
+                    continue
                 node_annotation = G.nodes[node]["description"]
                 length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
 
