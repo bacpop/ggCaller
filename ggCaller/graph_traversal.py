@@ -2,6 +2,7 @@ import os, sys
 import _pickle as cPickle
 from Bio import SeqIO
 
+# TODO update this to work with ggCaller ORF map outputs and panaroo graph which contains annotation
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, query_id, num_threads):
     # check if objects_dir present, if not exit
     if not os.path.exists(objects_dir):

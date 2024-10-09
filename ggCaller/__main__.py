@@ -530,7 +530,7 @@ def main():
                             options.truncation_threshold, options.save, options.refind)
 
     else:
-        print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
+        print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
                         input_colours, overlap, graph)
 
         if options.save:
@@ -544,16 +544,17 @@ def main():
 
             # serialise graph object and high scoring ORFs to future reading
             graph[0].data_out(objects_dir + "ggc_graph.dat")
-            with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
-                cPickle.dump(high_scoring_ORFs, o)
 
             # create index of all high_scoring_ORFs node_IDs
             node_index = defaultdict(list)
-            for colour, gene_dict in high_scoring_ORFs.items():
-                for ORF_ID, ORF_info in gene_dict.items():
-                    entry_ID = str(colour) + "_" + str(ORF_ID)
+            for colour_ID, file_path in ORF_file_paths.items():
+                ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+                for ORF_ID, ORF_info in ORF_map.items():
+                    delim = "_0_" if ORF_ID > 0 else "_refound_"
+                    entry_ID = str(colour_ID) + delim + str(ORF_ID)
                     for node in ORF_info[0]:
-                        node_index[node].append(entry_ID)
+                        node_index[abs(node)].append(entry_ID)
 
             with open(objects_dir + "node_index.dat", "wb") as o:
                 cPickle.dump(node_index, o)

@@ -273,10 +273,15 @@ def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, trunca
                                             description=""))
     else:
         for colour, file_path in ORF_file_paths.items():
+            to_remove = set()
             ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
             for ORF_ID, ORF_info in ORF_map.items():
                 pan_ORF_id = str(colour) + "_0_" + str(ORF_ID)
+                # if pan_ORF_id not in ORF_map means has been removed so remove it from ORF_map
+                if pan_ORF_id not in ids_len_stop:
+                    to_remove.add(ORF_ID)
+                    continue
                 node = ids_len_stop[pan_ORF_id][2]
                 node_annotation = G.nodes[node]["description"]
                 length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
@@ -299,6 +304,11 @@ def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, trunca
                     aa_records.append(
                         SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID),
                                         description="ggcID=" + pan_ORF_id + ";" + gene_annotation))
+            
+            # remove from ORF_map and save
+            for ORF_ID in to_remove:
+                del ORF_map[ORF_ID]
+            ggCaller_cpp.save_ORF_file(file_path, ORF_map)
     SeqIO.write(DNA_records, outfile + ".ffn", "fasta")
     SeqIO.write(aa_records, outfile + ".faa", "fasta")
     return
