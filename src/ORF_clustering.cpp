@@ -153,7 +153,7 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
             const auto& ORF_nodes = std::get<0>(ORF_info);
             const auto& ORF_len = std::get<2>(ORF_info);
 
-            bool is_centroid = false;
+            std::unordered_set<std::string> CentroidComparisons;
 
             for (int i = 0; i < std::get<0>(ORF_info).size(); i++)
             {
@@ -169,16 +169,17 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
 
                 const auto& centroid_ID = centroid_vector.at(current_node);
                 std::string ORF_ID_string = std::to_string(colour.first) + "_" + std::to_string(ORF_entry.first);
-
-                // check if entry is centroid itself, if already set then ignore as already added
-                if (std::get<0>(centroid_ID) == colour.first && std::get<1>(centroid_ID) == ORF_entry.first)
+                std::string Centroid_ID_string = std::to_string(std::get<0>(centroid_ID)) + "_" + std::to_string(std::get<1>(centroid_ID));
+                
+                // if ORF and centroid have already been compared, pass
+                if (CentroidComparisons.find(Centroid_ID_string) != CentroidComparisons.end())
                 {
-                    if (!is_centroid)
-                    {
-                        CentroidToORFMap[ORF_ID_string].push_back({colour.first, ORF_entry.first});
-                        is_centroid = true;
-                    }
-                } else 
+                    continue;
+                } else if (Centroid_ID_string == ORF_ID_string)
+                {
+                    // check if entry is centroid itself, if already set then ignore as already added
+                    CentroidToORFMap[ORF_ID_string].push_back({colour.first, ORF_entry.first});
+                } else
                 {
                     const auto& centroid_len = std::get<3>(centroid_ID);
 
@@ -199,10 +200,12 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
 
                     if (current_perc_id >= id_cutoff)
                     {
-                        std::string Centroid_ID_string = std::to_string(std::get<0>(centroid_ID)) + "_" + std::to_string(std::get<1>(centroid_ID));
                         CentroidToORFMap[Centroid_ID_string].push_back({colour.first, ORF_entry.first});
                     }
                 }
+
+                // ensure ORF and centoid not compared again
+                CentroidComparisons.insert(Centroid_ID_string);
             }
         }
     }
