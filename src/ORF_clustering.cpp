@@ -188,7 +188,7 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
 
                     if (perc_len_diff < len_diff_cutoff)
                     {
-                        continue;
+                        break;
                     }
 
                     const auto centroid_seq = *std::get<4>(centroid_ID);
