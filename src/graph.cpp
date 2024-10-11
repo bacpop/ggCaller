@@ -406,7 +406,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
             bar.set_closing_bracket_char("|");
 
             // score centroid and apply score to all ORFs in group
-            std::set<std::pair<size_t, size_t>> to_remove;
+            robin_hood::unordered_map<size_t, robin_hood::unordered_set<size_t>> to_remove;
             robin_hood::unordered_map<size_t, robin_hood::unordered_map<size_t, float>> ORFToScoreMap;
             
             //#pragma omp parallel for
@@ -437,10 +437,10 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         // if centroid score is below the min-orf score remove from cluster map
                         if (std::get<4>(centroid_info) < minimum_ORF_score)
                         {
-                            // remove all ORFs (first is centroid)
+                            // remove all ORFs
                             for (const auto& homolog_ID : centroid_found->second) 
                             {
-                                to_remove.insert(homolog_ID);
+                                to_remove[colour.first].insert(homolog_ID.second);
                             }
 
                             // remove from cluster map
@@ -448,6 +448,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
 
                         } else {
                             // add score for calculation
+                            ORFToScoreMap[colour.first][ORF_entry.first] = gene_prob;
                             for (const auto& homolog_ID : centroid_found->second) 
                             {
                                 ORFToScoreMap[homolog_ID.first][homolog_ID.second] = gene_prob;
@@ -455,6 +456,15 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         }
                     }
                 }
+
+                // overwrite ORF_map file
+                {
+                    std::ofstream ofs(colour.second);
+                    boost::archive::text_oarchive oa(ofs);
+                    // write class instance to archive
+                    oa << ORF_map;
+                }
+
                 // update progress bar
                 #pragma omp critical
                 {
@@ -486,16 +496,16 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                     ia >> ORF_map;
                 }
 
+                // remove all low scoring ORFs
+                for (const auto& ORF_ID : to_remove[colour.first])
+                {
+                    ORF_map.erase(ORF_ID);
+                    continue;
+                }
+
                 // iterate over ORFToScoreMap for the given colour
                 for (const auto& ORF_ID : ORFToScoreMap[colour.first])
                 {
-                    // remove if score too low and move onto next gene
-                    if (to_remove.find({colour.first, ORF_ID.first}) != to_remove.end())
-                    {
-                        ORF_map.erase(ORF_ID.first);
-                        continue;
-                    }
-
                     std::string ORF_ID_str = std::to_string(colour.first) + "_" + std::to_string(ORF_ID.first);
                     
                     auto centroid_found = cluster_map.find(ORF_ID_str);
