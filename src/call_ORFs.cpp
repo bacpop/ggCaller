@@ -426,7 +426,7 @@ void generate_ORFs(const int& colour_ID,
                         if (best_coverage)
                         {
                             // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, best_TIS_score);
+                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, best_TIS_score, "");
 
                             // think about if there is no TIS, then can ignore ORF?
                             update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
@@ -460,7 +460,7 @@ void generate_ORFs(const int& colour_ID,
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
                         // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, ORF_len, !present.second, 0);
+                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, ORF_len, !present.second, 0, "");
 
                         // think about if there is no TIS, then can ignore ORF?
                         update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);

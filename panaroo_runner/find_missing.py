@@ -104,7 +104,7 @@ def find_missing(G,
             nodelist, node_coords, total_overlap = all_node_locs[member][node]
             premature_stop = "*" in hit_protein[1:-3]
             ORF_map[n_found * -1] = (
-                nodelist, node_coords, len(dna_hit), premature_stop, hit_protein, hit_dna)
+                nodelist, node_coords, len(dna_hit), premature_stop, 0.0, hit_protein)
         # save ORF_map
         ggCaller_cpp.save_ORF_file(ORF_file_paths[member], ORF_map)
 
