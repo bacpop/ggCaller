@@ -197,7 +197,6 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
                     double current_perc_id = align_seqs(centroid_seq, ORF_seq);
 
                     // assign to all centroids with current_perc_id >= id_cutoff
-
                     if (current_perc_id >= id_cutoff)
                     {
                         CentroidToORFMap[Centroid_ID_string].push_back({colour.first, ORF_entry.first});

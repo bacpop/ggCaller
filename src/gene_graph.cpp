@@ -393,10 +393,12 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
                 remove_edge(e, tc);
             }
 
+            size_t component_numVertices = num_vertices(tc);
+
             // get weight map for graph
             const auto weight_pmap = get(boost::edge_weight_t(), tc);
             
-            auto path = traverse_components(ORF_map, vertex_mapping, component_vertex_mapping, tc, minimum_path_score, numVertices, weight_pmap, head_kmer_arr);
+            auto path = traverse_components(ORF_map, vertex_mapping, component_vertex_mapping, tc, minimum_path_score, component_numVertices, weight_pmap, head_kmer_arr);
             // ensure path is not empty
             if (!path.empty())
             {
