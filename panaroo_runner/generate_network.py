@@ -6,7 +6,8 @@ import ggCaller_cpp
 
 def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file):
     # read in cluster_dict
-    cluster_dict = ggCaller_cpp.read_cluster_file(cluster_file)
+    # TODO save pair here that holds ORFs removed for low scores after centroid scored
+    cluster_dict, ORFs_to_remove = ggCaller_cpp.read_cluster_file(cluster_file)
 
     # associate sequences with their clusters
     seq_to_cluster = {}
@@ -50,6 +51,10 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                     local_id = ORF_ID_pair[1]
 
                     pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
+
+                    # make sure ORF wasn't removed after centroid scored
+                    if pan_ORF_id in ORFs_to_remove:
+                        continue
 
                     # only hold lengths of genes that are not in a cluster
                     if ORF_ID_str in ORF_length_map:

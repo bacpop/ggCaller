@@ -36,7 +36,7 @@ def find_missing(G,
             for sid in sorted(G.nodes[neigh]['seqIDs']):
                 member = int(sid.split("_")[0])
                 ORF_ID = int(sid.split("_")[-1])
-                search_dict[member]["conflicts"][neigh] = (member, ORF_ID)
+                search_dict[member]["conflicts"][neigh] = ORF_ID
 
                 if member not in G.nodes[node]['members']:
                     if G.nodes[node]["lengths"][G.nodes[node]['maxLenId']] <= 0:
@@ -146,7 +146,7 @@ def search_graph(search_pair,
     for node, ORF_ID in conflicts.items():
         
         # read in ORF information
-        ORF_info = ORF_map[ORF_ID[1]]
+        ORF_info = ORF_map[ORF_ID]
 
         # determine sequence overlap of ORFs
         for i, node_coords in enumerate(ORF_info[1]):

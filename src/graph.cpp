@@ -362,6 +362,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
     {
         cout << "Generating clusters of high-scoring ORFs..." << endl;
         ORFClusterMap cluster_map;
+        std::unordered_set<std::string> ORFs_to_remove;
 
         // load Balrog gene model
         torch::jit::script::Module ORF_model;
@@ -524,9 +525,11 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         score_cluster(std::get<4>(ORF_info), gene_prob, ORF_seq, std::get<2>(ORF_info));
 
                         // remove from orf map if score too low
+                        // issue here, if remove ORF then need to remove from cluster_dict too
                         if (std::get<4>(ORF_info) < minimum_ORF_score)
                         {
                             ORF_map.erase(ORF_ID.first);
+                            ORFs_to_remove.insert(ORF_ID_str);
                         }
                     }
                 }
@@ -556,7 +559,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
             boost::archive::text_oarchive oa(ofs);
             // write class instance to archive
 
-            oa << cluster_map;
+            oa << std::make_pair(cluster_map, ORFs_to_remove);
         }
     }
 
@@ -876,15 +879,15 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
     _stop_freq= stop_codon_freq;
 }
 
-ORFClusterMap read_cluster_file(const std::string& cluster_file)
+std::pair<ORFClusterMap, std::unordered_set<std::string>> read_cluster_file(const std::string& cluster_file)
 {
-    ORFClusterMap cluster_map;
+    std::pair<ORFClusterMap, std::unordered_set<std::string>> cluster_pair;
 
     std::ifstream ifs(cluster_file);
     boost::archive::text_iarchive ia(ifs);
-    ia >> cluster_map;
+    ia >> cluster_pair;
 
-    return cluster_map;
+    return cluster_pair;
 }
 
 ORFNodeMap read_ORF_file(const std::string& ORF_file)
