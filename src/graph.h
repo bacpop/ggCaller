@@ -142,13 +142,14 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> findGene
                                                                                     const std::string& tmp_dir);
 
 
-    std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
-                                          const NodeSearchDict& node_search_dict,
-                                          const size_t radius,
-                                          const int kmer,
-                                          const std::string& FM_fasta_file,
-                                          const bool repeat,
-                                          const std::unordered_set<int>& to_avoid);
+std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
+                                        const NodeSearchDict& node_search_dict,
+                                        const size_t radius,
+                                        const int kmer,
+                                        const std::string& FM_fasta_file,
+                                        const bool repeat,
+                                        const std::unordered_set<int>& to_avoid,
+                                        const string& ORF_file_path);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,

@@ -45,7 +45,7 @@ def find_missing(G,
                     # add the representative DNA sequence for missing node and the ID of the colour to search from
                     if node not in search_dict[member]["searches"]:
                         search_dict[member]["searches"][node] = ((curr_ORF_info[0], curr_ORF_info[1]), [])
-                    search_dict[member]["searches"][node][1].append((member, ORF_ID))
+                    search_dict[member]["searches"][node][1].append(ORF_ID)
 
                     n_searches += 1
 
@@ -161,7 +161,8 @@ def search_graph(search_pair,
 
     # get sequences to search
     refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
-                                                      repeat, to_avoid)
+                                                      repeat, to_avoid, ORF_file_paths[member])
+    
 
     # search for matches
     hits = []

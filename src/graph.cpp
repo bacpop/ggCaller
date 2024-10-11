@@ -770,7 +770,8 @@ std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
                                              const int kmer,
                                              const std::string& FM_fasta_file,
                                              const bool repeat,
-                                             const std::unordered_set<int>& to_avoid)
+                                             const std::unordered_set<int>& to_avoid,
+                                             const string& ORF_file_path)
 {
     // get whether colour is reference or not
     bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
@@ -787,7 +788,7 @@ std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
     }
 
     return {refind_in_nodes(_ccdbg, _KmerArray, colour_ID, node_search_dict, radius, is_ref,
-                            kmer, fm_idx, repeat, to_avoid), is_ref};
+                            kmer, fm_idx, repeat, to_avoid, ORF_file_path), is_ref};
 }
 
 std::string Graph::generate_sequence(const std::vector<int>& nodelist,

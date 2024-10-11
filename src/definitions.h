@@ -45,8 +45,8 @@
 #include <serialize_tuple.h>
 
 // pybind11 headers
-//#include <pybind11/pybind11.h>
-//#include <pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 // Eigen header
 #include <Eigen/Sparse>
@@ -62,7 +62,7 @@
 #include <bifrost/ColoredCDBG.hpp>
 
 // global variable declaration
-//namespace py = pybind11;
+namespace py = pybind11;
 
 // UnitigDict typedefs
 // Vector of neighbouring nodes by ID, map of stop codon frames and set of colours in which edge is found in
@@ -119,6 +119,6 @@ typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t
 // map containing nodeID, search sequence and refind tuple
 typedef std::map<int, std::vector<RefindTuple>> RefindMap;
 // dictionary passed by python for refinding
-typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>>> NodeSearchDict;
+typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<size_t>>> NodeSearchDict;
 
 #endif //DEFINITIONS_H

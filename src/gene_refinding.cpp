@@ -292,7 +292,7 @@ RefindPathVector iter_nodes_length (const ColoredCDBG<MyUnitigMap>& ccdbg,
 RefindTuple traverse_outward(const ColoredCDBG<MyUnitigMap>& ccdbg,
                              const std::vector<Kmer>& head_kmer_arr,
                              const size_t& colour_ID,
-                             const std::pair<std::vector<int>, std::vector<indexPair>>& ORF_info,
+                             const ORFNodeVector& ORF_info,
                              const size_t& radius,
                              const bool is_ref,
                              const int kmer,
@@ -463,9 +463,18 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
                           const int kmer,
                           const fm_index_coll& fm_idx,
                           const bool repeat,
-                          const std::unordered_set<int>& to_avoid)
+                          const std::unordered_set<int>& to_avoid,
+                          const string& ORF_file_path)
 {
     RefindMap refind_map;
+    ORFNodeMap ORF_map;
+
+    // read in ORF_map file
+    {
+        std::ifstream ifs(ORF_file_path);
+        boost::archive::text_iarchive ia(ifs);
+        ia >> ORF_map;
+    }
 
     // iterate over nodes in node_search_dict
     for (const auto node_search : node_search_dict)
@@ -474,8 +483,9 @@ RefindMap refind_in_nodes(const ColoredCDBG<MyUnitigMap>& ccdbg,
         const auto& seq_search = node_search.second;
 
         // iterate over search sequences in node_search
-        for (const auto& ORF_info : seq_search.second)
+        for (const auto& ORF_ID : seq_search.second)
         {
+            const auto& ORF_info = ORF_map.at(ORF_ID);
             refind_map[node].push_back(std::move(traverse_outward(ccdbg, head_kmer_arr, colour_ID, ORF_info, radius, is_ref,
                                                          kmer, fm_idx, repeat, to_avoid)));
         }
