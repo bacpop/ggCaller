@@ -440,7 +440,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                             // remove all ORFs
                             for (const auto& homolog_ID : centroid_found->second) 
                             {
-                                to_remove[colour.first].insert(homolog_ID.second);
+                                to_remove[homolog_ID.first].insert(homolog_ID.second);
                             }
 
                             // remove from cluster map
