@@ -10,7 +10,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
     # associate sequences with their clusters
     seq_to_cluster = {}
-    seqid_to_centroid = {}
+    ORF_length_map = {}
     cluster_centroids = {}
     cluster_members = defaultdict(list)
     cluster_centroid_data = {}
@@ -24,12 +24,15 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
             # identify centroids
             ORF_ID_str = str(colour_ID) + "_" + str(ORF_ID)
 
+            # only hold lengths of genes that are not in a cluster
+            if ORF_ID_str not in seq_to_cluster:
+                seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                current_hash = DBG.rb_hash(seq)
+                ORF_length_map[ORF_ID_str] = (ORFNodeVector[2], current_hash)
+
             if ORF_ID_str in cluster_dict:
                 # access ORF information for centroid from high_scoring_ORFs
                 pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
-
-                seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                current_hash = DBG.rb_hash(seq)
 
                 # add information to cluster_centroid_data
                 cluster_centroid_data[cluster_id] = {
@@ -48,11 +51,74 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
                     pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
 
+                    # only hold lengths of genes that are not in a cluster
+                    if ORF_ID_str in ORF_length_map:
+                        del ORF_length_map[ORF_ID_str]
+
                     # index sequences to clusters and the number of edges they have
                     seq_to_cluster[pan_ORF_id] = [cluster_id, 0]
                     cluster_members[cluster_id].append(pan_ORF_id)
 
                 cluster_id += 1
+                del cluster_dict[ORF_ID_str]
+
+    # determine if any clusters have not been added as centroid was removed, add a new centroid
+    for centroid, ORF_IDs in cluster_dict.items():
+        current_centroid = ""
+        current_length = 0
+        current_hash = 0
+        cluster_list = []
+        
+        # iterate through, if in ORF_length_map then is real ORF
+        for ORF_ID_pair in ORF_IDs:
+            genome_id = ORF_ID_pair[0]
+            local_id = ORF_ID_pair[1]
+
+            pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
+            
+            if pan_ORF_id in ORF_length_map:
+                append = True
+                length, hash = ORF_length_map[pan_ORF_id]
+
+                # add cluster member
+                cluster_members[cluster_id].append(pan_ORF_id)
+
+                # assign centroid first on length, then hash, then genome index
+                if length > current_length:
+                    cluster_list.append(current_centroid)
+                    current_centroid = pan_ORF_id
+                    current_length = length
+                    current_hash = hash
+                    append = False
+                elif length == current_length:
+                    if hash < current_hash:
+                        cluster_list.append(current_centroid)
+                        current_centroid = pan_ORF_id
+                        current_length = length
+                        current_hash = hash
+                        append = False
+                    elif hash == current_hash:
+                        centroid_genome_ID = int(current_centroid.split("_")[0])
+                        if genome_id < centroid_genome_ID:
+                            cluster_list.append(current_centroid)
+                            current_centroid = pan_ORF_id
+                            current_length = length
+                            current_hash = hash
+                            append = False
+                
+                # add to end
+                if append == True:
+                    cluster_list.append(pan_ORF_id)
+
+        # add only if other genes found in cluster
+        if current_centroid != "":
+            # ensure centroid at start of list
+            cluster_list = [current_centroid] + cluster_list
+            
+            # index sequences to clusters and the number of edges they have
+            seq_to_cluster[current_centroid] = [cluster_id, 0]
+            cluster_id += 1
+
 
     # clear cluster_dict
     cluster_dict.clear()
