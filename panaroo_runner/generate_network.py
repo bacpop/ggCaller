@@ -54,6 +54,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
                     # make sure ORF wasn't removed after centroid scored
                     if pan_ORF_id in ORFs_to_remove:
+                        print("removing: {}".format(pan_ORF_id))
                         continue
 
                     # only hold lengths of genes that are not in a cluster
@@ -80,48 +81,44 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
             local_id = ORF_ID_pair[1]
 
             pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
-            
-            if pan_ORF_id in ORF_length_map:
-                append = True
-                length, hash = ORF_length_map[pan_ORF_id]
 
-                # add cluster member
-                cluster_members[cluster_id].append(pan_ORF_id)
+            if pan_ORF_id in ORF_length_map:
+                new_centroid = False
+                length, hash = ORF_length_map[pan_ORF_id]
+                
+                # add to seq_to_cluster for new ORFs
+                seq_to_cluster[pan_ORF_id] = [cluster_id, 0]
 
                 # assign centroid first on length, then hash, then genome index
                 if length > current_length:
-                    cluster_list.append(current_centroid)
-                    current_centroid = pan_ORF_id
-                    current_length = length
-                    current_hash = hash
-                    append = False
+                    new_centroid = True
                 elif length == current_length:
                     if hash < current_hash:
-                        cluster_list.append(current_centroid)
-                        current_centroid = pan_ORF_id
-                        current_length = length
-                        current_hash = hash
-                        append = False
+                        new_centroid = True
                     elif hash == current_hash:
                         centroid_genome_ID = int(current_centroid.split("_")[0])
                         if genome_id < centroid_genome_ID:
-                            cluster_list.append(current_centroid)
-                            current_centroid = pan_ORF_id
-                            current_length = length
-                            current_hash = hash
-                            append = False
+                            new_centroid = True
                 
-                # add to end
-                if append == True:
+                # add to end if not centroid
+                if new_centroid == True:
+                    if current_centroid != "":
+                        cluster_list.append(current_centroid)
+                    current_centroid = pan_ORF_id
+                    current_length = length
+                    current_hash = hash
+                else:
                     cluster_list.append(pan_ORF_id)
 
         # add only if other genes found in cluster
         if current_centroid != "":
             # ensure centroid at start of list
             cluster_list = [current_centroid] + cluster_list
+
+            # add cluster member
+            cluster_members[cluster_id] = cluster_list
             
             # index sequences to clusters and the number of edges they have
-            seq_to_cluster[current_centroid] = [cluster_id, 0]
             cluster_id += 1
 
 
