@@ -206,7 +206,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             ORF_len = ORF_info[2]
 
             # determine if gene is refound. If it is, then determine if premature stop codon present
-            delim = "_0_" if ORF_ID > 0 else "_refound_"
+            delim = "_0_" if ORF_ID >= 0 else "_refound_"
             pan_ORF_id = str(colour_ID) + delim + str(ORF_ID)
             if (ORF_ID < 0):
                 ids_len_stop[pan_ORF_id] = [ORF_len / 3, ORF_info[3], -1]
@@ -320,7 +320,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
         for ORF_ID, ORFNodeVector in ORF_map.items():
-            delim = "_0_" if ORF_ID > 0 else "_refound_"
+            delim = "_0_" if ORF_ID >= 0 else "_refound_"
             pan_ORF_id = str(colour_ID) + delim + str(ORF_ID)
             node = ids_len_stop[pan_ORF_id][2]
 
@@ -366,7 +366,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
             ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
             for ORF_ID, ORF_info in ORF_map.items():
-                delim = "_0_" if ORF_ID > 0 else "_refound_"
+                delim = "_0_" if ORF_ID >= 0 else "_refound_"
                 entry_ID = str(colour_ID) + delim + str(ORF_ID)
                 for node in ORF_info[0]:
                     node_index[abs(node)].append(entry_ID)

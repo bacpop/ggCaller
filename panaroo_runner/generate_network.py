@@ -192,11 +192,11 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                     ],
                     paralog=has_paralogs,
                     mergedDNA=False)
-                # if has_paralogs == true, then need to add new node for each sequence
-                # otherwise can stop adding clusters
-                if not has_paralogs:
-                    add_cluster = False
-
+                
+                # add to colour_to_nodes
+                if genome_id not in colour_to_nodes:
+                    colour_to_nodes[genome_id] = set()
+                colour_to_nodes[genome_id].add(cluster_to_add)
             else:
                 # check if ORF_id already added to the cluster
                 if ORF_id not in G.nodes[current_cluster]['seqIDs']:
@@ -204,18 +204,19 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                     G.nodes[current_cluster]['members'].add(genome_id)
                     G.nodes[current_cluster]['seqIDs'].add(ORF_id)
             
-            # add to colour_to_nodes
-            if genome_id not in colour_to_nodes:
-                colour_to_nodes[genome_id] = set()
-            colour_to_nodes[genome_id].add(current_cluster)
 
     # iterative over each colour, adding edges between nodes with genes of that colour
-    for genome_id, node_set in colour_to_nodes.items():
-        ORF_edges = ggCaller_cpp.read_edge_file(Edge_file_paths[genome_id])
+    for colour_id, node_set in colour_to_nodes.items():
+        ORF_edges = ggCaller_cpp.read_edge_file(Edge_file_paths[colour_id])
         for node in node_set:                        
             for index, ORF_id in enumerate(G.nodes[node]['seqIDs']):
                 parsed_id = ORF_id.split("_")
+
+                # ensure colours between ORF and file match
                 genome_id = int(parsed_id[0])
+                if genome_id != colour_id:
+                    continue
+
                 local_id = int(parsed_id[-1])
 
                 # if edge present between ORFs add, otherwise pass

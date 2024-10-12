@@ -277,7 +277,7 @@ def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, trunca
             ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
             for ORF_ID, ORF_info in ORF_map.items():
-                delim = "_0_" if ORF_ID > 0 else "_refound_"
+                delim = "_0_" if ORF_ID >= 0 else "_refound_"
                 pan_ORF_id = str(colour) + delim + str(ORF_ID)
                 # if pan_ORF_id not in ORF_map means has been removed so remove it from ORF_map
                 node = ids_len_stop[pan_ORF_id][2]
