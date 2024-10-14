@@ -536,7 +536,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, OR
         # generate protein sequence. If refound, add found protein sequence from find_missing.py
         ORF_info = ORF_info_dict[colour][ORF_ID]
         if ORF_ID < 0:
-            protein = Seq(ORF_info[4])
+            protein = Seq(ORF_info[5])
         else:
             protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
 
