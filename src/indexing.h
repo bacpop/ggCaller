@@ -47,7 +47,8 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             const std::string& fasta_file,
                             const int kmer,
                             const int colour_ID,
-                            const size_t nb_colours);
+                            const size_t nb_colours,
+                            const std::string& path_dir);
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              ColoredCDBG<MyUnitigMap>& ccdbg,
@@ -60,6 +61,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
                              const boost::dynamic_bitset<>& ref_set,
-                             robin_hood::unordered_map<std::string, size_t>& start_freq);
+                             robin_hood::unordered_map<std::string, size_t>& start_freq,
+                             const std::string& path_dir);
 
 #endif //INDEXING_H

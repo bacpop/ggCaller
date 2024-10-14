@@ -396,10 +396,15 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(options.out, "")
 
+    # create directory for reference path files
+    Path_dir = os.path.join(output_dir, "Path_dir")
+    if not os.path.exists(Path_dir):
+        os.mkdir(Path_dir)    
+
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 start_codons_for, start_codons_rev, options.threads, is_ref, ref_set)
+                                 start_codons_for, start_codons_rev, options.threads, is_ref, ref_set, Path_dir)
     # query unitigs in previous saved ggc graph
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
             (options.query is not None):
@@ -415,17 +420,17 @@ def main():
             options.reads is None) and (
             options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, True, options.no_write_graph, "NA", ref_set)
+                                  start_codons_rev, options.threads, True, options.no_write_graph, "NA", ref_set, Path_dir)
     # if reads file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, False, options.no_write_graph, "NA", ref_set)
+                                  start_codons_rev, options.threads, False, options.no_write_graph, "NA", ref_set, Path_dir)
     # if both reads and refs file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set)
+                                  start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set, Path_dir)
     elif options.balrog_db is not None:
         db_dir = download_db(options.balrog_db)
         sys.exit(0)
@@ -496,7 +501,7 @@ def main():
     # create directory for ORF map
     ORFMap_dir = os.path.join(output_dir, "ORF_dir")
     if not os.path.exists(ORFMap_dir):
-        os.mkdir(ORFMap_dir)    
+        os.mkdir(ORFMap_dir)
 
     # load models models if required
     if not options.no_filter:
@@ -512,7 +517,7 @@ def main():
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
-                                 options.score_tolerance, ORFMap_dir)
+                                 options.score_tolerance, ORFMap_dir, Path_dir)
 
     ORF_file_paths, Edge_file_paths = file_tuple
 
@@ -532,7 +537,7 @@ def main():
                             options.no_write_idx, overlap + 1, options.repeat,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save, options.refind)
+                            options.truncation_threshold, options.save, options.refind, Path_dir)
 
     else:
         print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),

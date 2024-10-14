@@ -32,7 +32,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, ref_list, write_idx, kmer, repeat,
                 search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
-                call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
+                call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind, Path_dir):
 
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -155,6 +155,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
                          pairwise_id_thresh=identity_cutoff,
                          pool=pool,
                          n_cpu=n_cpu,
+                         Path_dir=Path_dir,
                          verbose=verbose)
 
         # remove edges that are likely due to misassemblies (by consensus)
@@ -253,7 +254,7 @@ def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file
         if verbose:
             print("writing GFF files...")
         generate_GFF(shd_arr[0], ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
-                     overlap, write_idx, ref_list, n_cpu)
+                     overlap, write_idx, ref_list, n_cpu, Path_dir)
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,

@@ -21,6 +21,7 @@ def find_missing(G,
                  pairwise_id_thresh,
                  n_cpu,
                  pool,
+                 Path_dir,
                  verbose=True):
     # load shared memory items
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
@@ -66,7 +67,8 @@ def find_missing(G,
                                                     prop_match=prop_match,
                                                     pairwise_id_thresh=pairwise_id_thresh,
                                                     kmer=kmer,
-                                                    repeat=repeat),
+                                                    repeat=repeat,
+                                                    Path_dir=Path_dir),
                                             search_dict.items()):
         all_hits[member] = hits
         all_node_locs[member] = node_locs
@@ -121,6 +123,7 @@ def search_graph(search_pair,
                  kmer,
                  repeat,
                  overlap,
+                 Path_dir,
                  search_radius=10000,
                  prop_match=0.2,
                  pairwise_id_thresh=0.95):
@@ -161,7 +164,7 @@ def search_graph(search_pair,
 
     # get sequences to search
     refind_map, is_ref = graph_shd_arr[0].refind_gene(member, node_search_dict, search_radius, kmer, fasta,
-                                                      repeat, to_avoid, ORF_file_paths[member])
+                                                      repeat, to_avoid, ORF_file_paths[member], Path_dir)
     
 
     # search for matches

@@ -317,7 +317,7 @@ def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, trunca
 
 
 def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir, overlap,
-                 write_idx, ref_list, num_threads):
+                 write_idx, ref_list, num_threads, Path_dir):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
     if not os.path.exists(GFF_dir):
@@ -336,7 +336,7 @@ def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_ann
         # get coordinates for each ORF
         ORF_IDs = [(ORF_map[i[0]][0], ORF_map[i[0]][1]) for i in
                    contig_annotation[colour]]
-        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads)
+        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads, Path_dir)
 
         # create data structure for each GFF entry
         GFF_entries = defaultdict(list)

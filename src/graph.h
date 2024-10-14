@@ -96,7 +96,8 @@ class Graph {
                       bool is_ref,
                       const bool write_graph,
                       const std::string& infile2,
-                      const std::unordered_set<std::string>& ref_set);
+                      const std::unordered_set<std::string>& ref_set,
+                      const std::string& path_dir);
 
     // read existing graph and index
     GraphTuple read (const std::string& graphfile,
@@ -107,7 +108,8 @@ class Graph {
                      const std::vector<std::string>& start_codons_rev,
                      size_t num_threads,
                      const bool is_ref,
-                     const std::unordered_set<std::string>& ref_set);
+                     const std::unordered_set<std::string>& ref_set,
+                     const std::string& path_dir);
 
     // get graph object from serialised file
     void in(const std::string& infile,
@@ -139,7 +141,8 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> findGene
                                                                                     size_t num_threads,
                                                                                     const std::string& cluster_file,
                                                                                     const float& score_tolerance,
-                                                                                    const std::string& tmp_dir);
+                                                                                    const std::string& tmp_dir,
+                                                                                    const std::string& path_dir);
 
 
 std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
@@ -149,7 +152,8 @@ std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
                                         const std::string& FM_fasta_file,
                                         const bool repeat,
                                         const std::unordered_set<int>& to_avoid,
-                                        const string& ORF_file_path);
+                                        const string& ORF_file_path,
+                                        const std::string& path_dir);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
@@ -164,7 +168,8 @@ std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
                                                          const std::string& fasta_file,
                                                          const int overlap,
                                                          const bool write_idx,
-                                                         size_t num_threads);
+                                                         size_t num_threads,
+                                                         const std::string& path_dir);
     size_t rb_hash(const std::string seq)
     {
         return hasher{}(seq);
@@ -190,7 +195,8 @@ std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
                        const std::vector<std::string>& start_codons_rev,
                        const int& kmer,
                        const size_t& nb_colours,
-                       const std::vector<std::string>& input_colours);
+                       const std::vector<std::string>& input_colours,
+                       const std::string& path_dir);
 
     
     // stored bifrost DBG

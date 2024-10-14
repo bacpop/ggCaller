@@ -14,7 +14,8 @@ GraphTuple Graph::build (const std::string& infile1,
                         bool is_ref,
                         const bool write_graph,
                         const std::string& infile2,
-                        const std::unordered_set<std::string>& ref_set) {
+                        const std::unordered_set<std::string>& ref_set,
+                        const std::string& path_dir) {
     // Set number of threads
     if (num_threads < 1)
     {
@@ -64,7 +65,7 @@ GraphTuple Graph::build (const std::string& infile1,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours, path_dir);
 
     // create vector bool for reference sequences
     std::vector<bool> ref_list(nb_colours, false);
@@ -91,7 +92,8 @@ GraphTuple Graph::read (const std::string& graphfile,
                     const std::vector<std::string>& start_codons_rev,
                     size_t num_threads,
                     const bool is_ref,
-                    const std::unordered_set<std::string>& ref_set) {
+                    const std::unordered_set<std::string>& ref_set,
+                    const std::string& path_dir) {
 
     // Set number of threads
     if (num_threads < 1)
@@ -137,7 +139,7 @@ GraphTuple Graph::read (const std::string& graphfile,
 
     // generate codon index for graph
     cout << "Generating graph stop codon index..." << endl;
-    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours);
+    _index_graph(stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours, path_dir);
 
     // create vector bool for reference sequences
     std::vector<bool> ref_list(nb_colours, false);
@@ -225,7 +227,8 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                                                                                             size_t num_threads,
                                                                                             const std::string& cluster_file,
                                                                                             const float& score_tolerance,
-                                                                                            const std::string& tmp_dir)
+                                                                                            const std::string& tmp_dir,
+                                                                                            const std::string& path_dir)
 {    
     // initilise map to hold file paths
     std::map<size_t, std::string> ORF_file_paths;
@@ -309,7 +312,9 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
 
                 if (is_ref)
                 {
-                    const auto idx_file_name = FM_fasta_file + ".fmp";
+                    const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
+                    
+                    const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
                     if (!load_from_file(fm_idx, idx_file_name))
                     {
                         cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -615,8 +620,9 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
 
             if (is_ref)
             {
-                //            cout << "FM-indexing: " << to_string(colour_ID) << endl;
-                const auto idx_file_name = FM_fasta_file + ".fmp";
+                const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
+                    
+                const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
                 if (!load_from_file(fm_idx, idx_file_name))
                 {
                     cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -807,7 +813,8 @@ std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
                                              const std::string& FM_fasta_file,
                                              const bool repeat,
                                              const std::unordered_set<int>& to_avoid,
-                                             const string& ORF_file_path)
+                                             const string& ORF_file_path,
+                                             const std::string& path_dir)
 {
     // get whether colour is reference or not
     bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
@@ -815,7 +822,9 @@ std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
     fm_index_coll fm_idx;
     if (is_ref)
     {
-        const auto idx_file_name = FM_fasta_file + ".fmp";
+        const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
+        
+        const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
         if (!load_from_file(fm_idx, idx_file_name))
         {
             cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -869,7 +878,8 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
                                                             const std::string& fasta_file,
                                                             const int overlap,
                                                             const bool write_idx,
-                                                            size_t num_threads)
+                                                            size_t num_threads,
+                                                            const std::string& path_dir)
 {
     // Set number of threads
     if (num_threads < 1)
@@ -884,7 +894,7 @@ std::vector<std::pair<ContigLoc, bool>> Graph::ORF_location(const std::vector<st
     std::vector<std::pair<ContigLoc, bool>> ORF_coords(ORF_IDs.size());
 
     // get the FM_index
-    const auto fm_index = index_fasta(fasta_file, write_idx);
+    const auto fm_index = index_fasta(fasta_file, write_idx, path_dir);
 
     #pragma omp parallel for
     for (int i = 0; i < ORF_IDs.size(); i++)
@@ -905,10 +915,11 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
                           const std::vector<std::string>& start_codons_rev,
                           const int& kmer,
                           const size_t& nb_colours,
-                          const std::vector<std::string>& input_colours)
+                          const std::vector<std::string>& input_colours,
+                          const std::string& path_dir)
 {
     float stop_codon_freq = 0;
-    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codon_freq, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours, _RefSet, _StartFreq));
+    _NodeColourVector = std::move(index_graph(_KmerArray, _ccdbg, stop_codon_freq, stop_codons_for, stop_codons_rev, start_codons_for, start_codons_rev, kmer, nb_colours, input_colours, _RefSet, _StartFreq, path_dir));
     _stop_freq= stop_codon_freq;
 }
 
