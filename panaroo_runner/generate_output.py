@@ -1064,7 +1064,7 @@ def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, ORF_file
             
             # just get information for this cluster
             ORF_info_dict = defaultdict(dict)
-            for colour, ORF_list in sequence_dict:
+            for colour, ORF_list in sequence_dict.items():
                 ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
                 for ORF_ID in ORF_list:
                     ORF_info = ORF_map[ORF_ID]
