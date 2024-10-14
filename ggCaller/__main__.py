@@ -103,7 +103,7 @@ def get_options():
                           type=int,
                           default=100,
                           help='Minimum individual Balrog score for an ORF to be returned. '
-                               '[Default = 50] ')
+                               '[Default = 100] ')
     Settings.add_argument('--max-orf-orf-distance',
                           type=int,
                           default=10000,

@@ -35,6 +35,10 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                 # access ORF information for centroid from high_scoring_ORFs
                 pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
 
+                # make sure ORF wasn't removed after centroid scored
+                if pan_centroid_ID in ORFs_to_remove:
+                    continue
+
                 # add information to cluster_centroid_data
                 cluster_centroid_data[cluster_id] = {
                     'ORF_info': ORFNodeVector,
@@ -54,7 +58,6 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
                     # make sure ORF wasn't removed after centroid scored
                     if pan_ORF_id in ORFs_to_remove:
-                        print("removing: {}".format(pan_ORF_id))
                         continue
 
                     # only hold lengths of genes that are not in a cluster
@@ -117,6 +120,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
             # add cluster member
             cluster_members[cluster_id] = cluster_list
+            cluster_centroids[cluster_id] = current_centroid
             
             # index sequences to clusters and the number of edges they have
             cluster_id += 1

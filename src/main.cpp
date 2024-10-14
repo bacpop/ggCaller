@@ -84,7 +84,7 @@ void write_to_file (const robin_hood::unordered_map<std::string, std::vector<boo
 
 int main(int argc, char *argv[]) {
 
-    int num_threads = 8;
+    int num_threads = 1;
     bool is_ref = true;
     //const std::string outfile = "/home/shorsfield/software/ggCaller/all_test_capsular_loci_list_v1.2.4.fasta";
     omp_set_num_threads(num_threads);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     std::string listfile = workdir + "/test/input.txt";
     std::string ORF_model_file = workdir + "/models/ggCallerdb/balrog_models/geneTCN_jit.pt";
     std::string TIS_model_file = workdir + "/models/ggCallerdb/balrog_models/tisTCN_jit.pt";
-    std::string tmp_dir = workdir + "/tmp";
+    std::string tmp_dir = workdir + "/test/tmp";
     const double minimum_ORF_score = 100;
     const double minimum_path_score = 100;
     const size_t max_ORF_ORF_distance = 10000;
@@ -158,29 +158,31 @@ int main(int argc, char *argv[]) {
     const auto& ORF_file_paths = std::get<0>(gene_tuple);
 
 //    #pragma omp parallel for
-    //for (int i = 0; i < colour_ORF_map.size(); i++)
-    {
-        NodeSearchDict node_search_dict;
-        int node_ID = 0;
-	    const size_t i = 0;
-        ORFNodeMap ORF_map;
-        // read in ORF_map file
-        {
-            std::ifstream ifs(ORF_file_paths.at(i));
-            boost::archive::text_iarchive ia(ifs);
-            ia >> ORF_map;
-        }
-        for (const auto& ORF_entry : ORF_map)
-        {
-            const auto& ORF_ID = ORF_entry.first;
-            const auto& ORF_info = ORF_entry.second;
-//            const std::string sequence = unitig_graph.generate_sequence(std::get<0>(ORF_info), std::get<1>(ORF_info), 30);
-            node_search_dict[node_ID] = {{std::get<0>(ORF_info), std::get<1>(ORF_info)}, {{std::get<0>(ORF_info), std::get<1>(ORF_info)}}};
-            node_ID++;
-        }
-        std::unordered_set<int> to_avoid;
-        const auto refound = unitig_graph.refind_gene(i, node_search_dict, 5000, 31, input_colours[i], repeat, to_avoid);
-    }
+    // //for (int i = 0; i < colour_ORF_map.size(); i++)
+    // {
+    //     NodeSearchDict node_search_dict;
+    //     int node_ID = 0;
+	//     const size_t i = 0;
+    //     ORFNodeMap ORF_map;
+    //     // read in ORF_map file
+    //     {
+    //         std::ifstream ifs(ORF_file_paths.at(i));
+    //         boost::archive::text_iarchive ia(ifs);
+    //         ia >> ORF_map;
+    //     }
+    //     for (const auto& ORF_entry : ORF_map)
+    //     {
+    //         const auto& ORF_ID = ORF_entry.first;
+    //         const auto& ORF_info = ORF_entry.second;
+    //         std::vector<size_t> ORF_ID_vector;
+    //         ORF_ID_vector.push_back((size_t)ORF_ID);
+    //         std::pair<std::pair<std::vector<int>, std::vector<indexPair>> ORF_pair = {std::get<0>(ORF_info), std::get<1>(ORF_info)};
+    //         node_search_dict[node_ID] = std::make_pair(, ORF_ID_vector);
+    //         node_ID++;
+    //     }
+    //     std::unordered_set<int> to_avoid;
+    //     const auto refound = unitig_graph.refind_gene(i, node_search_dict, 5000, 31, input_colours[i], repeat, to_avoid, ORF_file_paths.at(i));
+    // }
 
     unitig_graph.out(workdir + "/test/test_graph.o");
     unitig_graph.clear();
