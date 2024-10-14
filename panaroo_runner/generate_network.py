@@ -196,6 +196,10 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                     ],
                     paralog=has_paralogs,
                     mergedDNA=False)
+                # if has_paralogs == true, then need to add new node for each sequence
+                # otherwise can stop adding clusters
+                if not has_paralogs:
+                    add_cluster = False
                 
                 # add to colour_to_nodes
                 if genome_id not in colour_to_nodes:
