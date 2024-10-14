@@ -214,7 +214,7 @@ def back_translate(file, annotation_dir, shd_arr_tup, ORF_file_paths, isolate_na
     
     output_sequences = []
     # iterate over input files and generate back-translated sequences
-    for colour, ORF_list in sequence_dict:
+    for colour, ORF_list in sequence_dict.items():
         ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
         for ORF_ID, protein in ORF_list:
             ORFNodeVector = ORF_map[ORF_ID]
@@ -457,7 +457,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, OR
     
     # just get information for this cluster
     ORF_info_dict = defaultdict(dict)
-    for colour, ORF_list in sequence_dict:
+    for colour, ORF_list in sequence_dict.items():
         ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
         for ORF_ID in ORF_list:
             ORF_info = ORF_map[ORF_ID]
