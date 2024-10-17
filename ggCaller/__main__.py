@@ -59,9 +59,9 @@ def get_options():
                     default=False,
                     help='Save graph objects for sequence querying. '
                          '[Default = False] ')
-    IO.add_argument('--data',
+    IO.add_argument('--prev-run',
                     default=None,
-                    help='Directory containing data from previous ggCaller run generated via "--save" ')
+                    help='Directory containing data from previous ggCaller run. Must have been run with "--save" ')
     IO.add_argument(
         "--all-seq-in-graph",
         dest="all_seq_in_graph",
@@ -400,6 +400,9 @@ def main():
     Path_dir = os.path.join(output_dir, "Path_dir")
     if not os.path.exists(Path_dir):
         os.mkdir(Path_dir)    
+    
+    # ensure trailing slash present
+    Path_dir = os.path.join(Path_dir, "")
 
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.query is None):
@@ -408,10 +411,10 @@ def main():
     # query unitigs in previous saved ggc graph
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
             (options.query is not None):
-        if options.data is None:
-            print("Please specify a ggc_data directory from a previous ggCaller run.")
+        if options.prev_run is None:
+            print("Please specify a directory from a previous ggCaller run.")
             sys.exit(1)
-        search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.query_id,
+        search_graph(graph, options.graph, options.colours, options.query, options.prev_run, output_dir, options.query_id,
                      options.threads)
         print("Finished.")
         sys.exit(0)
@@ -502,6 +505,12 @@ def main():
     ORFMap_dir = os.path.join(output_dir, "ORF_dir")
     if not os.path.exists(ORFMap_dir):
         os.mkdir(ORFMap_dir)
+    
+    # ensure trailing slash present
+    ORFMap_dir = os.path.join(ORFMap_dir, "")
+
+    # save the kmer_array to ORFMap_dir
+    graph[0].data_out(ORFMap_dir + "kmer_array.dat")
 
     # load models models if required
     if not options.no_filter:
@@ -551,9 +560,6 @@ def main():
 
             # make sure trailing forward slash is present
             objects_dir = os.path.join(objects_dir, "")
-
-            # serialise graph object and high scoring ORFs to future reading
-            graph[0].data_out(objects_dir + "ggc_graph.dat")
 
             # create index of all high_scoring_ORFs node_IDs
             node_index = defaultdict(list)

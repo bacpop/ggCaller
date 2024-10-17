@@ -402,7 +402,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     // create fm index file name
     const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
     
-    const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
+    const auto idx_file_name = path_dir + base_filename + ".fmp";
 
     // initialise string of nodes for FM-index generation
     std::string genome_path;

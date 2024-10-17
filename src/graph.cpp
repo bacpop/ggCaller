@@ -314,7 +314,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                 {
                     const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
                     
-                    const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
+                    const auto idx_file_name = path_dir + base_filename + ".fmp";
                     if (!load_from_file(fm_idx, idx_file_name))
                     {
                         cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -338,7 +338,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
 
             // write ORF_map file
             {
-                std::string ORF_file_path = tmp_dir + "/colour_" + std::to_string(colour_ID) + "_ORFs.tmp";
+                std::string ORF_file_path = tmp_dir + "colour_" + std::to_string(colour_ID) + "_ORFs.tmp";
                 std::ofstream ofs(ORF_file_path);
                 boost::archive::text_oarchive oa(ofs);
                 // write class instance to archive
@@ -622,7 +622,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
             {
                 const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
                     
-                const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
+                const auto idx_file_name = path_dir + base_filename + ".fmp";
                 if (!load_from_file(fm_idx, idx_file_name))
                 {
                     cout << "FM-Index not available for " << FM_fasta_file << endl;
@@ -768,7 +768,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
             }
 
             {
-                std::string file_path = tmp_dir + "/colour_" + std::to_string(colour_ID) + "_edges.tmp";
+                std::string file_path = tmp_dir + "colour_" + std::to_string(colour_ID) + "_edges.tmp";
                 std::ofstream ofs(file_path);
                 boost::archive::text_oarchive oa(ofs);
                 // write class instance to archive
@@ -824,7 +824,7 @@ std::pair<RefindMap, bool> Graph::refind_gene(const size_t& colour_ID,
     {
         const std::string base_filename = FM_fasta_file.substr(FM_fasta_file.find_last_of("/\\") + 1);
         
-        const auto idx_file_name = path_dir + "/" + base_filename + ".fmp";
+        const auto idx_file_name = path_dir + base_filename + ".fmp";
         if (!load_from_file(fm_idx, idx_file_name))
         {
             cout << "FM-Index not available for " << FM_fasta_file << endl;

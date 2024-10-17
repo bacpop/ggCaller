@@ -19,7 +19,7 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
     // create fm index file name
     const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
 
-    std::string idx_file_name = path_dir + "/" + base_filename + ".fms";
+    std::string idx_file_name = path_dir + base_filename + ".fms";
 
     // create entry for start and end of contigs within fm_index
     std::vector<size_t> contig_locs;
