@@ -59,18 +59,21 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
     # try to load panaroo graph, not present if panaroo not run
     G = None
     ids_len_stop = None
+    node_to_node_map = {}
     try:
-        G = nx.read_gml('t.gml')
+        G = nx.read_gml(os.path.join(objects_dir, "final_graph.gml"))
+        # remap mislabelled nodes
+        for node in G.nodes():
+            node_to_node_map[G.nodes[node]['CID']] = node
+
         # load in gene to panaroo node mappings
-        with open(ggc_data_dir + "ORF_to_node_map.dat", "rb") as input_file:
-            ids_len_stop = cPickle.load(input_file)
+        with open(os.path.join(ggc_data_dir, "ORF_to_node_map.dat"), "rb") as input_file:
+                ids_len_stop = cPickle.load(input_file)
     except:
         pass
 
-    outfile = output_dir + "matched_queries.fasta"
+    outfile = os.path.join(output_dir, "matched_queries.fasta")
     print("Matching overlapping ORFs...")
-
-
     ORF_dict = defaultdict(lambda: defaultdict(list))
     for i in range(len(query_nodes)):
         for node in query_nodes[i]:
@@ -101,9 +104,9 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
                 if G is not None:
                     delim = "_0_" if ORF_ID >= 0 else "_refound_"
                     pan_ORF_id = str(colour) + delim + str(ORF_ID)
-                    # if pan_ORF_id not in ORF_map means has been removed so remove it from ORF_map
+                    # if node not in G then has been removed so pass
                     node = ids_len_stop[pan_ORF_id][2]
-                    annotation = G.nodes[node]["description"]
+                    annotation = G.nodes[node_to_node_map[node]]["description"]
 
                 # add annotation
                 f.write(
