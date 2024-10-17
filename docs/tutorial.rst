@@ -98,13 +98,15 @@ You will find the following files in the output directory ``ggc_Bentley_et_al_CP
 - ``aligned_gene_sequences``: directory of alignment files for each cluster in FASTA format
 - ``GFF``: directory of GFF files for each sample in GFF3 format
 - ``ggc_data``: intermediate datastructures written to disk, required for querying.
+- ``ORF_dir``: intermediate datastructures written to disk, containing gene predictions.
+- ``Path_dir``: intermediate datastructures written to disk, containing genome paths through the DBG.
 
 Querying the graph
 ------------------
 
 We can now query the graph. To do so, run::
 
-    ggcaller --query CPS_queries.fasta --graph Bentley_et_al_2006_CPS_sequences/input.gfa --colours Bentley_et_al_2006_CPS_sequences/input.color.bfg --data ggc_Bentley_et_al_CPS/ggc_data --out ggc_Bentley_et_al_CPS --threads 4
+    ggcaller --query CPS_queries.fasta --graph Bentley_et_al_2006_CPS_sequences/input.gfa --colours Bentley_et_al_2006_CPS_sequences/input.color.bfg --prev_run ggc_Bentley_et_al_CPS --out ggc_Bentley_et_al_CPS --threads 4
 
 Results will be saved in ``ggc_Bentley_et_al_CPS/matched_queries.fasta``.
 
