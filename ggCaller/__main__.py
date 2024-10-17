@@ -510,7 +510,7 @@ def main():
     ORFMap_dir = os.path.join(ORFMap_dir, "")
 
     # save the kmer_array to ORFMap_dir
-    graph[0].data_out(ORFMap_dir + "kmer_array.dat")
+    graph.data_out(ORFMap_dir + "kmer_array.dat")
 
     # load models models if required
     if not options.no_filter:
@@ -529,6 +529,10 @@ def main():
                                  options.score_tolerance, ORFMap_dir, Path_dir)
 
     ORF_file_paths, Edge_file_paths = file_tuple
+
+    # save the ORF file paths
+    with open(ORFMap_dir + "ORF_file_paths.dat", "wb") as o:
+        cPickle.dump(ORF_file_paths, o)
 
     # generate ORF clusters
     if not options.no_clustering:
