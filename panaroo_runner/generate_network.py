@@ -207,10 +207,10 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                 colour_to_nodes[genome_id].add(cluster_to_add)
             else:
                 # check if ORF_id already added to the cluster
-                if ORF_id not in G.nodes[current_cluster]['seqIDs']:
-                    G.nodes[current_cluster]['size'] += 1
-                    G.nodes[current_cluster]['members'].add(genome_id)
-                    G.nodes[current_cluster]['seqIDs'].add(ORF_id)
+                if ORF_id not in G.nodes[cluster_to_add]['seqIDs']:
+                    G.nodes[cluster_to_add]['size'] += 1
+                    G.nodes[cluster_to_add]['members'].add(genome_id)
+                    G.nodes[cluster_to_add]['seqIDs'].add(ORF_id)
             
 
     # iterative over each colour, adding edges between nodes with genes of that colour

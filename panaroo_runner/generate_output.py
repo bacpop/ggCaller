@@ -452,6 +452,12 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, OR
         ORF_ID = int(pan_ORF_id.split("_")[-1])
         sequence_dict[mem].append(ORF_ID)
     
+    # add centroids too, deals with paralogs which have centroid which is not in seqIDs
+    for pan_ORF_id in node["centroid"]:
+        mem = int(pan_ORF_id.split("_")[0])
+        ORF_ID = int(pan_ORF_id.split("_")[-1])
+        sequence_dict[mem].append(ORF_ID)
+    
     # just get information for this cluster
     ORF_info_dict = defaultdict(dict)
     for colour, ORF_list in sequence_dict.items():

@@ -598,7 +598,7 @@ def collapse_paralogs(G, centroid_contexts, max_context=5, quiet=False):
             s_max = -np.inf
             best_cluster = None
 
-            if para[1] == ref_paralogs[0][1]:
+            if para in ref_paralogs:
                 # this is the reference so skip
                 continue
 
