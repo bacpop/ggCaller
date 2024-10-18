@@ -514,11 +514,15 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
 
                 std::unordered_set<std::string> ORFs_to_remove_private;
 
-                // remove all low scoring ORFs
-                for (const auto& ORF_ID : to_remove.at(colour_ID))
+                // remove all low scoring ORFs if present in colour
+                const auto& removal = to_remove.find(colour_ID);
+                if (removal != to_remove.end())
                 {
-                    ORF_map.erase(ORF_ID);
-                    continue;
+                    for (const auto& ORF_ID : removal->second)
+                    {
+                        ORF_map.erase(ORF_ID);
+                        continue;
+                    }
                 }
 
                 // iterate over ORFToScoreMap for the given colour
