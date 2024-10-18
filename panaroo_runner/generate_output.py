@@ -220,7 +220,10 @@ def back_translate(file, annotation_dir, shd_arr_tup, ORF_file_paths, isolate_na
             ORFNodeVector = ORF_map[ORF_ID]
 
             # generate DNA sequence
-            dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+            if ORF_ID < 0:
+                dna = ORFNodeVector[6]
+            else:
+                dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
             # back translate sequence
             aligned_dna = ""

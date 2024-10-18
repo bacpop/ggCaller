@@ -84,8 +84,8 @@ typedef std::pair<unsigned int, unsigned int> indexPair;
 typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::pair<std::vector<int>, std::vector<indexPair>> ORFCoords;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, bool, float, std::string> ORFNodeVector;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score and strings for protein/DNA
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, bool, float, std::string, std::string> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
 typedef std::map<int, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeMap to its colour
