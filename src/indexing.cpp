@@ -166,6 +166,35 @@ std::vector<std::pair<Kmer, bool>> get_neighbours (const T& neighbour_iterator)
     return neighbour_vector;
 }
 
+void calc_start_freq (std::string& start_site_AA, 
+                      const boost::dynamic_bitset<>& full_unitig_colour,
+                      tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_set<int>>& start_freq_set,
+                      const int& aa_kmer,
+                      const size_t& nb_colours)
+{
+    // ensure if small start found, can still generate sequence
+    int num_kmers = start_site_AA.size() > aa_kmer ? start_site_AA.size() - aa_kmer : 1;
+
+    std::vector<std::string> AA_kmers(num_kmers);
+
+    for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
+    {
+        AA_kmers[kmer_index] = get_kmers(start_site_AA, kmer_index, aa_kmer);
+    }
+
+    // add colours to start_freq_set
+    for (int i = 0; i < nb_colours; i++)
+    {
+        if ((bool)full_unitig_colour[i])
+        {
+            for (const auto& entry_aa : AA_kmers)
+            {
+                start_freq_set[entry_aa].insert(i);
+            }
+        }
+    }
+}
+
 template <class T, class U, bool is_const>
 void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
                             UnitigMap<DataAccessor<T>, DataStorage<U>, is_const> um,
@@ -290,43 +319,10 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            //if (unitig.size() - pos >= kmer)
-            {
-                std::string start_site_DNA = unitig.substr(pos, kmer);
-                std::string start_site_AA = translate(start_site_DNA);
+            std::string start_site_DNA = unitig.substr(pos, kmer);
+            std::string start_site_AA = translate(start_site_DNA);
 
-                // remove any starts with stop codon
-                // if (start_site_AA.find('*') != std::string::npos)
-                // {
-                //     continue;
-                // }
-
-                int num_kmers = start_site_AA.size() - aa_kmer;
-                // ensure if small start found, can still generate sequence
-                if (num_kmers <= 0)
-                {
-                    num_kmers = 1;
-                }
-
-                std::vector<std::string> AA_kmers(num_kmers);
-
-                for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
-                {
-                    AA_kmers[kmer_index] = get_kmers(start_site_AA, kmer_index, aa_kmer);
-                }
-
-                // add colours to start_freq_set
-                for (int i = 0; i < nb_colours; i++)
-                {
-                    if ((bool)full_unitig_colour[i])
-                    {
-                        for (const auto& entry_aa : AA_kmers)
-                        {
-                            start_freq_set[entry_aa].insert(i);
-                        }
-                    }
-                }
-            }
+            calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
     }
 
@@ -347,43 +343,10 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            //if (unitig.size() - pos >= kmer)
-            {
-                std::string start_site_DNA = rev_unitig.substr(pos, kmer);
-                std::string start_site_AA = translate(start_site_DNA);
+            std::string start_site_DNA = rev_unitig.substr(pos, kmer);
+            std::string start_site_AA = translate(start_site_DNA);
 
-                // remove any starts with stop codon
-                // if (start_site_AA.find('*') != std::string::npos)
-                // {
-                //     continue;
-                // }
-
-                int num_kmers = start_site_AA.size() - aa_kmer;
-                // ensure if small start found, can still generate sequence
-                if (num_kmers <= 0)
-                {
-                    num_kmers = 1;
-                }
-
-                std::vector<std::string> AA_kmers(num_kmers);
-
-                for (int kmer_index = 0; kmer_index < num_kmers; ++kmer_index)
-                {
-                    AA_kmers[kmer_index] = get_kmers(start_site_AA, kmer_index, aa_kmer);
-                }
-
-                // add colours to start_freq_set
-                for (int i = 0; i < nb_colours; i++)
-                {
-                    if ((bool)full_unitig_colour[i])
-                    {
-                        for (const auto& entry_aa : AA_kmers)
-                        {
-                            start_freq_set[entry_aa].insert(i);
-                        }
-                    }
-                }
-            }
+            calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
     }
 }

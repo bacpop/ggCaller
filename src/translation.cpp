@@ -76,6 +76,7 @@ std::string translate (const std::string& dna_seq)
     {
         const std::string codon = dna_seq.substr(i, 3);
         aa_seq += codonMap_[codon];
+        // break if stop codon present
         if (codonMap_[codon] == '*') {
             break;
         }
