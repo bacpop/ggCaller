@@ -96,7 +96,8 @@ class Graph {
                       bool is_ref,
                       const bool write_graph,
                       const std::string& infile2,
-                      const std::unordered_set<std::string>& ref_set);
+                      const std::unordered_set<std::string>& ref_set,
+                      const std::string& path_dir);
 
     // read existing graph and index
     GraphTuple read (const std::string& graphfile,
@@ -107,7 +108,8 @@ class Graph {
                      const std::vector<std::string>& start_codons_rev,
                      size_t num_threads,
                      const bool is_ref,
-                     const std::unordered_set<std::string>& ref_set);
+                     const std::unordered_set<std::string>& ref_set,
+                     const std::string& path_dir);
 
     // get graph object from serialised file
     void in(const std::string& infile,
@@ -119,35 +121,39 @@ class Graph {
     void out(const std::string& outfile);
 
     // find ORFs
-    std::pair<ColourORFMap, ColourEdgeMap> findGenes (const bool repeat,
-                                                     const size_t overlap,
-                                                     const size_t max_path_length,
-                                                     bool no_filter,
-                                                     const std::vector<std::string>& stop_codons_for,
-                                                     const std::vector<std::string>& start_codons_for,
-                                                     const size_t min_ORF_length,
-                                                     const size_t max_overlap,
-                                                     const std::vector<std::string>& input_colours,
-                                                     const std::string& ORF_model_file,
-                                                     const std::string& TIS_model_file,
-                                                     const float& minimum_ORF_score,
-                                                     const float& minimum_path_score,
-                                                     const size_t max_ORF_path_length,
-                                                     const bool clustering,
-                                                     const double& id_cutoff,
-                                                     const double& len_diff_cutoff,
-                                                     size_t num_threads,
-                                                     const std::string& cluster_file,
-                                                     const float& score_tolerance);
+std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> findGenes (const bool repeat,
+                                                                                    const size_t overlap,
+                                                                                    const size_t max_path_length,
+                                                                                    bool no_filter,
+                                                                                    const std::vector<std::string>& stop_codons_for,
+                                                                                    const std::vector<std::string>& start_codons_for,
+                                                                                    const size_t min_ORF_length,
+                                                                                    const size_t max_overlap,
+                                                                                    const std::vector<std::string>& input_colours,
+                                                                                    const std::string& ORF_model_file,
+                                                                                    const std::string& TIS_model_file,
+                                                                                    const float& minimum_ORF_score,
+                                                                                    const float& minimum_path_score,
+                                                                                    const size_t max_ORF_path_length,
+                                                                                    const bool clustering,
+                                                                                    const double& id_cutoff,
+                                                                                    const double& len_diff_cutoff,
+                                                                                    size_t num_threads,
+                                                                                    const std::string& cluster_file,
+                                                                                    const float& score_tolerance,
+                                                                                    const std::string& tmp_dir,
+                                                                                    const std::string& path_dir);
 
 
-    std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
-                                          const NodeSearchDict& node_search_dict,
-                                          const size_t radius,
-                                          const int kmer,
-                                          const std::string& FM_fasta_file,
-                                          const bool repeat,
-                                          const std::unordered_set<int>& to_avoid);
+std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
+                                        const NodeSearchDict& node_search_dict,
+                                        const size_t radius,
+                                        const int kmer,
+                                        const std::string& FM_fasta_file,
+                                        const bool repeat,
+                                        const std::unordered_set<int>& to_avoid,
+                                        const string& ORF_file_path,
+                                        const std::string& path_dir);
 
     // generate sequences from ORF node_lists
     std::string generate_sequence(const std::vector<int>& nodelist,
@@ -162,7 +168,8 @@ class Graph {
                                                          const std::string& fasta_file,
                                                          const int overlap,
                                                          const bool write_idx,
-                                                         size_t num_threads);
+                                                         size_t num_threads,
+                                                         const std::string& path_dir);
     size_t rb_hash(const std::string seq)
     {
         return hasher{}(seq);
@@ -188,7 +195,8 @@ class Graph {
                        const std::vector<std::string>& start_codons_rev,
                        const int& kmer,
                        const size_t& nb_colours,
-                       const std::vector<std::string>& input_colours);
+                       const std::vector<std::string>& input_colours,
+                       const std::string& path_dir);
 
     
     // stored bifrost DBG
@@ -210,7 +218,14 @@ class Graph {
     boost::dynamic_bitset<> _RefSet;
 };
 
-ORFClusterMap read_cluster_file(const std::string& cluster_file);
+std::pair<ORFClusterMap, std::unordered_set<std::string>> read_cluster_file(const std::string& cluster_file);
+
+ORFNodeMap read_ORF_file(const std::string& ORF_file);
+
+void save_ORF_file(const std::string& ORF_file_path,
+                   const ORFNodeMap& ORF_map);
+
+std::unordered_map<size_t, std::unordered_set<size_t>> read_edge_file(const std::string& cluster_file);
 
 void clear_graph(Graph& g);
 

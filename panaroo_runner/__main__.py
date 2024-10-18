@@ -27,12 +27,12 @@ class SmartFormatter(argparse.HelpFormatter):
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 
-def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file, overlap,
+def run_panaroo(pool, shd_arr_tup, ORF_file_paths, Edge_file_paths, cluster_file, overlap,
                 input_colours, output_dir, temp_dir, verbose, n_cpu, length_outlier_support_proportion, identity_cutoff,
                 family_threshold, min_trailing_support, trailing_recursive, clean_edges, edge_support_threshold,
                 merge_para, aln, alr, core, min_edge_support_sv, all_seq_in_graph, ref_list, write_idx, kmer, repeat,
                 search_radius, refind_prop_match, annotate, evalue, annotation_db, hmm_db,
-                call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind):
+                call_variants, ignore_pseduogenes, truncation_threshold, save_objects, refind, Path_dir):
 
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -58,8 +58,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         print("Generating initial network...")
 
     # generate network from clusters and adjacency information
-    G, centroid_contexts = generate_network(shd_arr[0], overlap, high_scoring_ORFs,
-                                            high_scoring_ORF_edges, cluster_file)
+    G, centroid_contexts = generate_network(shd_arr[0], overlap, ORF_file_paths,
+                                            Edge_file_paths, cluster_file)
 
     # check if G is empty before proceeding
     if G.number_of_nodes() == 0:
@@ -143,19 +143,20 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             print("refinding genes...")
 
         # find genes that Prokka has missed
-        G, high_scoring_ORFs = find_missing(G,
-                                            shd_arr_tup,
-                                            high_scoring_ORFs,
-                                            kmer=kmer,
-                                            repeat=repeat,
-                                            overlap=overlap,
-                                            isolate_names=input_colours,
-                                            search_radius=search_radius,
-                                            prop_match=refind_prop_match,
-                                            pairwise_id_thresh=identity_cutoff,
-                                            pool=pool,
-                                            n_cpu=n_cpu,
-                                            verbose=verbose)
+        G = find_missing(G,
+                         ORF_file_paths,
+                         shd_arr_tup,
+                         kmer=kmer,
+                         repeat=repeat,
+                         overlap=overlap,
+                         isolate_names=input_colours,
+                         search_radius=search_radius,
+                         prop_match=refind_prop_match,
+                         pairwise_id_thresh=identity_cutoff,
+                         pool=pool,
+                         n_cpu=n_cpu,
+                         Path_dir=Path_dir,
+                         verbose=verbose)
 
         # remove edges that are likely due to misassemblies (by consensus)
 
@@ -199,22 +200,36 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     # get original annotation IDs, lengths and whether or
     # not an internal stop codon is present
     ids_len_stop = {}
+    for colour_ID, file_path in ORF_file_paths.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+        for ORF_ID, ORF_info in ORF_map.items():
+            ORF_len = ORF_info[2]
+
+            # determine if gene is refound. If it is, then determine if premature stop codon present
+            delim = "_0_" if ORF_ID >= 0 else "_refound_"
+            pan_ORF_id = str(colour_ID) + delim + str(ORF_ID)
+            if (ORF_ID < 0):
+                ids_len_stop[pan_ORF_id] = [ORF_len / 3, ORF_info[3], -1]
+            else:
+                ids_len_stop[pan_ORF_id] = [ORF_len / 3, False, -1]
+    
+    # add annotation to genes
     contig_annotation = defaultdict(list)
     for node in G.nodes():
         length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
         node_annotation = G.nodes[node]['annotation']
         node_bitscore = G.nodes[node]['bitscore']
         node_description = G.nodes[node]['description']
-        for sid in G.nodes[node]['seqIDs']:
-            mem = int(sid.split("_")[0])
-            ORF_ID = int(sid.split("_")[-1])
-            ORF_info = high_scoring_ORFs[mem][ORF_ID]
-            ORF_len = ORF_info[2]
-            # determine if gene is refound. If it is, then determine if premature stop codon present
-            if (ORF_ID < 0):
-                ids_len_stop[sid] = (ORF_len / 3, ORF_info[3])
-            else:
-                ids_len_stop[sid] = (ORF_len / 3, False)
+        for pan_ORF_id in G.nodes[node]['seqIDs']:
+            mem = int(pan_ORF_id.split("_")[0])
+            ORF_ID = int(pan_ORF_id.split("_")[-1])
+            ORF_len = ids_len_stop[pan_ORF_id][0] * 3
+            prem_stop = ids_len_stop[pan_ORF_id][1]
+
+            # update cluster_ID in ids_len_stop
+            ids_len_stop[pan_ORF_id][2] = node
+
             if annotate != "none" and ref_list[mem]:
                 # annotate genes
                 source = "annotation"
@@ -228,7 +243,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 annotation = (source, node_annotation, node_bitscore, node_description)
 
                 # annotate potential pseudogene if fits criteria of length, premature stop codon or length not multiple of 3
-                if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (ORF_info[3] is True
+                if ORF_len < (length_centroid * truncation_threshold) or (ORF_ID < 0 and (prem_stop is True
                                                                                           or ORF_len % 3 != 0)):
                     description = annotation[-1] + " potential psuedogene"
                     annotation = annotation[0:3] + (description,)
@@ -238,8 +253,8 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
     if annotate != "none" and any(ref_list):
         if verbose:
             print("writing GFF files...")
-        generate_GFF(shd_arr[0], high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir,
-                     overlap, write_idx, ref_list, n_cpu)
+        generate_GFF(shd_arr[0], ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
+                     overlap, write_idx, ref_list, n_cpu, Path_dir)
 
     # write roary output and summary stats file
     G = generate_roary_gene_presence_absence(G,
@@ -264,17 +279,17 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
     if verbose:
         print("writing gene fasta...")
-    print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
-                    input_colours, overlap, shd_arr[0], truncation_threshold, G)
+    print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
+                    input_colours, overlap, shd_arr[0], truncation_threshold, G, ids_len_stop)
 
     # Write out core/pan-genome alignments
     # determine if reference-guided alignment being done
     if aln == "pan":
         if verbose: print("generating pan genome MSAs...")
         generate_pan_genome_alignment(G, temp_dir, output_dir, n_cpu, isolate_names, shd_arr_tup,
-                                      high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
+                                      ORF_file_paths, overlap, ref_aln, call_variants, verbose,
                                       ignore_pseduogenes, truncation_threshold, pool)
-        core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, high_scoring_ORFs,
+        core_genes = get_core_gene_nodes(G, core, len(input_colours), ignore_pseduogenes, ORF_file_paths,
                                          truncation_threshold)
         core_gene_names = ["CID_" + str(G.nodes[x[0]]["CID"]) for x in core_genes]
         concatenate_core_genome_alignments(core_gene_names, output_dir, isolate_names, n_cpu)
@@ -282,7 +297,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if verbose: print("generating core genome MSAs...")
         generate_core_genome_alignment(G, temp_dir, output_dir,
                                        n_cpu, isolate_names, core, len(input_colours), shd_arr_tup,
-                                       high_scoring_ORFs, overlap, ref_aln, call_variants, verbose,
+                                       ORF_file_paths, overlap, ref_aln, call_variants, verbose,
                                        ignore_pseduogenes, truncation_threshold, pool)
 
 
@@ -301,12 +316,14 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         if all_seq_in_graph:
             G.nodes[node]['dna'] = list()
             G.nodes[node]['protein'] = list()
+    
+    for colour_ID, file_path in ORF_file_paths.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
-        for seq_ID in G.nodes[node]['seqIDs']:
-            parsed_id = seq_ID.split("_")
-            genome_id = int(parsed_id[0])
-            local_id = int(parsed_id[-1])
-            ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
+        for ORF_ID, ORFNodeVector in ORF_map.items():
+            delim = "_0_" if ORF_ID >= 0 else "_refound_"
+            pan_ORF_id = str(colour_ID) + delim + str(ORF_ID)
+            node = ids_len_stop[pan_ORF_id][2]
 
             G.nodes[node]['lengths'].append(ORFNodeVector[2])
 
@@ -314,7 +331,7 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             if all_seq_in_graph:
                 seq = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 G.nodes[node]['dna'].append(seq)
-                if local_id < 0:
+                if ORF_ID < 0:
                     G.nodes[node]['protein'].append(ORFNodeVector[4])
                 else:
                     G.nodes[node]['protein'].append(str(Seq(seq).translate()))
@@ -323,12 +340,6 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
             # convert to printable format
             G.nodes[node]['dna'] = ";".join(conv_list(G.nodes[node]['dna']))
             G.nodes[node]['protein'] = ";".join(conv_list(G.nodes[node]['protein']))
-
-        # add node annotation
-        if save_objects:
-            high_scoring_ORFs[genome_id][local_id] = list(high_scoring_ORFs[genome_id][local_id])
-            high_scoring_ORFs[genome_id][local_id][-1] = G.nodes[node]["description"]
-
 
     for edge in G.edges():
         G.edges[edge[0], edge[1]]['genomeIDs'] = ";".join(
@@ -350,32 +361,23 @@ def run_panaroo(pool, shd_arr_tup, high_scoring_ORFs, high_scoring_ORF_edges, cl
         # make sure trailing forward slash is present
         objects_dir = os.path.join(objects_dir, "")
 
-        to_remove = set()
-
-        # create index of all high_scoring_ORFs node_IDs, remove if not in panaroo graph
+        # create index of all high_scoring_ORFs node_IDs
         node_index = defaultdict(list)
-        for colour, gene_dict in high_scoring_ORFs.items():
-            for ORF_ID, ORF_info in gene_dict.items():
-                if not isinstance(ORF_info, list):
-                    to_remove.add((colour, ORF_ID))
-                    continue
-                delim = "_0_" if ORF_ID > 0 else "_refound_"
-                entry_ID = str(colour) + delim + str(ORF_ID)
+        for colour_ID, file_path in ORF_file_paths.items():
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+            for ORF_ID, ORF_info in ORF_map.items():
+                delim = "_0_" if ORF_ID >= 0 else "_refound_"
+                entry_ID = str(colour_ID) + delim + str(ORF_ID)
                 for node in ORF_info[0]:
                     node_index[abs(node)].append(entry_ID)
 
-        # remove genes not in panaroo graph
-        for entry in to_remove:
-            del high_scoring_ORFs[entry[0]][entry[1]]
-
-        # serialise graph object and high scoring ORFs to future reading
-        shd_arr[0].data_out(objects_dir + "ggc_graph.dat")
-        with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
-            cPickle.dump(high_scoring_ORFs, o)
-
         with open(objects_dir + "node_index.dat", "wb") as o:
             cPickle.dump(node_index, o)
-
+        
+        # map each ORF to node in graph
+        with open(objects_dir + "ORF_to_node_map.dat", "wb") as o:
+            cPickle.dump(ids_len_stop, o)
 
     return
 

@@ -82,9 +82,10 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
             // check against fm-idx every other node, pass if not present
             if (is_ref && node_vector.size() % 2 == 1)
             {
-                std::vector<int> check_vector = node_vector;
-                check_vector.push_back(neighbour_id);
-                std::pair<bool, bool> present = path_search(check_vector, fm_idx);
+                //std::vector<int> check_vector = node_vector;
+                node_vector.push_back(neighbour_id);
+                std::pair<bool, bool> present = path_search(node_vector, fm_idx);
+                node_vector.pop_back();
                 if (!present.first)
                 {
                     continue;
@@ -98,16 +99,6 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
                     continue;
                 }
             }
-
-
-            // if not is_ref, check that unitig is shared in at least one other colour
-//            if (!is_ref)
-//            {
-//                if (neighbour_colour.count() < 2)
-//                {
-//                    continue;
-//                }
-//            }
 
             // check path length, if too long continue
             const size_t updated_path_length = path_length + (neighbour_um.size - overlap);
@@ -187,7 +178,7 @@ PathVector iter_nodes_binary (const ColoredCDBG<MyUnitigMap>& ccdbg,
     return path_list;
 }
 
-ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
+ORFNodeMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
                          const std::vector<Kmer>& head_kmer_arr,
                          const float& stop_codon_freq,
                          const size_t colour_ID,
@@ -358,7 +349,7 @@ ORFNodeRobMap traverse_graph(const ColoredCDBG<MyUnitigMap>& ccdbg,
     }
 
     // group colours of ORFs together
-    ORFNodeRobMap ORF_map = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
+    ORFNodeMap ORF_node_map_new = std::move(sort_ORF_indexes(ORF_node_map, pos_strand_map, ccdbg, head_kmer_arr, is_ref));
 
-    return ORF_map;
+    return ORF_node_map_new;
 }

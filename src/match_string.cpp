@@ -11,12 +11,15 @@ char ascii_toupper_char(char c) {
 
 // index fasta files
 std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
-                                                          const bool write_idx)
+                                                          const bool write_idx,
+                                                          const std::string& path_dir)
 {
     fm_index_coll ref_index;
 
     // create fm index file name
-    std::string idx_file_name = fasta_file + ".fms";
+    const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
+
+    std::string idx_file_name = path_dir + base_filename + ".fms";
 
     // create entry for start and end of contigs within fm_index
     std::vector<size_t> contig_locs;

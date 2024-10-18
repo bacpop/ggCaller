@@ -54,19 +54,21 @@ std::vector<size_t> getPath(
         const VertexDescriptor& source,
         const VertexDescriptor& destination,
         float& path_score,
-        const std::vector<size_t>& vertex_mapping);
+        const std::vector<size_t>& vertex_mapping,
+        const std::vector<size_t>& component_vertex_mapping);
 
 template <class T>
-std::vector<size_t> traverse_components(const ORFNodeRobMap& ORF_map,
-                                        const std::vector<size_t>& vertex_mapping,
-                                        const std::unordered_set<size_t>& vertex_list,
-                                        const GeneGraph& g,
-                                        const float& minimum_path_score,
-                                        const size_t numVertices,
-                                        T weight_pmap,
-                                        const std::vector<Kmer>& head_kmer_arr);
+std::vector<size_t> traverse_components(const ORFNodeMap& ORF_map,
+                                       const std::vector<size_t>& vertex_mapping,
+                                       const std::vector<size_t>& component_vertex_mapping,
+                                       const std::unordered_set<size_t>& vertex_list,
+                                       const GeneGraph& g,
+                                       const float& minimum_path_score,
+                                       const size_t numVertices,
+                                       T weight_pmap,
+                                       const std::vector<Kmer>& head_kmer_arr);
 
-std::vector<std::vector<size_t>> call_true_genes (const ORFNodeRobMap& ORF_map,
+std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
                                                   const ORFOverlapMap& overlap_map,
                                                   const float& minimum_path_score,
                                                   const std::vector<Kmer>& head_kmer_arr);

@@ -320,7 +320,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         for (const auto& pos : found_indices)
         {
             std::string start_site_DNA = unitig.substr(pos, kmer);
-            std::string start_site_AA = (translate(start_site_DNA)).aa();
+            std::string start_site_AA = translate(start_site_DNA);
 
             calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
@@ -344,7 +344,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         for (const auto& pos : found_indices)
         {
             std::string start_site_DNA = rev_unitig.substr(pos, kmer);
-            std::string start_site_AA = (translate(start_site_DNA)).aa();
+            std::string start_site_AA = translate(start_site_DNA);
 
             calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
@@ -356,13 +356,16 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             const std::string& fasta_file,
                             const int kmer,
                             const int colour_ID,
-                            const size_t nb_colours)
+                            const size_t nb_colours,
+                            const std::string& path_dir)
 {
     // generate the index
     fm_index_coll ref_index;
 
     // create fm index file name
-    std::string idx_file_name = fasta_file + ".fmp";
+    const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
+    
+    const auto idx_file_name = path_dir + base_filename + ".fmp";
 
     // initialise string of nodes for FM-index generation
     std::string genome_path;
@@ -470,7 +473,8 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
                              const boost::dynamic_bitset<>& ref_set,
-                             robin_hood::unordered_map<std::string, size_t>& start_freq)
+                             robin_hood::unordered_map<std::string, size_t>& start_freq,
+                             const std::string& path_dir)
 {
     // get all head kmers and add IDs
     size_t unitig_id = 1;
@@ -551,7 +555,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             #pragma omp for
             for (int i = 0; i < ref_index.size(); i++)
             {
-                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);
+                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours, path_dir);
             }
         }
     }

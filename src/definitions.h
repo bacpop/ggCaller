@@ -17,6 +17,8 @@
 #include <cassert>
 #include <mutex>
 #include <math.h>
+#include <memory>
+#include <memory>
 
 // openMP headers
 #include <omp.h>
@@ -39,6 +41,7 @@
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/unordered_set.hpp>
+#include <boost/serialization/map.hpp>
 #include <serialize_tuple.h>
 
 // pybind11 headers
@@ -81,10 +84,10 @@ typedef std::pair<unsigned int, unsigned int> indexPair;
 typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::pair<std::vector<int>, std::vector<indexPair>> ORFCoords;
-// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score
-typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, bool, float> ORFNodeVector;
+// tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score and strings for protein/DNA
+typedef std::tuple<std::vector<int>, std::vector<indexPair>, size_t, bool, float, std::string, std::string> ORFNodeVector;
 // maps an ORFNodeVector sequence to its ID in order
-typedef std::map<size_t, ORFNodeVector> ORFNodeMap;
+typedef std::map<int, ORFNodeVector> ORFNodeMap;
 // maps an map of ORFNodeMap to its colour
 typedef std::map<size_t, ORFNodeMap> ColourORFMap;
 // maps colours to the edges for every ORF in that colour
@@ -108,14 +111,14 @@ typedef std::map<size_t, bool> NodeStrandMap;
 // mapping of overlapping ORFs, detailed by ORFIDMap
 typedef std::unordered_map<size_t, std::unordered_map<size_t, std::pair<char, size_t>>> ORFOverlapMap;
 // tuple containing grouping information for ORFs filtered by Balrog
-typedef std::pair<std::vector<std::tuple<int, int, size_t>>, std::vector<std::pair<size_t, std::pair<size_t, size_t>>>> ORFGroupPair;
+typedef std::pair<std::vector<std::tuple<int, int, size_t, size_t, std::shared_ptr<std::string>>>, std::vector<std::pair<size_t, std::pair<size_t, size_t>>>> ORFGroupPair;
 // map of ORFs to clusters, with centroid as first entry
-typedef std::unordered_map<size_t, std::vector<std::pair<size_t, size_t>>> ORFClusterMap;
+typedef std::unordered_map<std::string, std::vector<std::pair<size_t, size_t>>> ORFClusterMap;
 // tuple of ORF sequence, node list, node coordinates for orientation and the contig locations if using FM index
 typedef std::tuple<std::string, std::vector<int>, std::vector<std::vector<size_t>>, bool> RefindTuple;
 // map containing nodeID, search sequence and refind tuple
 typedef std::map<int, std::vector<RefindTuple>> RefindMap;
 // dictionary passed by python for refinding
-typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<std::pair<std::vector<int>, std::vector<indexPair>>>>> NodeSearchDict;
+typedef std::unordered_map<int, std::pair<std::pair<std::vector<int>, std::vector<indexPair>>, std::vector<size_t>>> NodeSearchDict;
 
 #endif //DEFINITIONS_H

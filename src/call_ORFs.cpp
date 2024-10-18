@@ -320,7 +320,7 @@ void generate_ORFs(const int& colour_ID,
                         size_t site_hash;
                         {
                             std::string start_site_DNA = path_sequence.substr((codon_pair.first), (overlap + 1));
-                            std::string start_site_AA = (translate(start_site_DNA)).aa();
+                            std::string start_site_AA = translate(start_site_DNA);
                             site_hash = hasher{}(start_site_AA);
 
                             // ensure if small start found, can still generate sequence
@@ -422,7 +422,7 @@ void generate_ORFs(const int& colour_ID,
                         if (best_coverage)
                         {
                             // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, best_TIS_score);
+                            ORFNodeVector ORF_node_vector = std::make_tuple(best_ORF_coords.first, best_ORF_coords.second, best_ORF_len, !present.second, best_TIS_score, "", "");
 
                             // think about if there is no TIS, then can ignore ORF?
                             update_ORF_node_map(ccdbg, head_kmer_arr, best_hash, ORF_node_vector, ORF_node_map);
@@ -456,7 +456,7 @@ void generate_ORFs(const int& colour_ID,
                         ORFCoords ORF_coords = std::move(calculate_coords(codon_pair, nodelist, node_ranges));
 
                         // create ORF_node_vector, populate with results from node traversal (add true on end for relative strand if !is_ref).
-                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, ORF_len, !present.second, 0);
+                        ORFNodeVector ORF_node_vector = std::make_tuple(ORF_coords.first, ORF_coords.second, ORF_len, !present.second, 0, "", "");
 
                         // think about if there is no TIS, then can ignore ORF?
                         update_ORF_node_map(ccdbg, head_kmer_arr, ORF_hash, ORF_node_vector, ORF_node_map);
@@ -601,13 +601,13 @@ void update_ORF_node_map (const ColoredCDBG<MyUnitigMap>& ccdbg,
 }
 
 // converts ORF entries into a vector and assigns relative strand
-ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+ORFNodeMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
                            const std::vector<Kmer>& head_kmer_arr,
                            const bool is_ref)
 {
-    ORFNodeRobMap ORF_map;
+    ORFNodeMap ORF_map_new;
 
     // generate ID for each ORF and assign strand
     size_t ORF_ID = 0;
@@ -646,7 +646,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
         }
 
         // move entry from map to vector
-        ORF_map[ORF_ID] = std::move(ORF.second);
+        ORF_map_new[ORF_ID] = std::move(ORF.second);
 
         // iterate ORF_ID
         ORF_ID++;
@@ -655,7 +655,7 @@ ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
     // clear ORF_node_map
     ORF_node_map.clear();
 
-    return ORF_map;
+    return ORF_map_new;
 }
 
 // calculate the relative strand of each node traversed in an ORF

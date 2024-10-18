@@ -1,14 +1,19 @@
 import os, sys
 import _pickle as cPickle
 from Bio import SeqIO
+import networkx as nx
+from collections import defaultdict
+import ggCaller_cpp
 
+# TODO update this to work with ggCaller ORF map outputs and panaroo graph which contains annotation
 def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_dir, query_id, num_threads):
     # check if objects_dir present, if not exit
-    if not os.path.exists(objects_dir):
-        print("Please specify a ggc_data directory")
-        sys.exit(1)
-
+    ggc_data_dir = os.path.join(objects_dir, "ggc_data")
     objects_dir = os.path.join(objects_dir, "")
+
+    if not os.path.exists(ggc_data_dir):
+        print("Please specify a directory from a ggCaller run with '--save'")
+        sys.exit(1)
 
     # read in and parse sequences in queryfile
     id_vec = []
@@ -32,7 +37,7 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
                     query_vec.append(line.strip())
 
     # read in graph object and high_scoring ORFs and node_index
-    graph.data_in(objects_dir + "ggc_graph.dat", graphfile, coloursfile, num_threads)
+    graph.data_in(os.path.join(objects_dir, "ORF_dir", "kmer_array.dat"), graphfile, coloursfile, num_threads)
 
     # query the sequences in the graph
     print("Querying unitigs in graph...")
@@ -43,39 +48,68 @@ def search_graph(graph, graphfile, coloursfile, queryfile, objects_dir, output_d
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
 
-    with open(objects_dir + "high_scoring_orfs.dat", "rb") as input_file:
-        high_scoring_ORFs = cPickle.load(input_file)
-
-    with open(objects_dir + "node_index.dat", "rb") as input_file:
+    # load in gene to DBG node mappings
+    with open(os.path.join(ggc_data_dir, "node_index.dat"), "rb") as input_file:
         node_index = cPickle.load(input_file)
 
-    outfile = output_dir + "matched_queries.fasta"
-    print("Matching overlapping ORFs...")
+    # load in paths to ORF data
+    with open(os.path.join(objects_dir, "ORF_dir", "ORF_file_paths.dat"), "rb") as input_file:
+        ORF_file_paths = cPickle.load(input_file)
 
-    ORF_dict = {}
+    # try to load panaroo graph, not present if panaroo not run
+    G = None
+    ids_len_stop = None
+    node_to_node_map = {}
+    try:
+        G = nx.read_gml(os.path.join(objects_dir, "final_graph.gml"))
+        # remap mislabelled nodes
+        for node in G.nodes():
+            node_to_node_map[G.nodes[node]['CID']] = node
+
+        # load in gene to panaroo node mappings
+        with open(os.path.join(ggc_data_dir, "ORF_to_node_map.dat"), "rb") as input_file:
+                ids_len_stop = cPickle.load(input_file)
+    except:
+        pass
+
+    outfile = os.path.join(output_dir, "matched_queries.fasta")
+    print("Matching overlapping ORFs...")
+    ORF_dict = defaultdict(lambda: defaultdict(list))
     for i in range(len(query_nodes)):
         for node in query_nodes[i]:
-            for ORF_ID in node_index[node]:
-                if ORF_ID not in ORF_dict:
-                    ORF_dict[ORF_ID] = []
-                ORF_dict[ORF_ID].append(i)
+            for ORF in node_index[node]:
+                split_ID = ORF.split("_")
+                colour = int(split_ID[0])
+                ORF_ID = int(split_ID[-1])
+                ORF_dict[colour][ORF_ID].append(i)
 
     with open(outfile, "w") as f:
-        for ORF, aligned in ORF_dict.items():
-            split_ID = ORF.split("_")
-            colour = int(split_ID[0])
-            ORF_ID = int(split_ID[-1])
+        for colour, ORF_element in ORF_dict.items():
+            # load ORF info
+            ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
             fasta_ID = isolate_names[colour] + "_" + str(ORF_ID)
-            ORF_info = high_scoring_ORFs[colour][ORF_ID]
-            seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
-            if fasta_file:
-                id_set = set([id_vec[i] for i in aligned])
-                queries = ";".join([i for i in id_set])
-            else:
-                queries = ";".join([query_vec[i] for i in aligned])
+            
+            # iterate over each ORF that has match
+            for ORF_ID, aligned in ORF_element.items():
+                ORF_info = ORF_map[ORF_ID]
+                seq = graph.generate_sequence(ORF_info[0], ORF_info[1], kmer - 1)
+                if fasta_file:
+                    id_set = set([id_vec[i] for i in aligned])
+                    queries = ";".join([i for i in id_set])
+                else:
+                    queries = ";".join([query_vec[i] for i in aligned])
+                
+                # get annotation for node
+                annotation = "NA"
+                if G is not None:
+                    delim = "_0_" if ORF_ID >= 0 else "_refound_"
+                    pan_ORF_id = str(colour) + delim + str(ORF_ID)
+                    # if node not in G then has been removed so pass
+                    node = ids_len_stop[pan_ORF_id][2]
+                    annotation = G.nodes[node_to_node_map[node]]["description"]
 
-            # add annotation
-            f.write(
-                    ">" + fasta_ID + " ggcID=" + ORF + " QUERY=" + queries + " annotation=" + ORF_info[-1] + "\n" + seq + "\n")
+                # add annotation
+                f.write(
+                        ">" + fasta_ID + " ggcID=" + ORF + " QUERY=" + queries + " annotation=" + annotation + "\n" + seq + "\n")
 
     return

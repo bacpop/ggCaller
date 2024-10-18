@@ -59,9 +59,9 @@ def get_options():
                     default=False,
                     help='Save graph objects for sequence querying. '
                          '[Default = False] ')
-    IO.add_argument('--data',
+    IO.add_argument('--prev-run',
                     default=None,
-                    help='Directory containing data from previous ggCaller run generated via "--save" ')
+                    help='Directory containing data from previous ggCaller run. Must have been run with "--save" ')
     IO.add_argument(
         "--all-seq-in-graph",
         dest="all_seq_in_graph",
@@ -396,17 +396,25 @@ def main():
     # make sure trailing forward slash is present
     output_dir = os.path.join(options.out, "")
 
+    # create directory for reference path files
+    Path_dir = os.path.join(output_dir, "Path_dir")
+    if not os.path.exists(Path_dir):
+        os.mkdir(Path_dir)    
+    
+    # ensure trailing slash present
+    Path_dir = os.path.join(Path_dir, "")
+
     # if build graph specified, build graph and then call ORFs
     if (options.graph is not None) and (options.colours is not None) and (options.query is None):
         graph_tuple = graph.read(options.graph, options.colours, stop_codons_for, stop_codons_rev,
-                                 start_codons_for, start_codons_rev, options.threads, is_ref, ref_set)
+                                 start_codons_for, start_codons_rev, options.threads, is_ref, ref_set, Path_dir)
     # query unitigs in previous saved ggc graph
     elif (options.graph is not None) and (options.colours is not None) and (options.refs is None) and \
             (options.query is not None):
-        if options.data is None:
-            print("Please specify a ggc_data directory from a previous ggCaller run.")
+        if options.prev_run is None:
+            print("Please specify a directory from a previous ggCaller run.")
             sys.exit(1)
-        search_graph(graph, options.graph, options.colours, options.query, options.data, output_dir, options.query_id,
+        search_graph(graph, options.graph, options.colours, options.query, options.prev_run, output_dir, options.query_id,
                      options.threads)
         print("Finished.")
         sys.exit(0)
@@ -415,17 +423,17 @@ def main():
             options.reads is None) and (
             options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, True, options.no_write_graph, "NA", ref_set)
+                                  start_codons_rev, options.threads, True, options.no_write_graph, "NA", ref_set, Path_dir)
     # if reads file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.reads, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, False, options.no_write_graph, "NA", ref_set)
+                                  start_codons_rev, options.threads, False, options.no_write_graph, "NA", ref_set, Path_dir)
     # if both reads and refs file specified for building
     elif (options.graph is None) and (options.colours is None) and (options.refs is not None) and (
             options.reads is not None) and (options.query is None):
         graph_tuple = graph.build(options.refs, options.kmer, stop_codons_for, stop_codons_rev, start_codons_for,
-                                  start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set)
+                                  start_codons_rev, options.threads, False, options.no_write_graph, options.reads, ref_set, Path_dir)
     elif options.balrog_db is not None:
         db_dir = download_db(options.balrog_db)
         sys.exit(0)
@@ -493,6 +501,17 @@ def main():
     # Create temp_file for cluster_map
     cluster_file = os.path.join(temp_dir, "cluster_map.dat")
 
+    # create directory for ORF map
+    ORFMap_dir = os.path.join(output_dir, "ORF_dir")
+    if not os.path.exists(ORFMap_dir):
+        os.mkdir(ORFMap_dir)
+    
+    # ensure trailing slash present
+    ORFMap_dir = os.path.join(ORFMap_dir, "")
+
+    # save the kmer_array to ORFMap_dir
+    graph.data_out(ORFMap_dir + "kmer_array.dat")
+
     # load models models if required
     if not options.no_filter:
         print("Loading gene models...")
@@ -501,15 +520,19 @@ def main():
     else:
         ORF_model_file, TIS_model_file = "NA", "NA"
 
-    gene_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
+    file_tuple = graph.findGenes(options.repeat, overlap, options.max_path_length,
                                  options.no_filter, stop_codons_for, start_codons_for, options.min_orf_length,
                                  options.max_ORF_overlap, input_colours, ORF_model_file,
                                  TIS_model_file, options.min_orf_score, options.min_path_score,
                                  options.max_orf_orf_distance, not options.no_clustering,
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
-                                 options.score_tolerance)
+                                 options.score_tolerance, ORFMap_dir, Path_dir)
 
-    high_scoring_ORFs, high_scoring_ORF_edges = gene_tuple
+    ORF_file_paths, Edge_file_paths = file_tuple
+
+    # save the ORF file paths
+    with open(ORFMap_dir + "ORF_file_paths.dat", "wb") as o:
+        cPickle.dump(ORF_file_paths, o)
 
     # generate ORF clusters
     if not options.no_clustering:
@@ -518,7 +541,7 @@ def main():
             total_arr = np.array([graph])
             array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
             with Pool(processes=options.threads) as pool:
-                run_panaroo(pool, array_shd_tup, high_scoring_ORFs, high_scoring_ORF_edges,
+                run_panaroo(pool, array_shd_tup, ORF_file_paths, Edge_file_paths,
                             cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
                             options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
                             options.family_threshold, options.min_trailing_support, options.trailing_recursive,
@@ -527,10 +550,10 @@ def main():
                             options.no_write_idx, overlap + 1, options.repeat,
                             options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
                             annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save, options.refind)
+                            options.truncation_threshold, options.save, options.refind, Path_dir)
 
     else:
-        print_ORF_calls(high_scoring_ORFs, os.path.join(output_dir, "gene_calls"),
+        print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
                         input_colours, overlap, graph)
 
         if options.save:
@@ -542,18 +565,16 @@ def main():
             # make sure trailing forward slash is present
             objects_dir = os.path.join(objects_dir, "")
 
-            # serialise graph object and high scoring ORFs to future reading
-            graph[0].data_out(objects_dir + "ggc_graph.dat")
-            with open(objects_dir + "high_scoring_orfs.dat", "wb") as o:
-                cPickle.dump(high_scoring_ORFs, o)
-
             # create index of all high_scoring_ORFs node_IDs
             node_index = defaultdict(list)
-            for colour, gene_dict in high_scoring_ORFs.items():
-                for ORF_ID, ORF_info in gene_dict.items():
-                    entry_ID = str(colour) + "_" + str(ORF_ID)
+            for colour_ID, file_path in ORF_file_paths.items():
+                ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+                for ORF_ID, ORF_info in ORF_map.items():
+                    delim = "_0_" if ORF_ID > 0 else "_refound_"
+                    entry_ID = str(colour_ID) + delim + str(ORF_ID)
                     for node in ORF_info[0]:
-                        node_index[node].append(entry_ID)
+                        node_index[abs(node)].append(entry_ID)
 
             with open(objects_dir + "node_index.dat", "wb") as o:
                 cPickle.dump(node_index, o)

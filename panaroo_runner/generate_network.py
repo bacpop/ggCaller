@@ -4,98 +4,127 @@ from intbitset import intbitset
 import ggCaller_cpp
 
 
-def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cluster_file):
+def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file):
     # read in cluster_dict
-    cluster_dict = ggCaller_cpp.read_cluster_file(cluster_file)
+    # TODO save pair here that holds ORFs removed for low scores after centroid scored
+    cluster_dict, ORFs_to_remove = ggCaller_cpp.read_cluster_file(cluster_file)
 
     # associate sequences with their clusters
     seq_to_cluster = {}
-    seqid_to_centroid = {}
+    ORF_length_map = {}
     cluster_centroids = {}
     cluster_members = defaultdict(list)
     cluster_centroid_data = {}
     cluster_id = 0
 
-    # iterate over cluster_dict in order of entries, parsing all sequences to clusters
-    for temp_cluster_id, ORF_list in sorted(cluster_dict.items()):
-        # generate a panaroo sequence ID for current centroid
-        centroid_genome_id = ORF_list[0][0]
-        centroid_local_id = ORF_list[0][1]
+    # iterate over all ORFs in ORF_file_paths to determine centroids and add clusters
+    for colour_ID, file_path in ORF_file_paths.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
-        # hold current_hash
-        current_hash = None
+        for ORF_ID, ORFNodeVector in ORF_map.items():
+            # identify centroids
+            ORF_ID_str = str(colour_ID) + "_" + str(ORF_ID)
 
-        # access ORF information for centroid from high_scoring_ORFs, ensuring cluster is present
-        if centroid_local_id not in high_scoring_ORFs[centroid_genome_id]:
-            # if centroid not present, go through ORF_list and find next largest ORF present
-            current_length = 0
-            for ORF_ID_pair in ORF_list:
-                genome_id = ORF_ID_pair[0]
-                local_id = ORF_ID_pair[1]
-                if local_id in high_scoring_ORFs[genome_id]:
-                    # generate a hash for the centroid based on the sequence and strand
-                    ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
-                    seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-                    seq_hash = DBG.rb_hash(seq)
-                    # if longer, assign as centroid
-                    if ORFNodeVector[2] > current_length:
-                        current_length = ORFNodeVector[2]
-                        centroid_genome_id = genome_id
-                        centroid_local_id = local_id
-                        current_hash = seq_hash
-                    # if same length, assign to lowest hash
-                    elif ORFNodeVector[2] == current_length:
-                        if seq_hash < current_hash:
-                            current_length = ORFNodeVector[2]
-                            centroid_genome_id = genome_id
-                            centroid_local_id = local_id
-                            current_hash = seq_hash
-                        # if same hash, assign to lowest colour
-                        elif seq_hash == current_hash:
-                            if genome_id < centroid_genome_id:
-                                current_length = ORFNodeVector[2]
-                                centroid_genome_id = genome_id
-                                centroid_local_id = local_id
-                                current_hash = seq_hash
-            # if no new centroids assigned, pass
-            if current_length == 0:
-                continue
+            # only hold lengths of genes that are not in a cluster
+            if ORF_ID_str not in seq_to_cluster:
+                seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
+                current_hash = DBG.rb_hash(seq)
+                ORF_length_map[ORF_ID_str] = (ORFNodeVector[2], current_hash)
 
-        # access ORF information for centroid from high_scoring_ORFs
-        ORFNodeVector = high_scoring_ORFs[centroid_genome_id][centroid_local_id]
-        pan_centroid_ID = str(centroid_genome_id) + "_0_" + str(centroid_local_id)
+            if ORF_ID_str in cluster_dict:
+                # access ORF information for centroid from high_scoring_ORFs
+                pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
 
-        # generate hash for later comparisons if not already generated
-        if current_hash is None:
-            seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
-            current_hash = DBG.rb_hash(seq)
+                # make sure ORF wasn't removed after centroid scored
+                if pan_centroid_ID in ORFs_to_remove:
+                    continue
 
-        # add information to cluster_centroid_data
-        cluster_centroid_data[cluster_id] = {
-            'ORF_info': ORFNodeVector,
-            'hash': current_hash,
-        }
+                # add information to cluster_centroid_data
+                cluster_centroid_data[cluster_id] = {
+                    'ORF_info': ORFNodeVector,
+                    'hash': current_hash,
+                }
 
-        # append centroid to cluster
-        cluster_centroids[cluster_id] = pan_centroid_ID
+                # append centroid to cluster
+                cluster_centroids[cluster_id] = pan_centroid_ID
 
-        # for each ORF, add ORF_id and cluster_id to respective dictionaries
-        for ORF_ID_pair in ORF_list:
-            # generate a panaroo sequence ID for current ORF
+                # for each ORF, add ORF_id and cluster_id to respective dictionaries
+                for ORF_ID_pair in cluster_dict[ORF_ID_str]:
+                    # generate a panaroo sequence ID for current ORF
+                    genome_id = ORF_ID_pair[0]
+                    local_id = ORF_ID_pair[1]
+
+                    pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
+
+                    # make sure ORF wasn't removed after centroid scored
+                    if pan_ORF_id in ORFs_to_remove:
+                        continue
+
+                    # only hold lengths of genes that are not in a cluster
+                    if ORF_ID_str in ORF_length_map:
+                        del ORF_length_map[ORF_ID_str]
+
+                    # index sequences to clusters and the number of edges they have
+                    seq_to_cluster[pan_ORF_id] = [cluster_id, 0]
+                    cluster_members[cluster_id].append(pan_ORF_id)
+
+                cluster_id += 1
+                del cluster_dict[ORF_ID_str]
+
+    # determine if any clusters have not been added as centroid was removed, add a new centroid
+    for centroid, ORF_IDs in cluster_dict.items():
+        current_centroid = ""
+        current_length = 0
+        current_hash = 0
+        cluster_list = []
+        
+        # iterate through, if in ORF_length_map then is real ORF
+        for ORF_ID_pair in ORF_IDs:
             genome_id = ORF_ID_pair[0]
             local_id = ORF_ID_pair[1]
 
-            # check if ORF is present in high_scoring_ORFs
-            if local_id not in high_scoring_ORFs[genome_id]:
-                continue
-
             pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
 
-            # index sequences to clusters
-            seq_to_cluster[pan_ORF_id] = cluster_id
-            cluster_members[cluster_id].append(pan_ORF_id)
+            if pan_ORF_id in ORF_length_map:
+                new_centroid = False
+                length, hash = ORF_length_map[pan_ORF_id]
+                
+                # add to seq_to_cluster for new ORFs
+                seq_to_cluster[pan_ORF_id] = [cluster_id, 0]
 
-        cluster_id += 1
+                # assign centroid first on length, then hash, then genome index
+                if length > current_length:
+                    new_centroid = True
+                elif length == current_length:
+                    if hash < current_hash:
+                        new_centroid = True
+                    elif hash == current_hash:
+                        centroid_genome_ID = int(current_centroid.split("_")[0])
+                        if genome_id < centroid_genome_ID:
+                            new_centroid = True
+                
+                # add to end if not centroid
+                if new_centroid == True:
+                    if current_centroid != "":
+                        cluster_list.append(current_centroid)
+                    current_centroid = pan_ORF_id
+                    current_length = length
+                    current_hash = hash
+                else:
+                    cluster_list.append(pan_ORF_id)
+
+        # add only if other genes found in cluster
+        if current_centroid != "":
+            # ensure centroid at start of list
+            cluster_list = [current_centroid] + cluster_list
+
+            # add cluster member
+            cluster_members[cluster_id] = cluster_list
+            cluster_centroids[cluster_id] = current_centroid
+            
+            # index sequences to clusters and the number of edges they have
+            cluster_id += 1
+
 
     # clear cluster_dict
     cluster_dict.clear()
@@ -113,6 +142,9 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
     centroid_context = defaultdict(list)
     n_nodes = len(cluster_members)
 
+    # hold which nodes hold genes from different colours
+    colour_to_nodes = {}
+
     # iterating over each cluster, adding edges between clusters that each have a connection
     for current_cluster, ORF_members in cluster_members.items():
         # check if cluster is currently in graph
@@ -120,6 +152,8 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
         # check if current cluster contains paralogs
         has_paralogs = True if current_cluster in paralogs else False
+
+        ORFNodeVector = cluster_centroid_data[current_cluster]['ORF_info']
 
         for ORF_id in ORF_members:
             # parse genome id and local ORF id
@@ -132,7 +166,6 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
 
             if add_cluster:
                 if has_paralogs:
-                    ORFNodeVector = high_scoring_ORFs[genome_id][local_id]
                     seq = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                     seq_hash = DBG.rb_hash(seq)
                     # create a new paralog
@@ -142,7 +175,7 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                         cluster_centroids[current_cluster]].append(
                         (cluster_to_add, genome_id, seq_hash))
                     # overwrite seq_to_cluster for current ORF
-                    seq_to_cluster[ORF_id] = cluster_to_add
+                    seq_to_cluster[ORF_id][0] = cluster_to_add
                 G.add_node(
                     cluster_to_add,
                     CID=cluster_to_add,
@@ -152,14 +185,14 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                     members=intbitset([genome_id]),
                     seqIDs=set([ORF_id]),
                     hasEnd=False,
-                    ORF_info=[(cluster_centroid_data[current_cluster]['ORF_info'][0],
-                               cluster_centroid_data[current_cluster]['ORF_info'][1])],
+                    ORF_info=[(ORFNodeVector[0],
+                               ORFNodeVector[1])],
                     hash=[cluster_centroid_data[current_cluster]['hash']],
                     annotation='',
                     bitscore=0,
                     description='',
                     lengths=[
-                        cluster_centroid_data[current_cluster]['ORF_info'][2]
+                        ORFNodeVector[2]
                     ],
                     paralog=has_paralogs,
                     mergedDNA=False)
@@ -167,57 +200,64 @@ def generate_network(DBG, overlap, high_scoring_ORFs, high_scoring_ORF_edges, cl
                 # otherwise can stop adding clusters
                 if not has_paralogs:
                     add_cluster = False
-
+                
+                # add to colour_to_nodes
+                if genome_id not in colour_to_nodes:
+                    colour_to_nodes[genome_id] = set()
+                colour_to_nodes[genome_id].add(cluster_to_add)
             else:
                 # check if ORF_id already added to the cluster
                 if ORF_id not in G.nodes[current_cluster]['seqIDs']:
                     G.nodes[current_cluster]['size'] += 1
                     G.nodes[current_cluster]['members'].add(genome_id)
                     G.nodes[current_cluster]['seqIDs'].add(ORF_id)
+            
 
-    # Iterate over all nodes in graph, and add edges
-    for node in G.nodes():
-        # hold dict to determine which ORFs have less than two edges
-        single_edge = {}
+    # iterative over each colour, adding edges between nodes with genes of that colour
+    for colour_id, node_set in colour_to_nodes.items():
+        ORF_edges = ggCaller_cpp.read_edge_file(Edge_file_paths[colour_id])
+        for node in node_set:                        
+            for index, ORF_id in enumerate(G.nodes[node]['seqIDs']):
+                parsed_id = ORF_id.split("_")
 
-        for ORF_id in G.nodes[node]['seqIDs']:
-            # add to single_edge if not present, remove if present
-            if ORF_id not in single_edge:
-                single_edge[ORF_id] = 1
-            else:
-                single_edge[ORF_id] += 1
+                # ensure colours between ORF and file match
+                genome_id = int(parsed_id[0])
+                if genome_id != colour_id:
+                    continue
 
-            parsed_id = ORF_id.split("_")
-            genome_id = int(parsed_id[0])
-            local_id = int(parsed_id[-1])
+                local_id = int(parsed_id[-1])
 
-            # if edge present between ORFs add, otherwise pass
-            if local_id in high_scoring_ORF_edges[genome_id]:
-                edge_set = high_scoring_ORF_edges[genome_id][local_id]
-            else:
-                continue
-
-            for neighbour in edge_set:
-                pan_neigbour_id = str(genome_id) + "_0_" + str(neighbour)
-
-                # ensure neighbour is high scoring ORF, otherwise ignore
-                if pan_neigbour_id in seq_to_cluster:
-                    neighbour_cluster = seq_to_cluster[pan_neigbour_id]
+                # if edge present between ORFs add, otherwise pass
+                if local_id in ORF_edges:
+                    edge_set = ORF_edges[local_id]
                 else:
                     continue
 
-                # add edge between current ORF and neighbour
-                if G.has_edge(node, neighbour_cluster):
-                    G[node][neighbour_cluster]['size'] += 1
-                    G[node][neighbour_cluster]['members'].add(genome_id)
-                else:
-                    G.add_edge(node,
-                               neighbour_cluster,
-                               size=1,
-                               members=intbitset([genome_id]))
-        for ORF_id, count in single_edge.items():
-            if count == 1:
-                G.nodes[node]['hasEnd'] = True
-                break
+                for neighbour in edge_set:
+                    pan_neigbour_id = str(genome_id) + "_0_" + str(neighbour)
+
+                    # ensure neighbour is high scoring ORF, otherwise ignore
+                    if pan_neigbour_id in seq_to_cluster:
+                        neighbour_cluster = seq_to_cluster[pan_neigbour_id][0]
+                        # update edge count for ORF
+                        seq_to_cluster[pan_neigbour_id][1] += 1
+                        seq_to_cluster[ORF_id][1] += 1
+                    else:
+                        continue
+
+                    # add edge between current ORF and neighbour
+                    if G.has_edge(node, neighbour_cluster):
+                        G[node][neighbour_cluster]['size'] += 1
+                        G[node][neighbour_cluster]['members'].add(genome_id)
+                    else:
+                        G.add_edge(node,
+                                neighbour_cluster,
+                                size=1,
+                                members=intbitset([genome_id]))
+
+    # iterate over seq_to_cluster, identifying nodes that have ends
+    for ORF_ID, cluster_list in seq_to_cluster.items():
+            if cluster_list[1] < 2:
+                G.nodes[cluster_list[0]]['hasEnd'] = True
 
     return G, centroid_context
