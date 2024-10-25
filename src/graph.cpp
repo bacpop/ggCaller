@@ -363,7 +363,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
     cout << endl;
 
     // keep track of all genes that are low scoring
-    std::unordered_set<std::string> ORFs_to_remove;
+    std::unordered_map<size_t, std::unordered_set<int>> ORFs_present;
 
     // generate clusters if required
     if (clustering || !no_filter)
@@ -512,8 +512,6 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                     ia >> ORF_map;
                 }
 
-                std::unordered_set<std::string> ORFs_to_remove_private;
-
                 // remove all low scoring ORFs if present in colour
                 const auto& removal = to_remove.find(colour_ID);
                 if (removal != to_remove.end())
@@ -550,7 +548,6 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         if (std::get<4>(ORF_info) < minimum_ORF_score)
                         {
                             ORF_map.erase(ORF_ID.first);
-                            ORFs_to_remove_private.insert(ORF_ID_str);
                         }
                     }
                 }
@@ -567,7 +564,6 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                 #pragma omp critical
                 {
                     bar2.update();
-                    ORFs_to_remove.insert(ORFs_to_remove_private.begin(), ORFs_to_remove_private.end());
                 }
             }
         }
@@ -606,7 +602,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                 ia >> ORF_map;
             }
 
-            std::unordered_set<std::string> ORFs_to_remove_private;
+            std::unordered_set<int> ORFs_present_private;
 
             // get whether colour is reference or not
             bool is_ref = ((bool)_RefSet[colour_ID]) ? true : false;
@@ -661,17 +657,12 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                             {
                                 // simplify ORF_info
                                 simplify_ORFNodeVector(ORF_map[ORF_ID], overlap);
-                                // issue is here, genes in cluster_map are lost if are too low scoring
                                 gene_map[ORF_ID] = std::move(ORF_map[ORF_ID]);
+
+                                // keep track of genes that are present
+                                ORFs_present_private.insert(ORF_ID);
                             }
                         }
-                    }
-
-                    // go over remaining ORFs and add to ORFs_to_remove
-                    for (const auto& ORF_entry : ORF_map)
-                    {
-                        std::string ORF_ID_str = std::to_string(colour_ID) + "_" + std::to_string(ORF_entry.first);
-                        ORFs_to_remove_private.insert(ORF_ID_str);
                     }
                 } else
                 {
@@ -682,6 +673,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         simplify_ORFNodeVector(entry.second, overlap);
                         gene_map[entry.first] = std::move(entry.second);
                         gene_paths.push_back({entry.first});
+                        ORFs_present_private.insert(entry.first);
                     }
                 }
             } else
@@ -693,6 +685,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                     simplify_ORFNodeVector(entry.second, overlap);
                     gene_map[entry.first] = std::move(entry.second);
                     gene_paths.push_back({entry.first});
+                    ORFs_present_private.insert(entry.first);
                 }
             }
 
@@ -789,18 +782,18 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
             #pragma omp critical
             {
                 bar.update();
-                ORFs_to_remove.insert(ORFs_to_remove_private.begin(), ORFs_to_remove_private.end());
+                ORFs_present[colour_ID] = std::move(ORFs_present_private);
             }
         }
     }
 
-    // write ORFs_to_remove
+    // write ORFs_present
     {
-        std::ofstream ofs(cluster_file + ".rem");
+        std::ofstream ofs(cluster_file + ".pres");
         boost::archive::text_oarchive oa(ofs);
         // write class instance to archive
 
-        oa << ORFs_to_remove;
+        oa << ORFs_present;
     }
 
     // add line for progress bar
@@ -927,24 +920,24 @@ void Graph::_index_graph (const std::vector<std::string>& stop_codons_for,
     _stop_freq= stop_codon_freq;
 }
 
-std::pair<ORFClusterMap, std::unordered_set<std::string>> read_cluster_file(const std::string& cluster_file)
+std::pair<ORFClusterMap, std::unordered_map<size_t, std::unordered_set<int>>> read_cluster_file(const std::string& cluster_file)
 {
-    ORFClusterMap cluster_pair;
-    std::unordered_set<std::string> ORFs_to_remove;
+    ORFClusterMap cluster_map;
+    std::unordered_map<size_t, std::unordered_set<int>> ORFs_present;
 
     {
         std::ifstream ifs(cluster_file);
         boost::archive::text_iarchive ia(ifs);
-        ia >> cluster_pair;
+        ia >> cluster_map;
     }
 
     {
-        std::ifstream ifs(cluster_file + ".rem");
+        std::ifstream ifs(cluster_file + ".pres");
         boost::archive::text_iarchive ia(ifs);
-        ia >> ORFs_to_remove;
+        ia >> ORFs_present;
     }
 
-    return std::make_pair(cluster_pair, ORFs_to_remove);
+    return std::make_pair(cluster_map, ORFs_present);
 }
 
 ORFNodeMap read_ORF_file(const std::string& ORF_file)

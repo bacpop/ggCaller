@@ -218,7 +218,7 @@ std::pair<RefindMap, bool> refind_gene(const size_t& colour_ID,
     boost::dynamic_bitset<> _RefSet;
 };
 
-std::pair<ORFClusterMap, std::unordered_set<std::string>> read_cluster_file(const std::string& cluster_file);
+std::pair<ORFClusterMap, std::unordered_map<size_t, std::unordered_set<int>>> read_cluster_file(const std::string& cluster_file);
 
 ORFNodeMap read_ORF_file(const std::string& ORF_file);
 

@@ -136,8 +136,6 @@ def search_graph(search_pair,
     graph_existing_shm = shared_memory.SharedMemory(name=graph_shd_arr_tup.name)
     graph_shd_arr = np.ndarray(graph_shd_arr_tup.shape, dtype=graph_shd_arr_tup.dtype, buffer=graph_existing_shm.buf)
 
-    # sort items to preserve order
-    conflicts = {k: v for k, v in sorted(dicts["conflicts"].items(), key=lambda item: item[0])}
     node_search_dict = dicts["searches"]
 
     node_locs = {}
@@ -145,11 +143,11 @@ def search_graph(search_pair,
     # keep track of regions already with genes to avoid re-traversal
     to_avoid = set()
 
-    # mask regions that already have genes
-    for node, ORF_ID in conflicts.items():
+    # mask regions that already have genes, with sorted list to preserve order
+    for node in sorted(dicts["conflicts"].keys()):
         
         # read in ORF information
-        ORF_info = ORF_map[ORF_ID]
+        ORF_info = ORF_map[dicts["conflicts"][node]]
 
         # determine sequence overlap of ORFs
         for i, node_coords in enumerate(ORF_info[1]):

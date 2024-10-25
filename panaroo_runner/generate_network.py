@@ -7,7 +7,7 @@ import ggCaller_cpp
 def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file):
     # read in cluster_dict
     # TODO save pair here that holds ORFs removed for low scores after centroid scored
-    cluster_dict, ORFs_to_remove = ggCaller_cpp.read_cluster_file(cluster_file)
+    cluster_dict, ORFs_present = ggCaller_cpp.read_cluster_file(cluster_file)
 
     # associate sequences with their clusters
     seq_to_cluster = {}
@@ -36,7 +36,7 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                 pan_centroid_ID = str(colour_ID) + "_0_" + str(ORF_ID)
 
                 # make sure ORF wasn't removed after centroid scored
-                if pan_centroid_ID in ORFs_to_remove:
+                if ORF_ID not in ORFs_present[colour_ID]:
                     continue
 
                 # add information to cluster_centroid_data
@@ -57,12 +57,12 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
                     pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
 
                     # make sure ORF wasn't removed after centroid scored
-                    if pan_ORF_id in ORFs_to_remove:
+                    if local_id not in ORFs_present[genome_id]:
                         continue
 
                     # only hold lengths of genes that are not in a cluster
-                    if ORF_ID_str in ORF_length_map:
-                        del ORF_length_map[ORF_ID_str]
+                    if pan_ORF_id in ORF_length_map:
+                        del ORF_length_map[pan_ORF_id]
 
                     # index sequences to clusters and the number of edges they have
                     seq_to_cluster[pan_ORF_id] = [cluster_id, 0]
@@ -84,6 +84,9 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
             local_id = ORF_ID_pair[1]
 
             pan_ORF_id = str(genome_id) + "_0_" + str(local_id)
+
+            if local_id not in ORFs_present[genome_id]:
+                continue
 
             if pan_ORF_id in ORF_length_map:
                 new_centroid = False
@@ -127,7 +130,8 @@ def generate_network(DBG, overlap, ORF_file_paths, Edge_file_paths, cluster_file
 
 
     # clear cluster_dict
-    cluster_dict.clear()
+    del cluster_dict
+    del ORFs_present
 
     # determine paralogs if required
     paralogs = set()
