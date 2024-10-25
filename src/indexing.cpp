@@ -466,7 +466,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     kseq_destroy(seq);
     gzclose(fp);
 
-    sdsl::construct(ref_index, idx_file_name, cache_config, 8); // generate index from file
+    sdsl::construct(ref_index, idx_file_name, cache_config, 1); // generate index from file
     sdsl::store_to_file(ref_index, idx_file_name); // save it
 }
 
