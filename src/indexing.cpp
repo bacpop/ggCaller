@@ -368,7 +368,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     const auto idx_file_name = path_dir + base_filename + ".fmp";
 
     // set temp dir for sdsl
-    sdsl::cache_config cache_config(true, path_dir);
+    sdsl::cache_config cache_config(true, path_dir.substr(0, path_dir.size() - 1));
 
     // open the file handler
     gzFile fp = gzopen(fasta_file.c_str(), "r");
