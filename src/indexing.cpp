@@ -369,6 +369,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
 
     // set temp dir for sdsl
     sdsl::cache_config cache_config(true, path_dir.substr(0, path_dir.size() - 1));
+    cache_config.id = std::to_string(colour_ID);
 
     // open the file handler
     gzFile fp = gzopen(fasta_file.c_str(), "r");
@@ -458,6 +459,7 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             }
         }
 
+        cout << "Checkpoint 1.0" << endl;
         sdsl::store_to_file(genome_path, idx_file_name);
     }
     
