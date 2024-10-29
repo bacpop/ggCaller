@@ -459,7 +459,6 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
             }
         }
 
-        cout << "Checkpoint 1.0" << endl;
         sdsl::store_to_file(genome_path, idx_file_name);
     }
     
