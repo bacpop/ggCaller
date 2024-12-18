@@ -10,7 +10,7 @@ from ggCaller.shared_memory import *
 from Bio import Seq
 from panaroo_runner.set_default_args import *
 from panaroo_runner.__main__ import run_panaroo
-from panaroo_runner.generate_output import print_ORF_calls
+from panaroo_runner.generate_output import print_ORF_calls, generate_GFF
 from panaroo_runner.annotate import check_diamond_install, check_HMMER_install, generate_HMMER_index, \
     generate_diamond_index
 from collections import defaultdict
@@ -69,6 +69,10 @@ def get_options():
               "output. Off by default as it uses a large amount of space."),
         action='store_true',
         default=False)
+    IO.add_argument('--gene-finding-only',
+                    action="store_true",
+                    default=False,
+                    help='Only run ggCaller gene-finding and generate a gff compatible with other clustering tools.')
     IO.add_argument('--out',
                     default='ggCaller_output',
                     help='Output directory ')
@@ -535,7 +539,7 @@ def main():
         cPickle.dump(ORF_file_paths, o)
 
     # generate ORF clusters
-    if not options.no_clustering:
+    if not options.no_clustering and not options.gene_finding_only:
         with SharedMemoryManager() as smm:
             # generate shared numpy arrays
             total_arr = np.array([graph])
@@ -553,6 +557,29 @@ def main():
                             options.truncation_threshold, options.save, options.refind, Path_dir)
 
     else:
+        if any(ref_list):
+            contig_annotation = defaultdict(list)
+            isolate_names = [
+                os.path.splitext(os.path.basename(x))[0] for x in input_colours
+            ]
+
+            # iterate over nodes and add placeholder information
+            for colour_ID, file_path in ORF_file_paths.items():
+                # ensure entry is genome, not reads
+                if ref_list[colour_ID]:
+                    ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+                    for ORF_ID, ORFNodeVector in ORF_map.items():
+                        node_bitscore = 0
+                        source = "prediction"
+                        node_annotation = "hypothetical protein"
+                        node_description = "hypothetical protein"
+
+                        annotation = (source, node_annotation, node_bitscore, node_description)
+                        contig_annotation[colour_ID].append((ORF_ID, annotation))
+
+            generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
+                     overlap, options.no_write_idx, ref_list, options.threads, Path_dir)
+
         print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
                         input_colours, overlap, graph)
 

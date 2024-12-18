@@ -389,7 +389,7 @@ def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_ann
         outfile = GFF_dir + isolate_names[colour] + ".gff"
 
         with open(outfile, "w") as out_handle:
-            GFF.write(gff_record_list, out_handle)
+            GFF.write(gff_record_list, out_handle, include_fasta=True)
 
     return
 
