@@ -376,7 +376,7 @@ def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_ann
                                            .replace(";", " ")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][0], entry[1][0][1], strand=strand),
+                        FeatureLocation(entry[1][0][0] + 1, entry[1][0][1], strand=strand),
                         type="CDS", qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
