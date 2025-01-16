@@ -120,7 +120,7 @@ std::pair<ContigLoc, bool> get_ORF_coords(const std::string& query,
     if (query_loc >= 0)
     {
         // go through contig_locs to determine in which contig sequence sits
-        for (int i = 0; i < contig_locs.size(); i++)
+        for (size_t i = 0; i < contig_locs.size(); i++)
         {
             if (query_loc < contig_locs.at(i))
             {
@@ -131,7 +131,7 @@ std::pair<ContigLoc, bool> get_ORF_coords(const std::string& query,
                 } else
                 {
                     // account for 1-indexing
-                    size_t relative_loc = ((query_loc - 1) - contig_locs.at(i - 1));
+                    int relative_loc = ((query_loc - 1) - contig_locs.at(i - 1));
                     contig_loc = {i + 1, {(relative_loc - 1), relative_loc + query.size()}};
                 }
                 break;

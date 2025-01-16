@@ -81,7 +81,7 @@ typedef std::vector<std::vector<size_t>> NodeColourVector;
 //a pair of start and end coordinates for an ORF across a node
 typedef std::pair<unsigned int, unsigned int> indexPair;
 // pair that describes the contig locations of an ORF, 1-indexed for contig id (first) and locations within contig (second)
-typedef std::pair<size_t, std::pair<size_t, size_t>> ContigLoc;
+typedef std::pair<size_t, std::pair<int, int>> ContigLoc;
 // tuple holding ORF path ID, nodes traversed, node coordinates, coordinates in path, 5p and 3p coordinates
 typedef std::pair<std::vector<int>, std::vector<indexPair>> ORFCoords;
 // tuple containing a vector of nodeIDs, a vector of start,stop and length coordinates, length of an ORF, relative strand and score and strings for protein/DNA
