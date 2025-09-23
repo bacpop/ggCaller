@@ -186,34 +186,42 @@ def custom_stringizer(value):
     return buf.getvalue()
 
 
-def back_translate_dir(high_scoring_ORFs, isolate_names, annotation_dir, overlap, shd_arr_tup, pool):
+def back_translate_dir(ORF_file_paths, isolate_names, annotation_dir, overlap, shd_arr_tup, pool):
     # iterate over all files in annotation directory multithreaded
     pool.map(partial(back_translate, isolate_names=isolate_names, shd_arr_tup=shd_arr_tup,
-                     high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, annotation_dir=annotation_dir),
+                     ORF_file_paths=ORF_file_paths, overlap=overlap, annotation_dir=annotation_dir),
              os.listdir(annotation_dir))
 
     return True
 
 
-def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate_names, overlap):
+def back_translate(file, annotation_dir, shd_arr_tup, ORF_file_paths, isolate_names, overlap):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
     shd_arr = np.ndarray(shd_arr_tup.shape, dtype=shd_arr_tup.dtype, buffer=existing_shm.buf)
 
     file = os.path.join(annotation_dir, file)
 
-    output_sequences = []
+    # iterate over entries and parse by colour
+    sequence_dict = defaultdict(list)
     with open(file, "r") as handle:
         for record in SeqIO.parse(handle, "fasta"):
             record_ID = record.id
             protein = str(record.seq)
             mem = int(record_ID.split("_")[0])
             ORF_ID = int(record_ID.split("_")[-1])
-            ORFNodeVector = high_scoring_ORFs[mem][ORF_ID]
+            sequence_dict[mem].append((ORF_ID, protein))
+    
+    output_sequences = []
+    # iterate over input files and generate back-translated sequences
+    for colour, ORF_list in sequence_dict.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
+        for ORF_ID, protein in ORF_list:
+            ORFNodeVector = ORF_map[ORF_ID]
 
-            # parse DNA sequence
+            # generate DNA sequence
             if ORF_ID < 0:
-                dna = ORFNodeVector[5]
+                dna = ORFNodeVector[6]
             else:
                 dna = shd_arr[0].generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
 
@@ -247,29 +255,40 @@ def back_translate(file, annotation_dir, shd_arr_tup, high_scoring_ORFs, isolate
     return
 
 
-def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, truncation_threshold=0, G=None):
+def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, truncation_threshold=0, G=None, ids_len_stop=None):
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
     ]
     DNA_records = []
     aa_records = []
-    if G == None:
-        for colour, gene_dict in high_scoring_ORFs.items():
-            for ORF_ID, ORFNodeVector in gene_dict.items():
+    if G == None or ids_len_stop == None:
+        for colour, file_path in ORF_file_paths.items():
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+            for ORF_ID, ORFNodeVector in ORF_map.items():
                 gene = DBG.generate_sequence(ORFNodeVector[0], ORFNodeVector[1], overlap)
                 DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID),
                                              description=""))
                 aa_records.append(SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID),
                                             description=""))
     else:
-        for node in G.nodes():
-            node_annotation = G.nodes[node]["description"]
-            length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
-            for sid in G.nodes[node]['seqIDs']:
-                # if sid not in centroid_sequence_ids:
-                colour = int(sid.split("_")[0])
-                ORF_ID = int(sid.split("_")[-1])
-                ORF_info = high_scoring_ORFs[colour][ORF_ID]
+        for colour, file_path in ORF_file_paths.items():
+            to_remove = set()
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
+            for ORF_ID, ORF_info in ORF_map.items():
+                delim = "_0_" if ORF_ID >= 0 else "_refound_"
+                pan_ORF_id = str(colour) + delim + str(ORF_ID)
+                # if pan_ORF_id not in ORF_map means has been removed so remove it from ORF_map
+                node = ids_len_stop[pan_ORF_id][2]
+                if node == -1:
+                    to_remove.add(ORF_ID)
+                    del ids_len_stop[pan_ORF_id]
+                    continue
+                node_annotation = G.nodes[node]["description"]
+                length_centroid = G.nodes[node]['lengths'][G.nodes[node]['maxLenId']]
+
+                # generate output sequences
                 gene = DBG.generate_sequence(ORF_info[0], ORF_info[1], overlap)
                 ORF_len = ORF_info[2]
                 gene_annotation = node_annotation
@@ -278,22 +297,27 @@ def print_ORF_calls(high_scoring_ORFs, outfile, input_colours, overlap, DBG, tru
                                         or ORF_len % 3 != 0)):
                     gene_annotation += " (potential psuedogene)"
                 DNA_records.append(SeqRecord(Seq(gene), id=isolate_names[colour] + "_" + str(ORF_ID),
-                                   description="ggcID=" + sid + ";" + gene_annotation))
+                                description="ggcID=" + pan_ORF_id + ";" + gene_annotation))
                 if (ORF_ID < 0):
                     aa_records.append(
-                        SeqRecord(Seq(ORF_info[4]), id=isolate_names[colour] + "_" + str(ORF_ID),
-                                        description="ggcID=" + sid + ";" + gene_annotation))
+                        SeqRecord(Seq(ORF_info[5]), id=isolate_names[colour] + "_" + str(ORF_ID),
+                                        description="ggcID=" + pan_ORF_id + ";" + gene_annotation))
                 else:
                     aa_records.append(
                         SeqRecord(Seq(gene).translate(), id=isolate_names[colour] + "_" + str(ORF_ID),
-                                        description="ggcID=" + sid + ";" + gene_annotation))
+                                        description="ggcID=" + pan_ORF_id + ";" + gene_annotation))
+            
+            # remove from ORF_map and save
+            for ORF_ID in to_remove:
+                del ORF_map[ORF_ID]
+            ggCaller_cpp.save_ORF_file(file_path, ORF_map)
     SeqIO.write(DNA_records, outfile + ".ffn", "fasta")
     SeqIO.write(aa_records, outfile + ".faa", "fasta")
     return
 
 
-def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_annotation, output_dir, overlap,
-                 write_idx, ref_list, num_threads):
+def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir, overlap,
+                 write_idx, ref_list, num_threads, Path_dir):
     # create directory for gffs
     GFF_dir = os.path.join(output_dir, "GFF")
     if not os.path.exists(GFF_dir):
@@ -302,14 +326,17 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
     GFF_dir = os.path.join(GFF_dir, "")
 
     # iterate over colours in contig_annotation, writing output file
-    for colour in range(len(input_colours)):
+    for colour, file_path in ORF_file_paths.items():
         # if colour is not reference, then cannot generate GFF
         if not ref_list[colour]:
             continue
+        
+        ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+
         # get coordinates for each ORF
-        ORF_IDs = [(high_scoring_ORFs[colour][i[0]][0], high_scoring_ORFs[colour][i[0]][1]) for i in
+        ORF_IDs = [(ORF_map[i[0]][0], ORF_map[i[0]][1]) for i in
                    contig_annotation[colour]]
-        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads)
+        ORF_coords = graph.ORF_location(ORF_IDs, input_colours[colour], overlap, write_idx, num_threads, Path_dir)
 
         # create data structure for each GFF entry
         GFF_entries = defaultdict(list)
@@ -349,7 +376,7 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
                                            .replace(";", " ")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][0], entry[1][0][1], strand=strand),
+                        FeatureLocation(entry[1][0][0] + 1, entry[1][0][1], strand=strand),
                         type="CDS", qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)
@@ -362,7 +389,7 @@ def generate_GFF(graph, high_scoring_ORFs, input_colours, isolate_names, contig_
         outfile = GFF_dir + isolate_names[colour] + ".gff"
 
         with open(outfile, "w") as out_handle:
-            GFF.write(gff_record_list, out_handle)
+            GFF.write(gff_record_list, out_handle, include_fasta=True)
 
     return
 
@@ -406,7 +433,7 @@ def output_dna_sequence(node_pair, shd_arr_tup, overlap):
 
     return ref_output_sequences
 
-def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, high_scoring_ORFs, overlap,
+def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, ORF_file_paths, overlap,
                               ref_aln, ignore_pseudogenes, truncation_threshold):
     # load shared memory items
     existing_shm = shared_memory.SharedMemory(name=shd_arr_tup.name)
@@ -421,26 +448,47 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
     # get outname for reference alignment file
     ref_outname = None
 
+    # iterate over entries and parse by colour
+    sequence_dict = defaultdict(list)
+    for pan_ORF_id in node["seqIDs"]:
+        mem = int(pan_ORF_id.split("_")[0])
+        ORF_ID = int(pan_ORF_id.split("_")[-1])
+        sequence_dict[mem].append(ORF_ID)
+    
+    # add centroids too, deals with paralogs which have centroid which is not in seqIDs
+    for pan_ORF_id in node["centroid"]:
+        mem = int(pan_ORF_id.split("_")[0])
+        ORF_ID = int(pan_ORF_id.split("_")[-1])
+        sequence_dict[mem].append(ORF_ID)
+    
+    # just get information for this cluster
+    ORF_info_dict = defaultdict(dict)
+    for colour, ORF_list in sequence_dict.items():
+        ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
+        for ORF_ID in ORF_list:
+            ORF_info = ORF_map[ORF_ID]
+            ORF_info_dict[colour][ORF_ID] = ORF_info
+
     # determine sequences to aligned
     if ignore_pseudogenes:
         length_centroid = node['lengths'][node['maxLenId']]
         # identify pseudogenes based on truncation threshold, and if annotated as
         # having premature stop or not multiple of 3 long
         sequence_ids = [x for x in node["seqIDs"] if
-                        not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
+                        not ((ORF_info_dict[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                               < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
-                                                                            (high_scoring_ORFs[int(x.split("_")[0])][
+                                                                            (ORF_info_dict[int(x.split("_")[0])][
                                                                                  int(x.split("_")[-1])][3] is True or
-                                                                             high_scoring_ORFs[int(x.split("_")[0])][
+                                                                             ORF_info_dict[int(x.split("_")[0])][
                                                                                  int(x.split("_")[-1])][2] % 3 != 0
                                                                              )))]
         centroid_sequence_ids = set(
             [x for x in node["centroid"] if
-             not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
+             not ((ORF_info_dict[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                    < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
-                                                                 (high_scoring_ORFs[int(x.split("_")[0])][
+                                                                 (ORF_info_dict[int(x.split("_")[0])][
                                                                       int(x.split("_")[-1])][3] is True or
-                                                                  high_scoring_ORFs[int(x.split("_")[0])][
+                                                                  ORF_info_dict[int(x.split("_")[0])][
                                                                       int(x.split("_")[-1])][2] % 3 != 0
                                                                   )))])
 
@@ -455,7 +503,7 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
             if centroid_id in centroid_sequence_ids:
                 colour = int(centroid_id.split('_')[0])
                 ORF_ID = int(centroid_id.split('_')[-1])
-                ORF_info = high_scoring_ORFs[colour][ORF_ID]
+                ORF_info = ORF_info_dict[colour][ORF_ID]
                 if ORF_ID < 0:
                     protein = Seq(ORF_info[4])
                 else:
@@ -492,9 +540,9 @@ def output_alignment_sequence(node_pair, temp_directory, outdir, shd_arr_tup, hi
         colour = int(seq.split('_')[0])
         ORF_ID = int(seq.split('_')[-1])
         # generate protein sequence. If refound, add found protein sequence from find_missing.py
-        ORF_info = high_scoring_ORFs[colour][ORF_ID]
+        ORF_info = ORF_info_dict[colour][ORF_ID]
         if ORF_ID < 0:
-            protein = Seq(ORF_info[4])
+            protein = Seq(ORF_info[5])
         else:
             protein = Seq(shd_arr[0].generate_sequence(ORF_info[0], ORF_info[1], overlap)).translate()
 
@@ -910,7 +958,7 @@ def generate_common_struct_presence_absence(G,
 
 
 def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
-                                  isolate_names, shd_arr_tup, high_scoring_ORFs, overlap, ref_aln,
+                                  isolate_names, shd_arr_tup, ORF_file_paths, overlap, ref_aln,
                                   call_variants, verbose, ignore_pseudogenes, truncation_threshold, pool):
     unaligned_sequence_files = []
     unaligned_reference_files = []
@@ -924,7 +972,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
+                                                 ORF_file_paths=ORF_file_paths, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseudogenes=ignore_pseudogenes,
                                                  truncation_threshold=truncation_threshold),
                                          G.nodes(data=True)):
@@ -984,7 +1032,7 @@ def generate_pan_genome_alignment(G, temp_dir, output_dir, threads,
                               threads, "def", not verbose)
 
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
+    back_translate_dir(ORF_file_paths, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
                        pool)
 
     # call variants using snp-sites
@@ -1007,22 +1055,37 @@ def get_unannotated_nodes(G):
     return unannotated_nodes
 
 
-def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold):
+def get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, ORF_file_paths, truncation_threshold):
     # Get the core genes based on percent threshold
     core_nodes = []
     for node in G.nodes(data=True):
         node_data = node[1]
         if float(node_data["size"]) / float(num_isolates) >= threshold:
+            # iterate over entries and parse by colour
+            sequence_dict = defaultdict(list)
+            for pan_ORF_id in node_data["seqIDs"]:
+                mem = int(pan_ORF_id.split("_")[0])
+                ORF_ID = int(pan_ORF_id.split("_")[-1])
+                sequence_dict[mem].append(ORF_ID)
+            
+            # just get information for this cluster
+            ORF_info_dict = defaultdict(dict)
+            for colour, ORF_list in sequence_dict.items():
+                ORF_map = ggCaller_cpp.read_ORF_file(ORF_file_paths[colour])
+                for ORF_ID in ORF_list:
+                    ORF_info = ORF_map[ORF_ID]
+                    ORF_info_dict[colour][ORF_ID] = ORF_info
+            
             if ignore_pseudogenes:
                 length_centroid = node_data['lengths'][node_data['maxLenId']]
                 sequence_ids = [x for x in node_data["seqIDs"] if
-                            not ((high_scoring_ORFs[int(x.split("_")[0])][int(x.split("_")[-1])][2]
+                            not ((ORF_info_dict[int(x.split("_")[0])][int(x.split("_")[-1])][2]
                                   < length_centroid * truncation_threshold) or (int(x.split("_")[-1]) < 0 and
-                                                                                (high_scoring_ORFs[
+                                                                                (ORF_info_dict[
                                                                                      int(x.split("_")[0])][
                                                                                      int(x.split("_")[-1])][
                                                                                      3] is True or
-                                                                                 high_scoring_ORFs[
+                                                                                 ORF_info_dict[
                                                                                      int(x.split("_")[0])][
                                                                                      int(x.split("_")[-1])][2] % 3 != 0
                                                                                  )))]
@@ -1107,7 +1170,7 @@ def concatenate_core_genome_alignments(core_names, output_dir, isolate_names, th
 
 
 def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
-                                   isolate_names, threshold, num_isolates, shd_arr_tup, high_scoring_ORFs,
+                                   isolate_names, threshold, num_isolates, shd_arr_tup, ORF_file_paths,
                                    overlap, ref_aln, call_variants, verbose,
                                    ignore_pseudogenes, truncation_threshold, pool):
     unaligned_sequence_files = []
@@ -1120,13 +1183,13 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         os.mkdir(output_dir + "alignments")
 
     # Get core nodes
-    core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, high_scoring_ORFs, truncation_threshold)
+    core_genes = get_core_gene_nodes(G, threshold, num_isolates, ignore_pseudogenes, ORF_file_paths, truncation_threshold)
     core_gene_names = ["CID_" + str(G.nodes[x[0]]["CID"]) for x in core_genes]
 
     # Multithread writing gene sequences to disk (temp directory) so aligners can find them
     for outname, ref_outname in pool.map(partial(output_alignment_sequence,
                                                  temp_directory=temp_dir, outdir=output_dir, shd_arr_tup=shd_arr_tup,
-                                                 high_scoring_ORFs=high_scoring_ORFs, overlap=overlap, ref_aln=ref_aln,
+                                                 ORF_file_paths=ORF_file_paths, overlap=overlap, ref_aln=ref_aln,
                                                  ignore_pseudogenes=ignore_pseudogenes,
                                                  truncation_threshold=truncation_threshold),
                                          core_genes):
@@ -1187,7 +1250,7 @@ def generate_core_genome_alignment(G, temp_dir, output_dir, threads,
         multi_align_sequences(commands, output_dir + "alignments/",
                               threads, "def", not verbose)
     # back translate sequences
-    back_translate_dir(high_scoring_ORFs, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
+    back_translate_dir(ORF_file_paths, isolate_names, output_dir + "alignments/", overlap, shd_arr_tup,
                        pool)
 
     # call variants using snp-sites

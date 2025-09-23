@@ -21,7 +21,7 @@ vector<size_t> sort_indexes(vector<torch::Tensor> &v) {
 
 torch::Tensor tokenized_aa_seq(const std::string& aa_seq)
 {
-    std::vector<int> tokens = (tokenise(aa_seq).out());
+    std::vector<int> tokens = tokenise(aa_seq);
 
     std::vector<torch::Tensor> padded_stack;
 
@@ -79,7 +79,7 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
 
                 for (const auto &c : combined)
                 {
-                    encoded.push_back(nuc_encode(c).out());
+                    encoded.push_back(nuc_encode(c));
                 }
 
                 // ensure sequence is padded if too short
@@ -132,7 +132,7 @@ std::vector<float> score_TIS (const std::vector<std::tuple<std::string, std::str
         auto& TIS_prob = TIS_scores[pos];
 
         // encode start codon
-        const auto start_codon = start_encode(downstream.substr(0,3)).out();
+        const auto start_codon = start_encode(downstream.substr(0,3));
 
         const float ATG = ((start_codon == 0) ? 1 : 0) * weight_ATG;
         const float GTG = ((start_codon == 1) ? 1 : 0) * weight_GTG;
@@ -173,7 +173,7 @@ float score_gene (float& curr_prob,
     // get gene score either from stored scores or calculate it
     {
         // get aa sequence, remove start and end codon
-        const auto ORF_aa = (translate(ORF_DNA)).aa().substr(1,(ORF_DNA.size() / 3) - 2);
+        const auto ORF_aa = translate(ORF_DNA).substr(1,(ORF_DNA.size() / 3) - 2);
 
         size_t ORF_hash = hasher{}(ORF_aa);
 

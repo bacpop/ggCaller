@@ -11,12 +11,15 @@ char ascii_toupper_char(char c) {
 
 // index fasta files
 std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fasta_file,
-                                                          const bool write_idx)
+                                                          const bool write_idx,
+                                                          const std::string& path_dir)
 {
     fm_index_coll ref_index;
 
     // create fm index file name
-    std::string idx_file_name = fasta_file + ".fms";
+    const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
+
+    std::string idx_file_name = path_dir + base_filename + ".fms";
 
     // create entry for start and end of contigs within fm_index
     std::vector<size_t> contig_locs;
@@ -41,7 +44,6 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
         while ((l = kseq_read(seq)) >= 0)
         {
             reference_seq += seq->seq.s;
-            contig_locs.push_back(reference_seq.size());
             reference_seq += ",";
         }
 
@@ -53,6 +55,12 @@ std::pair<fm_index_coll, std::vector<size_t>> index_fasta(const std::string& fas
         std::transform(reference_seq.begin(), reference_seq.end(), reference_seq.begin(), ::ascii_toupper_char);
 
         sdsl::construct_im(ref_index, reference_seq, 1); // generate index
+
+        // get locations of contig breaks
+        auto locations = sdsl::locate(ref_index, ",");
+        sort(locations.begin(), locations.end());
+        contig_locs.insert(contig_locs.end(), locations.begin(), locations.end());
+
         if (write_idx)
         {
             store_to_file(ref_index, idx_file_name); // save it
@@ -112,17 +120,19 @@ std::pair<ContigLoc, bool> get_ORF_coords(const std::string& query,
     if (query_loc >= 0)
     {
         // go through contig_locs to determine in which contig sequence sits
-        for (int i = 0; i < contig_locs.size(); i++)
+        for (size_t i = 0; i < contig_locs.size(); i++)
         {
             if (query_loc < contig_locs.at(i))
             {
                 if (i == 0)
                 {
-                    contig_loc = {1, {query_loc, query_loc + query.size()}};
+                    // account for 1-indexing
+                    contig_loc = {1, {(query_loc - 1), query_loc + query.size()}};
                 } else
                 {
-                    size_t relative_loc = (query_loc - contig_locs.at(i - 1));
-                    contig_loc = {i + 1, {relative_loc, relative_loc + (query.size() - 1)}};
+                    // account for 1-indexing
+                    int relative_loc = ((query_loc - 1) - contig_locs.at(i - 1));
+                    contig_loc = {i + 1, {(relative_loc - 1), relative_loc + query.size()}};
                 }
                 break;
             }

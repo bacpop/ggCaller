@@ -30,6 +30,16 @@ PYBIND11_MODULE(ggCaller_cpp, m)
     m.def("read_cluster_file", &read_cluster_file, "Read cluster map file",
         py::arg("cluster_file"));
 
+    m.def("read_ORF_file", &read_ORF_file, "Read ORF file",
+        py::arg("ORF_file"));
+    
+    m.def("save_ORF_file", &save_ORF_file, "Save ORF file",
+        py::arg("ORF_file"),
+        py::arg("ORF_map"));
+    
+    m.def("read_edge_file", &read_edge_file, "Read edge file",
+        py::arg("edge_file"));
+
 //    m.def("clear_graph", &clear_graph, "Call graph destructor",
 //        py::arg("graph"));
 

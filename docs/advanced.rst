@@ -9,6 +9,7 @@ Input/output
 - ``--kmer``: value of k used to build Bifrost DBG (Default and max value = 31).
 - ``--all-seq-in-graph``: Output gene graph GML file with all DNA and amino acid sequences. Off by default due to large file size.
 - ``--balrog-db``: Path to an existing download of the balrog annotation database. If this does not exist, downloaded and placed in path for future use.
+- ``--gene-finding-only``: Only run ggCaller gene-finding and generate a gff compatible with other clustering tools.
 
 Traversal and gene-calling cut-off settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

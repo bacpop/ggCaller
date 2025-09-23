@@ -320,7 +320,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         for (const auto& pos : found_indices)
         {
             std::string start_site_DNA = unitig.substr(pos, kmer);
-            std::string start_site_AA = (translate(start_site_DNA)).aa();
+            std::string start_site_AA = translate(start_site_DNA);
 
             calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
@@ -344,7 +344,7 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         for (const auto& pos : found_indices)
         {
             std::string start_site_DNA = rev_unitig.substr(pos, kmer);
-            std::string start_site_AA = (translate(start_site_DNA)).aa();
+            std::string start_site_AA = translate(start_site_DNA);
 
             calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
         }
@@ -356,16 +356,20 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
                             const std::string& fasta_file,
                             const int kmer,
                             const int colour_ID,
-                            const size_t nb_colours)
+                            const size_t nb_colours,
+                            const std::string& path_dir)
 {
     // generate the index
     fm_index_coll ref_index;
 
     // create fm index file name
-    std::string idx_file_name = fasta_file + ".fmp";
+    const std::string base_filename = fasta_file.substr(fasta_file.find_last_of("/\\") + 1);
+    
+    const auto idx_file_name = path_dir + base_filename + ".fmp";
 
-    // initialise string of nodes for FM-index generation
-    std::string genome_path;
+    // set temp dir for sdsl
+    sdsl::cache_config cache_config(true, path_dir.substr(0, path_dir.size() - 1));
+    cache_config.id = std::to_string(colour_ID);
 
     // open the file handler
     gzFile fp = gzopen(fasta_file.c_str(), "r");
@@ -380,83 +384,91 @@ void calculate_genome_paths(const std::vector<Kmer>& head_kmer_arr,
     // read sequence
     size_t contig_ID = 1;
     int l;
-    while ((l = kseq_read(seq)) >= 0) {
-        std::string contig = seq->seq.s;
+    {
+        // initialise string of nodes for FM-index generation
+        std::string genome_path;
 
-        // remove N from assembly
-        std::vector<std::string> contig_vec;
-        boost::split(contig_vec, contig, boost::is_any_of("N"));
-        contig_vec.erase( remove( contig_vec.begin(), contig_vec.end(), "" ), contig_vec.end() );
+        while ((l = kseq_read(seq)) >= 0) {
+            std::string contig = seq->seq.s;
 
-        for (const auto& entry : contig_vec)
-        {
-            const int num_kmers = entry.length() - kmer + 1;
+            // remove N from assembly
+            std::vector<std::string> contig_vec;
+            boost::split(contig_vec, contig, boost::is_any_of("N"));
+            contig_vec.erase( remove( contig_vec.begin(), contig_vec.end(), "" ), contig_vec.end() );
 
-            // roll through the sequence, generating k-mers and querying them in graph
-            if (num_kmers > 0) {
-                // initialise variables for contig, add initial delimeter
-                std::string contig_path = ",";
+            for (const auto& entry : contig_vec)
+            {
+                const int num_kmers = entry.length() - kmer + 1;
 
-                const char *query_str = entry.c_str();
+                // roll through the sequence, generating k-mers and querying them in graph
+                if (num_kmers > 0) {
+                    // initialise variables for contig, add initial delimeter
+                    std::string contig_path = ",";
 
-                // create int to identify if head and tail kmers in unitig have been traversed
-                int prev_head = 0;
+                    const char *query_str = entry.c_str();
 
-                for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
-                {
-                    auto um = ccdbg.find(it_km->first);
+                    // create int to identify if head and tail kmers in unitig have been traversed
+                    int prev_head = 0;
 
-                    // if found, add to FM-index string
-                    if (!um.isEmpty) {
-                        int strand = um.strand ? 1 : -1;
+                    for (KmerIterator it_km(query_str), it_km_end; it_km != it_km_end; ++it_km)
+                    {
+                        auto um = ccdbg.find(it_km->first);
 
-                        DataAccessor<MyUnitigMap>* da = um.getData();
-                        MyUnitigMap* um_data = da->getData(um);
+                        // if found, add to FM-index string
+                        if (!um.isEmpty) {
+                            int strand = um.strand ? 1 : -1;
 
-                        // look for the head in the graph, determine node ID and add to genome_path
-                        int node_ID = um_data->get_id() * strand;
+                            DataAccessor<MyUnitigMap>* da = um.getData();
+                            MyUnitigMap* um_data = da->getData(um);
 
-                        if (prev_head != node_ID) {
-                            // if at start of contig i.e. prev_head==0, set as end_contig
-                            if (!prev_head)
-                            {
-                                um_data->set_end_contig(colour_ID, nb_colours);
+                            // look for the head in the graph, determine node ID and add to genome_path
+                            int node_ID = um_data->get_id() * strand;
+
+                            if (prev_head != node_ID) {
+                                // if at start of contig i.e. prev_head==0, set as end_contig
+                                if (!prev_head)
+                                {
+                                    um_data->set_end_contig(colour_ID, nb_colours);
+                                }
+
+                                // set prev_head to new node
+                                prev_head = node_ID;
+
+                                // add new node
+                                const std::string node_entry = std::to_string(node_ID);
+                                contig_path += node_entry + ",";
                             }
-
-                            // set prev_head to new node
-                            prev_head = node_ID;
-
-                            // add new node
-                            const std::string node_entry = std::to_string(node_ID);
-                            contig_path += node_entry + ",";
                         }
                     }
-                }
 
-                // in case where whole contig removed, do not add to FM index
-                // otherwise causes out of range error with head_kmer_arr as k-mer not present
-                if (prev_head != 0) {
-                    // map to last entry and assign end-contig
-                    auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
-                    auto& um_data = um_pair.second;
-    
-                    um_data->set_end_contig(colour_ID, nb_colours);
-    
-                    // add delimiter between contigs
-                    genome_path += contig_path;
-                    genome_path += ";";
-                    contig_ID++;
+                    // in case where whole contig removed, do not add to FM index
+                    // otherwise causes out of range error with head_kmer_arr as k-mer not present
+                    if (prev_head != 0) {
+                        // map to last entry and assign end-contig
+                        auto um_pair = get_um_data(ccdbg, head_kmer_arr, prev_head);
+                        auto& um_data = um_pair.second;
+        
+                        um_data->set_end_contig(colour_ID, nb_colours);
+        
+                        // add delimiter between contigs
+                        genome_path += contig_path;
+                        genome_path += ";";
+                        contig_ID++;
+                    }
                 }
             }
         }
+
+        sdsl::store_to_file(genome_path, idx_file_name);
     }
+    
 
     // destroy seq and fp objects
     kseq_destroy(seq);
     gzclose(fp);
 
-    sdsl::construct_im(ref_index, genome_path, 1); // generate index
-    store_to_file(ref_index, idx_file_name); // save it
+    sdsl::construct(ref_index, idx_file_name, cache_config, 1); // generate index from file
+    sdsl::store_to_file(ref_index, idx_file_name); // save it
 }
 
 NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
@@ -470,7 +482,8 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
                              const size_t nb_colours,
                              const std::vector<std::string>& input_colours,
                              const boost::dynamic_bitset<>& ref_set,
-                             robin_hood::unordered_map<std::string, size_t>& start_freq)
+                             robin_hood::unordered_map<std::string, size_t>& start_freq,
+                             const std::string& path_dir)
 {
     // get all head kmers and add IDs
     size_t unitig_id = 1;
@@ -551,7 +564,7 @@ NodeColourVector index_graph(std::vector<Kmer>& head_kmer_arr,
             #pragma omp for
             for (int i = 0; i < ref_index.size(); i++)
             {
-                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours);
+                calculate_genome_paths(head_kmer_arr, ccdbg, input_colours[ref_index[i]], kmer, ref_index[i], nb_colours, path_dir);
             }
         }
     }

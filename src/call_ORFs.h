@@ -35,7 +35,7 @@ ORFCoords calculate_coords(const std::pair<std::size_t, std::size_t>& codon_pair
                            const std::vector<int>& nodelist,
                            const std::vector<std::vector<size_t>>& node_ranges);
 
-ORFNodeRobMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
+ORFNodeMap sort_ORF_indexes(ORFNodeMap& ORF_node_map,
                            const NodeStrandMap& pos_strand_map,
                            const ColoredCDBG<MyUnitigMap>& ccdbg,
                            const std::vector<Kmer>& head_kmer_arr,
