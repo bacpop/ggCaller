@@ -73,27 +73,26 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
-here = path.abspath(path.dirname(__file__))
+# -----------------------
+# Setup
+# -----------------------
 
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+here = path.abspath(path.dirname(__file__))
 
 setup(
     name='ggCaller',
     version=find_version('ggCaller/__init__.py'),
-    packages=['ggCaller',
-              'models',
-              'panaroo_runner'],
-    package_dir={'ggCaller': 'ggCaller',
-                 'models': 'models',
-                 'panaroo_runner': 'panaroo_runner'},
-    url='https://github.com/samhorsfield96/ggCaller',
+    packages=['ggCaller', 'models', 'panaroo_runner'],
+    package_dir={'ggCaller': 'ggCaller', 'models': 'models', 'panaroo_runner': 'panaroo_runner'},
+    url='https://github.com/bacpop/ggCaller',
     license='MIT License',
     author='Sam Horsfield',
-    author_email='s.horsfield19@imperial.ac.uk',
+    author_email='shorsfield@ebi.ac.uk',
     description='A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs).',
+    long_description=read('README.md'),
+    long_description_content_type='text/markdown',
     entry_points={'console_scripts': ['ggcaller = ggCaller.__main__:main']},
     ext_modules=[CMakeExtension('ggCaller_cpp')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    zip_safe=False
+    cmdclass={'build_ext': CMakeBuild},
+    zip_safe=False,
 )
