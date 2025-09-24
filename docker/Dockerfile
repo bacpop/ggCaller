@@ -25,9 +25,10 @@ RUN micromamba install -y -n base -f /tmp/environment_docker.yml && \
     mkdir -p ggc_db
 
 # Build execstack from source (needed for PyTorch 1.10)
-RUN apt-get update && apt-get install -y build-essential prelink \
-    && execstack -c $(python -c "import torch, os; print(os.path.join(os.path.dirname(torch.__file__), 'lib', 'libtorch_cpu.so'))") \
-    && rm -rf /var/lib/apt/lists/*
+# Install patchelf to fix libtorch_cpu.so
+RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
+RUN python -c "import torch, os; print(os.path.join(os.path.dirname(torch.__file__), 'lib', 'libtorch_cpu.so'))" \
+    | xargs -I{} patchelf --clear-execstack {}
 
 # download ggCaller DB during build
 RUN ggcaller --balrog-db ggc_db
