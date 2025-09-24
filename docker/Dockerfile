@@ -24,10 +24,15 @@ RUN micromamba install -y -n base -f /tmp/environment_docker.yml && \
     python -m pip install --no-deps --ignore-installed . && \
     mkdir -p ggc_db
 
-# fix libtorch_cpu.so execstack issue
-RUN apt-get update && apt-get install -y execstack && \
-    python -c "import torch; import os; lib=os.path.join(os.path.dirname(torch.__file__), 'lib', 'libtorch_cpu.so'); print(lib)" | xargs execstack -c && \
+# Build execstack from source (needed for PyTorch 1.10)
+RUN apt-get update && apt-get install -y build-essential wget tar && \
+    wget http://ftp.debian.org/debian/pool/main/e/execstack/execstack_1.0.0.orig.tar.gz && \
+    tar xf execstack_1.0.0.orig.tar.gz && \
+    cd execstack-1.0.0 && make && cp execstack /usr/local/bin/ && cd .. && rm -rf execstack-1.0.0* && \
     rm -rf /var/lib/apt/lists/*
+
+# Clear executable stack flag for libtorch_cpu.so (PyTorch 1.10)
+RUN execstack -c $(python -c "import torch, os; print(os.path.join(os.path.dirname(torch.__file__), 'lib', 'libtorch_cpu.so'))")
 
 # download ggCaller DB during build
 RUN ggcaller --balrog-db ggc_db
