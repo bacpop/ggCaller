@@ -55,7 +55,7 @@ Once all required packages are installed, install ggCaller using:
 ```
 git clone --recursive https://github.com/samhorsfield96/ggCaller
 cd ggCaller
-python setup.py install
+python -m pip install .
 ```
 
 ## Citation

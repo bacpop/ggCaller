@@ -77,6 +77,10 @@ If all sequences are reads, specify ``--not-ref``::
 
     ggcaller --graph input.gfa --colours colours.color.bfg --not-ref
 
+You can also reduce runtime by skipping Panaroo with ``--gene-finding-only`` to generate just GFF and FASTA files, which can then be used in pangenome clustering methods, in the ``GFF`` subdirectory::
+
+    ggcaller --refs input.txt --gene-finding-only
+
 Results from all commands above will be saved to a directory called ``ggCaller_output`` by default.
 To change this, specify ``--out <path>``. Note that ggCaller will overwrite results if an already existing directory is specified.
 
@@ -93,8 +97,9 @@ By default, ggCaller will generate:
 
 Additionally, ggCaller generates some intermediate files:
 
-- Two Bifrost files, a GFA file and BFG_COLORS file, with the same file path as ``input.txt``
-- FMINDEX files for each of the sample FASTAs with the same file path the input files.
+- Two Bifrost files, a GFA file and COLORS file, with the same file path as ``input.txt``
+- FMINDEX files for each of the sample FASTAs, placed in the ``Path_dir`` subdirectory.
+- GRAPH INDEX files used for memory efficient gene calling and gene call updating, placed in the ``ORF_dir`` subdirectory.
 
 Annotating genes
 ^^^^^^^^^^^^^^^^
@@ -220,16 +225,16 @@ Querying the DBG
 
 Queries sequences can either be in multi-FASTA format, or in a single file with each sequence on its own line.
 
-Provide paths to the DBG ``.gfa`` and ``.color.bfg`` files, the ``ggc_data`` directory and query file::
+Provide paths to the DBG ``.gfa`` and ``.color.bfg`` files, the previous run directory::
 
-    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --data ggCaller_output/ggc_data
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --prev-run ggCaller_output
 
 By default, mapped queries >=80% matching k-mers to a given colour will be returned. This can be changed using
 ``--query-id`` flag.
 
 To return queries with 100% match::
 
-    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --data ggCaller_output/ggc_data --query-id 1.0
+    ggcaller --query queries.fasta --graph inputs.gfa --colours inputs.color.bfg --prev-run ggCaller_output --query-id 1.0
 
 .. _Interpreting results:
 
@@ -250,6 +255,20 @@ The header contains:
 - ggCaller identifier (``ggcID`` field)
 - Mapped query sequences or IDs (``QUERY`` field) separated by semi-colons. These will be fasta IDs if ``queries`` file is a FASTA, otherwise DNA sequence.
 - Annotation(s) (``annotation`` field) separated by semi-colons
+
+Iterative gene calling
+----------------------
+
+After an initial run of ggCaller, you can call genes in new genomes, using the original information from the initial gene calls. 
+
+Note this is designed to be used after a run with ``--gene-finding-only``, as it does not use information from Panaroo::
+    ggcaller --refs input1.txt --gene-finding-only --out run1
+    ggcaller --refs input2.txt --gene-finding-only --out run2 --prev-run run1
+
+Results can be placed in a new directory, or directed to the original directory. If repeated updates are likely, use a single directory::
+    ggcaller --refs input1.txt --gene-finding-only --out all_runs
+    ggcaller --refs input2.txt --gene-finding-only --out all_runs --prev-run all_runs
+    ggcaller --refs input3.txt --gene-finding-only --out all_runs --prev-run all_runs
 
 Parallelisation
 ---------------
