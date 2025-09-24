@@ -32,6 +32,10 @@ subprocess.run(
     shell=True,
     check=True)
 
+print("CWD:", os.getcwd())
+print("Contents:", os.listdir())
+print("test_dir contents:", os.listdir("test_dir"))
+
 sys.stderr.write("Running unitig query workflow\n")
 subprocess.run(
     python_cmd + " ../ggcaller-runner.py --graph pneumo_CL_group2.gfa --colours pneumo_CL_group2.color.bfg --prev-run test_dir --query pneumo_CL_group2_queries.fasta --query-id 0.5 --out test_dir",
