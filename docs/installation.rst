@@ -52,12 +52,16 @@ Once loaded, add the conda bin directory to your path variable and run ggCaller 
     cp -r /app/ggc_db <path/to/ggc_db>
     ggcaller --refs input.txt --out output_path --balrog-db <path/to/ggc_db>
 
+.. important::
+    This method of installing ggCaller requires manual 
+    updating from our end, and may be out of date.
+
 Installing with conda
 -----------------------------------
 
 Installing with conda is the easiest way to get ggCaller up and running, and will install all dependencies.
 
-If you do not have ``conda`` you can install it through
+If you do not have ``conda`` or ``mamba`` you can install it through
 `miniconda <https://conda.io/miniconda.html>`_ and then add the necessary
 channels::
 
@@ -88,7 +92,7 @@ To install dependencies (creates ```ggc_env``` environment)::
 Then clone the code and install::
 
     git clone --recursive https://github.com/samhorsfield96/ggCaller && cd ggCaller
-    python setup.py install
+    python -m pip install .
 
 Test installation
 -----------------

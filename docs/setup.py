@@ -40,7 +40,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/samhorsfield96/ggCaller',
     author='Sam Horsfield',
-    author_email='s.horsfield19@imperial.ac.uk',
+    author_email='shorsfield@ebi.ac.uk',
     license='MIT License',
     classifiers=[
         'Development Status :: 4 - Beta',

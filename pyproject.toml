@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "cmake>=3.18"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ggCaller"
+version = "1.4.1"  # placeholder; overridden by setup.py via __init__.py
+description = "A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs)."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT License"}
+authors = [
+    {name = "Sam Horsfield", email = "shorsfield@ebi.ac.uk"}
+]
+urls = { "Homepage" = "https://github.com/bacpop/ggCaller" }
+
+[project.scripts]
+ggcaller = "ggCaller.__main__:main"
+
+[tool.setuptools]
+zip-safe = false

@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'ggCaller'
-copyright = '2022, Sam Horsfield'
+copyright = '2025, Sam Horsfield'
 author = 'Sam Horsfield'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -25,9 +25,9 @@ author = 'Sam Horsfield'
 # built documents.
 #
 # The short X.Y version.
-version = '1.3'
+version = '1.4'
 # The full version, including alpha/beta/rc tags.
-release = '1.3.0'
+release = '1.4.0'
 
 # -- General configuration ---------------------------------------------------
 

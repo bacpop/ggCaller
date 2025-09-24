@@ -44,6 +44,8 @@ jobs:
   test-macos:
 
     runs-on: macos-latest
+    env:
+      CONDA_SUBDIR: osx-64
     strategy:
       matrix:
         python-version: [3.9]
