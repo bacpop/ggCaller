@@ -261,11 +261,13 @@ Iterative gene calling
 
 After an initial run of ggCaller, you can call genes in new genomes, using the original information from the initial gene calls. 
 
-Note this is designed to be used after a run with ``--gene-finding-only``, as it does not use information from Panaroo::
+This is designed to be used after a run with ``--gene-finding-only``, as it does not use information from Panaroo::
+
     ggcaller --refs input1.txt --gene-finding-only --out run1
     ggcaller --refs input2.txt --gene-finding-only --out run2 --prev-run run1
 
 Results can be placed in a new directory, or directed to the original directory. If repeated updates are likely, use a single directory::
+
     ggcaller --refs input1.txt --gene-finding-only --out all_runs
     ggcaller --refs input2.txt --gene-finding-only --out all_runs --prev-run all_runs
     ggcaller --refs input3.txt --gene-finding-only --out all_runs --prev-run all_runs
