@@ -60,9 +60,9 @@ python -m pip install .
 
 ## Citation
 
-Please cite the ggCaller pre-print:
+Please cite the ggCaller paper:
 
-Horsfield, S.T., Croucher, N.J., Lees, J.A. "Accurate and fast graph-based pangenome annotation and clustering with ggCaller" bioRxiv 2023.01.24.524926 (2023). doi: https://doi.org/10.1101/2023.01.24.524926
+Horsfield, S.T., Tonkin-Hill, G., Croucher, N.J., Lees, J.A. "Accurate and fast graph-based pangenome annotation and clustering with ggCaller" Genome Res 33(9):1622–1637 (2023). doi: https://doi.org/10.1101/gr.277733.123
 
 If you use this code, please also cite the dependencies:
 
