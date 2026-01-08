@@ -362,8 +362,20 @@ def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_ann
                 gff_record = record
                 gff_record.features = []
                 entry_ID = 1
+
+                # remove duplicated entries
+                seen = set()
                 for entry in GFF_entries[record_id]:
+                    start = entry[1][0][0] + 1
+                    end = entry[1][0][1]
                     strand = 1 if entry[1][1] else -1
+
+                    # ignore duplicates
+                    ORF_position = (start, end, strand)
+                    if ORF_position in seen:
+                        continue
+                    seen.add(ORF_position)
+
                     qualifiers = {
                         "source": "ggCaller:" + __version__,
                         "ID": isolate_names[colour] + "_" + str(entry[0]),
@@ -376,7 +388,7 @@ def generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_ann
                                            .replace(";", " ")],
                     }
                     feature = SeqFeature(
-                        FeatureLocation(entry[1][0][0] + 1, entry[1][0][1], strand=strand),
+                        FeatureLocation(start, end, strand=strand),
                         type="CDS", qualifiers=qualifiers
                     )
                     gff_record.features.append(feature)

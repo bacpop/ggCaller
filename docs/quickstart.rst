@@ -33,15 +33,21 @@ Running ggCaller
 
 To run ggCaller with just assemblies::
 
-    ggcaller --refs input.txt --out output_path
+    ggcaller --refs input.txt --out output_path --gene-finding-only
+
+.. important::
+    As of ggCaller v1.4, we highly recommend running ggCaller with
+    ``--gene-finding-only`` enabled. This will not conduct annotation or
+    COG clustering, and will instead generate a directory of GFF files
+    which can be used in any modern clustering method, such as Panaroo.
 
 To run ggCaller with just reads::
 
-    ggcaller --reads input.txt --out output_path
+    ggcaller --reads input.txt --out output_path --gene-finding-only
 
 If using Docker, run with the below command, ensuring you keep ``--balrog-db /app/ggc_db`` and ``/workdir`` paths as specified below. Replace ``path to files`` with the absolute path to the directory of files in ``input_docker.txt``::
 
-	docker run --rm -it -v $(pwd):/workdir -v <path to files>:/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/input_docker.txt --out /workdir/output_path 
+	docker run --rm -it -v $(pwd):/workdir -v <path to files>:/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/input_docker.txt --out /workdir/output_path --gene-finding-only
 
 .. important::
     We haven't extensively tested calling genes within

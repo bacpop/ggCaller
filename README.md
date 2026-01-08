@@ -38,7 +38,7 @@ Then pull the latest image::
 
 To run ggCaller, run::
 
-	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out
+	cd test && docker run --rm -it -v $(pwd):/workdir -v $(pwd):/data samhorsfield96/ggcaller:latest ggcaller --balrog-db /app/ggc_db --refs /workdir/pneumo_CL_group2_docker.txt --out /workdir/ggc_out --gene-finding-only
 
 ### Installation from source
 Required packages and versions can be found in ```environment_linux.yml``` and ```environment_macOS.yml``` depending on your operating system. In addition, a C++17 compiler (e.g. gcc >=7.3) is required.

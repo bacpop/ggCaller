@@ -8,6 +8,12 @@ ggCaller has two main modes: :ref:`Gene-calling` and :ref:`Querying`.
 Gene-calling
 -------------
 
+.. important::
+    As of ggCaller v1.4, we highly recommend running ggCaller with
+    ``--gene-finding-only`` enabled. This will not conduct annotation or
+    COG clustering, and will instead generate a directory of GFF files
+    which can be used in any modern clustering method, such as Panaroo.
+
 Gene-calling predicts and annotates genes within a pangenome de Bruijn Graph (DBG), before
 conducting orthologue clustering and pangenome analysis using Panaroo.
 
