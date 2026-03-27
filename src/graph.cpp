@@ -672,7 +672,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         // simplify ORF_info
                         simplify_ORFNodeVector(entry.second, overlap);
                         gene_map[entry.first] = std::move(entry.second);
-                        gene_paths.push_back({entry.first});
+                        gene_paths.push_back({static_cast<size_t>(entry.first)});
                         ORFs_present_private.insert(entry.first);
                     }
                 }
@@ -684,7 +684,7 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                     // simplify ORF_info
                     simplify_ORFNodeVector(entry.second, overlap);
                     gene_map[entry.first] = std::move(entry.second);
-                    gene_paths.push_back({entry.first});
+                    gene_paths.push_back({static_cast<size_t>(entry.first)});
                     ORFs_present_private.insert(entry.first);
                 }
             }

@@ -82,8 +82,8 @@ here = path.abspath(path.dirname(__file__))
 setup(
     name='ggCaller',
     version=find_version('ggCaller/__init__.py'),
-    packages=['ggCaller', 'models', 'panaroo_runner'],
-    package_dir={'ggCaller': 'ggCaller', 'models': 'models', 'panaroo_runner': 'panaroo_runner'},
+    packages=['ggCaller', 'models'],
+    package_dir={'ggCaller': 'ggCaller', 'models': 'models'},
     url='https://github.com/bacpop/ggCaller',
     license='MIT License',
     author='Sam Horsfield',

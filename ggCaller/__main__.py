@@ -4,17 +4,11 @@ import sys
 
 from ggCaller.graph_traversal import *
 import ggCaller_cpp
+from ggCaller.generate_output import generate_GFF, print_ORF_calls
 import shutil
 from models.__main__ import *
-from ggCaller.shared_memory import *
 from Bio import Seq
-from panaroo_runner.set_default_args import *
-from panaroo_runner.__main__ import run_panaroo
-from panaroo_runner.generate_output import print_ORF_calls, generate_GFF
-from panaroo_runner.annotate import check_diamond_install, check_HMMER_install, generate_HMMER_index, \
-    generate_diamond_index
 from collections import defaultdict
-import ast
 import tempfile
 import json
 
@@ -62,20 +56,13 @@ def get_options():
     IO.add_argument('--prev-run',
                     default=None,
                     help='Directory containing data from previous ggCaller run. Must have been run with "--save" ')
-    IO.add_argument(
-        "--all-seq-in-graph",
-        dest="all_seq_in_graph",
-        help=("Retains all DNA sequence for each gene cluster in the Panaroo graph " +
-              "output. Off by default as it uses a large amount of space."),
-        action='store_true',
-        default=False)
+    IO.add_argument('--out',
+                    default='ggCaller_output',
+                    help='Output directory ')
     IO.add_argument('--gene-finding-only',
                     action="store_true",
                     default=False,
                     help='Only run ggCaller gene-finding and generate a gff compatible with other clustering tools.')
-    IO.add_argument('--out',
-                    default='ggCaller_output',
-                    help='Output directory ')
     Settings = parser.add_argument_group('ggCaller traversal and gene-calling cut-off settings')
     Settings.add_argument('--max-path-length',
                           type=int,
@@ -145,12 +132,6 @@ def get_options():
                            default=False,
                            help='Do not cluster ORFs. '
                                 '[Default = False] ')
-    Algorithm.add_argument('--no-refind',
-                           dest="refind",
-                           action="store_false",
-                           default=True,
-                           help='Do not refind uncalled genes '
-                                '[Default = False] ')
     Clustering = parser.add_argument_group('Gene clustering options')
     Clustering.add_argument('--identity-cutoff',
                             type=float,
@@ -162,172 +143,6 @@ def get_options():
                             default=0.98,
                             help='Minimum ratio of length between two ORFs for clustering.  '
                                  '[Default = 0.98] ')
-    Clustering.add_argument(
-        "--family-threshold",
-        dest="family_threshold",
-        help="protein family sequence identity threshold "
-             "[Default = 0.7]",
-        type=float)
-    Clustering.add_argument("--merge-paralogs",
-                            dest="merge_paralogs",
-                            help="don't split paralogs"
-                                 "[Default = False]",
-                            action='store_true',
-                            default=False)
-    Panaroo_mode_opts = parser.add_argument_group('Panaroo run mode options')
-    Panaroo_mode_opts.add_argument(
-        "--clean-mode",
-        dest="mode",
-        default="moderate",
-        help=
-        ('''R|The stringency mode at which to run panaroo. Must be one of 'strict',\
-    'moderate' or 'sensitive'. Each of these modes can be fine tuned using the\
-     additional parameters in the 'Graph correction' section.
-
-    strict: 
-    Requires fairly strong evidence (present in  at least 5%% of genomes)\
-     to keep likely contaminant genes.
-
-    moderate: 
-    Requires moderate evidence (present in  at least 1%% of genomes)\
-     to keep likely contaminant genes.
-
-    sensitive: 
-    Does not delete any genes and only performes merge and refinding\
-     operations. Useful if rare plasmids are of interest as these are often hard to\
-     disguish from contamination. Results will likely include  higher number of\
-     spurious annotations.'''),
-        choices=['strict', 'moderate', 'sensitive'],
-        required=False)
-
-    Panaroo_annotation = parser.add_argument_group('Panaroo gene cluster annotation options')
-    Panaroo_annotation.add_argument("--annotation",
-                                    dest="annotate",
-                                    help="Annotate genes using diamond default (fast), diamond sensitive (sensitive) or diamond and HMMscan (ultrasensitive). Specify 'none' if annotation not required."
-                                         "Default = 'fast'",
-                                    choices=["none", "fast", "sensitive", "ultrasensitive"],
-                                    default="fast")
-    Panaroo_annotation.add_argument("--diamonddb",
-                                    dest="annotation_db",
-                                    help="Diamond database. Defaults are 'Bacteria' or 'Viruses'. Can also "
-                                         "specify path to fasta file for custom database generation",
-                                    default="Bacteria")
-    Panaroo_annotation.add_argument("--hmmdb",
-                                    dest="hmm_db",
-                                    help="HMMER hmm profile file. Default is Uniprot HAMAP. Can also"
-                                         "specify path to pre-built hmm profile file generated using hmmbuild",
-                                    type=str,
-                                    default="default")
-    Panaroo_annotation.add_argument("--evalue",
-                                    dest="evalue",
-                                    help="Maximum e-value to return for DIAMOND and HMMER searches during annotation"
-                                         "[Default = 0.001]",
-                                    default=0.001,
-                                    type=float)
-    Panaroo_annotation.add_argument("--truncation-threshold",
-                                    dest="truncation_threshold",
-                                    help="Sequences in a gene family cluster below this proportion of the length of the"
-                                         "centroid will be annotated as 'potential pseudogene'"
-                                         "[Default = 0.8]",
-                                    default=0.8,
-                                    type=float)
-
-    Panaroo_refind = parser.add_argument_group('Panaroo gene refinding options')
-    Panaroo_refind.add_argument(
-        "--search-radius",
-        dest="search_radius",
-        help=("the distance in nucleotides surronding the " +
-              "neighbour of an accessory gene in which to search for it"),
-        default=5000,
-        type=int)
-    Panaroo_refind.add_argument(
-        "--refind-prop-match",
-        dest="refind_prop_match",
-        help=("the proportion of an accessory gene that must " +
-              "be found in order to consider it a match"
-              "[Default = 0.2]"),
-        default=0.2,
-        type=float)
-    Panaroo_graph = parser.add_argument_group('Panaroo graph correction stringency options')
-    Panaroo_graph.add_argument(
-        "--min-trailing-support",
-        dest="min_trailing_support",
-        help=("minimum cluster size to keep a gene called at the " +
-              "end of a contig"),
-        type=int)
-    Panaroo_graph.add_argument(
-        "--trailing-recursive",
-        dest="trailing_recursive",
-        help=("number of times to perform recursive trimming of low support " +
-              "nodes near the end of contigs"),
-        type=int)
-    Panaroo_graph.add_argument(
-        "--edge-support-threshold",
-        dest="edge_support_threshold",
-        help=("minimum support required to keep an edge that has been flagged" +
-              " as a possible mis-assembly"),
-        type=float)
-    Panaroo_graph.add_argument(
-        "--length-outlier-support-proportion",
-        dest="length_outlier_support_proportion",
-        help=
-        ("proportion of genomes supporting a gene with a length more " +
-         "than 1.5x outside the interquatile range for genes in the same cluster."
-         "Genes failing this test will be re-annotated at the shorter length"
-         "[Default = 0.1]"),
-        type=float,
-        default=0.1)
-    Panaroo_graph.add_argument(
-        "--min-edge-support-sv",
-        dest="min_edge_support_sv",
-        help=("minimum edge support required to call structural variants" +
-              " in the presence/absence sv file"),
-        type=int)
-    Panaroo_graph.add_argument(
-        "--no-clean-edges",
-        dest="clean_edges",
-        help=("Turn off edge filtering in the final output graph."
-              "[Default = False]"),
-        action='store_false',
-        default=True)
-
-    Panaroo_aln = parser.add_argument_group('Alignment options')
-    Panaroo_aln.add_argument(
-        "--alignment",
-        dest="aln",
-        help=("Output alignments of core genes or all genes. Options are" +
-              " 'core' and 'pan'. "
-              "[Default = 'None'"),
-        type=str,
-        choices=['core', 'pan'],
-        default=None)
-    Panaroo_aln.add_argument(
-        "--aligner",
-        dest="alr",
-        help=
-        "Specify an aligner. Options: 'ref' for reference-guided MSA and 'def' for default standard MSA",
-        type=str,
-        choices=['def', 'ref'],
-        default="def")
-    Panaroo_aln.add_argument("--core-threshold",
-                             dest="core",
-                             help="Core-genome sample threshold."
-                                  "[Default = 0.95]",
-                             type=float,
-                             default=0.95)
-    Panaroo_aln.add_argument("--no-variants",
-                             dest="call_variants",
-                             help="Do not call variants using SNP-sites after alignment."
-                                  "[Default = False]",
-                             action='store_false',
-                             default=True)
-    Panaroo_aln.add_argument("--ignore-pseduogenes",
-                             dest="ignore_pseduogenes",
-                             help="Ignore ORFs annotated as 'potential pseudogenes' in alignment"
-                                  "[Default = False]",
-                             action='store_true',
-                             default=False)
-
     # Other options
     Misc = parser.add_argument_group('Misc. options')
     Misc.add_argument("--balrog-db",
@@ -356,6 +171,11 @@ def get_options():
 def main():
     # parse command line arguments for ggCaller
     options = get_options()
+
+    # deprication warning for --gene-finding-only flag
+    if options.gene_finding_only:
+        print("Warning: the --gene-finding-only flag is deprecated and will be removed in a future version. "
+              "By default, ggcaller now only generates gff files compatible with clustering tools.")
 
     # determine if references/assemblies present
     ref_set = set()
@@ -457,48 +277,6 @@ def main():
     # download balrog and annotation files
     db_dir = download_db(options.balrog_db)
 
-    # set rest of panaroo arguments
-    options = set_default_args(options, nb_colours)
-    annotation_db = options.annotation_db
-    hmm_db = options.hmm_db
-
-    if options.annotate != "none":
-        # check diamond and HMMER are installed correctly
-        check_diamond_install()
-        check_HMMER_install()
-
-        # unpack annotation database
-        if annotation_db == "Bacteria" or annotation_db == "Viruses":
-            db_id = annotation_db
-            diamond_dir = os.path.join(db_dir, "diamond")
-            annotation_db = os.path.join(diamond_dir, annotation_db)
-
-            if not os.path.exists(annotation_db):
-                print("Unzipping protein annotation file...")
-                tar = tarfile.open(annotation_db + ".tar.gz", mode="r:gz")
-                tar.extractall(diamond_dir)
-                tar.close()
-
-            annotation_db = os.path.join(annotation_db, db_id + ".dmnd")
-
-        # if custom annotation database specified, then create diamond db if not present already
-        else:
-            annotation_db = os.path.abspath(annotation_db)
-            if ".dmnd" not in annotation_db:
-                print("Generating diamond index...")
-                annotation_db = generate_diamond_index(annotation_db)
-
-        # set-up hmm_db
-        if hmm_db == "default":
-            hmm_dir = os.path.join(db_dir, "hmm")
-            hmm_db = os.path.join(hmm_dir, "HAMAP.hmm")
-        else:
-            hmm_db = os.path.abspath(hmm_db)
-
-        if not os.path.exists(hmm_db + ".h3f") and options.annotate == "ultrasensitive":
-            print("Generating HMMER index...")
-            generate_HMMER_index(hmm_db)
-
     # Create temporary directory
     temp_dir = os.path.join(tempfile.mkdtemp(dir=output_dir), "")
 
@@ -532,79 +310,61 @@ def main():
                                  options.identity_cutoff, options.len_diff_cutoff, options.threads, cluster_file,
                                  options.score_tolerance, ORFMap_dir, Path_dir)
 
-    ORF_file_paths, Edge_file_paths = file_tuple
+    ORF_file_paths, _ = file_tuple
 
     # save the ORF file paths
     with open(ORFMap_dir + "ORF_file_paths.dat", "wb") as o:
         cPickle.dump(ORF_file_paths, o)
 
-    # generate ORF clusters
-    if not options.no_clustering and not options.gene_finding_only:
-        with SharedMemoryManager() as smm:
-            # generate shared numpy arrays
-            total_arr = np.array([graph])
-            array_shd, array_shd_tup = generate_shared_mem_array(total_arr, smm)
-            with Pool(processes=options.threads) as pool:
-                run_panaroo(pool, array_shd_tup, ORF_file_paths, Edge_file_paths,
-                            cluster_file, overlap, input_colours, output_dir, temp_dir, options.verbose,
-                            options.threads, options.length_outlier_support_proportion, options.identity_cutoff,
-                            options.family_threshold, options.min_trailing_support, options.trailing_recursive,
-                            options.clean_edges, options.edge_support_threshold, options.merge_paralogs, options.aln,
-                            options.alr, options.core, options.min_edge_support_sv, options.all_seq_in_graph, ref_list,
-                            options.no_write_idx, overlap + 1, options.repeat,
-                            options.search_radius, options.refind_prop_match, options.annotate, options.evalue,
-                            annotation_db, hmm_db, options.call_variants, options.ignore_pseduogenes,
-                            options.truncation_threshold, options.save, options.refind, Path_dir)
+    if any(ref_list):
+        contig_annotation = defaultdict(list)
+        isolate_names = [
+            os.path.splitext(os.path.basename(x))[0] for x in input_colours
+        ]
 
-    else:
-        if any(ref_list):
-            contig_annotation = defaultdict(list)
-            isolate_names = [
-                os.path.splitext(os.path.basename(x))[0] for x in input_colours
-            ]
+        # iterate over nodes and add placeholder information
+        for colour_ID, file_path in ORF_file_paths.items():
+            # ensure entry is genome, not reads
+            if ref_list[colour_ID]:
+                ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+                for ORF_ID, _ in ORF_map.items():
+                    node_bitscore = 0
+                    source = "prediction"
+                    node_annotation = "hypothetical protein"
+                    node_description = "hypothetical protein"
 
-            # iterate over nodes and add placeholder information
-            for colour_ID, file_path in ORF_file_paths.items():
-                # ensure entry is genome, not reads
-                if ref_list[colour_ID]:
-                    ORF_map = ggCaller_cpp.read_ORF_file(file_path)
-                    for ORF_ID, ORFNodeVector in ORF_map.items():
-                        node_bitscore = 0
-                        source = "prediction"
-                        node_annotation = "hypothetical protein"
-                        node_description = "hypothetical protein"
-
-                        annotation = (source, node_annotation, node_bitscore, node_description)
-                        contig_annotation[colour_ID].append((ORF_ID, annotation))
+                    annotation = (source, node_annotation, node_bitscore, node_description)
+                    contig_annotation[colour_ID].append((ORF_ID, annotation))
 
             generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
-                     overlap, options.no_write_idx, ref_list, options.threads, Path_dir)
+                    overlap, options.no_write_idx, ref_list, options.threads, Path_dir)
 
         print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
                         input_colours, overlap, graph)
 
-        if options.save:
-            # create directory if it isn't present already
-            objects_dir = output_dir + "ggc_data"
-            if not os.path.exists(objects_dir):
-                os.mkdir(objects_dir)
+    if options.save:
+        # create directory if it isn't present already
+        objects_dir = output_dir + "ggc_data"
+        if not os.path.exists(objects_dir):
 
-            # make sure trailing forward slash is present
-            objects_dir = os.path.join(objects_dir, "")
+            os.mkdir(objects_dir)
 
-            # create index of all high_scoring_ORFs node_IDs
-            node_index = defaultdict(list)
-            for colour_ID, file_path in ORF_file_paths.items():
-                ORF_map = ggCaller_cpp.read_ORF_file(file_path)
+        # make sure trailing forward slash is present
+        objects_dir = os.path.join(objects_dir, "")
 
-                for ORF_ID, ORF_info in ORF_map.items():
-                    delim = "_0_" if ORF_ID > 0 else "_refound_"
-                    entry_ID = str(colour_ID) + delim + str(ORF_ID)
-                    for node in ORF_info[0]:
-                        node_index[abs(node)].append(entry_ID)
+        # create index of all high_scoring_ORFs node_IDs
+        node_index = defaultdict(list)
+        for colour_ID, file_path in ORF_file_paths.items():
+            ORF_map = ggCaller_cpp.read_ORF_file(file_path)
 
-            with open(objects_dir + "node_index.dat", "wb") as o:
-                cPickle.dump(node_index, o)
+            for ORF_ID, ORF_info in ORF_map.items():
+                delim = "_0_" if ORF_ID > 0 else "_refound_"
+                entry_ID = str(colour_ID) + delim + str(ORF_ID)
+                for node in ORF_info[0]:
+                    node_index[abs(node)].append(entry_ID)
+
+        with open(objects_dir + "node_index.dat", "wb") as o:
+            cPickle.dump(node_index, o)
 
     # remove temporary directory
     shutil.rmtree(temp_dir)
