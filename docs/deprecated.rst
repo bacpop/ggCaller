@@ -1,4 +1,4 @@
-Depricated features
+Deprecated features
 ============
 
 These features are not available in ggCaller v1.4+. They are replaced by generation of GFF files which can  be used in any modern clustering method, such as Panaroo.
