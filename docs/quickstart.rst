@@ -40,6 +40,7 @@ To run ggCaller with just assemblies::
     ``--gene-finding-only`` enabled. This will not conduct annotation or
     COG clustering, and will instead generate a directory of GFF files
     which can be used in any modern clustering method, such as Panaroo.
+    Future versions will remove panaroo entirely.
 
 To run ggCaller with just reads::
 
