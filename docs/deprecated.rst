@@ -105,7 +105,7 @@ More information can be found `here <https://gtonkinhill.github.io/panaroo/#/get
 **If you use the full pipeline of ggCaller, also please cite** `Panaroo <https://doi.org/10.1186/s13059-020-02090-4>`_.
 
 
-Depricated advanced options
+Deprecated advanced options
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Gene clustering options
