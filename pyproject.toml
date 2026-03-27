@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ggCaller"
-version = "1.4.3"  # placeholder; overridden by setup.py via __init__.py
+version = "1.4.4"  # placeholder; overridden by setup.py via __init__.py
 description = "A gene caller for Bifrost graphs; traverses Bifrost graphs constructed from bacterial genomes to identify putative protein coding sequences, known as open reading frames (ORFs)."
 readme = "README.md"
 requires-python = ">=3.8"
