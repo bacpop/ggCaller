@@ -77,4 +77,6 @@ patches/
 *.h3f
 *.h3i
 *.h3m
-*.h3p
+*.h3p# pixi environments
+.pixi/*
+!.pixi/config.toml
