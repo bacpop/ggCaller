@@ -14,28 +14,6 @@ import os
 from ast import literal_eval
 from collections import defaultdict
 
-try:
-    long
-except NameError:
-    long = int
-try:
-    unicode
-except NameError:
-    unicode = str
-try:
-    unichr
-except NameError:
-    unichr = chr
-try:
-    literal_eval(r"u'\u4444'")
-except SyntaxError:
-    # Remove 'u' prefixes in unicode literals in Python 3
-    def rtp_fix_unicode(s):
-        return s[1:]
-else:
-    rtp_fix_unicode = None
-
-
 def print_ORF_calls(ORF_file_paths, outfile, input_colours, overlap, DBG, truncation_threshold=0, G=None, ids_len_stop=None):
     isolate_names = [
         os.path.splitext(os.path.basename(x))[0] for x in input_colours
