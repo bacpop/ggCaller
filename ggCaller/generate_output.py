@@ -1,5 +1,4 @@
 from functools import partial
-from ggCaller.shared_memory import *
 import ggCaller_cpp
 from ggCaller import __version__
 from BCBio import GFF

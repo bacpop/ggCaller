@@ -7,7 +7,6 @@ import ggCaller_cpp
 from ggCaller.generate_output import generate_GFF, print_ORF_calls
 import shutil
 from models.__main__ import *
-from ggCaller.shared_memory import *
 from Bio import Seq
 from collections import defaultdict
 import tempfile
