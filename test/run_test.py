@@ -16,7 +16,7 @@ else:
 ### reference build workflow ###
 sys.stderr.write("Running reference build workflow\n")
 subprocess.run(
-    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --min-orf-length 100 --max-ORF-overlap 55",
+    python_cmd + " ../ggcaller-runner.py --refs pneumo_CL_group2.txt --kmer 31 --out test_dir --max-path-length 5000 --min-orf-length 100 --max-ORF-overlap 55 --save",
     shell=True,
     check=True)
 
