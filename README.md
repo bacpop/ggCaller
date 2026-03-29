@@ -10,9 +10,9 @@ Guides for installation, usage and a tutorial can be found [here](https://ggcall
 
 ## Installation
 
-ggCaller is available on Linux. If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux ([WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)).
+ggCaller is available on Linux and MacOS (x86_64). If you are running Windows 10/11, Linux can be installed via the Windows Subsystem for Linux ([WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)).
 
-We plan to get a MacOS version up and running in the future.
+To use with Apple Silicon architectures, [configure your conda environment](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html#specifying-a-different-target-platform-for-an-environment) to run x86_64 packages.
 
 ### Installation via conda/mamba
 
