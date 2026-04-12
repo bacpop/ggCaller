@@ -3,6 +3,8 @@ Deprecated features
 
 These features are not available in ggCaller v1.4+. They are replaced by generation of GFF files which can  be used in any modern clustering method, such as Panaroo.
 
+For gene clustering and functional annotation, use `ggCallaroo <https://github.com/samhorsfield96/ggCallaroo>`_, which combines ggCaller, `Panaroo <https://github.com/gtonkinhill/panaroo>`_ and `Bakta <https://github.com/oschwengers/bakta>`_.
+
 Annotating genes
 ^^^^^^^^^^^^^^^^
 
