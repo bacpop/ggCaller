@@ -37,10 +37,8 @@ To run ggCaller with just assemblies::
 
 .. important::
     As of ggCaller v1.4, we highly recommend running ggCaller with
-    ``--gene-finding-only`` enabled. This will not conduct annotation or
-    COG clustering, and will instead generate a directory of GFF files
-    which can be used in any modern clustering method, such as Panaroo.
-    Future versions will remove panaroo entirely.
+    ``--gene-finding-only`` enabled. For gene clustering and functional annotation, 
+    use `ggCallaroo <https://github.com/samhorsfield96/ggCallaroo>`_.
 
 To run ggCaller with just reads::
 
