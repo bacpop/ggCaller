@@ -48,7 +48,7 @@ Now we will run ggCaller specifying saved intermediate datastructures, enabling 
 
 To do this using 4 threads, run::
 
-    ggcaller --refs Bentley_et_al_2006_CPS_sequences/input.txt --save --out ggc_Bentley_et_al_CPS --threads 4
+    ggcaller --refs Bentley_et_al_2006_CPS_sequences/input.txt --gene-finding-only --save --out ggc_Bentley_et_al_CPS --threads 4
 
 You will find the following files in the output directory ``ggc_Bentley_et_al_CPS``:
 
