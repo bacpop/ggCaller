@@ -2,7 +2,9 @@
 
 ggCaller traverses [Bifrost](https://github.com/pmelsted/bifrost) graphs constructed from bacterial genomes to identify putative gene sequences, known as open reading frames (ORFs). 
 
-ggCaller incorporates [Balrog](https://github.com/salzberg-lab/Balrog) to filter ORFs to improve specificity of calls and [Panaroo](https://github.com/gtonkinhill/panaroo) for pangenome analysis and quality control.
+ggCaller incorporates [Balrog](https://github.com/salzberg-lab/Balrog) to filter ORFs to improve specificity of calls.
+
+For functional annotation, use [ggCallaroo](https://github.com/samhorsfield96/ggCallaroo): a snakemake pipeline combining ggCaller for gene prediction, [Panaroo](https://github.com/gtonkinhill/panaroo) for clustering and [Bakta](https://github.com/oschwengers/bakta) for functional annotation.
 
 ## Documentation
 
