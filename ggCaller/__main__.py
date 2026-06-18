@@ -336,8 +336,8 @@ def main():
                     annotation = (source, node_annotation, node_bitscore, node_description)
                     contig_annotation[colour_ID].append((ORF_ID, annotation))
 
-            generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
-                    overlap, options.no_write_idx, ref_list, options.threads, Path_dir)
+        generate_GFF(graph, ORF_file_paths, input_colours, isolate_names, contig_annotation, output_dir,
+                overlap, options.no_write_idx, ref_list, options.threads, Path_dir)
 
         print_ORF_calls(ORF_file_paths, os.path.join(output_dir, "gene_calls"),
                         input_colours, overlap, graph)
