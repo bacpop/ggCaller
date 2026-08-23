@@ -216,36 +216,45 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
     // initialise map as intermediate to hold cluster IDs
     ORFClusterMap final_clusters;
 
-    // assign every centroid and its homologs directly from CentroidToORFMap first. A homolog is
-    // never itself a key in this map, only ever a value, so this ordering (rather than relying on
-    // ORF_length_list, which can visit an equal-length homolog before its centroid on ties) ensures
-    // homologs are never mistaken for unassigned singletons below.
-    for (const auto& centroid_entry : CentroidToORFMap)
+    // Iterate through ORFs in length order. If the current ORF is a centroid,
+    // assign the centroid and all of its homologs to the same cluster.
+    //
+    // Homologs are marked as assigned here, so they will not later be mistaken
+    // for singleton clusters, including in the case where a homolog has the
+    // same length as its centroid.
+    for (const auto& ORF_length_entry : ORF_length_list)
     {
-        const auto& ORF_ID_str = centroid_entry.first;
+        const auto& ORF_ID = ORF_length_entry.second;
 
+        const std::string ORF_ID_str =
+            std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
+
+        // Skip ORFs that have already been assigned as homologs to an earlier
+        // centroid in ORF_length_list.
         if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
         {
             continue;
         }
 
-        // recover the centroid's (colour, ORF_ID) pair from its key string
-        const auto delim_pos = ORF_ID_str.find('_');
-        const std::pair<size_t, size_t> ORF_ID = {std::stoull(ORF_ID_str.substr(0, delim_pos)),
-                                                  std::stoull(ORF_ID_str.substr(delim_pos + 1))};
+        // Only centroids are keys in CentroidToORFMap. If this ORF is not a
+        // centroid, leave it for the singleton pass below.
+        const auto centroid_it = CentroidToORFMap.find(ORF_ID_str);
 
-        // add current ORF to centroid entry
+        if (centroid_it == CentroidToORFMap.end())
+        {
+            continue;
+        }
+
+        // Add the centroid to its cluster.
         final_clusters[ORF_ID_str].push_back(ORF_ID);
-
-        // add the centroid to the cluster_assigned set
         cluster_assigned.insert(ORF_ID_str);
 
-        // add rest of homologs to centroid entry
-        for (const auto& homolog_ID : centroid_entry.second)
+        // Add all homologs to the centroid's cluster.
+        for (const auto& homolog_ID : centroid_it->second)
         {
-            std::string homolog_ID_str = std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
+            const std::string homolog_ID_str =
+                std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
 
-            // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
             if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
             {
                 final_clusters[ORF_ID_str].push_back(homolog_ID);
@@ -254,12 +263,15 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
         }
     }
 
-    // any ORF not matched to a centroid above forms its own singleton cluster
-    for (size_t i = 0; i < ORF_length_list.size(); i++)
+    // Any ORF that was neither a centroid nor a homolog of a centroid forms
+    // its own singleton cluster. Because this is again ORF_length_list order,
+    // singleton clusters are also added in length order.
+    for (const auto& ORF_length_entry : ORF_length_list)
     {
-        const auto& ORF_ID = ORF_length_list.at(i).second;
+        const auto& ORF_ID = ORF_length_entry.second;
 
-        std::string ORF_ID_str = std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
+        const std::string ORF_ID_str =
+            std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
 
         if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
         {
