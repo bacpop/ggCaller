@@ -274,7 +274,7 @@ double align_seqs(const std::string& ORF1_aa,
     // convert sequence to const char * and calculate edit distance
     const char * seq1 = ORF1_aa.c_str();
     const char * seq2 = ORF2_aa.c_str();
-    EdlibAlignResult result = edlibAlign(seq1, ORF1_aa.size(), seq2, ORF1_aa.size(), edlibDefaultAlignConfig());
+    EdlibAlignResult result = edlibAlign(seq1, ORF1_aa.size(), seq2, ORF2_aa.size(), edlibDefaultAlignConfig());
     size_t edit_distance = result.editDistance;
     edlibFreeAlignResult(result);
 
