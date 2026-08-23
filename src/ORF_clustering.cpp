@@ -188,7 +188,8 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
 
                     if (perc_len_diff < len_diff_cutoff)
                     {
-                        break;
+                        // only skip this centroid candidate, other nodes may still yield a valid centroid
+                        continue;
                     }
 
                     const auto centroid_seq = *std::get<4>(centroid_ID);
