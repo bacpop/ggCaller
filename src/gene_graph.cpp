@@ -290,12 +290,19 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
                 //iterate over component again and add edges if in original graph
                 for (const auto& source : component)
                 {
-                    for (const auto& target : component)
+                    auto [begin, end] = boost::out_edges(source, g);
+
+                    for (auto it = begin; it != end; ++it)
                     {
-                        auto edgePair = boost::edge(source, target, g);
-                        if (edgePair.second)
+                        const auto target = boost::target(*it, g);
+
+                        if (component.find(target) != component.end())
                         {
-                            add_edge(component_ORF_ID_mapping.at(source), component_ORF_ID_mapping.at(target), component_g);
+                            add_edge(
+                                component_ORF_ID_mapping.at(source),
+                                component_ORF_ID_mapping.at(target),
+                                component_g
+                            );
                         }
                     }
                 }
