@@ -216,7 +216,45 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
     // initialise map as intermediate to hold cluster IDs
     ORFClusterMap final_clusters;
 
-    // iterate over ORF_length_list, pulling out centroids and their assigned clustered ORFs
+    // assign every centroid and its homologs directly from CentroidToORFMap first. A homolog is
+    // never itself a key in this map, only ever a value, so this ordering (rather than relying on
+    // ORF_length_list, which can visit an equal-length homolog before its centroid on ties) ensures
+    // homologs are never mistaken for unassigned singletons below.
+    for (const auto& centroid_entry : CentroidToORFMap)
+    {
+        const auto& ORF_ID_str = centroid_entry.first;
+
+        if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
+        {
+            continue;
+        }
+
+        // recover the centroid's (colour, ORF_ID) pair from its key string
+        const auto delim_pos = ORF_ID_str.find('_');
+        const std::pair<size_t, size_t> ORF_ID = {std::stoull(ORF_ID_str.substr(0, delim_pos)),
+                                                  std::stoull(ORF_ID_str.substr(delim_pos + 1))};
+
+        // add current ORF to centroid entry
+        final_clusters[ORF_ID_str].push_back(ORF_ID);
+
+        // add the centroid to the cluster_assigned set
+        cluster_assigned.insert(ORF_ID_str);
+
+        // add rest of homologs to centroid entry
+        for (const auto& homolog_ID : centroid_entry.second)
+        {
+            std::string homolog_ID_str = std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
+
+            // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
+            if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
+            {
+                final_clusters[ORF_ID_str].push_back(homolog_ID);
+                cluster_assigned.insert(homolog_ID_str);
+            }
+        }
+    }
+
+    // any ORF not matched to a centroid above forms its own singleton cluster
     for (size_t i = 0; i < ORF_length_list.size(); i++)
     {
         const auto& ORF_ID = ORF_length_list.at(i).second;
@@ -228,41 +266,8 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
             continue;
         }
 
-        // check if entry is a centroid, if so add to final_clusters along with all of its attached ORFs that are unassigned
-        if (CentroidToORFMap.find(ORF_ID_str) != CentroidToORFMap.end())
-        {
-            // add current ORF to centroid entry
-            final_clusters[ORF_ID_str].push_back(ORF_ID);
-
-            // add the centroid to the cluster_assigned set
-            cluster_assigned.insert(ORF_ID_str);
-
-            // add rest of homologs to centroid entry
-            for (const auto& homolog_ID : CentroidToORFMap.at(ORF_ID_str))
-            {
-                std::string homolog_ID_str = std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
-
-                // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
-                if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
-                {
-                    final_clusters[ORF_ID_str].push_back(homolog_ID);
-                    cluster_assigned.insert(homolog_ID_str);
-                }
-                // if homolog already assigned to a cluster, skip
-                else
-                {
-                    continue;
-                }
-            }
-            // erase from cluster_map
-            CentroidToORFMap.erase(ORF_ID_str);
-        } else
-        {
-            // if not assigned and not a centroid, then add to it's own cluster as singleton
-            final_clusters[ORF_ID_str].push_back(ORF_ID);
-
-            cluster_assigned.insert(ORF_ID_str);
-        }
+        final_clusters[ORF_ID_str].push_back(ORF_ID);
+        cluster_assigned.insert(ORF_ID_str);
     }
 
     return final_clusters;
