@@ -443,25 +443,19 @@ std::pair<std::map<size_t, std::string>, std::map<size_t, std::string>> Graph::f
                         
                         const auto gene_prob = score_gene(std::get<4>(centroid_info), centroid_seq, std::get<2>(centroid_info), ORF_model, all_ORF_scores);
                         
-                        // if centroid score is below the min-orf score remove from cluster map
+                        // if centroid score is below the min-orf score, remove only the centroid itself.
+                        // Homologs are still scored individually against gene_prob (as in v1.3.4), rather
+                        // than being discarded wholesale, so they are not lost just because the centroid failed.
                         if (std::get<4>(centroid_info) < minimum_ORF_score)
                         {
-                            // remove all ORFs
-                            for (const auto& homolog_ID : centroid_found->second) 
-                            {
-                                to_remove[homolog_ID.first].insert(homolog_ID.second);
-                            }
+                            to_remove[colour_ID].insert(ORF_entry.first);
+                        }
 
-                            // set up to remove from cluster map
-                            to_remove_cluster.insert(ORF_ID_str);
-
-                        } else {
-                            // add score for calculation
-                            ORFToScoreMap[colour_ID][ORF_entry.first] = gene_prob;
-                            for (const auto& homolog_ID : centroid_found->second) 
-                            {
-                                ORFToScoreMap[homolog_ID.first][homolog_ID.second] = gene_prob;
-                            }
+                        // add score for calculation
+                        ORFToScoreMap[colour_ID][ORF_entry.first] = gene_prob;
+                        for (const auto& homolog_ID : centroid_found->second) 
+                        {
+                            ORFToScoreMap[homolog_ID.first][homolog_ID.second] = gene_prob;
                         }
                     }
                 }
