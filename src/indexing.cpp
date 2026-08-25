@@ -172,6 +172,12 @@ void calc_start_freq (std::string& start_site_AA,
                       const int& aa_kmer,
                       const size_t& nb_colours)
 {
+    // discard windows with an in-frame stop, as these do not represent real start sites
+    if (start_site_AA.find('*') != std::string::npos)
+    {
+        return;
+    }
+
     // ensure if small start found, can still generate sequence
     int num_kmers = start_site_AA.size() > aa_kmer ? start_site_AA.size() - aa_kmer : 1;
 
@@ -319,10 +325,14 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            std::string start_site_DNA = unitig.substr(pos, kmer);
-            std::string start_site_AA = translate(start_site_DNA);
+            // skip windows that would be truncated by the end of the unitig
+            if (unitig.size() - pos >= kmer)
+            {
+                std::string start_site_DNA = unitig.substr(pos, kmer);
+                std::string start_site_AA = translate(start_site_DNA);
 
-            calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
+                calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
+            }
         }
     }
 
@@ -343,10 +353,14 @@ void analyse_unitigs_binary (ColoredCDBG<MyUnitigMap>& ccdbg,
         // pull out start codon positions
         for (const auto& pos : found_indices)
         {
-            std::string start_site_DNA = rev_unitig.substr(pos, kmer);
-            std::string start_site_AA = translate(start_site_DNA);
+            // skip windows that would be truncated by the end of the unitig
+            if (unitig.size() - pos >= kmer)
+            {
+                std::string start_site_DNA = rev_unitig.substr(pos, kmer);
+                std::string start_site_AA = translate(start_site_DNA);
 
-            calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
+                calc_start_freq (start_site_AA, full_unitig_colour, start_freq_set, aa_kmer, nb_colours);
+            }
         }
     }
 }

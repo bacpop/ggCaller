@@ -124,27 +124,6 @@ std::vector<size_t> traverse_components(const ORFNodeMap& ORF_map,
                                        T weight_pmap,
                                        const std::vector<Kmer>& head_kmer_arr)
 {
-    // // set all vertices as source and sink
-    // std::vector<VertexDescriptor> start_vertices;
-    // std::vector<VertexDescriptor> end_vertices;
-
-    // // push all vertices onto vertex list to test all possible paths
-    // // for (const auto& v : vertex_list)
-    // // {
-    // //     start_vertices.push_back(v);
-    // //     end_vertices.push_back(v);
-    // // }
-
-    // // // catch issue if no vertices in start or end
-    // // if (start_vertices.empty())
-    // // {
-    // //     std::copy(vertex_list.begin(), vertex_list.end(), start_vertices.begin());
-    // // }
-    // // if (end_vertices.empty())
-    // // {
-    // //     std::copy(vertex_list.begin(), vertex_list.end(), end_vertices.begin());
-    // // }
-
     // set values of paths and scores
     std::vector<size_t> gene_path;
     float high_score = 0;
@@ -286,20 +265,6 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
             }
         }
 
-        // check for cycles
-        bool has_cycle = false;
-        EdgeDescriptor cycle_edge;
-        cycle_detector vis(has_cycle, cycle_edge);
-        depth_first_search(g, visitor(vis));
-
-        // check if cycle present, if so continually remove until no more cycles
-        while (has_cycle)
-        {
-            remove_edge(cycle_edge, g);
-            has_cycle = false;
-            depth_first_search(g, visitor(vis));
-        }
-
         // get components from simple graph
         components = get_components(g);
         numVertices = num_vertices(g);
@@ -325,14 +290,36 @@ std::vector<std::vector<size_t>> call_true_genes (const ORFNodeMap& ORF_map,
                 //iterate over component again and add edges if in original graph
                 for (const auto& source : component)
                 {
-                    for (const auto& target : component)
+                    auto [begin, end] = boost::out_edges(source, g);
+
+                    for (auto it = begin; it != end; ++it)
                     {
-                        auto edgePair = boost::edge(source, target, g);
-                        if (edgePair.second)
+                        const auto target = boost::target(*it, g);
+
+                        if (component.find(target) != component.end())
                         {
-                            add_edge(component_ORF_ID_mapping.at(source), component_ORF_ID_mapping.at(target), component_g);
+                            add_edge(
+                                component_ORF_ID_mapping.at(source),
+                                component_ORF_ID_mapping.at(target),
+                                component_g
+                            );
                         }
                     }
+                }
+
+                // check for cycles in component
+                while (true)
+                {
+                    bool has_cycle = false;
+                    EdgeDescriptor cycle_edge;
+
+                    cycle_detector vis(has_cycle, cycle_edge);
+                    depth_first_search(component_g, visitor(vis));
+
+                    if (!has_cycle)
+                        break;
+
+                    remove_edge(cycle_edge, component_g);
                 }
 
                 transitive_closure(component_g, tc);

@@ -188,7 +188,8 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
 
                     if (perc_len_diff < len_diff_cutoff)
                     {
-                        break;
+                        // only skip this centroid candidate, other nodes may still yield a valid centroid
+                        continue;
                     }
 
                     const auto centroid_seq = *std::get<4>(centroid_ID);
@@ -215,53 +216,70 @@ ORFClusterMap produce_clusters(const std::map<size_t, std::string>& ORF_file_pat
     // initialise map as intermediate to hold cluster IDs
     ORFClusterMap final_clusters;
 
-    // iterate over ORF_length_list, pulling out centroids and their assigned clustered ORFs
-    for (size_t i = 0; i < ORF_length_list.size(); i++)
+    // Iterate through ORFs in length order. If the current ORF is a centroid,
+    // assign the centroid and all of its homologs to the same cluster.
+    //
+    // Homologs are marked as assigned here, so they will not later be mistaken
+    // for singleton clusters, including in the case where a homolog has the
+    // same length as its centroid.
+    for (const auto& ORF_length_entry : ORF_length_list)
     {
-        const auto& ORF_ID = ORF_length_list.at(i).second;
+        const auto& ORF_ID = ORF_length_entry.second;
 
-        std::string ORF_ID_str = std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
+        const std::string ORF_ID_str =
+            std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
+
+        // Skip ORFs that have already been assigned as homologs to an earlier
+        // centroid in ORF_length_list.
+        if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
+        {
+            continue;
+        }
+
+        // Only centroids are keys in CentroidToORFMap. If this ORF is not a
+        // centroid, leave it for the singleton pass below.
+        const auto centroid_it = CentroidToORFMap.find(ORF_ID_str);
+
+        if (centroid_it == CentroidToORFMap.end())
+        {
+            continue;
+        }
+
+        // Add the centroid to its cluster.
+        final_clusters[ORF_ID_str].push_back(ORF_ID);
+        cluster_assigned.insert(ORF_ID_str);
+
+        // Add all homologs to the centroid's cluster.
+        for (const auto& homolog_ID : centroid_it->second)
+        {
+            const std::string homolog_ID_str =
+                std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
+
+            if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
+            {
+                final_clusters[ORF_ID_str].push_back(homolog_ID);
+                cluster_assigned.insert(homolog_ID_str);
+            }
+        }
+    }
+
+    // Any ORF that was neither a centroid nor a homolog of a centroid forms
+    // its own singleton cluster. Because this is again ORF_length_list order,
+    // singleton clusters are also added in length order.
+    for (const auto& ORF_length_entry : ORF_length_list)
+    {
+        const auto& ORF_ID = ORF_length_entry.second;
+
+        const std::string ORF_ID_str =
+            std::to_string(ORF_ID.first) + "_" + std::to_string(ORF_ID.second);
 
         if (cluster_assigned.find(ORF_ID_str) != cluster_assigned.end())
         {
             continue;
         }
 
-        // check if entry is a centroid, if so add to final_clusters along with all of its attached ORFs that are unassigned
-        if (CentroidToORFMap.find(ORF_ID_str) != CentroidToORFMap.end())
-        {
-            // add current ORF to centroid entry
-            final_clusters[ORF_ID_str].push_back(ORF_ID);
-
-            // add the centroid to the cluster_assigned set
-            cluster_assigned.insert(ORF_ID_str);
-
-            // add rest of homologs to centroid entry
-            for (const auto& homolog_ID : CentroidToORFMap.at(ORF_ID_str))
-            {
-                std::string homolog_ID_str = std::to_string(homolog_ID.first) + "_" + std::to_string(homolog_ID.second);
-
-                // if the homolog is not already assigned to a cluster, assign and add to cluster_assigned
-                if (cluster_assigned.find(homolog_ID_str) == cluster_assigned.end())
-                {
-                    final_clusters[ORF_ID_str].push_back(homolog_ID);
-                    cluster_assigned.insert(homolog_ID_str);
-                }
-                // if homolog already assigned to a cluster, skip
-                else
-                {
-                    continue;
-                }
-            }
-            // erase from cluster_map
-            CentroidToORFMap.erase(ORF_ID_str);
-        } else
-        {
-            // if not assigned and not a centroid, then add to it's own cluster as singleton
-            final_clusters[ORF_ID_str].push_back(ORF_ID);
-
-            cluster_assigned.insert(ORF_ID_str);
-        }
+        final_clusters[ORF_ID_str].push_back(ORF_ID);
+        cluster_assigned.insert(ORF_ID_str);
     }
 
     return final_clusters;
@@ -273,7 +291,7 @@ double align_seqs(const std::string& ORF1_aa,
     // convert sequence to const char * and calculate edit distance
     const char * seq1 = ORF1_aa.c_str();
     const char * seq2 = ORF2_aa.c_str();
-    EdlibAlignResult result = edlibAlign(seq1, ORF1_aa.size(), seq2, ORF1_aa.size(), edlibDefaultAlignConfig());
+    EdlibAlignResult result = edlibAlign(seq1, ORF1_aa.size(), seq2, ORF2_aa.size(), edlibDefaultAlignConfig());
     size_t edit_distance = result.editDistance;
     edlibFreeAlignResult(result);
 
